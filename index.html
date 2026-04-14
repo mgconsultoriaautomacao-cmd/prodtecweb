@@ -1,0 +1,1038 @@
+  <!DOCTYPE html>
+  <html lang="pt-br">
+  <head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Prodtech | Gestão Completa</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--bg:#030712;--card:#0f172a;--text:#f8fafc;--muted:#94a3b8;--border:rgba(255,255,255,.065);--blue:#3b82f6;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--accent:#6366f1;--purple:#8b5cf6;--r:14px}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+  /* AUTH */
+  .auth-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000;background-image:radial-gradient(ellipse at 20% 50%,rgba(59,130,246,.08) 0%,transparent 60%)}
+  .auth-card{width:420px;padding:40px;background:var(--card);border-radius:22px;border:1px solid var(--border);box-shadow:0 24px 64px rgba(0,0,0,.5)}
+  .auth-logo{font-size:30px;font-weight:900;color:var(--blue);margin-bottom:4px;letter-spacing:-1px}
+  .auth-sub{font-size:11px;color:var(--muted);margin-bottom:28px;text-transform:uppercase;letter-spacing:.5px}
+  .auth-err{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2);padding:10px 14px;border-radius:9px;font-size:13px;margin-bottom:14px;display:none}
+  /* SIDEBAR */
+  .sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;background:linear-gradient(180deg,var(--card) 0%,#070c18 100%);border-right:1px solid var(--border);padding:20px 12px;display:flex;flex-direction:column;z-index:100;overflow-y:auto}
+  .brand{font-size:19px;font-weight:900;color:var(--blue);margin-bottom:2px;letter-spacing:-.5px}
+  .brand-sub{font-size:10px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+  .tenant-badge{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);color:var(--blue);padding:6px 10px;border-radius:8px;font-size:11px;font-weight:600;margin-bottom:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .nav-group{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-weight:700;padding:0 4px;margin:12px 0 4px}
+  .nav{padding:10px 12px;border-radius:10px;cursor:pointer;color:var(--muted);margin-bottom:2px;transition:all .15s;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px}
+  .nav:hover{background:rgba(59,130,246,.08);color:var(--text)}
+  .nav.active{background:rgba(59,130,246,.15);color:var(--blue);font-weight:700}
+  .sf{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pd 2s infinite;display:inline-block;margin-right:5px}
+  @keyframes pd{0%,100%{opacity:1}50%{opacity:.3}}
+  /* MAIN */
+  .main{margin-left:240px;padding:28px 32px;max-width:1300px}
+  .ptitle{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:22px}
+  /* CARDS */
+  .card{background:var(--card);border-radius:var(--r);padding:20px;border:1px solid var(--border);margin-bottom:18px}
+  .card .title{font-weight:700;font-size:13.5px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  /* KPI */
+  .kgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:18px}
+  .kcard{background:linear-gradient(135deg,var(--card),rgba(15,23,42,.9));border-radius:var(--r);padding:18px;border:1px solid var(--border);position:relative;overflow:hidden}
+  .kcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2.5px;background:linear-gradient(90deg,var(--blue),var(--accent))}
+  .kcard.green::before{background:linear-gradient(90deg,var(--green),#05966960)}
+  .kcard.yellow::before{background:linear-gradient(90deg,var(--yellow),#b4530060)}
+  .kcard.purple::before{background:linear-gradient(90deg,var(--purple),var(--accent))}
+  .klabel{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.kval{font-size:26px;font-weight:800;margin-top:5px;color:var(--blue)}
+.kval.green{color:var(--green)}.kval.yellow{color:var(--yellow)}.kval.purple{color:var(--purple)}
+.ksub{font-size:11px;color:var(--muted);margin-top:2px}
+/* TABS */
+.tab{display:none;animation:fs .2s ease}
+.tab.active{display:block}
+@keyframes fs{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+/* TABLE */
+table{width:100%;border-collapse:collapse}
+thead th{text-align:left;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;padding:10px 12px;border-bottom:1px solid var(--border);font-weight:600}
+tbody td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px}
+tbody tr:hover{background:rgba(59,130,246,.03)}
+/* BADGES */
+.badge{padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;display:inline-block}
+.badge.packer{background:rgba(59,130,246,.12);color:var(--blue)}
+.badge.stacker{background:rgba(16,185,129,.12);color:var(--green)}
+.badge.active{background:rgba(16,185,129,.12);color:var(--green)}
+.badge.inactive{background:rgba(239,68,68,.12);color:var(--red)}
+/* FORMS */
+input,select,textarea{background:rgba(0,0,0,.4);border:1px solid #334155;color:var(--text);padding:9px 12px;border-radius:8px;font-size:13px;width:100%;font-family:inherit;transition:border-color .2s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue)}
+.flabel{display:block;font-size:10px;color:var(--muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+button{background:var(--blue);color:#fff;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+button:hover{background:#2563eb;transform:translateY(-1px);box-shadow:0 4px 12px rgba(59,130,246,.3)}
+button:disabled{opacity:.5;cursor:not-allowed;transform:none}
+button.danger{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.15)}
+button.danger:hover{background:rgba(239,68,68,.2);box-shadow:none;transform:none}
+button.sec{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--border)}
+button.sec:hover{background:rgba(255,255,255,.09);color:var(--text);box-shadow:none}
+button.green{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.2)}
+button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
+/* FILTERS */
+.fbar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;padding:14px;background:rgba(0,0,0,.2);border-radius:11px;margin-bottom:18px;border:1px solid var(--border)}
+.fbar .f{flex:1;min-width:110px}
+/* CHARTS */
+.cgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;margin-bottom:18px}
+.ch{position:relative;height:240px}
+.ch.tall{height:300px}
+/* RANKING */
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.rcard{display:flex;gap:10px;align-items:center;background:rgba(0,0,0,.25);padding:13px;border-radius:11px;border:1px solid var(--border);transition:all .15s}
+.rcard:hover{border-color:rgba(59,130,246,.2)}
+.ravatar{width:40px;height:40px;border-radius:9px;flex-shrink:0;background:linear-gradient(135deg,var(--blue),var(--accent));display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff}
+/* BOX DETAIL */
+.box-item{display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.3);padding:9px 12px;border-radius:9px;border:1px solid rgba(59,130,246,.1)}
+/* STAGGER */
+@media(max-width:768px){.sidebar{transform:translateX(-240px)}.main{margin-left:0;padding:16px}.cgrid{grid-template-columns:1fr}.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">PRODTECH</div>
+    <div class="auth-sub">Plataforma de Gestão de Produção</div>
+    <div id="authErr" class="auth-err"></div>
+    <div style="margin-bottom:12px"><label class="flabel">Email</label><input id="authEmail" type="email" placeholder="seu@email.com"/></div>
+    <div style="margin-bottom:20px"><label class="flabel">Senha</label><input id="authPass" type="password" placeholder="••••••••"/></div>
+    <button id="authBtn" onclick="doLogin()" style="width:100%;justify-content:center;padding:12px">Entrar</button>
+    <p style="font-size:11px;color:var(--muted);margin-top:14px;text-align:center">Acesso exclusivo para empresas cadastradas</p>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="brand">PRODTECH</div>
+  <div class="brand-sub">v3.0</div>
+  <div id="tenantBadge" class="tenant-badge">...</div>
+
+  <div class="nav-group">Análise</div>
+  <div class="nav active" onclick="showTab('dash',this)">📊 Dashboard</div>
+  <div class="nav" onclick="showTab('ranking',this)">🏆 Ranking</div>
+  <div class="nav" onclick="showTab('finance',this)">💰 Financeiro</div>
+
+  <div class="nav-group">Operação</div>
+  <div class="nav" onclick="showTab('finalize',this)">✅ Finalizar Dia</div>
+  <div class="nav" onclick="showTab('logs',this)">📋 Logs de Produção</div>
+  <div class="nav" onclick="showTab('quality',this)">🕵️ Qualidade</div>
+
+  <div class="nav-group">Cadastros</div>
+  <div class="nav" onclick="showTab('employees',this)">👥 Funcionários</div>
+  <div class="nav" onclick="showTab('weights',this)">📦 Pesos de Caixa</div>
+  <div class="nav" onclick="showTab('mapping',this)">🔗 Mapeamento</div>
+  <div class="nav" id="navTrace" onclick="showTab('trace',this)" style="display:none">🌿 Rastreabilidade</div>
+
+  <div class="nav-group">Sistema</div>
+  <div class="nav" onclick="showTab('settings',this)">⚙️ Configurações</div>
+
+  <div class="sf">
+    <div id="statusBar" style="font-size:11px;color:var(--muted);margin-bottom:8px"><span class="dot"></span>Conectado</div>
+    <button class="sec" onclick="doLogout()" style="width:100%;justify-content:center;font-size:12px">Sair</button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="appMain" class="main" style="display:none">
+
+  <!-- ═══ DASHBOARD ═══ -->
+  <div id="tab-dash" class="tab active">
+    <h1 class="ptitle">📊 Dashboard de Produção</h1>
+    <div class="kgrid">
+      <div class="kcard"><div class="klabel">Prod. Total (Dia)</div><div id="kpiTotalDia" class="kval">0</div><div class="ksub">caixas embaladas</div></div>
+      <div class="kcard green"><div class="klabel">Total em Quilos</div><div id="kpiTotalKg" class="kval green">0</div><div class="ksub">kg processados</div></div>
+      <div class="kcard yellow"><div class="klabel">Velocidade Média</div><div id="kpiCadencia" class="kval yellow">--</div><div class="ksub"><span id="kpiMediaHora">0</span> cx/h média</div></div>
+      <div class="kcard purple"><div class="klabel">Ativos Hoje</div><div id="kpiAtivos" class="kval purple">0</div><div class="ksub">colaboradores</div></div>
+    </div>
+    <div class="fbar">
+      <div class="f"><label class="flabel">Início</label><input type="date" id="dashStart"/></div>
+      <div class="f"><label class="flabel">Fim</label><input type="date" id="dashEnd"/></div>
+      <div class="f"><label class="flabel">Colaborador</label><select id="dashEmployee"><option value="">Todos</option></select></div>
+      <button onclick="refreshDash()">🔍 Filtrar</button>
+      <button class="sec" onclick="exportDashPDF()">📄 PDF</button>
+    </div>
+    <div class="cgrid">
+      <div class="card"><div class="title">📈 Produção por Hora</div><div class="ch"><canvas id="chartProdHora"></canvas></div></div>
+      <div class="card"><div class="title">📦 Distribuição por Peso</div>
+        <div style="display:flex;gap:12px;height:230px">
+          <div style="flex:1;position:relative"><canvas id="chartWeightDist"></canvas></div>
+          <div id="boxWeightDetailList" style="flex:1;display:flex;flex-direction:column;gap:6px;overflow-y:auto"></div>
+        </div>
+      </div>
+    </div>
+    <div class="cgrid">
+      <div class="card"><div class="title">👥 Produção por Colaborador (Top 10)</div><div class="ch"><canvas id="chartCollab"></canvas></div></div>
+      <div class="card"><div class="title">📊 Comparativo Período Atual vs Anterior</div><div class="ch"><canvas id="chartComparison"></canvas></div></div>
+    </div>
+    <div class="card"><div class="title">🏆 Ranking Detalhado</div><div id="collabDetailList" class="rgrid" style="margin-top:12px"></div></div>
+    <div id="parcelStatsCard" class="card" style="display:none">
+      <div class="title">🚜 Produção por Parcela / Variedade</div>
+      <div id="parcelStatsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:10px"></div>
+    </div>
+  </div>
+
+  <!-- ═══ RANKING ═══ -->
+  <div id="tab-ranking" class="tab">
+    <h1 class="ptitle">🏆 Ranking de Produtividade</h1>
+    <div class="fbar">
+      <div class="f"><label class="flabel">Início</label><input type="date" id="rankStart"/></div>
+      <div class="f"><label class="flabel">Fim</label><input type="date" id="rankEnd"/></div>
+      <div class="f"><label class="flabel">Função</label><select id="rankRole"><option value="">Todos</option><option value="PACKER">Embalador</option><option value="STACKER">Empilhador</option></select></div>
+      <div class="f"><label class="flabel">Colaborador</label><select id="rankEmp"><option value="">Todos</option></select></div>
+      <button onclick="refreshRanking()">🔍 Filtrar</button>
+      <button class="sec" onclick="exportRankPDF()">📄 PDF</button>
+    </div>
+    <div class="card"><div class="title">👤 Caixas por Colaborador</div><div class="ch tall"><canvas id="chartRankCollab"></canvas></div></div>
+    <div class="card"><div class="title">📊 Detalhamento Individual</div><div id="rankGrid" class="rgrid" style="margin-top:10px"></div></div>
+  </div>
+
+  <!-- ═══ FINANCEIRO ═══ -->
+  <div id="tab-finance" class="tab">
+    <h1 class="ptitle">💰 Relatório Financeiro</h1>
+    <div class="fbar">
+      <div class="f"><label class="flabel">Início</label><input type="date" id="finStart"/></div>
+      <div class="f"><label class="flabel">Fim</label><input type="date" id="finEnd"/></div>
+      <div class="f"><label class="flabel">Função</label><select id="finRole"><option value="">Todos</option><option value="PACKER">Embalador</option><option value="STACKER">Empilhador</option></select></div>
+      <button onclick="refreshFin()">Gerar</button>
+      <button class="sec" onclick="exportFinPDF()">📄 PDF Folha</button>
+    </div>
+    <div class="kgrid">
+      <div class="kcard"><div class="klabel">Custo Total Estimado</div><div id="finKpiTotal" class="kval" style="color:var(--green)">R$ 0,00</div></div>
+      <div class="kcard"><div class="klabel">Total de Caixas</div><div id="finKpiBoxes" class="kval">0</div></div>
+      <div class="kcard"><div class="klabel">Custo Médio/Caixa</div><div id="finKpiAvgBox" class="kval yellow">R$ 0,00</div></div>
+      <div class="kcard"><div class="klabel">Total em KG</div><div id="finKpiKg" class="kval purple">0 kg</div></div>
+    </div>
+    <div class="cgrid">
+      <div class="card"><div class="title">📈 Evolução de Gastos por Hora</div><div class="ch"><canvas id="chartFinHourly"></canvas></div></div>
+      <div class="card"><div class="title">👥 Gastos por Colaborador</div><div class="ch"><canvas id="chartFinCollab"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="title">📄 Detalhamento por Funcionário</div>
+      <table id="finTable"><thead><tr><th>Data</th><th>Colaborador</th><th>Função</th><th>Caixas</th><th>Kg</th><th>Valor/cx</th><th>Total Est.</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <!-- ═══ FINALIZAR DIA ═══ -->
+  <div id="tab-finalize" class="tab">
+    <h1 class="ptitle">✅ Finalizar Produção</h1>
+    <div class="card" style="max-width:700px">
+      <div class="title">📤 Enviar Relatórios</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:18px;line-height:1.7">Ao finalizar: salva resumo no banco • envia desempenho individual via WhatsApp • envia relatório completo ao gestor • gera PDF</p>
+      <div style="margin-bottom:14px"><label class="flabel">Data</label><input type="date" id="finalizeDate"/></div>
+      <div id="finalizePreview" style="background:rgba(0,0,0,.25);border-radius:10px;padding:14px;margin-bottom:18px;border:1px solid var(--border);min-height:60px">
+        <span style="color:var(--muted);font-size:13px">Clique em "Pré-visualizar" para ver o resumo.</span>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="sec" onclick="previewFinalize()">👁 Pré-visualizar</button>
+        <button class="sec" onclick="exportProducaoPDF()">📄 Baixar PDF</button>
+        <button id="finalizeBtn" onclick="doFinalize()" class="green">📤 Finalizar e Enviar WhatsApp</button>
+      </div>
+      <div id="finalizeStatus" style="margin-top:12px;font-size:13px;color:var(--muted)"></div>
+    </div>
+    <div class="card" style="max-width:700px">
+      <div class="title">👤 Gestores que recebem relatório</div>
+      <table id="managersTable"><thead><tr><th>Papel</th><th>WhatsApp</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <!-- ═══ LOGS ═══ -->
+  <div id="tab-logs" class="tab">
+    <h1 class="ptitle">📋 Logs de Produção</h1>
+    <div class="fbar">
+      <div class="f"><label class="flabel">Início</label><input type="date" id="logStart"/></div>
+      <div class="f"><label class="flabel">Fim</label><input type="date" id="logEnd"/></div>
+      <div class="f"><label class="flabel">Colaborador</label><select id="logEmp"><option value="">Todos</option></select></div>
+      <button onclick="refreshLogs()">Carregar Logs</button>
+    </div>
+    <div class="card">
+      <table id="logsTable">
+        <thead><tr><th>Data/Hora</th><th>Colaborador</th><th>Função</th><th>Caixa/Peso</th><th>Kg</th><th>Parcela</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ QUALIDADE ═══ -->
+  <div id="tab-quality" class="tab">
+    <h1 class="ptitle">🕵️ Auditoria de Qualidade</h1>
+    <div class="fbar">
+      <div class="f"><label class="flabel">Início</label><input type="date" id="qaStart"/></div>
+      <div class="f"><label class="flabel">Fim</label><input type="date" id="qaEnd"/></div>
+      <button onclick="refreshQuality()">🔍 Filtrar</button>
+    </div>
+    <div class="cgrid">
+      <div class="card"><div class="title">📊 Distribuição de Defeitos</div><div class="ch"><canvas id="chartQA"></canvas></div></div>
+      <div class="card">
+        <div class="title">📉 Maiores Ofensores (Penalidades)</div>
+        <div id="qaPenaltyList" class="list"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="title">📋 Registros de Auditoria</div>
+      <table id="qaTable"><thead><tr><th>Data/Hora</th><th>Colaborador</th><th>Defeito</th><th>Caixas Desc.</th><th>Motivo</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <!-- ═══ FUNCIONÁRIOS ═══ -->
+  <div id="tab-employees" class="tab">
+    <h1 class="ptitle">👥 Funcionários</h1>
+    <div class="card">
+      <div class="title">➕ Novo Funcionário</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
+        <div><label class="flabel">Barcode</label><input id="empBarcode"/></div>
+        <div><label class="flabel">Nome</label><input id="empName"/></div>
+        <div><label class="flabel">Função</label>
+          <select id="empRole"><option value="PACKER">Embalador</option><option value="STACKER">Empilhador</option></select>
+        </div>
+        <div><label class="flabel">WhatsApp</label><input id="empWhatsapp" placeholder="5511999999999"/></div>
+        <button onclick="addEmp()">Salvar</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="title">📋 Lista de Funcionários</div>
+      <table id="empTable">
+        <thead><tr><th>Barcode</th><th>Nome</th><th>Função</th><th>WhatsApp</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ PESOS ═══ -->
+  <div id="tab-weights" class="tab">
+    <h1 class="ptitle">📦 Pesos de Caixa</h1>
+    <div class="card">
+      <div class="title">➕ Nova Caixa</div>
+      <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:end">
+        <div><label class="flabel">Nome (ex: 7,5kg ou CAIXA P)</label><input id="wName"/></div>
+        <div><label class="flabel">Peso (kg)</label><input id="wKg" type="number" step="0.1"/></div>
+        <button onclick="addWeight()">Adicionar</button>
+      </div>
+    </div>
+    <div class="card">
+      <table id="wTable">
+        <thead><tr><th>Nome</th><th>Peso</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ MAPEAMENTO ═══ -->
+  <div id="tab-mapping" class="tab">
+    <h1 class="ptitle">🔗 Mapeamento de Etiquetas</h1>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:18px">Vincule um código de barras combinado a um funcionário + tipo de caixa (ex: código 0201 → Embalador 02, Caixa 7.5kg)</p>
+    <div class="card">
+      <div class="title">➕ Novo Mapeamento</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end">
+        <div><label class="flabel">Barcode</label><input id="mapBarcode" placeholder="Bipie a etiqueta"/></div>
+        <div><label class="flabel">Funcionário</label><select id="mapEmployee"></select></div>
+        <div><label class="flabel">Peso/Caixa</label><select id="mapWeight"></select></div>
+        <button onclick="addMapping()">Mapear</button>
+      </div>
+    </div>
+    <div class="card">
+      <table id="mapTable">
+        <thead><tr><th>Barcode</th><th>Funcionário</th><th>Caixa</th><th>Ações</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ RASTREABILIDADE ═══ -->
+  <div id="tab-trace" class="tab">
+    <h1 class="ptitle">🌿 Rastreabilidade</h1>
+    <div class="grid3">
+      <div class="card">
+        <div class="title">🍈 Frutas</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px"><input id="fruitName" placeholder="Nova fruta"/><button onclick="addFruit()" style="padding:9px 14px">+</button></div>
+        <div id="fruitList"></div>
+      </div>
+      <div class="card">
+        <div class="title">🌱 Variedades</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px"><input id="varName" placeholder="Nova variedade"/><button onclick="addVariety()" style="padding:9px 14px">+</button></div>
+        <div id="varList"></div>
+      </div>
+      <div class="card">
+        <div class="title">🚜 Parcelas</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px"><input id="parcelCode" placeholder="Código da parcela"/><button onclick="addParcel()" style="padding:9px 14px">+</button></div>
+        <div id="parcelList"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="title">🔗 Vincular Parcela → Fruta → Variedade</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end">
+        <div><label class="flabel">Parcela</label><select id="linkParcel"></select></div>
+        <div><label class="flabel">Fruta</label><select id="linkFruit"></select></div>
+        <div><label class="flabel">Variedade</label><select id="linkVariety"></select></div>
+        <button onclick="addLink()">Vincular</button>
+      </div>
+      <div id="linkList" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- ═══ CONFIGURAÇÕES ═══ -->
+  <div id="tab-settings" class="tab">
+    <h1 class="ptitle">⚙️ Configurações do Tenant</h1>
+    <div class="grid2">
+      <div class="card">
+        <div class="title">🏢 Dados da Empresa</div>
+        <div style="margin-bottom:12px"><label class="flabel">Nome da Empresa</label><input id="cfgName" placeholder="Ex: Fazenda Santa Maria"/></div>
+        <div style="margin-bottom:12px"><label class="flabel">Tipo de Cultura</label>
+          <select id="cfgCulture"><option value="MAMAO">Mamão</option><option value="MELAO">Melão/Melancia (com rastreabilidade)</option><option value="OUTRO">Outro</option></select>
+        </div>
+      </div>
+      <div class="card">
+        <div class="title">🎯 Metas de Produção</div>
+        <div class="grid2" style="gap:10px">
+          <div><label class="flabel">Meta Packer (cx/h)</label><input id="cfgMetaPacker" type="number" placeholder="Ex: 50"/></div>
+          <div><label class="flabel">Meta Stacker (cx/h)</label><input id="cfgMetaStacker" type="number" placeholder="Ex: 200"/></div>
+          <div><label class="flabel">Valor Packer (R$/cx)</label><input id="cfgValPacker" type="number" step="0.01" placeholder="Ex: 0.50"/></div>
+          <div><label class="flabel">Valor Stacker (R$/cx)</label><input id="cfgValStacker" type="number" step="0.01" placeholder="Ex: 0.15"/></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="title">📱 Evolution API (WhatsApp)</div>
+        <div style="margin-bottom:10px"><label class="flabel">URL da API</label><input id="cfgEvoUrl" placeholder="https://sua-evolution-api.com"/></div>
+        <div style="margin-bottom:10px"><label class="flabel">API Key</label><input id="cfgEvoKey" type="password" placeholder="sua-chave"/></div>
+        <div style="margin-bottom:10px"><label class="flabel">Instância</label><input id="cfgEvoInstance" placeholder="nome-da-instancia"/></div>
+      </div>
+      <div class="card">
+        <div class="title">👥 Usuários com acesso ao painel</div>
+        <table id="usersTable"><thead><tr><th>Usuário</th><th>Papel</th><th>WhatsApp</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+    <button id="cfgSaveBtn" onclick="saveSettings()" style="margin-top:4px">💾 Salvar Configurações</button>
+    <div id="cfgStatus" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ══════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════
+const SUPA_URL = 'https://yiigaohjvvieeooxsban.supabase.co';
+const SUPA_KEY = 'sb_publishable_t_6e3ZvN3VkT31VS8thpcg_6XclrsYR';
+const COLS = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#f472b6','#a855f7','#14b8a6','#e879f9'];
+const BRL = v => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v||0);
+const TOPTS = {backgroundColor:'#1e293b',padding:10,cornerRadius:8,titleColor:'#fff',bodyColor:'#94a3b8'};
+const MEDALS = ['🥇','🥈','🥉'];
+
+let sb=null, tenantId=null, tenantName='', tenantConfig={};
+let charts = {};
+
+function mkChart(id,cfg){ if(charts[id])charts[id].destroy(); charts[id]=new Chart(document.getElementById(id),cfg); return charts[id]; }
+function $(id){return document.getElementById(id)}
+function today(){return new Date().toISOString().split('T')[0]}
+function toISO(d,t='00:00:00'){return d+'T'+t+'Z'}
+
+// ══════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════
+async function initApp(){
+  sb = window.supabase.createClient(SUPA_URL,SUPA_KEY);
+  const {data:{session}} = await sb.auth.getSession();
+  if(session) await afterLogin(session.user);
+  else $('authScreen').style.display='flex';
+}
+
+async function doLogin(){
+  const email=$('authEmail').value.trim(), pass=$('authPass').value;
+  const btn=$('authBtn'), err=$('authErr');
+  err.style.display='none'; btn.disabled=true; btn.textContent='Entrando...';
+  const {data,error} = await sb.auth.signInWithPassword({email,password:pass});
+  if(error){err.textContent='Email ou senha incorretos.';err.style.display='block';btn.disabled=false;btn.textContent='Entrar';return;}
+  await afterLogin(data.user);
+}
+
+async function afterLogin(user){
+  const {data:tu} = await sb.from('tenant_users').select('tenant_id,role,whatsapp,tenants(name,plan,evo_api_url,evo_api_key,evo_instance,timezone)').eq('user_id',user.id).single();
+  if(!tu){alert('Usuário não vinculado a empresa. Contate o suporte.');await sb.auth.signOut();return;}
+  tenantId = tu.tenant_id;
+  tenantName = tu.tenants?.name || 'Empresa';
+  tenantConfig = tu.tenants || {};
+  $('tenantBadge').textContent = tenantName;
+  $('authScreen').style.display='none';
+  $('appMain').style.display='block';
+
+  // Mostrar rastreabilidade se for melão/melancia
+  const culture = tenantConfig.culture_type || 'MAMAO';
+  if(culture !== 'MAMAO') {$('navTrace').style.display='flex';}
+
+  // Datas padrão
+  const t = today();
+  ['dashStart','dashEnd','rankStart','rankEnd','finStart','finEnd','logStart','logEnd','finalizeDate','qaStart','qaEnd'].forEach(id=>{const el=$(id);if(el)el.value=t;});
+
+  await Promise.all([loadEmpSelectAll(), loadWeightSelectAll()]);
+  await refreshDash();
+  setInterval(()=>{ if($('tab-dash').classList.contains('active')) refreshDash(); },20000);
+}
+
+async function doLogout(){await sb.auth.signOut();location.reload();}
+
+// ══════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════
+function showTab(n,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav').forEach(v=>v.classList.remove('active'));
+  const targetId = 'tab-'+n;
+  if($(targetId)) $(targetId).classList.add('active');
+  if(el)el.classList.add('active');
+  const fns={employees:loadEmps,weights:loadWeights,mapping:()=>{loadMappings();loadMapSelects();},trace:()=>{loadFruits();loadVarieties();loadParcels();loadLinks();},settings:loadSettings,finance:refreshFin,ranking:refreshRanking,quality:refreshQuality,logs:()=>{},finalize:loadManagers};
+  if(fns[n]) fns[n]();
+}
+
+// ══════════════════════════════════════
+// HELPER: load selects
+// ══════════════════════════════════════
+let _emps=[], _weights=[];
+async function loadEmpSelectAll(){
+  const {data}=await sb.from('employees').select('id,name,role').eq('tenant_id',tenantId).order('name');
+  _emps=data||[];
+  ['dashEmployee','rankEmp','logEmp'].forEach(id=>{
+    const sel=$(id); if(!sel)return;
+    const cur=sel.value;
+    sel.innerHTML='<option value="">Todos</option>';
+    _emps.forEach(e=>sel.insertAdjacentHTML('beforeend',`<option value="${e.id}">${e.name} (${e.role})</option>`));
+    sel.value=cur;
+  });
+}
+async function loadWeightSelectAll(){
+  const {data}=await sb.from('box_weights').select('id,name,weight_kg').eq('tenant_id',tenantId).order('name');
+  _weights=data||[];
+}
+
+// ══════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════
+async function refreshDash(){
+  if(!sb||!tenantId)return;
+  const s=$('dashStart').value, e=$('dashEnd').value, empId=$('dashEmployee').value;
+  let q=sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
+  if(empId) q=q.eq('employee_id',empId);
+  const {data:scans}=await q.order('ts',{ascending:false});
+  if(!scans) return;
+
+  const packerScans = scans.filter(s=>s.role==='PACKER');
+  const kg = packerScans.reduce((a,x)=>a+(x.weight_kg||0),0);
+  const emps = new Set(scans.map(s=>s.employee_name)).size;
+
+  $('kpiTotalDia').textContent = packerScans.length;
+  $('kpiTotalKg').textContent  = kg.toFixed(1)+' kg';
+  $('kpiAtivos').textContent   = emps;
+
+  // Cadencia (avg gap between scans for PACKER)
+  if(packerScans.length>1){
+    const sorted=[...packerScans].sort((a,b)=>new Date(a.ts)-new Date(b.ts));
+    const gaps=[];
+    for(let i=1;i<sorted.length;i++){
+      const diff=(new Date(sorted[i].ts)-new Date(sorted[i-1].ts))/1000;
+      if(diff<600) gaps.push(diff);
+    }
+    const avgGap=gaps.length?gaps.reduce((a,b)=>a+b,0)/gaps.length:0;
+    $('kpiCadencia').textContent = avgGap>0?(avgGap<60?avgGap.toFixed(0)+'s':(avgGap/60).toFixed(1)+'min'):'--';
+    $('kpiMediaHora').textContent = avgGap>0?Math.round(3600/avgGap):'--';
+  }
+
+  buildDashCharts(scans, packerScans, s, e);
+  buildRankingGrid(packerScans, '#collabDetailList');
+  buildWeightDetail(packerScans);
+
+  // Parcelas (se habilitado)
+  const hasParcels = scans.some(s=>s.parcel_code);
+  $('parcelStatsCard').style.display = hasParcels?'block':'none';
+  if(hasParcels) buildParcelStats(scans);
+}
+
+function buildDashCharts(scans, packerScans, s, e){
+  if(typeof Chart==='undefined') return;
+
+  // Por hora
+  const hrs={}; for(let i=5;i<=22;i++) hrs[i]=0;
+  packerScans.forEach(x=>{const h=new Date(x.ts).getHours();if(h in hrs)hrs[h]++;});
+  mkChart('chartProdHora',{type:'bar',data:{labels:Object.keys(hrs).map(h=>h+'h'),datasets:[{data:Object.values(hrs),backgroundColor:'rgba(59,130,246,.65)',borderRadius:5,barThickness:16}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b'}},x:{grid:{display:false},ticks:{color:'#64748b',font:{size:10}}}},plugins:{legend:{display:false},tooltip:TOPTS}}});
+
+  // Peso
+  const wG={};
+  packerScans.forEach(x=>{const l=x.weight_name||'S/PESO';wG[l]=(wG[l]||0)+1;});
+  const wL=Object.keys(wG),wD=Object.values(wG);
+  mkChart('chartWeightDist',{type:'doughnut',data:{labels:wL,datasets:[{data:wD,backgroundColor:COLS.slice(0,wL.length),borderWidth:0,spacing:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false},tooltip:TOPTS}}});
+
+  // Collab (all roles)
+  const eb={};
+  scans.forEach(x=>{eb[x.employee_name]=(eb[x.employee_name]||0)+1;});
+  const sortedAll=Object.entries(eb).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  mkChart('chartCollab',{type:'bar',data:{labels:sortedAll.map(e=>e[0]),datasets:[{data:sortedAll.map(e=>e[1]),backgroundColor:COLS.slice(0,sortedAll.length),borderRadius:6,barThickness:22}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b'}},y:{grid:{display:false},ticks:{color:'#f8fafc',font:{weight:'600',size:11}}}},plugins:{legend:{display:false},tooltip:TOPTS}}});
+
+  // Comparativo (dummy - current vs prev period length)
+  const days = Math.max(1,Math.round((new Date(e)-new Date(s))/(86400000))+1);
+  mkChart('chartComparison',{type:'bar',data:{labels:sortedAll.slice(0,6).map(e=>e[0].split(' ')[0]),datasets:[{label:'Atual',data:sortedAll.slice(0,6).map(e=>e[1]),backgroundColor:'rgba(59,130,246,.7)',borderRadius:5},{label:'Meta',data:sortedAll.slice(0,6).map(()=>(tenantConfig.target_per_hour_packer||50)*8*days),backgroundColor:'rgba(99,102,241,.3)',borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b'}},x:{grid:{display:false},ticks:{color:'#94a3b8',font:{size:10}}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:TOPTS}}});
+}
+
+function buildWeightDetail(scans){
+  const wG={};
+  scans.forEach(x=>{const l=x.weight_name||'S/PESO';if(!wG[l])wG[l]={boxes:0,kg:0,icon:'📦'};wG[l].boxes++;wG[l].kg+=(x.weight_kg||0);});
+  $('boxWeightDetailList').innerHTML=Object.entries(wG).sort((a,b)=>b[1].boxes-a[1].boxes).map(([name,d])=>`
+    <div class="box-item">
+      <div style="display:flex;align-items:center;gap:8px"><span>📦</span><span style="font-weight:600;font-size:13px">${name}</span></div>
+      <div style="text-align:right"><div style="font-weight:800;color:var(--green);font-size:15px">${d.boxes} <span style="font-size:11px;font-weight:400;color:var(--muted)">un</span></div><div style="font-size:10px;color:var(--muted)">${d.kg.toFixed(1)} kg</div></div>
+    </div>
+  `).join('');
+}
+
+function buildRankingGrid(scans, containerId){
+  const eb={};
+  scans.forEach(x=>{if(!eb[x.employee_name])eb[x.employee_name]={boxes:0,kg:0};eb[x.employee_name].boxes++;eb[x.employee_name].kg+=(x.weight_kg||0);});
+  const sorted=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes);
+  const el=containerId.startsWith('#')?document.querySelector(containerId):$(containerId);
+  if(!el)return;
+  el.innerHTML=sorted.map(([name,d],i)=>`
+    <div class="rcard">
+      <div class="ravatar">${name.charAt(0)}</div>
+      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div><div style="font-size:11px;color:var(--muted)">${d.kg.toFixed(1)} kg</div></div>
+      <div style="text-align:right"><div style="font-size:16px;font-weight:800;color:var(--green)">${d.boxes}</div><div style="font-size:10px;color:var(--muted)">caixas</div></div>
+      <div style="font-size:18px;width:26px;text-align:center">${i<3?MEDALS[i]:'#'+(i+1)}</div>
+    </div>
+  `).join('')||'<div style="color:var(--muted);padding:20px;text-align:center;grid-column:1/-1">Nenhum dado.</div>';
+}
+
+function buildParcelStats(scans){
+  const pg={};
+  scans.forEach(x=>{const k=x.parcel_code||'SEM PARCELA';if(!pg[k])pg[k]={boxes:0,kg:0,variety:x.variety_name||'—'};pg[k].boxes++;pg[k].kg+=(x.weight_kg||0);});
+  $('parcelStatsList').innerHTML=Object.entries(pg).sort((a,b)=>b[1].boxes-a[1].boxes).map(([code,d])=>`
+    <div class="card" style="margin:0;padding:14px">
+      <div style="font-weight:700;font-size:14px;margin-bottom:6px">🚜 ${code}</div>
+      <div style="color:var(--muted);font-size:11px;margin-bottom:8px">Var: ${d.variety}</div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--green);font-weight:700">${d.boxes} cx</span><span style="color:var(--blue);font-weight:700">${d.kg.toFixed(1)} kg</span></div>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════
+// RANKING
+// ══════════════════════════════════════
+let _rankScans=[];
+async function refreshRanking(){
+  if(!sb||!tenantId)return;
+  const s=$('rankStart').value,e=$('rankEnd').value,empId=$('rankEmp').value,role=$('rankRole').value;
+  let q=sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
+  if(empId) q=q.eq('employee_id',empId);
+  if(role)  q=q.eq('role',role);
+  const {data:scans}=await q.order('ts',{ascending:false});
+  _rankScans=scans||[];
+
+  const eb={};
+  _rankScans.forEach(x=>{if(!eb[x.employee_name])eb[x.employee_name]={boxes:0,kg:0,role:x.role};eb[x.employee_name].boxes++;eb[x.employee_name].kg+=(x.weight_kg||0);});
+  const sorted=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes).slice(0,10);
+  mkChart('chartRankCollab',{type:'bar',data:{labels:sorted.map(e=>e[0]),datasets:[{data:sorted.map(e=>e[1]),backgroundColor:COLS.slice(0,sorted.length),borderRadius:7,barThickness:28}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b'}},y:{grid:{display:false},ticks:{color:'#f8fafc',font:{weight:'600',size:12}}}},plugins:{legend:{display:false},tooltip:TOPTS}}});
+  buildRankingGrid(_rankScans,'rankGrid');
+}
+
+// ══════════════════════════════════════
+// FINANCEIRO
+// ══════════════════════════════════════
+let _finData=[];
+async function refreshFin(){
+  if(!sb||!tenantId)return;
+  const s=$('finStart').value,e=$('finEnd').value,role=$('finRole').value;
+  
+  // Real-time calculation from production_scans
+  let q=sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
+  if(role) q=q.eq('role',role);
+  const {data:scans}=await q.order('ts',{ascending:false});
+  
+  if(!scans) return;
+
+  const cfg=tenantConfig;
+  const valP=parseFloat(cfg.value_per_box_packer||0);
+  const valS=parseFloat(cfg.value_per_box_stacker||0);
+
+  // Group by date and employee
+  const grouped = {};
+  scans.forEach(x => {
+    const day = x.ts.split('T')[0];
+    const key = `${day}_${x.employee_name}`;
+    if(!grouped[key]) {
+      grouped[key] = { date: day, employee_name: x.employee_name, role: x.role, total_boxes: 0, total_kg: 0 };
+    }
+    grouped[key].total_boxes++;
+    grouped[key].total_kg += (x.weight_kg || 0);
+  });
+
+  _finData = Object.values(grouped).sort((a,b) => b.date.localeCompare(a.date));
+
+  let totalVal=0,totalBoxes=0,totalKg=0;
+  _finData.forEach(d=>{
+    const v=d.role==='PACKER'?valP:valS;
+    const tv=(d.total_boxes||0)*v;
+    d._total_value=tv;
+    totalVal+=tv; totalBoxes+=d.total_boxes||0; totalKg+=d.total_kg||0;
+  });
+  $('finKpiTotal').textContent=BRL(totalVal);
+  $('finKpiBoxes').textContent=totalBoxes;
+  $('finKpiAvgBox').textContent=totalBoxes?BRL(totalVal/totalBoxes):'R$ 0,00';
+  $('finKpiKg').textContent=totalKg.toFixed(1)+' kg';
+
+  // Table
+  $('finTable').querySelector('tbody').innerHTML=_finData.map(d=>`
+    <tr>
+      <td>${d.date}</td><td><b>${d.employee_name}</b></td>
+      <td><span class="badge ${(d.role||'').toLowerCase()}">${d.role}</span></td>
+      <td>${d.total_boxes} cx</td><td>${(d.total_kg||0).toFixed(1)} kg</td>
+      <td>${BRL(d.role==='PACKER'?valP:valS)}</td>
+      <td style="color:var(--green);font-weight:700">${BRL(d._total_value)}</td>
+    </tr>
+  `).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:28px">Nenhum resumo.</td></tr>';
+
+  // Charts
+  const byHour={}; for(let i=6;i<=22;i++) byHour[i]=0;
+  _finData.forEach(d=>{/* hourly from summaries not available - show by date */});
+  const byEmp={};
+  _finData.forEach(d=>{byEmp[d.employee_name]=(byEmp[d.employee_name]||0)+d._total_value;});
+  const sortedE=Object.entries(byEmp).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mkChart('chartFinCollab',{type:'bar',data:{labels:sortedE.map(e=>e[0]),datasets:[{data:sortedE.map(e=>e[1]),backgroundColor:COLS.slice(0,sortedE.length),borderRadius:6,barThickness:24}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{beginAtZero:true,ticks:{color:'#64748b',callback:v=>BRL(v)},grid:{color:'rgba(255,255,255,.04)'}},y:{grid:{display:false},ticks:{color:'#f8fafc',font:{size:11}}}},plugins:{legend:{display:false},tooltip:{...TOPTS,callbacks:{label:c=>BRL(c.raw)}}}}});
+
+  // By date
+  const byDate={};
+  _finData.forEach(d=>{byDate[d.date]=(byDate[d.date]||0)+d._total_value;});
+  const dates=Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0]));
+  mkChart('chartFinHourly',{type:'line',data:{labels:dates.map(d=>d[0]),datasets:[{label:'Custo',data:dates.map(d=>d[1]),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.1)',borderWidth:2,fill:true,tension:.3,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,ticks:{color:'#64748b',callback:v=>BRL(v)},grid:{color:'rgba(255,255,255,.04)'}},x:{grid:{display:false},ticks:{color:'#64748b'}}},plugins:{legend:{display:false},tooltip:{...TOPTS,callbacks:{label:c=>BRL(c.raw)}}}}});
+}
+
+// ══════════════════════════════════════
+// QUALIDADE (AUDITORIA)
+// ══════════════════════════════════════
+async function refreshQuality(){
+  if(!sb||!tenantId)return;
+  const s=$('qaStart').value, e=$('qaEnd').value;
+  const {data:audits}=await sb.from('quality_audits').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')).order('ts',{ascending:false});
+  if(!audits) return;
+
+  // Pie chart types
+  const types={}; audits.forEach(a=>{const t=a.issue_type||'Outro'; types[t]=(types[t]||0)+1;});
+  mkChart('chartQA',{type:'pie',data:{labels:Object.keys(types),datasets:[{data:Object.values(types),backgroundColor:COLS}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#94a3b8'}}}}});
+
+  // Top offenders
+  const off={}; audits.forEach(a=>{off[a.employee_name]=(off[a.employee_name]||0)+a.penalty_boxes;});
+  const sortedOff=Object.entries(off).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  $('qaPenaltyList').innerHTML=sortedOff.map(([name,qty])=>`<div class="rcard" style="padding:10px;margin-bottom:8px"><span><b>${name}</b></span> <span style="color:var(--red)">-${qty} cx</span></div>`).join('') || 'Sem penalidades';
+
+  // Table
+  $('qaTable').querySelector('tbody').innerHTML=audits.map(a=>`
+    <tr>
+      <td>${new Date(a.ts).toLocaleString('pt-BR')}</td>
+      <td><b>${a.employee_name}</b></td>
+      <td><span class="badge inactive">${a.issue_type||'—'}</span></td>
+      <td style="color:var(--red);font-weight:700">-${a.penalty_boxes} cx</td>
+      <td>${a.reason||'—'}</td>
+    </tr>
+  `).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Nenhuma auditoria encontrada.</td></tr>';
+}
+
+// ══════════════════════════════════════
+// FINALIZAR DIA
+// ══════════════════════════════════════
+async function loadManagers(){
+  const {data}=await sb.from('tenant_users').select('role,whatsapp').eq('tenant_id',tenantId);
+  $('managersTable').querySelector('tbody').innerHTML=(data||[]).map(m=>`
+    <tr><td><span class="badge packer">${m.role}</span></td><td>${m.whatsapp||'<span style="color:var(--muted)">—</span>'}</td></tr>
+  `).join('');
+}
+
+async function previewFinalize(){
+  const date=$('finalizeDate').value; if(!date)return;
+  const {data:scans}=await sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(date)).lte('ts',toISO(date,'23:59:59'));
+  if(!scans||!scans.length){$('finalizePreview').innerHTML='<div style="color:var(--muted);font-size:13px">Nenhum registro para esta data.</div>';return;}
+  const eb={};
+  scans.forEach(x=>{if(!eb[x.employee_name])eb[x.employee_name]={boxes:0,kg:0,role:x.role};eb[x.employee_name].boxes++;eb[x.employee_name].kg+=(x.weight_kg||0);});
+  const sorted=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes);
+  $('finalizePreview').innerHTML=`<div style="font-weight:700;font-size:13px;margin-bottom:10px">📋 ${date}</div>`+sorted.map(([name,d],i)=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
+      <div><span style="font-weight:600;font-size:13px">${i<3?MEDALS[i]:''} ${name}</span><span class="badge ${d.role.toLowerCase()}" style="margin-left:8px">${d.role}</span></div>
+      <div style="text-align:right"><div style="font-weight:700;color:var(--green)">${d.boxes} cx</div><div style="font-size:11px;color:var(--muted)">${d.kg.toFixed(1)} kg</div></div>
+    </div>
+  `).join('');
+}
+
+async function doFinalize(){
+  const date=$('finalizeDate').value; if(!date)return;
+  if(!confirm(`Finalizar e enviar relatórios de ${date}?`))return;
+  const btn=$('finalizeBtn'),status=$('finalizeStatus');
+  btn.disabled=true;btn.textContent='⏳ Enviando...';
+  status.textContent='Processando...';
+  try{
+    const {data,error}=await sb.functions.invoke('send-daily-report',{body:{tenant_id:tenantId,date}});
+    if(error)throw error;
+    status.innerHTML=`<span style="color:var(--green)">✓ ${data?.sent||0} mensagens enviadas!</span>`;
+    exportProducaoPDF(date);
+  }catch(err){
+    status.innerHTML=`<span style="color:var(--red)">✗ Erro: ${err.message}</span>`;
+  }finally{btn.disabled=false;btn.textContent='📤 Finalizar e Enviar WhatsApp';}
+}
+
+// ══════════════════════════════════════
+// LOGS
+// ══════════════════════════════════════
+async function refreshLogs(){
+  const s=$('logStart').value,e=$('logEnd').value,empId=$('logEmp').value;
+  let q=sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
+  if(empId) q=q.eq('employee_id',empId);
+  const {data}=await q.order('ts',{ascending:false}).limit(500);
+  $('logsTable').querySelector('tbody').innerHTML=(data||[]).map(x=>`
+    <tr>
+      <td>${new Date(x.ts).toLocaleString('pt-BR')}</td>
+      <td><b>${x.employee_name||'—'}</b></td>
+      <td><span class="badge ${(x.role||'').toLowerCase()}">${x.role||'—'}</span></td>
+      <td>${x.weight_name||'—'}</td>
+      <td>${(x.weight_kg||0).toFixed(1)} kg</td>
+      <td>${x.parcel_code||'—'}</td>
+    </tr>
+  `).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:28px">Nenhum log.</td></tr>';
+}
+
+// ══════════════════════════════════════
+// FUNCIONÁRIOS
+// ══════════════════════════════════════
+async function loadEmps(){
+  const {data}=await sb.from('employees').select('*').eq('tenant_id',tenantId).order('name');
+  $('empTable').querySelector('tbody').innerHTML=(data||[]).map(e=>`
+    <tr>
+      <td><code style="background:rgba(255,255,255,.05);padding:2px 6px;border-radius:5px;font-size:12px">${e.barcode}</code></td>
+      <td><b>${e.name}</b></td>
+      <td><span class="badge ${e.role.toLowerCase()}">${e.role}</span></td>
+      <td>${e.whatsapp||'<span style="color:var(--muted)">—</span>'}</td>
+      <td><span class="badge ${e.active?'active':'inactive'}">${e.active?'Ativo':'Inativo'}</span></td>
+      <td>
+        <button class="danger" style="padding:4px 9px" onclick="delEmp('${e.id}')">Excluir</button>
+        <button class="sec" style="padding:4px 9px;margin-left:4px" onclick="toggleEmpActive('${e.id}',${e.active})">${e.active?'Desativar':'Ativar'}</button>
+      </td>
+    </tr>
+  `).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:28px">Nenhum funcionário.</td></tr>';
+}
+
+async function addEmp(){
+  const b=$('empBarcode').value.trim(),n=$('empName').value.trim(),r=$('empRole').value,w=$('empWhatsapp').value.trim();
+  if(!b||!n){alert('Preencha barcode e nome.');return;}
+  const {error}=await sb.from('employees').insert([{barcode:b,name:n,role:r,whatsapp:w||null,active:true,tenant_id:tenantId,updated_at:new Date().toISOString()}]);
+  if(error){alert('Erro: '+error.message);return;}
+  ['empBarcode','empName','empWhatsapp'].forEach(id=>$(id).value='');
+  await loadEmps();await loadEmpSelectAll();
+}
+async function delEmp(id){if(!confirm('Excluir?'))return;await sb.from('employees').delete().eq('id',id);loadEmps();}
+async function toggleEmpActive(id,cur){await sb.from('employees').update({active:!cur}).eq('id',id);loadEmps();}
+
+// ══════════════════════════════════════
+// PESOS
+// ══════════════════════════════════════
+async function loadWeights(){
+  const {data}=await sb.from('box_weights').select('*').eq('tenant_id',tenantId).order('name');
+  $('wTable').querySelector('tbody').innerHTML=(data||[]).map(w=>`
+    <tr>
+      <td><b>${w.name}</b></td>
+      <td>${w.weight_kg} kg</td>
+      <td><span class="badge ${w.active?'active':'inactive'}">${w.active?'Ativo':'Inativo'}</span></td>
+      <td>
+        <button class="danger" style="padding:4px 9px" onclick="delWeight('${w.id}')">Excluir</button>
+        <button class="sec" style="padding:4px 9px;margin-left:4px" onclick="toggleWActive('${w.id}',${w.active})">${w.active?'Desativar':'Ativar'}</button>
+      </td>
+    </tr>
+  `).join('');
+}
+async function addWeight(){
+  const n=$('wName').value.trim(),k=$('wKg').value;
+  if(!n){alert('Preencha o nome.');return;}
+  await sb.from('box_weights').insert([{name:n,weight_kg:parseFloat(k)||null,active:true,tenant_id:tenantId,updated_at:new Date().toISOString()}]);
+  $('wName').value='';$('wKg').value='';
+  await loadWeights();await loadWeightSelectAll();
+}
+async function delWeight(id){if(!confirm('Excluir?'))return;await sb.from('box_weights').delete().eq('id',id);loadWeights();}
+async function toggleWActive(id,cur){await sb.from('box_weights').update({active:!cur}).eq('id',id);loadWeights();}
+
+// ══════════════════════════════════════
+// MAPEAMENTO
+// ══════════════════════════════════════
+async function loadMapSelects(){
+  const empSel=$('mapEmployee'),wSel=$('mapWeight');
+  empSel.innerHTML=_emps.filter(e=>e.role==='PACKER').map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+  wSel.innerHTML=_weights.map(w=>`<option value="${w.id}">${w.name} (${w.weight_kg}kg)</option>`).join('');
+}
+async function loadMappings(){
+  const {data}=await sb.from('barcode_mappings').select('*,employees(name),box_weights(name)').eq('tenant_id',tenantId).order('barcode');
+  $('mapTable').querySelector('tbody').innerHTML=(data||[]).map(m=>`
+    <tr>
+      <td><code style="background:rgba(255,255,255,.05);padding:2px 6px;border-radius:5px">${m.barcode}</code></td>
+      <td>${m.employees?.name||'?'}</td>
+      <td>${m.box_weights?.name||'?'}</td>
+      <td><button class="danger" style="padding:4px 9px" onclick="delMapping('${m.id}')">Excluir</button></td>
+    </tr>
+  `).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:28px">Nenhum mapeamento.</td></tr>';
+}
+async function addMapping(){
+  const b=$('mapBarcode').value.trim(),empId=$('mapEmployee').value,wId=$('mapWeight').value;
+  if(!b){alert('Bipe ou insira o barcode.');return;}
+  await sb.from('barcode_mappings').upsert([{barcode:b,employee_id:empId,weight_id:wId,tenant_id:tenantId,updated_at:new Date().toISOString()}],{onConflict:'barcode'});
+  $('mapBarcode').value='';loadMappings();
+}
+async function delMapping(id){await sb.from('barcode_mappings').delete().eq('id',id);loadMappings();}
+
+// ══════════════════════════════════════
+// RASTREABILIDADE
+// ══════════════════════════════════════
+const simpleList=(tbl,el,label,keyCol)=>async(items)=>{
+  $(el).innerHTML=(items||[]).map(i=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span>${i[keyCol]}</span><button class="danger" style="padding:3px 8px" onclick="del_${tbl}('${i.id}')">×</button></div>`).join('')||`<div style="color:var(--muted);font-size:12px;padding:8px">Nenhum(a).</div>`;
+};
+
+async function loadFruits(){const {data}=await sb.from('fruits').select('*').eq('tenant_id',tenantId).order('name');simpleList('fruit','fruitList','Fruta','name')(data);}
+async function loadVarieties(){const {data}=await sb.from('varieties').select('*').eq('tenant_id',tenantId).order('name');simpleList('variety','varList','Variedade','name')(data);}
+async function loadParcels(){
+  const {data}=await sb.from('parcels').select('*').eq('tenant_id',tenantId).order('code');
+  $('parcelList').innerHTML=(data||[]).map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span>${p.code}</span><button class="danger" style="padding:3px 8px" onclick="del_parcel('${p.id}')">×</button></div>`).join('');
+  const sel=$('linkParcel');sel.innerHTML=data.map(p=>`<option value="${p.id}">${p.code}</option>`).join('');
+}
+async function loadLinks(){
+  const {data}=await sb.from('parcel_links').select('*,parcels(code),fruits(name),varieties(name)').eq('tenant_id',tenantId);
+  $('linkList').innerHTML=(data||[]).map(l=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span>📦 ${l.parcels?.code} → 🍈 ${l.fruits?.name} / ${l.varieties?.name}</span></div>`).join('');
+}
+async function addFruit(){const n=$('fruitName').value.trim();if(!n)return;await sb.from('fruits').insert([{name:n,active:true,tenant_id:tenantId,updated_at:new Date().toISOString()}]);$('fruitName').value='';loadFruits();}
+async function addVariety(){const n=$('varName').value.trim();if(!n)return;await sb.from('varieties').insert([{name:n,active:true,tenant_id:tenantId,updated_at:new Date().toISOString()}]);$('varName').value='';loadVarieties();}
+async function addParcel(){const n=$('parcelCode').value.trim();if(!n)return;await sb.from('parcels').insert([{code:n,active:true,tenant_id:tenantId,updated_at:new Date().toISOString()}]);$('parcelCode').value='';loadParcels();}
+async function addLink(){
+  const pId=$('linkParcel').value,fId=$('linkFruit').value,vId=$('linkVariety').value;
+  if(!pId||!fId)return;
+  await sb.from('parcel_links').upsert([{parcel_id:pId,fruit_id:fId,variety_id:vId,tenant_id:tenantId}],{onConflict:'parcel_id'});
+  loadLinks();
+}
+window.del_fruit=async(id)=>{await sb.from('fruits').delete().eq('id',id);loadFruits();};
+window.del_variety=async(id)=>{await sb.from('varieties').delete().eq('id',id);loadVarieties();};
+window.del_parcel=async(id)=>{await sb.from('parcels').delete().eq('id',id);loadParcels();};
+
+// selects rastreabilidade
+async function loadFruitsSelect(){const {data}=await sb.from('fruits').select('*').eq('tenant_id',tenantId);$('linkFruit').innerHTML=(data||[]).map(f=>`<option value="${f.id}">${f.name}</option>`).join('');}
+async function loadVarietiesSelect(){const {data}=await sb.from('varieties').select('*').eq('tenant_id',tenantId);$('linkVariety').innerHTML=(data||[]).map(v=>`<option value="${v.id}">${v.name}</option>`).join('');}
+
+// ══════════════════════════════════════
+// CONFIGURAÇÕES
+// ══════════════════════════════════════
+async function loadSettings(){
+  const {data}=await sb.from('tenants').select('*').eq('id',tenantId).single();
+  if(!data)return;
+  tenantConfig=data;
+  $('cfgName').value=data.name||'';
+  $('cfgCulture').value=data.culture_type||'MAMAO';
+  $('cfgMetaPacker').value=data.target_per_hour_packer||'';
+  $('cfgMetaStacker').value=data.target_per_hour_stacker||'';
+  $('cfgValPacker').value=data.value_per_box_packer||'';
+  $('cfgValStacker').value=data.value_per_box_stacker||'';
+  $('cfgEvoUrl').value=data.evo_api_url||'';
+  $('cfgEvoKey').value=data.evo_api_key||'';
+  $('cfgEvoInstance').value=data.evo_instance||'';
+
+  const {data:users}=await sb.from('tenant_users').select('role,whatsapp').eq('tenant_id',tenantId);
+  $('usersTable').querySelector('tbody').innerHTML=(users||[]).map(u=>`<tr><td><span class="badge packer">${u.role}</span></td><td>${u.whatsapp||'—'}</td></tr>`).join('');
+}
+
+async function saveSettings(){
+  const btn=$('cfgSaveBtn'),st=$('cfgStatus');
+  btn.disabled=true;st.textContent='Salvando...';
+  const {error}=await sb.from('tenants').update({
+    name:$('cfgName').value.trim(),
+    culture_type:$('cfgCulture').value,
+    target_per_hour_packer:parseFloat($('cfgMetaPacker').value)||null,
+    target_per_hour_stacker:parseFloat($('cfgMetaStacker').value)||null,
+    value_per_box_packer:parseFloat($('cfgValPacker').value)||null,
+    value_per_box_stacker:parseFloat($('cfgValStacker').value)||null,
+    evo_api_url:$('cfgEvoUrl').value.trim()||null,
+    evo_api_key:$('cfgEvoKey').value.trim()||null,
+    evo_instance:$('cfgEvoInstance').value.trim()||null,
+  }).eq('id',tenantId);
+  btn.disabled=false;
+  if(error){st.innerHTML=`<span style="color:var(--red)">Erro: ${error.message}</span>`;}
+  else{st.innerHTML=`<span style="color:var(--green)">✓ Configurações salvas!</span>`;await loadSettings();}
+}
+
+// ══════════════════════════════════════
+// PDF EXPORTS
+// ══════════════════════════════════════
+function pdfHeader(doc,title,sub){
+  doc.setFillColor(15,23,42);doc.rect(0,0,210,32,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(16);doc.setFont('helvetica','bold');
+  doc.text('PRODTECH — '+title,14,13);
+  doc.setFontSize(9);doc.setFont('helvetica','normal');
+  doc.text(`${tenantName} | ${sub} | ${new Date().toLocaleString('pt-BR')}`,14,22);
+  doc.setTextColor(15,23,42);
+}
+
+function exportDashPDF(){
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  const s=$('dashStart').value,e=$('dashEnd').value;
+  pdfHeader(doc,'Dashboard de Produção',`${s} a ${e}`);
+  doc.setFontSize(11);doc.setFont('helvetica','bold');
+  doc.text(`Caixas: ${$('kpiTotalDia').textContent} | KG: ${$('kpiTotalKg').textContent} | Ativos: ${$('kpiAtivos').textContent}`,14,42);
+  if(_rankScans.length){
+    const eb={};_rankScans.forEach(x=>{if(!eb[x.employee_name])eb[x.employee_name]={boxes:0,kg:0,role:x.role};eb[x.employee_name].boxes++;eb[x.employee_name].kg+=(x.weight_kg||0);});
+    const rows=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes).map(([name,d],i)=>[i+1,name,d.role,d.boxes+' cx',d.kg.toFixed(1)+' kg']);
+    doc.autoTable({startY:52,head:[['#','Nome','Função','Caixas','KG']],body:rows,headStyles:{fillColor:[59,130,246]},alternateRowStyles:{fillColor:[245,247,250]},theme:'grid',styles:{fontSize:10,cellPadding:5}});
+  }
+  doc.save(`prodtech-dashboard-${s}.pdf`);
+}
+
+function exportRankPDF(){
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  const s=$('rankStart').value,e=$('rankEnd').value;
+  pdfHeader(doc,'Ranking de Produtividade',`${s} a ${e}`);
+  const eb={};_rankScans.forEach(x=>{if(!eb[x.employee_name])eb[x.employee_name]={boxes:0,kg:0,role:x.role};eb[x.employee_name].boxes++;eb[x.employee_name].kg+=(x.weight_kg||0);});
+  const rows=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes).map(([name,d],i)=>[i+1,name,d.role,d.boxes,d.kg.toFixed(1)+' kg']);
+  doc.autoTable({startY:42,head:[['#','Colaborador','Função','Caixas','KG']],body:rows,headStyles:{fillColor:[99,102,241]},alternateRowStyles:{fillColor:[245,247,250]},theme:'grid',styles:{fontSize:10,cellPadding:5}});
+  doc.save(`prodtech-ranking-${s}-${e}.pdf`);
+}
+
+function exportFinPDF(){
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  const s=$('finStart').value,e=$('finEnd').value;
+  pdfHeader(doc,'Folha de Pagamento',`${s} a ${e}`);
+  doc.setFontSize(11);doc.setFont('helvetica','bold');
+  doc.text(`Total: ${$('finKpiTotal').textContent} | ${$('finKpiBoxes').textContent} caixas | ${$('finKpiKg').textContent}`,14,41);
+  const rows=_finData.map(d=>[d.date,d.employee_name,d.role,d.total_boxes+' cx',(d.total_kg||0).toFixed(1)+' kg',BRL(d._total_value||0)]);
+  doc.autoTable({startY:50,head:[['Data','Colaborador','Função','Caixas','KG','Total']],body:rows,headStyles:{fillColor:[16,185,129]},alternateRowStyles:{fillColor:[245,247,250]},theme:'grid',styles:{fontSize:10,cellPadding:5},foot:[['','TOTAL','',_finData.reduce((a,d)=>a+(d.total_boxes||0),0)+' cx',_finData.reduce((a,d)=>a+(d.total_kg||0),0).toFixed(1)+' kg',BRL(_finData.reduce((a,d)=>a+(d._total_value||0),0))]],footStyles:{fillColor:[15,23,42],textColor:255,fontStyle:'bold'}});
+  // Assinatura
+  const y=doc.lastAutoTable.finalY+22;
+  if(y<265){doc.setFontSize(9);doc.setTextColor(100,116,139);doc.text('____________________________',14,y);doc.text('Responsável / Assinatura',14,y+7);doc.text('Data: ___/___/______',14,y+14);}
+  doc.save(`prodtech-folha-${s}-${e}.pdf`);
+}
+
+async function exportProducaoPDF(dateParam){
+  const date=dateParam||$('finalizeDate').value; if(!date)return;
+  const {data:scans}=await sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(date)).lte('ts',toISO(date,'23:59:59'));
+  if(!scans||!scans.length){alert('Nenhum registro para esta data.');return;}
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  pdfHeader(doc,'Folha de Produção Diária',date);
+  const eb={};
+  scans.forEach(x=>{if(!eb[x.employee_name])eb[x.employee_name]={boxes:0,kg:0,role:x.role,first:x.ts,last:x.ts};eb[x.employee_name].boxes++;eb[x.employee_name].kg+=(x.weight_kg||0);if(x.ts<eb[x.employee_name].first)eb[x.employee_name].first=x.ts;if(x.ts>eb[x.employee_name].last)eb[x.employee_name].last=x.ts;});
+  const sorted=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes);
+  doc.setFontSize(10);doc.text(`Total: ${scans.length} caixas | ${scans.reduce((a,x)=>a+(x.weight_kg||0),0).toFixed(1)} kg | ${sorted.length} colaboradores`,14,40);
+  doc.autoTable({startY:48,head:[['#','Colaborador','Função','Caixas','KG Total','Início','Fim']],body:sorted.map(([name,d],i)=>[i+1,name,d.role,d.boxes,d.kg.toFixed(1)+' kg',new Date(d.first).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),new Date(d.last).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})]),headStyles:{fillColor:[16,185,129]},alternateRowStyles:{fillColor:[245,247,250]},theme:'grid',styles:{fontSize:10,cellPadding:5},foot:[['','TOTAL','',scans.length,scans.reduce((a,x)=>a+(x.weight_kg||0),0).toFixed(1)+' kg','','']],footStyles:{fillColor:[15,23,42],textColor:255,fontStyle:'bold'}});
+  const y=doc.lastAutoTable.finalY+22;
+  if(y<265){doc.setFontSize(9);doc.setTextColor(100,116,139);doc.text('____________________________',14,y);doc.text('Supervisor / Responsável',14,y+7);doc.text(`Data: ${date}`,14,y+14);}
+  doc.save(`prodtech-producao-${date}.pdf`);
+}
+
+// ══════════════════════════════════════
+// BARCODE_MAPPINGS table helper
+// ══════════════════════════════════════
+// Note: precisa existir a tabela barcode_mappings com: id, barcode, employee_id, weight_id, tenant_id
+// e parcel_links com: id, parcel_id, fruit_id, variety_id, tenant_id
+
+initApp();
+</script>
+</body>
+</html>
