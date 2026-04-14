@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ProdTech Campo">
+<meta name="theme-color" content="#030712">
+<title>ProdTech Campo</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#030712;--card:#0f172a;--card2:#111827;
+  --text:#f8fafc;--muted:#64748b;--muted2:#94a3b8;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
+  --green:#10b981;--green-dim:rgba(16,185,129,.15);
+  --blue:#3b82f6;--blue-dim:rgba(59,130,246,.15);
+  --red:#ef4444;--red-dim:rgba(239,68,68,.12);
+  --yellow:#f59e0b;--orange:#f97316;
+  --r:14px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,sans-serif;overflow:hidden;touch-action:manipulation}
+
+/* ── SCREENS ── */
+.screen{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--bg);transform:translateX(110%);transition:transform .28s cubic-bezier(.4,0,.2,1);will-change:transform;padding-bottom:calc(84px + var(--safe-bottom))}
+.screen.active{transform:translateX(0)}
+.screen.behind{transform:translateX(-12%);pointer-events:none}
+#screenLogin{padding-bottom:0;display:flex;align-items:center;justify-content:center;min-height:100dvh}
+#screenHome{padding-bottom:calc(32px + var(--safe-bottom))}
+
+/* ── HEADER ── */
+.header{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--border);padding:calc(14px + var(--safe-top)) 18px 14px;display:flex;align-items:center;gap:12px}
+.header-title{font-size:17px;font-weight:800;flex:1}
+.back-btn{width:38px;height:38px;border-radius:10px;background:var(--card);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;flex-shrink:0;transition:all .15s}
+.back-btn:active{background:var(--card2);transform:scale(.95)}
+.online-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 0 2px rgba(16,185,129,.3)}
+.online-dot.offline{background:var(--red);box-shadow:0 0 0 2px rgba(239,68,68,.3)}
+
+/* ── LOGIN ── */
+.login-card{width:min(360px,90vw);padding:36px 28px;background:var(--card);border-radius:24px;border:1px solid var(--border2);box-shadow:0 24px 80px rgba(0,0,0,.6)}
+.login-logo{font-size:34px;margin-bottom:4px}
+.login-title{font-size:22px;font-weight:900;color:var(--green);letter-spacing:-.5px}
+.login-sub{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:28px}
+.field-group{margin-bottom:16px}
+.field-label{display:block;font-size:10px;color:var(--muted2);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+input,select,textarea{width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border2);color:var(--text);padding:13px 14px;border-radius:10px;font-size:15px;font-family:inherit;appearance:none;transition:border-color .2s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
+.err-msg{background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,.2);padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:14px;display:none}
+
+/* ── BUTTONS ── */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:15px 20px;border-radius:12px;font-weight:700;font-size:15px;font-family:inherit;border:none;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--green);color:#fff;box-shadow:0 4px 20px rgba(16,185,129,.35)}
+.btn-primary:active{background:#059669}
+.btn-full{width:100%}
+.btn-sec{background:var(--card);border:1px solid var(--border2);color:var(--muted2)}
+.btn-danger{background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.btn-orange{background:rgba(249,115,22,.15);color:var(--orange);border:1px solid rgba(249,115,22,.2);box-shadow:0 4px 20px rgba(249,115,22,.2)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+
+/* ── TABS ── */
+.tab-bar{display:flex;gap:4px;padding:14px 16px 0;position:sticky;top:calc(66px + var(--safe-top));z-index:40;background:var(--bg)}
+.tab-btn{flex:1;padding:10px 8px;border-radius:10px;font-size:13px;font-weight:600;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .15s;text-align:center}
+.tab-btn.on{background:var(--green-dim);border-color:rgba(16,185,129,.3);color:var(--green)}
+.tab-pane{display:none;padding:14px 16px}
+.tab-pane.on{display:block}
+
+/* ── CARDS ── */
+.card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:18px}
+.card+.card,.card+.section,.section+.card{margin-top:12px}
+.section{padding:14px 16px 0}
+.section-title{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin-bottom:10px}
+
+/* ── HOME ── */
+.home-header{padding:calc(28px + var(--safe-top)) 20px 20px;text-align:center;background:linear-gradient(180deg,rgba(16,185,129,.08) 0%,transparent 100%)}
+.home-logo{font-size:40px;margin-bottom:6px}
+.home-title{font-size:24px;font-weight:900;letter-spacing:-.5px}
+.home-tenant{font-size:12px;color:var(--green);font-weight:600;margin-top:4px}
+.home-modules{padding:20px 16px;display:grid;gap:14px}
+.module-card{background:var(--card);border-radius:20px;padding:24px 20px;border:1px solid var(--border);cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.module-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--grad,linear-gradient(90deg,var(--green),#059669))}
+.module-card.orange::before{background:linear-gradient(90deg,var(--orange),#ea580c)}
+.module-card:active{transform:scale(.98);border-color:var(--border2)}
+.module-icon{font-size:44px;margin-bottom:14px;display:block}
+.module-name{font-size:19px;font-weight:800;margin-bottom:4px}
+.module-desc{font-size:13px;color:var(--muted2);line-height:1.5}
+.module-arrow{position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:22px;color:var(--muted)}
+.sync-badge{display:inline-flex;align-items:center;gap:6px;background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,.2);padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-top:6px}
+
+/* ── FORM ELEMENTS ── */
+.form-field{margin-bottom:16px}
+.form-section{margin-bottom:20px}
+.counter-row{display:flex;align-items:center;gap:0;border-radius:12px;overflow:hidden;border:1px solid var(--border2)}
+.counter-btn{width:56px;height:56px;background:var(--card2);border:none;color:var(--text);font-size:24px;font-weight:300;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0}
+.counter-btn:active{background:rgba(255,255,255,.08)}
+.counter-val{flex:1;text-align:center;font-size:28px;font-weight:800;color:var(--green);background:var(--card)}
+.counter-label{font-size:11px;color:var(--muted);text-align:center;margin-top:6px}
+
+/* ── TOGGLE GROUP ── */
+.toggle-group{display:grid;gap:8px}
+.toggle-group.cols2{grid-template-columns:1fr 1fr}
+.toggle-opt{padding:14px 12px;border-radius:12px;border:2px solid var(--border);background:var(--card2);text-align:center;cursor:pointer;transition:all .15s;font-size:14px;font-weight:700;color:var(--muted2)}
+.toggle-opt .icon{font-size:24px;display:block;margin-bottom:4px}
+.toggle-opt .price{font-size:11px;font-weight:600;margin-top:2px}
+.toggle-opt.on{border-color:var(--green);background:var(--green-dim);color:var(--green)}
+.toggle-opt.on[data-type="TARDE"]{border-color:var(--orange);background:rgba(249,115,22,.12);color:var(--orange)}
+.toggle-opt.on[data-type="MELANCIA"]{border-color:#ec4899;background:rgba(236,72,153,.12);color:#ec4899}
+.toggle-opt.on[data-type="MELAO"]{border-color:#f59e0b;background:rgba(245,158,11,.12);color:#f59e0b}
+.toggle-opt:active{transform:scale(.97)}
+
+/* ── ISSUE TYPES GRID ── */
+.issue-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.issue-opt{padding:14px 12px;border-radius:12px;border:2px solid var(--border);background:var(--card2);text-align:center;cursor:pointer;transition:all .15s;color:var(--muted2)}
+.issue-opt .icon{font-size:28px;display:block;margin-bottom:6px}
+.issue-opt .label{font-size:12px;font-weight:600;line-height:1.3}
+.issue-opt.on{border-color:var(--red);background:var(--red-dim);color:var(--red)}
+.issue-opt:active{transform:scale(.97)}
+
+/* ── EMPLOYEE LIST ── */
+.emp-search{display:flex;gap:8px;align-items:center;background:rgba(0,0,0,.3);border:1px solid var(--border2);border-radius:10px;padding:0 14px;margin-bottom:10px}
+.emp-search input{border:none;background:transparent;padding:12px 0;font-size:14px}
+.emp-list{max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;overscroll-behavior:contain}
+.emp-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--card2);cursor:pointer;transition:all .15s}
+.emp-item.on{border-color:var(--green);background:var(--green-dim)}
+.emp-avatar{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--green));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0}
+.emp-name{flex:1;font-size:14px;font-weight:600}
+.emp-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--muted);background:transparent;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .15s;flex-shrink:0}
+.emp-item.on .emp-check{border-color:var(--green);background:var(--green);color:#fff}
+.emp-select-all{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;margin-bottom:8px;font-size:12px;color:var(--muted2);cursor:pointer;font-weight:600}
+.emp-select-all:active{color:var(--text)}
+
+/* ── CALC PREVIEW ── */
+.calc-card{background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(59,130,246,.06));border:1px solid rgba(16,185,129,.2);border-radius:var(--r);padding:18px;margin-bottom:16px}
+.calc-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0}
+.calc-row+.calc-row{border-top:1px solid var(--border)}
+.calc-label{font-size:12px;color:var(--muted2)}
+.calc-val{font-size:14px;font-weight:700}
+.calc-total{font-size:20px;font-weight:900;color:var(--green)}
+.calc-per{font-size:16px;font-weight:800;color:var(--blue)}
+
+/* ── SIGNATURE PAD ── */
+.sig-wrap{border:2px dashed var(--border2);border-radius:var(--r);overflow:hidden;background:rgba(0,0,0,.4);position:relative;touch-action:none}
+.sig-canvas{display:block;width:100%;height:160px;cursor:crosshair}
+.sig-clear{position:absolute;top:8px;right:8px;padding:6px 12px;border-radius:8px;background:rgba(0,0,0,.6);border:1px solid var(--border2);color:var(--muted2);font-size:12px;font-weight:600;cursor:pointer}
+.sig-hint{font-size:11px;color:var(--muted);margin-top:6px;text-align:center}
+
+/* ── HISTORY LIST ── */
+.hist-item{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:14px;margin-bottom:8px;position:relative}
+.hist-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;background:var(--green)}
+.hist-item.red::before{background:var(--red)}
+.hist-item.orange::before{background:var(--orange)}
+.hist-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.hist-name{font-size:15px;font-weight:700}
+.hist-time{font-size:11px;color:var(--muted);text-align:right}
+.hist-meta{display:flex;flex-wrap:wrap;gap:6px}
+.pill{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;display:inline-block}
+.pill-red{background:var(--red-dim);color:var(--red)}
+.pill-green{background:var(--green-dim);color:var(--green)}
+.pill-blue{background:var(--blue-dim);color:var(--blue)}
+.pill-orange{background:rgba(249,115,22,.12);color:var(--orange)}
+.pill-gray{background:rgba(255,255,255,.06);color:var(--muted2)}
+.sync-indicator{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700}
+.sync-indicator.ok{color:var(--green)}
+.sync-indicator.pending{color:var(--yellow)}
+
+/* ── SUCCESS STATE ── */
+.success-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px 24px;gap:16px}
+.success-icon{font-size:72px;animation:pop .4s spring(1,80,10,0) both}
+@keyframes pop{from{transform:scale(0) rotate(-10deg);opacity:0}to{transform:scale(1) rotate(0deg);opacity:1}}
+.success-title{font-size:22px;font-weight:900}
+.success-sub{font-size:14px;color:var(--muted2);line-height:1.6}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:calc(90px + var(--safe-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:var(--card2);border:1px solid var(--border2);color:var(--text);padding:12px 20px;border-radius:40px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:all .25s;z-index:1000;pointer-events:none;max-width:90vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{border-color:rgba(16,185,129,.4);color:var(--green)}
+#toast.err{border-color:rgba(239,68,68,.4);color:var(--red)}
+
+/* ── LOADING ── */
+.loading{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--muted);font-size:13px;gap:8px}
+.spinner{width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
+.empty-icon{font-size:40px;margin-bottom:10px}
+
+/* ── SCROLLBAR ── */
+*::-webkit-scrollbar{width:4px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:4px}
+
+/* ── PREP badge ── */
+.prep-btn{display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:10px;border:1px dashed var(--border2);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;opacity:.7}
+.prep-badge{font-size:10px;background:rgba(245,158,11,.15);color:var(--yellow);border:1px solid rgba(245,158,11,.2);padding:2px 7px;border-radius:4px;font-weight:700}
+
+@media(min-width:500px){.home-modules{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ LOGIN ══════════════ -->
+<div id="screenLogin" class="screen active">
+  <div class="login-card">
+    <div class="login-logo">🌿</div>
+    <div class="login-title">ProdTech Campo</div>
+    <div class="login-sub">Qualidade · Colheita</div>
+    <div id="loginErr" class="err-msg"></div>
+    <div class="field-group">
+      <label class="field-label">Email</label>
+      <input id="loginEmail" type="email" inputmode="email" placeholder="seu@email.com" autocomplete="email">
+    </div>
+    <div class="field-group" style="margin-bottom:24px">
+      <label class="field-label">Senha</label>
+      <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary btn-full" id="loginBtn" onclick="doLogin()">Entrar</button>
+  </div>
+</div>
+
+<!-- ══════════════ HOME ══════════════ -->
+<div id="screenHome" class="screen">
+  <div class="home-header">
+    <div class="home-logo">🌿</div>
+    <div class="home-title">ProdTech Campo</div>
+    <div id="homeTenant" class="home-tenant">Carregando...</div>
+    <div id="loggedAs" style="font-size:11px;color:var(--muted2);margin-top:4px"></div>
+  </div>
+
+  <div class="home-modules">
+    <div class="module-card" onclick="showScreen('quality')">
+      <span class="module-icon">🔍</span>
+      <div class="module-name">Auditoria de Qualidade</div>
+      <div class="module-desc">Registre defeitos de embalagem com assinatura digital</div>
+      <div class="module-arrow">›</div>
+    </div>
+    <div class="module-card orange" onclick="showScreen('carrao')">
+      <span class="module-icon">🚜</span>
+      <div class="module-name">Carrões de Colheita</div>
+      <div class="module-desc">Lance carrões por turno e calcule o rateio entre colhedores</div>
+      <div class="module-arrow">›</div>
+    </div>
+  </div>
+
+  <div style="padding:0 16px">
+    <div id="syncBadge" onclick="syncQueue()" style="display:none" class="sync-badge">
+      ⚠️ <span id="syncCount">0</span> registro(s) offline pendente(s) — Toque para sincronizar
+    </div>
+  </div>
+
+  <div style="padding:16px">
+    <button class="btn btn-sec btn-full" style="font-size:13px" onclick="doLogout()">↩ Sair</button>
+  </div>
+</div>
+
+<!-- ══════════════ QUALIDADE ══════════════ -->
+<div id="screenQuality" class="screen">
+  <div class="header">
+    <div class="back-btn" onclick="showScreen('home')">‹</div>
+    <div class="header-title">🔍 Auditoria de Qualidade</div>
+    <div id="qOnlineDot" class="online-dot"></div>
+  </div>
+  <div class="tab-bar">
+    <div class="tab-btn on" id="qTabNewBtn" onclick="showQTab('new')">+ Nova Auditoria</div>
+    <div class="tab-btn" id="qTabHistBtn" onclick="showQTab('hist')">📋 Histórico</div>
+  </div>
+
+  <!-- Tab: Nova Auditoria -->
+  <div class="tab-pane on" id="qTabNew">
+
+    <div class="section"><div class="section-title">Funcionário Auditado</div></div>
+    <div style="padding:0 16px 8px">
+      <div class="emp-search"><span>🔎</span><input id="qEmpSearch" oninput="filterQEmp()" placeholder="Buscar funcionário..." autocomplete="off"></div>
+      <div class="emp-list" id="qEmpList">
+        <div class="loading"><div class="spinner"></div>Carregando...</div>
+      </div>
+    </div>
+
+    <div class="section"><div class="section-title">Tipo de Defeito</div></div>
+    <div style="padding:0 16px">
+      <div class="issue-grid" id="issueGrid">
+        <div class="issue-opt" data-id="podridao" onclick="selectIssue('podridao')"><span class="icon">🦠</span><div class="label">Podridão / Doença</div></div>
+        <div class="issue-opt" data-id="dano_mecanico" onclick="selectIssue('dano_mecanico')"><span class="icon">💥</span><div class="label">Dano Mecânico</div></div>
+        <div class="issue-opt" data-id="tamanho" onclick="selectIssue('tamanho')"><span class="icon">📏</span><div class="label">Tamanho Fora do Padrão</div></div>
+        <div class="issue-opt" data-id="maturacao" onclick="selectIssue('maturacao')"><span class="icon">🌿</span><div class="label">Maturação Incorreta</div></div>
+        <div class="issue-opt" data-id="residuo" onclick="selectIssue('residuo')"><span class="icon">🧪</span><div class="label">Resíduo / Contaminação</div></div>
+        <div class="issue-opt" data-id="outro" onclick="selectIssue('outro')"><span class="icon">❓</span><div class="label">Outro</div></div>
+      </div>
+    </div>
+
+    <div class="section"><div class="section-title">Caixas Descontadas</div></div>
+    <div style="padding:0 16px">
+      <div class="counter-row">
+        <button class="counter-btn" onclick="qPenaltyChange(-1)">−</button>
+        <div class="counter-val" id="qPenaltyVal">1</div>
+        <button class="counter-btn" onclick="qPenaltyChange(1)">+</button>
+      </div>
+      <div class="counter-label">caixas deduzidas da produção do funcionário</div>
+    </div>
+
+    <div class="section"><div class="section-title">Motivo / Observação</div></div>
+    <div style="padding:0 16px">
+      <textarea id="qReason" placeholder="Descreva o defeito observado..." rows="3" style="resize:none"></textarea>
+    </div>
+
+    <!-- PREP: Barcode scanner -->
+    <div style="padding:8px 16px">
+      <div class="prep-btn" onclick="toast('Leitura por barcode será ativada em breve','info')">
+        <span>📷</span> Ler barcode do funcionário
+        <span class="prep-badge">EM BREVE</span>
+      </div>
+    </div>
+
+    <div class="section"><div class="section-title">Assinatura do Inspetor</div></div>
+    <div style="padding:0 16px">
+      <div class="field-group">
+        <label class="field-label">Nome do Inspetor</label>
+        <input id="qInspectorName" placeholder="Nome de quem está auditando" autocomplete="name">
+      </div>
+      <div class="sig-wrap">
+        <canvas id="qSigCanvas" class="sig-canvas" width="800" height="240"></canvas>
+        <button class="sig-clear" onclick="clearSig()">🗑 Apagar</button>
+      </div>
+      <div class="sig-hint">Assine acima com o dedo ou caneta</div>
+    </div>
+
+    <div style="padding:16px">
+      <button class="btn btn-primary btn-full" id="qSubmitBtn" onclick="submitQuality()">✅ Registrar Auditoria</button>
+    </div>
+
+  </div>
+
+  <!-- Tab: Histórico -->
+  <div class="tab-pane" id="qTabHist">
+    <div id="qHistList"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+  </div>
+</div>
+
+<!-- ══════════════ CARRÃO ══════════════ -->
+<div id="screenCarrao" class="screen">
+  <div class="header">
+    <div class="back-btn" onclick="showScreen('home')">‹</div>
+    <div class="header-title">🚜 Carrões de Colheita</div>
+    <div id="cOnlineDot" class="online-dot"></div>
+  </div>
+  <div class="tab-bar">
+    <div class="tab-btn on" id="cTabNewBtn" onclick="showCTab('new')">+ Novo Carrão</div>
+    <div class="tab-btn" id="cTabHistBtn" onclick="showCTab('hist')">📋 Histórico</div>
+  </div>
+
+  <!-- Tab: Novo Carrão -->
+  <div class="tab-pane on" id="cTabNew">
+
+    <div class="section"><div class="section-title">Data</div></div>
+    <div style="padding:0 16px">
+      <input type="date" id="cDate">
+    </div>
+
+    <div class="section"><div class="section-title">Turno</div></div>
+    <div style="padding:0 16px">
+      <div class="toggle-group cols2">
+        <div class="toggle-opt on" data-type="MANHA" onclick="setShift('MANHA')">
+          <span class="icon">🌅</span>Manhã
+        </div>
+        <div class="toggle-opt" data-type="TARDE" onclick="setShift('TARDE')">
+          <span class="icon">🌇</span>Tarde
+        </div>
+      </div>
+    </div>
+
+    <div class="section"><div class="section-title">Fruta</div></div>
+    <div style="padding:0 16px">
+      <div class="toggle-group cols2">
+        <div class="toggle-opt on" data-type="MELANCIA" onclick="setFruit('MELANCIA')">
+          <span class="icon">🍉</span>Melancia
+          <div class="price">R$ 3,00 / carrão</div>
+        </div>
+        <div class="toggle-opt" data-type="MELAO" onclick="setFruit('MELAO')">
+          <span class="icon">🍈</span>Melão
+          <div class="price">R$ 4,00 / carrão</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section"><div class="section-title">Parcela</div></div>
+    <div style="padding:0 16px">
+      <select id="cParcela">
+        <option value="">— Selecionar Parcela —</option>
+      </select>
+    </div>
+
+    <div class="section"><div class="section-title">Quantidade de Carrões</div></div>
+    <div style="padding:0 16px">
+      <div class="counter-row">
+        <button class="counter-btn" onclick="cQtyChange(-1)">−</button>
+        <div class="counter-val" id="cQtyVal">1</div>
+        <button class="counter-btn" onclick="cQtyChange(1)">+</button>
+      </div>
+      <div class="counter-label">carrões completos neste registro</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Funcionários do Turno</div>
+      <div class="emp-search" style="margin-top:10px"><span>🔎</span><input id="cEmpSearch" oninput="filterCEmp()" placeholder="Buscar funcionário..." autocomplete="off"></div>
+      <div id="cEmpSelectAll" class="emp-select-all" onclick="toggleAllCEmp()">
+        <span>Selecionar todos</span><span id="cEmpCount">0 selecionados</span>
+      </div>
+      <div class="emp-list" id="cEmpList">
+        <div class="loading"><div class="spinner"></div>Carregando...</div>
+      </div>
+    </div>
+
+    <div style="padding:14px 16px 8px">
+      <div class="calc-card" id="calcCard">
+        <div class="calc-row">
+          <span class="calc-label">Carrões × Valor</span>
+          <span class="calc-val" id="calcFormula">1 × R$ 3,00</span>
+        </div>
+        <div class="calc-row">
+          <span class="calc-label">Total Bruto</span>
+          <span class="calc-val calc-total" id="calcTotal">R$ 3,00</span>
+        </div>
+        <div class="calc-row">
+          <span class="calc-label">Funcionários</span>
+          <span class="calc-val" id="calcEmpCount">0 selecionados</span>
+        </div>
+        <div class="calc-row">
+          <span class="calc-label">Valor por Funcionário</span>
+          <span class="calc-val calc-per" id="calcPerEmp">— selecione funcionários</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section"><div class="section-title">Registrado por</div></div>
+    <div style="padding:0 16px">
+      <input id="cRegisteredBy" placeholder="Nome do responsável pelo registro">
+    </div>
+
+    <div style="padding:16px">
+      <button class="btn btn-orange btn-full" id="cSubmitBtn" onclick="submitCarrao()">🚜 Registrar Carrões</button>
+    </div>
+  </div>
+
+  <!-- Tab: Histórico -->
+  <div class="tab-pane" id="cTabHist">
+    <div id="cHistList"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════
+const SUPA_URL = 'https://yiigaohjvvieeooxsban.supabase.co';
+const SUPA_KEY = 'sb_publishable_t_6e3ZvN3VkT31VS8thpcg_6XclrsYR';
+const PRICES   = { MELANCIA: 3.00, MELAO: 4.00 };
+const BRL = v => 'R$ ' + Number(v||0).toFixed(2).replace('.',',');
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let sb, user, tenantId, tenantName;
+let employees  = [];   // [{id, name, role}]
+let parcelas   = [];   // [{id, code}]
+let isOnline   = navigator.onLine;
+
+const qState = { empId: null, empName: '', issue: null, penalty: 1 };
+const cState = { shift: 'MANHA', fruit: 'MELANCIA', parcelaId: null, qty: 1, workers: new Map() };
+
+// ═══════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const today = () => new Date().toISOString().split('T')[0];
+const fmtTime = ts => new Date(ts).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+
+let toastTimer;
+function toast(msg, type='ok') {
+  const el = $('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 3000);
+}
+
+function showScreen(name) {
+  const screens = { login:'screenLogin', home:'screenHome', quality:'screenQuality', carrao:'screenCarrao' };
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active','behind'));
+  const active = $(screens[name]);
+  if (!active) return;
+  active.classList.add('active');
+  if (name === 'quality') loadQHistory();
+  if (name === 'carrao')  loadCHistory();
+}
+
+function showQTab(tab) {
+  $('qTabNew').className = 'tab-pane' + (tab==='new'?' on':'');
+  $('qTabHist').className = 'tab-pane' + (tab==='hist'?' on':'');
+  $('qTabNewBtn').className = 'tab-btn' + (tab==='new'?' on':'');
+  $('qTabHistBtn').className = 'tab-btn' + (tab==='hist'?' on':'');
+  if (tab === 'hist') loadQHistory();
+}
+function showCTab(tab) {
+  $('cTabNew').className = 'tab-pane' + (tab==='new'?' on':'');
+  $('cTabHist').className = 'tab-pane' + (tab==='hist'?' on':'');
+  $('cTabNewBtn').className = 'tab-btn' + (tab==='new'?' on':'');
+  $('cTabHistBtn').className = 'tab-btn' + (tab==='hist'?' on':'');
+  if (tab === 'hist') loadCHistory();
+}
+
+function updateOnlineDots() {
+  ['qOnlineDot','cOnlineDot'].forEach(id => {
+    const el = $(id); if(!el) return;
+    el.className = 'online-dot' + (isOnline ? '' : ' offline');
+    el.title = isOnline ? 'Online' : 'Offline — dados salvos localmente';
+  });
+}
+
+// ═══════════════════════════════════════════
+// OFFLINE QUEUE — IndexedDB
+// ═══════════════════════════════════════════
+let idb = null;
+function initIDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('prodtech-campo', 1);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('queue')) {
+        db.createObjectStore('queue', { keyPath: 'id', autoIncrement: true });
+      }
+    };
+    req.onsuccess = e => { idb = e.target.result; resolve(); };
+    req.onerror   = () => reject(req.error);
+  });
+}
+
+function idbAdd(record) {
+  return new Promise((resolve, reject) => {
+    const tx  = idb.transaction('queue', 'readwrite');
+    const req = tx.objectStore('queue').add(record);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = () => reject(req.error);
+  });
+}
+function idbGetAll() {
+  return new Promise((resolve, reject) => {
+    const tx  = idb.transaction('queue', 'readonly');
+    const req = tx.objectStore('queue').getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = () => reject(req.error);
+  });
+}
+function idbDelete(id) {
+  return new Promise((resolve, reject) => {
+    const tx  = idb.transaction('queue', 'readwrite');
+    const req = tx.objectStore('queue').delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror   = () => reject(req.error);
+  });
+}
+
+async function updateSyncBadge() {
+  if (!idb) return;
+  const items = await idbGetAll();
+  $('syncCount').textContent = items.length;
+  $('syncBadge').style.display = items.length ? 'inline-flex' : 'none';
+}
+
+async function syncQueue() {
+  if (!isOnline || !sb || !tenantId) return;
+  const items = await idbGetAll();
+  if (!items.length) return;
+  toast(`Sincronizando ${items.length} registro(s)...`, 'ok');
+  let ok = 0;
+  for (const item of items) {
+    try {
+      if (item.type === 'quality') await pushQuality(item.data);
+      if (item.type === 'carrao')  await pushCarrao(item.data);
+      await idbDelete(item.id);
+      ok++;
+    } catch(e) { console.warn('Sync fail', e); }
+  }
+  await updateSyncBadge();
+  if (ok > 0) toast(`✓ ${ok} registro(s) sincronizado(s)!`, 'ok');
+}
+
+// ═══════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════
+async function initApp() {
+  sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  await initIDB();
+  window.addEventListener('online',  () => { isOnline = true;  updateOnlineDots(); syncQueue(); });
+  window.addEventListener('offline', () => { isOnline = false; updateOnlineDots(); });
+  updateOnlineDots();
+
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    await afterLogin(session.user);
+  } else {
+    showScreen('login');
+  }
+}
+
+async function doLogin() {
+  const email = $('loginEmail').value.trim();
+  const pass  = $('loginPass').value;
+  const btn   = $('loginBtn');
+  const err   = $('loginErr');
+  err.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Entrando...';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    err.textContent = 'Email ou senha incorretos.';
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Entrar';
+    return;
+  }
+  await afterLogin(data.user);
+}
+
+async function afterLogin(u) {
+  user = u;
+  const { data: tu } = await sb.from('tenant_users')
+    .select('tenant_id, tenants(name)')
+    .eq('user_id', u.id).single();
+  if (!tu) { alert('Usuário não vinculado a uma empresa.'); await sb.auth.signOut(); return; }
+  tenantId   = tu.tenant_id;
+  tenantName = tu.tenants?.name || 'Empresa';
+  $('homeTenant').textContent = tenantName;
+  $('loggedAs').textContent   = u.email;
+  await loadEmployees();
+  await loadParcelas();
+  initQualityForm();
+  initCarraoForm();
+  await updateSyncBadge();
+  showScreen('home');
+  // Register Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  }
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  location.reload();
+}
+
+// ═══════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════
+async function loadEmployees() {
+  const { data } = await sb.from('employees')
+    .select('id, name, role')
+    .eq('tenant_id', tenantId)
+    .eq('active', 1)
+    .order('name');
+  employees = data || [];
+}
+
+async function loadParcelas() {
+  const { data } = await sb.from('parcels')
+    .select('id, code')
+    .eq('tenant_id', tenantId)
+    .eq('active', 1)
+    .order('code');
+  parcelas = data || [];
+  const sel = $('cParcela');
+  parcelas.forEach(p => {
+    sel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`);
+  });
+}
+
+// ═══════════════════════════════════════════
+// ──── MÓDULO QUALIDADE ────
+// ═══════════════════════════════════════════
+function initQualityForm() {
+  renderQEmpList(employees);
+}
+
+function renderQEmpList(list) {
+  const el = $('qEmpList');
+  if (!list.length) { el.innerHTML = '<div class="empty">Nenhum funcionário encontrado</div>'; return; }
+  el.innerHTML = list.map(e => `
+    <div class="emp-item ${qState.empId===e.id?'on':''}" id="qemp-${e.id}" onclick="selectQEmp(${e.id},'${e.name.replace(/'/g,"\\'")}')">
+      <div class="emp-avatar">${e.name[0].toUpperCase()}</div>
+      <div>
+        <div class="emp-name">${e.name}</div>
+        <div style="font-size:11px;color:var(--muted)">${e.role}</div>
+      </div>
+      <div class="emp-check">${qState.empId===e.id?'✓':''}</div>
+    </div>
+  `).join('');
+}
+
+function filterQEmp() {
+  const q = $('qEmpSearch').value.toLowerCase();
+  renderQEmpList(employees.filter(e => e.name.toLowerCase().includes(q)));
+}
+
+function selectQEmp(id, name) {
+  qState.empId   = id;
+  qState.empName = name;
+  document.querySelectorAll('#qEmpList .emp-item').forEach(el => {
+    const eid = parseInt(el.id.replace('qemp-',''));
+    el.classList.toggle('on', eid === id);
+    el.querySelector('.emp-check').textContent = eid === id ? '✓' : '';
+  });
+}
+
+function selectIssue(id) {
+  qState.issue = id;
+  document.querySelectorAll('.issue-opt').forEach(el =>
+    el.classList.toggle('on', el.dataset.id === id)
+  );
+}
+
+let qPenalty = 1;
+function qPenaltyChange(d) {
+  qPenalty = Math.max(1, qPenalty + d);
+  $('qPenaltyVal').textContent = qPenalty;
+}
+
+// ── Signature Pad ──
+let sigDrawing = false;
+let sigCtx, sigCanvas;
+let sigHasData = false;
+
+function initSignaturePad() {
+  sigCanvas = $('qSigCanvas');
+  sigCtx    = sigCanvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = sigCanvas.getBoundingClientRect();
+  sigCanvas.width  = rect.width  * dpr;
+  sigCanvas.height = rect.height * dpr;
+  sigCtx.scale(dpr, dpr);
+  sigCtx.strokeStyle = '#10b981';
+  sigCtx.lineWidth   = 2.5;
+  sigCtx.lineCap     = 'round';
+  sigCtx.lineJoin    = 'round';
+
+  function getPos(e) {
+    const r = sigCanvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - r.left, y: src.clientY - r.top };
+  }
+  function start(e) { e.preventDefault(); sigDrawing = true; const p = getPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); }
+  function move(e)  { e.preventDefault(); if (!sigDrawing) return; const p = getPos(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); sigHasData = true; }
+  function end()    { sigDrawing = false; }
+
+  sigCanvas.addEventListener('touchstart', start, { passive:false });
+  sigCanvas.addEventListener('touchmove',  move,  { passive:false });
+  sigCanvas.addEventListener('touchend',   end);
+  sigCanvas.addEventListener('mousedown',  start);
+  sigCanvas.addEventListener('mousemove',  move);
+  sigCanvas.addEventListener('mouseup',    end);
+}
+
+function clearSig() {
+  if (!sigCtx) return;
+  sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+  sigHasData = false;
+}
+
+function getSigData() {
+  if (!sigHasData) return null;
+  return sigCanvas.toDataURL('image/png', 0.7);
+}
+
+// ── Submit Quality ──
+async function submitQuality() {
+  if (!qState.empId)  { toast('Selecione um funcionário', 'err'); return; }
+  if (!qState.issue)  { toast('Selecione o tipo de defeito', 'err'); return; }
+  const inspector = $('qInspectorName').value.trim();
+  if (!inspector)     { toast('Informe o nome do inspetor', 'err'); return; }
+
+  const btn = $('qSubmitBtn');
+  btn.disabled = true; btn.textContent = '⏳ Salvando...';
+
+  const payload = {
+    tenant_id      : tenantId,
+    ts             : new Date().toISOString(),
+    employee_id    : qState.empId,
+    employee_name  : qState.empName,
+    issue_type     : qState.issue,
+    penalty_boxes  : qPenalty,
+    reason         : $('qReason').value.trim() || null,
+    inspector_name : inspector,
+    signature_base64: getSigData(),
+    synced         : true,
+  };
+
+  try {
+    await pushQuality(payload);
+    toast('✓ Auditoria registrada!', 'ok');
+    resetQForm();
+  } catch(e) {
+    if (!isOnline) {
+      await idbAdd({ type: 'quality', data: { ...payload, synced: false } });
+      await updateSyncBadge();
+      toast('📥 Salvo offline — sincronizará quando online', 'ok');
+      resetQForm();
+    } else {
+      toast('Erro ao salvar: ' + e.message, 'err');
+    }
+  } finally {
+    btn.disabled = false; btn.textContent = '✅ Registrar Auditoria';
+  }
+}
+
+async function pushQuality(payload) {
+  const { error } = await sb.from('quality_audits').insert(payload);
+  if (error) throw error;
+}
+
+function resetQForm() {
+  qState.empId = null; qState.empName = ''; qState.issue = null;
+  qPenalty = 1; $('qPenaltyVal').textContent = 1;
+  $('qReason').value = '';
+  clearSig();
+  document.querySelectorAll('#qEmpList .emp-item').forEach(el => {
+    el.classList.remove('on'); el.querySelector('.emp-check').textContent = '';
+  });
+  document.querySelectorAll('.issue-opt').forEach(el => el.classList.remove('on'));
+}
+
+// ── Quality History ──
+async function loadQHistory() {
+  const el = $('qHistList');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div>Carregando...</div>';
+  const { data, error } = await sb.from('quality_audits')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .order('ts', { ascending: false })
+    .limit(50);
+  if (error || !data?.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>Nenhuma auditoria registrada</div>'; return; }
+  el.innerHTML = data.map(a => `
+    <div class="hist-item red">
+      <div class="hist-top">
+        <div class="hist-name">${a.employee_name || '—'}</div>
+        <div class="hist-time">${fmtTime(a.ts)}</div>
+      </div>
+      <div class="hist-meta">
+        <span class="pill pill-red">−${a.penalty_boxes} cx</span>
+        <span class="pill pill-gray">${issueLabel(a.issue_type)}</span>
+        ${a.inspector_name ? `<span class="pill pill-blue">👤 ${a.inspector_name}</span>` : ''}
+      </div>
+      ${a.reason ? `<div style="font-size:12px;color:var(--muted2);margin-top:6px">${a.reason}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function issueLabel(id) {
+  const map = {podridao:'🦠 Podridão',dano_mecanico:'💥 Dano Mecânico',tamanho:'📏 Tamanho',maturacao:'🌿 Maturação',residuo:'🧪 Resíduo',outro:'❓ Outro'};
+  return map[id] || id || '—';
+}
+
+// ═══════════════════════════════════════════
+// ──── MÓDULO CARRÃO ────
+// ═══════════════════════════════════════════
+function initCarraoForm() {
+  $('cDate').value = today();
+  renderCEmpList(employees);
+}
+
+function renderCEmpList(list) {
+  const el = $('cEmpList');
+  if (!list.length) { el.innerHTML = '<div class="empty">Nenhum funcionário encontrado</div>'; return; }
+  el.innerHTML = list.map(e => `
+    <div class="emp-item ${cState.workers.has(e.id)?'on':''}" id="cemp-${e.id}" onclick="toggleCWorker(${e.id},'${e.name.replace(/'/g,"\\'")}')">
+      <div class="emp-avatar">${e.name[0].toUpperCase()}</div>
+      <div>
+        <div class="emp-name">${e.name}</div>
+        <div style="font-size:11px;color:var(--muted)">${e.role}</div>
+      </div>
+      <div class="emp-check">${cState.workers.has(e.id)?'✓':''}</div>
+    </div>
+  `).join('');
+}
+
+function filterCEmp() {
+  const q = $('cEmpSearch').value.toLowerCase();
+  renderCEmpList(employees.filter(e => e.name.toLowerCase().includes(q)));
+}
+
+function toggleCWorker(id, name) {
+  if (cState.workers.has(id)) cState.workers.delete(id);
+  else cState.workers.set(id, name);
+  const el = $('cemp-' + id);
+  if (el) {
+    el.classList.toggle('on', cState.workers.has(id));
+    el.querySelector('.emp-check').textContent = cState.workers.has(id) ? '✓' : '';
+  }
+  updateCalcPreview();
+}
+
+function toggleAllCEmp() {
+  const filtered = employees.filter(e => $('cemp-' + e.id));
+  const allOn = filtered.every(e => cState.workers.has(e.id));
+  filtered.forEach(e => {
+    if (allOn) cState.workers.delete(e.id);
+    else cState.workers.set(e.id, e.name);
+    const el = $('cemp-' + e.id);
+    if (el) {
+      el.classList.toggle('on', !allOn);
+      el.querySelector('.emp-check').textContent = !allOn ? '✓' : '';
+    }
+  });
+  updateCalcPreview();
+}
+
+function setShift(shift) {
+  cState.shift = shift;
+  document.querySelectorAll('[data-type="MANHA"],[data-type="TARDE"]').forEach(el =>
+    el.classList.toggle('on', el.dataset.type === shift)
+  );
+}
+
+function setFruit(fruit) {
+  cState.fruit = fruit;
+  document.querySelectorAll('[data-type="MELANCIA"],[data-type="MELAO"]').forEach(el =>
+    el.classList.toggle('on', el.dataset.type === fruit)
+  );
+  updateCalcPreview();
+}
+
+let cQty = 1;
+function cQtyChange(d) {
+  cQty = Math.max(1, cQty + d);
+  $('cQtyVal').textContent = cQty;
+  updateCalcPreview();
+}
+
+function updateCalcPreview() {
+  const price    = PRICES[cState.fruit] || 3;
+  const total    = cQty * price;
+  const empCount = cState.workers.size;
+  const perEmp   = empCount > 0 ? total / empCount : null;
+
+  $('calcFormula').textContent  = `${cQty} × ${BRL(price)}`;
+  $('calcTotal').textContent    = BRL(total);
+  $('calcEmpCount').textContent = empCount > 0 ? `${empCount} funcionário(s)` : '0 selecionados';
+  $('calcPerEmp').textContent   = perEmp !== null ? BRL(perEmp) + ' / pessoa' : '— selecione funcionários';
+  $('cEmpCount').textContent    = empCount + ' selecionado(s)';
+}
+
+async function submitCarrao() {
+  const date     = $('cDate').value;
+  const parcelaId = $('cParcela').value;
+  const regBy    = $('cRegisteredBy').value.trim();
+
+  if (!date)              { toast('Informe a data', 'err'); return; }
+  if (!regBy)             { toast('Informe quem está registrando', 'err'); return; }
+  if (cState.workers.size === 0) { toast('Selecione ao menos 1 funcionário', 'err'); return; }
+
+  const price    = PRICES[cState.fruit] || 3;
+  const total    = cQty * price;
+  const perEmp   = total / cState.workers.size;
+
+  const session = {
+    tenant_id         : tenantId,
+    date              : date,
+    shift             : cState.shift,
+    fruit_type        : cState.fruit,
+    parcel_id         : parcelaId ? parseInt(parcelaId) : null,
+    qty_carrocoes     : cQty,
+    price_per_carrao  : price,
+    total_value       : parseFloat(total.toFixed(2)),
+    value_per_employee: parseFloat(perEmp.toFixed(2)),
+    employee_count    : cState.workers.size,
+    registered_by     : regBy,
+    synced            : true,
+  };
+
+  const workersArr = Array.from(cState.workers.entries()).map(([id, name]) => ({
+    employee_id: id, employee_name: name, value_received: parseFloat(perEmp.toFixed(2))
+  }));
+
+  const btn = $('cSubmitBtn');
+  btn.disabled = true; btn.textContent = '⏳ Salvando...';
+
+  try {
+    await pushCarrao({ session, workers: workersArr });
+    toast('✓ Carrões registrados!', 'ok');
+    resetCForm();
+  } catch(e) {
+    if (!isOnline) {
+      await idbAdd({ type: 'carrao', data: { session: { ...session, synced: false }, workers: workersArr } });
+      await updateSyncBadge();
+      toast('📥 Salvo offline — sincronizará quando online', 'ok');
+      resetCForm();
+    } else {
+      toast('Erro: ' + e.message, 'err');
+    }
+  } finally {
+    btn.disabled = false; btn.textContent = '🚜 Registrar Carrões';
+  }
+}
+
+async function pushCarrao({ session, workers }) {
+  const { data: sess, error: e1 } = await sb.from('field_carrao_sessions').insert(session).select('id').single();
+  if (e1) throw e1;
+  const rows = workers.map(w => ({ ...w, session_id: sess.id }));
+  const { error: e2 } = await sb.from('field_carrao_employees').insert(rows);
+  if (e2) throw e2;
+}
+
+function resetCForm() {
+  cQty = 1; $('cQtyVal').textContent = 1;
+  cState.workers.clear();
+  $('cRegisteredBy').value = '';
+  $('cEmpSearch').value = '';
+  renderCEmpList(employees);
+  updateCalcPreview();
+}
+
+// ── Carrão History ──
+async function loadCHistory() {
+  const el = $('cHistList');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div>Carregando...</div>';
+  const { data, error } = await sb.from('field_carrao_sessions')
+    .select('*, field_carrao_employees(employee_name, value_received)')
+    .eq('tenant_id', tenantId)
+    .order('ts', { ascending: false })
+    .limit(40);
+  if (error || !data?.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🚜</div>Nenhum carrão registrado</div>'; return; }
+  el.innerHTML = data.map(s => {
+    const emps = (s.field_carrao_employees||[]).map(e => e.employee_name).join(', ');
+    const shiftLabel = s.shift === 'MANHA' ? '🌅 Manhã' : '🌇 Tarde';
+    const fruitIcon  = s.fruit_type === 'MELANCIA' ? '🍉' : '🍈';
+    return `
+      <div class="hist-item orange">
+        <div class="hist-top">
+          <div>
+            <div class="hist-name">${fruitIcon} ${s.qty_carrocoes} carrão(ões) — ${shiftLabel}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.date}</div>
+          </div>
+          <div class="hist-time" style="text-align:right">
+            <div style="font-size:17px;font-weight:900;color:var(--green)">${BRL(s.total_value)}</div>
+            <div style="font-size:11px;color:var(--muted)">${BRL(s.value_per_employee)}/pessoa</div>
+          </div>
+        </div>
+        <div class="hist-meta" style="margin-top:8px">
+          <span class="pill pill-orange">${s.employee_count} func.</span>
+          <span class="pill pill-gray" style="font-size:10px">${emps || '—'}</span>
+        </div>
+        ${s.registered_by ? `<div style="font-size:11px;color:var(--muted);margin-top:6px">Registrado por: ${s.registered_by}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async () => {
+  await initApp();
+  initSignaturePad();
+  window.addEventListener('resize', () => {
+    if (sigCanvas) initSignaturePad();
+  });
+  updateCalcPreview();
+});
+</script>
+</body>
+</html>
