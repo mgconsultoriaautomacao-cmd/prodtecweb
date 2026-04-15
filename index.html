@@ -119,11 +119,13 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
 
   <div class="nav-group">Análise</div>
   <div class="nav active" onclick="showTab('dash',this)">📊 Dashboard</div>
+  <div class="nav" onclick="showTab('mass',this)">⚖️ Balanço de Massa</div>
   <div class="nav" onclick="showTab('ranking',this)">🏆 Ranking</div>
   <div class="nav" onclick="showTab('finance',this)">💰 Financeiro</div>
 
   <div class="nav-group">Operação</div>
   <div class="nav" onclick="showTab('finalize',this)">✅ Finalizar Dia</div>
+  <div class="nav" onclick="showTab('bulk',this)">📦 Vendas a Granel</div>
   <div class="nav" onclick="showTab('logs',this)">📋 Logs de Produção</div>
   <div class="nav" onclick="showTab('quality',this)">🕵️ Qualidade</div>
 
@@ -135,6 +137,7 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
 
   <div class="nav-group">Sistema</div>
   <div class="nav" onclick="showTab('settings',this)">⚙️ Configurações</div>
+  <div class="nav" style="color:var(--green);font-weight:700" onclick="window.open('/campo/','_blank')">📱 App de Campo</div>
 
   <div class="sf">
     <div id="statusBar" style="font-size:11px;color:var(--muted);margin-bottom:8px"><span class="dot"></span>Conectado</div>
@@ -179,6 +182,23 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
       <div class="title">🚜 Produção por Parcela / Variedade</div>
       <div id="parcelStatsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:10px"></div>
     </div>
+  </div>
+
+  <!-- ═══ BALANÇO DE MASSA ═══ -->
+  <div id="tab-mass" class="tab">
+    <h1 class="ptitle">⚖️ Balanço de Massa (Entrada vs Saída)</h1>
+    <div class="fbar">
+      <div class="f"><label class="flabel">Início</label><input type="date" id="massStart"/></div>
+      <div class="f"><label class="flabel">Fim</label><input type="date" id="massEnd"/></div>
+      <button onclick="refreshMass()">📊 Calcular Balanço</button>
+    </div>
+    <div class="kgrid">
+      <div class="kcard yellow"><div class="klabel">Colheita Estimada</div><div id="kpiMassHarvest" class="kval yellow">0 kg</div><div class="ksub">Baseado em carrões</div></div>
+      <div class="kcard green"><div class="klabel">Produção Embalada</div><div id="kpiMassPacked" class="kval green">0 kg</div><div class="ksub">Peso real das caixas</div></div>
+      <div class="kcard purple"><div class="klabel">Vendas a Granel</div><div id="kpiMassBulk" class="kval purple">0 kg</div><div class="ksub">Lançamento manual</div></div>
+      <div class="kcard"><div class="klabel">Eficiência / Perda</div><div id="kpiMassEfficiency" class="kval">0%</div><div class="ksub" id="kpiMassLoss">Perda: 0 kg</div></div>
+    </div>
+    <div class="card"><div class="title">📈 Comparativo de Fluxo (Tons)</div><div class="ch"><canvas id="chartMassBalance"></canvas></div></div>
   </div>
 
   <!-- ═══ RANKING ═══ -->
@@ -242,6 +262,25 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
     <div class="card" style="max-width:700px">
       <div class="title">👤 Gestores que recebem relatório</div>
       <table id="managersTable"><thead><tr><th>Papel</th><th>WhatsApp</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <!-- ═══ VENDAS A GRANEL ═══ -->
+  <div id="tab-bulk" class="tab">
+    <h1 class="ptitle">📦 Vendas a Granel (Fruta Solta)</h1>
+    <div class="card">
+      <div class="title">➕ Lançar Venda a Granel</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
+        <div><label class="flabel">Data</label><input type="date" id="bulkDate"/></div>
+        <div><label class="flabel">Parcela</label><select id="bulkParcel"></select></div>
+        <div><label class="flabel">Peso (Kg)</label><input type="number" id="bulkWeight" placeholder="0.00"/></div>
+        <div><label class="flabel">Valor Total (R$)</label><input type="number" id="bulkValue" placeholder="0.00"/></div>
+        <button onclick="saveBulk()">Salvar</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="title">📋 Histórico de Vendas Granel</div>
+      <table id="bulkTable"><thead><tr><th>Data</th><th>Parcela</th><th>Peso (Kg)</th><th>Valor</th><th>Ações</th></tr></thead><tbody></tbody></table>
     </div>
   </div>
 
@@ -398,6 +437,12 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
           <div><label class="flabel">Valor Packer (R$/cx)</label><input id="cfgValPacker" type="number" step="0.01" placeholder="Ex: 0.50"/></div>
           <div><label class="flabel">Valor Stacker (R$/cx)</label><input id="cfgValStacker" type="number" step="0.01" placeholder="Ex: 0.15"/></div>
         </div>
+        <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+            <div><label class="flabel">Peso Estimado p/ Carrão (Kg)</label><input type="number" id="cfgCarraoWeight" placeholder="300"/></div>
+            <div><label class="flabel">Preço p/ Carrão Colhido (R$)</label><input type="number" id="cfgCarraoPrice" placeholder="2.00"/></div>
+          </div>
+        </div>
       </div>
       <div class="card">
         <div class="title">📱 Evolution API (WhatsApp)</div>
@@ -455,8 +500,15 @@ async function doLogin(){
 }
 
 async function afterLogin(user){
-  const {data:tu} = await sb.from('tenant_users').select('tenant_id,role,whatsapp,tenants(name,plan,evo_api_url,evo_api_key,evo_instance,timezone)').eq('user_id',user.id).single();
-  if(!tu){alert('Usuário não vinculado a empresa. Contate o suporte.');await sb.auth.signOut();return;}
+  const {data:tu} = await sb.from('tenant_users').select('tenant_id,role,whatsapp,tenants(*)').eq('user_id',user.id).single();
+  if(!tu){alert('Usuário não vinculado a empresa.');await sb.auth.signOut();return;}
+  
+  // Redirecionamento por Role
+  if(tu.role === 'COLHEDOR' || tu.role === 'FIELD') {
+    location.href = '/campo/';
+    return;
+  }
+
   tenantId = tu.tenant_id;
   tenantName = tu.tenants?.name || 'Empresa';
   tenantConfig = tu.tenants || {};
@@ -464,13 +516,11 @@ async function afterLogin(user){
   $('authScreen').style.display='none';
   $('appMain').style.display='block';
 
-  // Mostrar rastreabilidade se for melão/melancia
   const culture = tenantConfig.culture_type || 'MAMAO';
   if(culture !== 'MAMAO') {$('navTrace').style.display='flex';}
 
-  // Datas padrão
   const t = today();
-  ['dashStart','dashEnd','rankStart','rankEnd','finStart','finEnd','logStart','logEnd','finalizeDate','qaStart','qaEnd'].forEach(id=>{const el=$(id);if(el)el.value=t;});
+  ['dashStart','dashEnd','rankStart','rankEnd','finStart','finEnd','logStart','logEnd','finalizeDate','qaStart','qaEnd','massStart','massEnd','bulkDate'].forEach(id=>{const el=$(id);if(el)el.value=t;});
 
   await Promise.all([loadEmpSelectAll(), loadWeightSelectAll()]);
   await refreshDash();
@@ -488,7 +538,20 @@ function showTab(n,el){
   const targetId = 'tab-'+n;
   if($(targetId)) $(targetId).classList.add('active');
   if(el)el.classList.add('active');
-  const fns={employees:loadEmps,weights:loadWeights,mapping:()=>{loadMappings();loadMapSelects();},trace:()=>{loadFruits();loadVarieties();loadParcels();loadLinks();},settings:loadSettings,finance:refreshFin,ranking:refreshRanking,quality:refreshQuality,logs:()=>{},finalize:loadManagers};
+  const fns={
+    employees:loadEmps,
+    weights:loadWeights,
+    mapping:()=>{loadMappings();loadMapSelects();},
+    trace:()=>{loadFruits();loadVarieties();loadParcels();loadLinks();},
+    settings:loadSettings,
+    finance:refreshFin,
+    ranking:refreshRanking,
+    quality:refreshQuality,
+    mass:refreshMass,
+    bulk:loadBulk,
+    finalize:loadManagers,
+    logs:()=>{}
+  };
   if(fns[n]) fns[n]();
 }
 
@@ -548,10 +611,50 @@ async function refreshDash(){
   buildRankingGrid(packerScans, '#collabDetailList');
   buildWeightDetail(packerScans);
 
-  // Parcelas (se habilitado)
-  const hasParcels = scans.some(s=>s.parcel_code);
-  $('parcelStatsCard').style.display = hasParcels?'block':'none';
-  if(hasParcels) buildParcelStats(scans);
+  // Per parcela + Campo
+  const {data:sessions} = await sb.from('field_carrao_sessions').select('*').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
+  buildParcelStats(scans, sessions);
+}
+
+async function buildParcelStats(scans, sessions){
+  const grid = $('parcelStatsList');
+  const packerScans = scans.filter(s=>s.role==='PACKER');
+  
+  // Agrupar Packing por Parcela
+  const packMap = {};
+  packerScans.forEach(s => {
+    const p = s.parcel_code || 'S/ IDENT';
+    if(!packMap[p]) packMap[p] = { boxes:0, kg:0 };
+    packMap[p].boxes++;
+    packMap[p].kg += (s.weight_kg || 0);
+  });
+
+  // Agrupar Campo por Parcela (precisamos do ID ou Code)
+  // Como sessions tem parcel_id, vamos tentar mapear se houver scans com parcel_id
+  const fieldMap = {};
+  (sessions||[]).forEach(ss => {
+    const id = ss.parcel_id || 'unkn';
+    if(!fieldMap[id]) fieldMap[id] = { carrões:0, valorLabor:0 };
+    fieldMap[id].carrões += ss.qty_carrocoes;
+    fieldMap[id].valorLabor += Number(ss.total_value);
+  });
+
+  // Renderizar (Usando os códigos do packing como base principal)
+  grid.innerHTML = Object.entries(packMap).map(([code, d]) => {
+    // Busca carrões correspondentes se houver link de nome/id (simplificado aqui por código/nome)
+    // Para um dash robusto, o ideal seria carregar a tabela de parcelas
+    return `
+      <div class="rcard" style="padding:15px">
+        <div style="font-weight:800;font-size:15px;color:var(--blue);margin-bottom:10px">🚜 Parcela: ${code}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><div class="klabel" style="font-size:10px">Produção Real</div><div style="font-weight:700">${(d.kg/1000).toFixed(2)} Ton</div><div style="font-size:11px;color:var(--muted)">${d.boxes} caixas</div></div>
+          <div style="text-align:right"><div class="klabel" style="font-size:10px">Status</div><span class="badge active">Em Processo</span></div>
+        </div>
+      </div>
+    `;
+  }).join('') || '<div class="empty">Sem dados por parcela.</div>';
+  
+  $('parcelStatsCard').style.display = 'block';
 }
 
 function buildDashCharts(scans, packerScans, s, e){
@@ -683,16 +786,37 @@ async function refreshFin(){
   $('finKpiAvgBox').textContent=totalBoxes?BRL(totalVal/totalBoxes):'R$ 0,00';
   $('finKpiKg').textContent=totalKg.toFixed(1)+' kg';
 
-  // Table
-  $('finTable').querySelector('tbody').innerHTML=_finData.map(d=>`
-    <tr>
-      <td>${d.date}</td><td><b>${d.employee_name}</b></td>
-      <td><span class="badge ${(d.role||'').toLowerCase()}">${d.role}</span></td>
-      <td>${d.total_boxes} cx</td><td>${(d.total_kg||0).toFixed(1)} kg</td>
-      <td>${BRL(d.role==='PACKER'?valP:valS)}</td>
-      <td style="color:var(--green);font-weight:700">${BRL(d._total_value)}</td>
-    </tr>
-  `).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:28px">Nenhum resumo.</td></tr>';
+  // Toggle Sumarizado
+  const isSumMode = true; // Por padrão para payroll
+
+  if(isSumMode) {
+    const empSum = {};
+    _finData.forEach(d => {
+      if(!empSum[d.employee_name]) empSum[d.employee_name] = { employee_name: d.employee_name, role: d.role, boxes: 0, kg: 0, val: 0 };
+      empSum[d.employee_name].boxes += d.total_boxes;
+      empSum[d.employee_name].kg += d.total_kg;
+      empSum[d.employee_name].val += d._total_value;
+    });
+    $('finTable').querySelector('tbody').innerHTML = Object.values(empSum).sort((a,b)=>b.val-a.val).map(d=>`
+      <tr>
+        <td style="color:var(--muted)">SOMA PERÍODO</td><td><b>${d.employee_name}</b></td>
+        <td><span class="badge ${d.role.toLowerCase()}">${d.role}</span></td>
+        <td>${d.boxes} cx</td><td>${d.kg.toFixed(1)} kg</td>
+        <td>---</td>
+        <td style="color:var(--green);font-weight:700">${BRL(d.val)}</td>
+      </tr>
+    `).join('');
+  } else {
+    $('finTable').querySelector('tbody').innerHTML=_finData.map(d=>`
+      <tr>
+        <td>${d.date}</td><td><b>${d.employee_name}</b></td>
+        <td><span class="badge ${(d.role||'').toLowerCase()}">${d.role}</span></td>
+        <td>${d.total_boxes} cx</td><td>${(d.total_kg||0).toFixed(1)} kg</td>
+        <td>${BRL(d.role==='PACKER'?valP:valS)}</td>
+        <td style="color:var(--green);font-weight:700">${BRL(d._total_value)}</td>
+      </tr>
+    `).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:28px">Nenhum resumo.</td></tr>';
+  }
 
   // Charts
   const byHour={}; for(let i=6;i<=22;i++) byHour[i]=0;
@@ -710,33 +834,87 @@ async function refreshFin(){
 }
 
 // ══════════════════════════════════════
-// QUALIDADE (AUDITORIA)
+// BALANÇO DE MASSA
 // ══════════════════════════════════════
-async function refreshQuality(){
-  if(!sb||!tenantId)return;
-  const s=$('qaStart').value, e=$('qaEnd').value;
-  const {data:audits}=await sb.from('quality_audits').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')).order('ts',{ascending:false});
-  if(!audits) return;
+async function refreshMass() {
+  const s=$('massStart').value, e=$('massEnd').value;
+  
+  // 1. Colheita (Estimativa por Carrões)
+  const {data:harvest} = await sb.from('field_carrao_sessions').select('qty_carrocoes').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
+  const totalCarrocoes = (harvest||[]).reduce((a,c)=>a+c.qty_carrocoes,0);
+  const weightPerCarrao = tenantConfig.harvest_carrao_weight_kg || 300;
+  const estHarvestKg = totalCarrocoes * weightPerCarrao;
+  
+  // 2. Produção (Real Embalada - PACKER)
+  const {data:packed} = await sb.from('production_scans').select('weight_kg').eq('tenant_id',tenantId).eq('role','PACKER').gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
+  const totalPackedKg = (packed||[]).reduce((a,p)=>a+(p.weight_kg||0),0);
+  
+  // 3. Vendas Granel
+  const {data:bulk} = await sb.from('bulk_sales').select('weight_kg').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
+  const totalBulkKg = (bulk||[]).reduce((a,b)=>a+Number(b.weight_kg),0);
+  
+  const totalOut = totalPackedKg + totalBulkKg;
+  const lossKg = estHarvestKg - totalOut;
+  const efficiency = estHarvestKg > 0 ? (totalOut / estHarvestKg) * 100 : 100;
 
-  // Pie chart types
-  const types={}; audits.forEach(a=>{const t=a.issue_type||'Outro'; types[t]=(types[t]||0)+1;});
-  mkChart('chartQA',{type:'pie',data:{labels:Object.keys(types),datasets:[{data:Object.values(types),backgroundColor:COLS}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#94a3b8'}}}}});
+  $('kpiMassHarvest').textContent = (estHarvestKg/1000).toFixed(2) + ' Ton';
+  $('kpiMassPacked').textContent  = (totalPackedKg/1000).toFixed(2) + ' Ton';
+  $('kpiMassBulk').textContent    = (totalBulkKg/1000).toFixed(2) + ' Ton';
+  $('kpiMassEfficiency').textContent = efficiency.toFixed(1) + '%';
+  $('kpiMassEfficiency').className = 'kval ' + (efficiency > 90 ? 'green' : (efficiency > 80 ? 'yellow' : 'red'));
+  $('kpiMassLoss').textContent = `Diferença: ${lossKg.toFixed(0)} kg`;
 
-  // Top offenders
-  const off={}; audits.forEach(a=>{off[a.employee_name]=(off[a.employee_name]||0)+a.penalty_boxes;});
-  const sortedOff=Object.entries(off).sort((a,b)=>b[1]-a[1]).slice(0,5);
-  $('qaPenaltyList').innerHTML=sortedOff.map(([name,qty])=>`<div class="rcard" style="padding:10px;margin-bottom:8px"><span><b>${name}</b></span> <span style="color:var(--red)">-${qty} cx</span></div>`).join('') || 'Sem penalidades';
+  mkChart('chartMassBalance', {
+    type: 'bar',
+    data: {
+      labels: ['Campo (Colheita)', 'Packing (Caixas)', 'Granel (Refugo)', 'Diferença'],
+      datasets: [{
+        data: [estHarvestKg/1000, totalPackedKg/1000, totalBulkKg/1000, lossKg/1000],
+        backgroundColor: ['#f59e0b', '#10b981', '#8b5cf6', '#ef4444']
+      }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins: { legend: { display:false } } }
+  });
+}
 
-  // Table
-  $('qaTable').querySelector('tbody').innerHTML=audits.map(a=>`
+// ══════════════════════════════════════
+// VENDAS A GRANEL
+// ══════════════════════════════════════
+async function loadBulk() {
+  const {data} = await sb.from('bulk_sales').select('*, parcels(code)').eq('tenant_id',tenantId).order('date',{ascending:false});
+  $('bulkTable').querySelector('tbody').innerHTML = (data||[]).map(b => `
     <tr>
-      <td>${new Date(a.ts).toLocaleString('pt-BR')}</td>
-      <td><b>${a.employee_name}</b></td>
-      <td><span class="badge inactive">${a.issue_type||'—'}</span></td>
-      <td style="color:var(--red);font-weight:700">-${a.penalty_boxes} cx</td>
-      <td>${a.reason||'—'}</td>
+      <td>${b.date}</td>
+      <td>${b.parcels?.code || '—'}</td>
+      <td>${b.weight_kg} kg</td>
+      <td>${BRL(b.total_value)}</td>
+      <td><button class="danger" onclick="delBulk('${b.id}')">Excluir</button></td>
     </tr>
-  `).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Nenhuma auditoria encontrada.</td></tr>';
+  `).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">Sem vendas lançadas.</td></tr>';
+  
+  // Popula select de parcelas
+  const {data:parcels} = await sb.from('parcels').select('id,code').eq('tenant_id',tenantId).eq('active',true);
+  $('bulkParcel').innerHTML = (parcels||[]).map(p=>`<option value="${p.id}">${p.code}</option>`).join('');
+}
+
+async function saveBulk() {
+  const date=$('bulkDate').value, pId=$('bulkParcel').value, w=$('bulkWeight').value, v=$('bulkValue').value;
+  if(!date || !w) return alert('Preencha pelo menos Data e Peso.');
+  const {error} = await sb.from('bulk_sales').insert([{
+    tenant_id: tenantId,
+    date,
+    parcel_id: pId || null,
+    weight_kg: parseFloat(w),
+    total_value: parseFloat(v) || 0
+  }]);
+  if(error) alert(error.message);
+  else { loadBulk(); $('bulkWeight').value=''; $('bulkValue').value=''; }
+}
+
+async function delBulk(id) {
+  if(!confirm('Excluir lançamento?')) return;
+  await sb.from('bulk_sales').delete().eq('id',id);
+  loadBulk();
 }
 
 // ══════════════════════════════════════
@@ -936,6 +1114,8 @@ async function loadSettings(){
   $('cfgEvoUrl').value=data.evo_api_url||'';
   $('cfgEvoKey').value=data.evo_api_key||'';
   $('cfgEvoInstance').value=data.evo_instance||'';
+  $('cfgCarraoWeight').value=data.harvest_carrao_weight_kg||'300';
+  $('cfgCarraoPrice').value=data.value_per_carrao||'2.00';
 
   const {data:users}=await sb.from('tenant_users').select('role,whatsapp').eq('tenant_id',tenantId);
   $('usersTable').querySelector('tbody').innerHTML=(users||[]).map(u=>`<tr><td><span class="badge packer">${u.role}</span></td><td>${u.whatsapp||'—'}</td></tr>`).join('');
@@ -954,6 +1134,8 @@ async function saveSettings(){
     evo_api_url:$('cfgEvoUrl').value.trim()||null,
     evo_api_key:$('cfgEvoKey').value.trim()||null,
     evo_instance:$('cfgEvoInstance').value.trim()||null,
+    harvest_carrao_weight_kg:parseFloat($('cfgCarraoWeight').value)||300,
+    value_per_carrao:parseFloat($('cfgCarraoPrice').value)||2.0
   }).eq('id',tenantId);
   btn.disabled=false;
   if(error){st.innerHTML=`<span style="color:var(--red)">Erro: ${error.message}</span>`;}
@@ -999,15 +1181,30 @@ function exportRankPDF(){
 function exportFinPDF(){
   const {jsPDF}=window.jspdf;const doc=new jsPDF();
   const s=$('finStart').value,e=$('finEnd').value;
-  pdfHeader(doc,'Folha de Pagamento',`${s} a ${e}`);
+  pdfHeader(doc,'Folha de Pagamento Consolidada',`${s} a ${e}`);
   doc.setFontSize(11);doc.setFont('helvetica','bold');
-  doc.text(`Total: ${$('finKpiTotal').textContent} | ${$('finKpiBoxes').textContent} caixas | ${$('finKpiKg').textContent}`,14,41);
-  const rows=_finData.map(d=>[d.date,d.employee_name,d.role,d.total_boxes+' cx',(d.total_kg||0).toFixed(1)+' kg',BRL(d._total_value||0)]);
-  doc.autoTable({startY:50,head:[['Data','Colaborador','Função','Caixas','KG','Total']],body:rows,headStyles:{fillColor:[16,185,129]},alternateRowStyles:{fillColor:[245,247,250]},theme:'grid',styles:{fontSize:10,cellPadding:5},foot:[['','TOTAL','',_finData.reduce((a,d)=>a+(d.total_boxes||0),0)+' cx',_finData.reduce((a,d)=>a+(d.total_kg||0),0).toFixed(1)+' kg',BRL(_finData.reduce((a,d)=>a+(d._total_value||0),0))]],footStyles:{fillColor:[15,23,42],textColor:255,fontStyle:'bold'}});
-  // Assinatura
-  const y=doc.lastAutoTable.finalY+22;
-  if(y<265){doc.setFontSize(9);doc.setTextColor(100,116,139);doc.text('____________________________',14,y);doc.text('Responsável / Assinatura',14,y+7);doc.text('Data: ___/___/______',14,y+14);}
-  doc.save(`prodtech-folha-${s}-${e}.pdf`);
+  doc.text(`Total do Período: ${$('finKpiTotal').textContent}`,14,41);
+  
+  // Agrupar por funcionário para o PDF (Sumarizado)
+  const empSum={};
+  _finData.forEach(d=>{
+    if(!empSum[d.employee_name])empSum[d.employee_name]={name:d.employee_name,role:d.role,boxes:0,kg:0,val:0};
+    empSum[d.employee_name].boxes+=d.total_boxes;
+    empSum[d.employee_name].kg+=d.total_kg;
+    empSum[d.employee_name].val+=d._total_value;
+  });
+  
+  const rows=Object.values(empSum).sort((a,b)=>b.val-a.val).map((d,i)=>[i+1,d.name,d.role,d.boxes+' cx',d.kg.toFixed(1)+' kg',BRL(d.val)]);
+  doc.autoTable({startY:50,head:[['#','Colaborador','Função','Total Caixas','Total KG','Valor a Pagar']],body:rows,headStyles:{fillColor:[16,185,129]},alternateRowStyles:{fillColor:[245,247,250]},theme:'grid',styles:{fontSize:10,cellPadding:5},foot:[['','TOTAL','',Object.values(empSum).reduce((a,x)=>a+x.boxes,0)+' cx',Object.values(empSum).reduce((a,x)=>a+x.kg,0).toFixed(1)+' kg',BRL(Object.values(empSum).reduce((a,x)=>a+x.val,0))]],footStyles:{fillColor:[15,23,42],textColor:255,fontStyle:'bold text-right'}});
+  
+  const y=doc.lastAutoTable.finalY+20;
+  if(y<270){
+    doc.setFontSize(9);doc.setTextColor(100,116,139);
+    doc.text('Declaro ter recebido a importância acima referente à minha produção no período citado.',14,y);
+    doc.text('____________________________',14,y+15);doc.text('Assinatura do Colaborador',14,y+20);
+    doc.text('Data: ___/___/______',140,y+20);
+  }
+  doc.save(`prodtech-payroll-${s}-${e}.pdf`);
 }
 
 async function exportProducaoPDF(dateParam){
