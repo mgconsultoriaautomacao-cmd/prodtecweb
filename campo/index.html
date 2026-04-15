@@ -272,8 +272,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
     <div class="tab-btn" id="qTabHistBtn" onclick="showQTab('hist')">📋 Histórico</div>
   </div>
 
-  <div style="padding:10px 16px 0; display:flex; gap:10px">
-    <button class="btn btn-sec btn-full" style="padding:10px; font-size:12px" onclick="openClosure()">Finalizar Sessão / Assinar</button>
+  <div style="padding:10px 16px 0">
+    <button class="btn btn-sec btn-full" style="padding:10px;font-size:12px" onclick="openClosure()">Finalizar Sessão / Assinar</button>
   </div>
 
   <!-- Tab: Nova Auditoria -->
@@ -322,13 +322,17 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       </div>
     </div>
 
-    <div class="section"><div class="section-title" id="qInspectorSection" style="display:none">Assinatura de Fechamento</div></div>
-    <div id="qSigContainer" style="display:none; padding:0 16px">
+    <div class="section"><div class="section-title">Assinatura do Inspetor</div></div>
+    <div style="padding:0 16px">
+      <div class="field-group">
+        <label class="field-label">Nome do Inspetor</label>
+        <input id="qInspectorName" placeholder="Nome de quem está auditando" autocomplete="name">
+      </div>
       <div class="sig-wrap">
         <canvas id="qSigCanvas" class="sig-canvas" width="800" height="240"></canvas>
         <button class="sig-clear" onclick="clearSig()">🗑 Apagar</button>
       </div>
-      <div class="sig-hint">Assine para validar os registros da sessão</div>
+      <div class="sig-hint">Assine acima com o dedo ou caneta</div>
     </div>
 
     <div style="padding:16px">
@@ -340,32 +344,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   <!-- Tab: Histórico -->
   <div class="tab-pane" id="qTabHist">
     <div id="qHistList"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
-  </div>
-</div>
-
-<!-- ══════════════ CLOSURE MODAL ══════════════ -->
-<div id="screenClosure" class="screen" style="z-index:100; background:rgba(3,7,18,0.95); backdrop-filter:blur(10px)">
-  <div class="header">
-    <div class="back-btn" onclick="showScreen('home')">‹</div>
-    <div class="header-title">✍️ Fechamento de Sessão</div>
-  </div>
-  <div style="padding:24px 20px">
-    <div class="card" style="margin-bottom:20px; border-color:var(--green)">
-      <div style="font-weight:800; font-size:18px; color:var(--green); margin-bottom:8px">Validação de Lançamentos</div>
-      <div style="font-size:13px; color:var(--muted2); line-height:1.5">
-        Ao assinar abaixo, você valida todos os registros feitos por <b>${window.currentInspector||'você'}</b> nesta sessão/dia.
-      </div>
-    </div>
-    
-    <div class="section-title">Sua Assinatura</div>
-    <div class="sig-wrap">
-      <canvas id="closureSigCanvas" class="sig-canvas" width="800" height="240"></canvas>
-      <button class="sig-clear" onclick="clearClosureSig()">🗑 Limpar</button>
-    </div>
-    <div class="sig-hint" style="margin-bottom:30px">Assinatura digital válida para auditoria</div>
-
-    <button class="btn btn-primary btn-full" onclick="saveClosure()">Confirmar e Finalizar Sessão</button>
-    <button class="btn btn-sec btn-full" style="margin-top:12px" onclick="showScreen('home')">Cancelar</button>
   </div>
 </div>
 
@@ -481,6 +459,28 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 
 </div>
 
+<!-- CLOSURE MODAL -->
+<div id="screenClosure" class="screen" style="z-index:200;background:rgba(3,7,18,0.97);backdrop-filter:blur(12px)">
+  <div class="header">
+    <div class="back-btn" onclick="showScreen('home')">‹</div>
+    <div class="header-title">✍️ Fechamento de Sessão</div>
+  </div>
+  <div style="padding:24px 20px">
+    <div class="card" style="margin-bottom:20px;border-color:var(--green)">
+      <div style="font-weight:800;font-size:18px;color:var(--green);margin-bottom:8px">Validação dos Lançamentos</div>
+      <div style="font-size:13px;color:var(--muted2);line-height:1.5">Assine para confirmar todos os registros da sua sessão.</div>
+    </div>
+    <div class="section-title">Sua Assinatura</div>
+    <div class="sig-wrap">
+      <canvas id="closureSigCanvas" class="sig-canvas" width="800" height="240"></canvas>
+      <button class="sig-clear" onclick="clearClosureSig()">🗑 Limpar</button>
+    </div>
+    <div class="sig-hint" style="margin-bottom:24px">Assinatura válida para auditoria</div>
+    <button class="btn btn-primary btn-full" onclick="saveClosure()">Confirmar e Finalizar</button>
+    <button class="btn btn-sec btn-full" style="margin-top:12px" onclick="showScreen('home')">Cancelar</button>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -521,14 +521,13 @@ function toast(msg, type='ok') {
 }
 
 function showScreen(name) {
-  const screens = { login:'screenLogin', home:'screenHome', quality:'screenQuality', carrao:'screenCarrao' };
+  const screens = { login:'screenLogin', home:'screenHome', quality:'screenQuality', carrao:'screenCarrao', closure:'screenClosure' };
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active','behind'));
   const active = $(screens[name]);
   if (!active) return;
   active.classList.add('active');
   if (name === 'quality') loadQHistory();
   if (name === 'carrao')  loadCHistory();
-  if (name === 'closure') initClosureSig();
 }
 
 function showQTab(tab) {
@@ -660,39 +659,20 @@ async function doLogin() {
 async function afterLogin(u) {
   user = u;
   const { data: tu } = await sb.from('tenant_users')
-    .select('tenant_id, role, tenants(*)')
+    .select('tenant_id, tenants(name)')
     .eq('user_id', u.id).single();
-    
-  if (!tu) { alert('Usuário não vinculado.'); await sb.auth.signOut(); return; }
-  
-  // Se for Admin acessando pelo mobile, ele pode escolher o módulo.
-  // Se for Packer/Stacker, ele não deveria estar aqui (teoricamente).
-  if(tu.role === 'ADMIN' || tu.role === 'COLHEDOR' || tu.role === 'QUALIDADE' || tu.role === 'FIELD' || tu.role === 'PACKER' || tu.role === 'STACKER' || tu.role === 'MANAGER') {
-    // OK - segue no app de campo
-  } else {
-    // Redireciona para o dashboard se for gestor/outro
-    location.href = '/';
-    return;
-  }
-
+  if (!tu) { alert('Usuário não vinculado a uma empresa.'); await sb.auth.signOut(); return; }
   tenantId   = tu.tenant_id;
   tenantName = tu.tenants?.name || 'Empresa';
-  tenantConfig = tu.tenants || {};
-  
+  window.currentInspector = u.email.split('@')[0];
   $('homeTenant').textContent = tenantName;
   $('loggedAs').textContent   = u.email;
-  
   await loadEmployees();
   await loadParcelas();
-  
-  // Nome do usuário como inspetor padrão
-  window.currentInspector = u.email.split('@')[0];
-
   initQualityForm();
   initCarraoForm();
   await updateSyncBadge();
   showScreen('home');
-
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(()=>{});
   }
@@ -713,16 +693,8 @@ async function loadEmployees() {
     .eq('active', 1)
     .order('name');
   employees = data || [];
-  // Inicializa listas
-  renderQEmpList(employees.filter(e => e.role === 'PACKER' || e.role === 'ADMIN'));
-  renderCEmpList(employees.filter(e => e.role === 'COLHEDOR' || e.role === 'FIELD'));
 }
 
-async function initCarraoForm() {
-  const price = tenantConfig.value_per_carrao || 2.0; // Padrão
-  cState.pricePerCarrao = price;
-  updateCalcPreview();
-}
 async function loadParcelas() {
   const { data } = await sb.from('parcels')
     .select('id, code')
@@ -740,7 +712,8 @@ async function loadParcelas() {
 // ──── MÓDULO QUALIDADE ────
 // ═══════════════════════════════════════════
 function initQualityForm() {
-  renderQEmpList(employees);
+  const qualityRoles = ['PACKER', 'ADMIN', 'MANAGER', 'STACKER'];
+  renderQEmpList(employees.filter(e => qualityRoles.includes(e.role)));
 }
 
 function renderQEmpList(list) {
@@ -760,8 +733,8 @@ function renderQEmpList(list) {
 
 function filterQEmp() {
   const q = $('qEmpSearch').value.toLowerCase();
-  const filtered = employees.filter(e => (e.role === 'PACKER' || e.role === 'ADMIN') && e.name.toLowerCase().includes(q));
-  renderQEmpList(filtered);
+  const qualityRoles = ['PACKER', 'ADMIN', 'MANAGER', 'STACKER'];
+  renderQEmpList(employees.filter(e => e.name.toLowerCase().includes(q) && qualityRoles.includes(e.role)));
 }
 
 function selectQEmp(id, name) {
@@ -828,51 +801,16 @@ function clearSig() {
   sigHasData = false;
 }
 
-// ── Closure Signature Logic ──
-function openClosure() {
-  showScreen('closure');
+function getSigData() {
+  if (!sigHasData) return null;
+  return sigCanvas.toDataURL('image/png', 0.7);
 }
 
-let cSigCtx, cSigCanvas, cSigHasData=false, cSigDrawing=false;
-function initClosureSig() {
-  cSigCanvas = $('closureSigCanvas');
-  cSigCtx    = cSigCanvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  const rect = cSigCanvas.getBoundingClientRect();
-  cSigCanvas.width  = rect.width  * dpr;
-  cSigCanvas.height = rect.height * dpr;
-  cSigCtx.scale(dpr, dpr);
-  cSigCtx.strokeStyle = '#10b981';
-  cSigCtx.lineWidth   = 3;
-  cSigCtx.lineCap='round'; cSigCtx.lineJoin='round';
-
-  const getPos = e => {
-    const r = cSigCanvas.getBoundingClientRect();
-    const src = e.touches ? e.touches[0] : e;
-    return { x: src.clientX - r.left, y: src.clientY - r.top };
-  };
-  const start = e => { e.preventDefault(); cSigDrawing=true; const p=getPos(e); cSigCtx.beginPath(); cSigCtx.moveTo(p.x, p.y); };
-  const move = e => { e.preventDefault(); if(!cSigDrawing)return; const p=getPos(e); cSigCtx.lineTo(p.x, p.y); cSigCtx.stroke(); cSigHasData=true; };
-  cSigCanvas.addEventListener('touchstart', start, {passive:false});
-  cSigCanvas.addEventListener('touchmove', move, {passive:false});
-  cSigCanvas.addEventListener('touchend', () => cSigDrawing=false);
-  cSigCanvas.addEventListener('mousedown', start);
-  cSigCanvas.addEventListener('mousemove', move);
-  window.addEventListener('mouseup', () => cSigDrawing=false);
-}
-function clearClosureSig() { cSigCtx.clearRect(0,0,cSigCanvas.width,cSigCanvas.height); cSigHasData=false; }
-
-async function saveClosure() {
-  if(!cSigHasData) return toast('Assine para fechar a sessão','err');
-  toast('✓ Sessão fechada com sucesso!','ok');
-  showScreen('home');
-}
-
-// ── Submit Quality ──
+// -- Submit Quality --
 async function submitQuality() {
   if (!qState.empId)  { toast('Selecione um funcionário', 'err'); return; }
   if (!qState.issue)  { toast('Selecione o tipo de defeito', 'err'); return; }
-  
+  // Inspetor vem automaticamente do email de login
   const inspector = window.currentInspector || 'Sistema';
 
   const btn = $('qSubmitBtn');
@@ -887,7 +825,7 @@ async function submitQuality() {
     penalty_boxes  : qPenalty,
     reason         : $('qReason').value.trim() || null,
     inspector_name : inspector,
-    signature_base64: getSigData(),
+    signature_base64: null,
     synced         : true,
   };
 
@@ -918,11 +856,46 @@ function resetQForm() {
   qState.empId = null; qState.empName = ''; qState.issue = null;
   qPenalty = 1; $('qPenaltyVal').textContent = 1;
   $('qReason').value = '';
-  // clearSig(); // Não limpa assinatura pois será no fechamento
   document.querySelectorAll('#qEmpList .emp-item').forEach(el => {
     el.classList.remove('on'); el.querySelector('.emp-check').textContent = '';
   });
   document.querySelectorAll('.issue-opt').forEach(el => el.classList.remove('on'));
+}
+
+// -- Closure Screen --
+function openClosure() {
+  showScreen('closure');
+  setTimeout(initClosureSig, 100);
+}
+
+let cSigCtx, cSigCanvas, cSigHasData = false, cSigDrawing = false;
+function initClosureSig() {
+  cSigCanvas = $('closureSigCanvas');
+  if (!cSigCanvas) return;
+  cSigCtx = cSigCanvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = cSigCanvas.getBoundingClientRect();
+  cSigCanvas.width  = rect.width * dpr;
+  cSigCanvas.height = rect.height * dpr;
+  cSigCtx.scale(dpr, dpr);
+  cSigCtx.strokeStyle = '#10b981';
+  cSigCtx.lineWidth = 3;
+  cSigCtx.lineCap = 'round'; cSigCtx.lineJoin = 'round';
+  const getPos = e => { const r = cSigCanvas.getBoundingClientRect(); const s = e.touches ? e.touches[0] : e; return {x: s.clientX-r.left, y: s.clientY-r.top}; };
+  const start = e => { e.preventDefault(); cSigDrawing=true; const p=getPos(e); cSigCtx.beginPath(); cSigCtx.moveTo(p.x,p.y); };
+  const move  = e => { e.preventDefault(); if(!cSigDrawing)return; const p=getPos(e); cSigCtx.lineTo(p.x,p.y); cSigCtx.stroke(); cSigHasData=true; };
+  cSigCanvas.addEventListener('touchstart', start, {passive:false});
+  cSigCanvas.addEventListener('touchmove',  move,  {passive:false});
+  cSigCanvas.addEventListener('touchend',   () => cSigDrawing=false);
+  cSigCanvas.addEventListener('mousedown',  start);
+  cSigCanvas.addEventListener('mousemove',  move);
+  window.addEventListener('mouseup', () => cSigDrawing=false);
+}
+function clearClosureSig() { if(cSigCtx) { cSigCtx.clearRect(0,0,cSigCanvas.width,cSigCanvas.height); cSigHasData=false; } }
+async function saveClosure() {
+  if (!cSigHasData) { toast('Assine para confirmar', 'err'); return; }
+  toast('✓ Sessão finalizada com sucesso!', 'ok');
+  setTimeout(() => showScreen('home'), 1200);
 }
 
 // ── Quality History ──
@@ -952,7 +925,7 @@ async function loadQHistory() {
 }
 
 function issueLabel(id) {
-  const map = {podridao:'🦠 Podridão',dano_mecanico:'💥 Dano Mecânico',tamanho:'📏 Tamanho/Padrão',maturacao:'🌿 Maturação',residuo:'🧪 Resíduo/Mancha',outro:'❓ Outro'};
+  const map = {podridao:'🦠 Podridão',dano_mecanico:'💥 Dano Mecânico',tamanho:'📏 Tamanho',maturacao:'🌿 Maturação',residuo:'🧪 Resíduo',outro:'❓ Outro'};
   return map[id] || id || '—';
 }
 
@@ -981,8 +954,7 @@ function renderCEmpList(list) {
 
 function filterCEmp() {
   const q = $('cEmpSearch').value.toLowerCase();
-  const filtered = employees.filter(e => (e.role === 'COLHEDOR' || e.role === 'FIELD') && e.name.toLowerCase().includes(q));
-  renderCEmpList(filtered);
+  renderCEmpList(employees.filter(e => e.name.toLowerCase().includes(q)));
 }
 
 function toggleCWorker(id, name) {
@@ -1157,6 +1129,10 @@ async function loadCHistory() {
 // ═══════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
   await initApp();
+  initSignaturePad();
+  window.addEventListener('resize', () => {
+    if (sigCanvas) initSignaturePad();
+  });
   updateCalcPreview();
 });
 </script>
