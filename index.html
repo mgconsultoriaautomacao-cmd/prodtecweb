@@ -1552,12 +1552,36 @@ function exportAuditPDF(){
 }
 
 async function exportProducaoPDF(dateParam){
-
-// ══════════════════════════════════════
-// BARCODE_MAPPINGS table helper
-// ══════════════════════════════════════
-// Note: precisa existir a tabela barcode_mappings com: id, barcode, employee_id, weight_id, tenant_id
-// e parcel_links com: id, parcel_id, fruit_id, variety_id, tenant_id
+  // Exporta o relatório de produção diária em PDF
+  const date = dateParam || $('finDate')?.value || today();
+  toast('Gerando PDF de produção...', 'ok');
+  const {data} = await sb.from('production_scans')
+    .select('*, employees(name)')
+    .eq('tenant_id', tenantId)
+    .gte('ts', toISO(date))
+    .lte('ts', toISO(date, '23:59:59'))
+    .order('ts');
+  if(!data?.length) { alert('Nenhum dado de produção para esta data.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFontSize(16); doc.setTextColor(15,23,42);
+  doc.text(`Relatório de Produção — ${date}`, 14, 20);
+  doc.setFontSize(10); doc.setTextColor(100,116,139);
+  doc.text(`Empresa: ${tenantName} | Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
+  doc.autoTable({
+    startY: 35,
+    head:[['Hora','Funcionário','Caixa/Peso','Kg','Parcela']],
+    body: data.map(r => [
+      new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+      r.employees?.name || r.employee_name || '—',
+      r.weight_name || '—',
+      (r.weight_kg||0).toFixed(1),
+      r.parcel_code || '—'
+    ]),
+    theme:'striped', styles:{fontSize:9}, headStyles:{fillColor:[15,23,42]}
+  });
+  doc.save(`producao-${date}.pdf`);
+}
 
 initApp();
 </script>
