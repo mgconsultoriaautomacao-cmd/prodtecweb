@@ -289,9 +289,10 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
           <button class="sec" onclick="$('bulkXmlInput').click()" style="padding:6px 12px; font-size:12px">📂 Importar XML (NF-e)</button>
         </div>
       </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr auto; gap:10px; align-items:end">
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1.5fr 1fr 1fr 1fr auto; gap:10px; align-items:end">
         <div><label class="flabel">Data</label><input type="date" id="bulkDate"/></div>
         <div><label class="flabel">Parcela</label><select id="bulkParcel"></select></div>
+        <div><label class="flabel">Variedade</label><select id="bulkVariety"></select></div>
         <div><label class="flabel">Cliente / Destino</label><input id="bulkCustomer" placeholder="Ex: CEASA / Descarte"/></div>
         <div><label class="flabel">Nota Fiscal</label><input id="bulkInvoice" placeholder="000..."/></div>
         <div><label class="flabel">Peso (Kg)</label><input type="number" id="bulkWeight" placeholder="0.00"/></div>
@@ -1010,25 +1011,35 @@ async function loadBulk() {
     </tr>
   `).join('') || '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">Sem lançamentos.</td></tr>';
   
-  // Popula select de parcelas
+  // Popula select de parcelas e variedades
   const {data:parcels} = await sb.from('parcels').select('id,code').eq('tenant_id',tenantId).eq('active',true);
+  const {data:varieties} = await sb.from('varieties').select('id,name').eq('tenant_id',tenantId).eq('active',true);
+
   ['bulkParcel', 'massParcel'].forEach(id => {
     const el = $(id); if(!el) return;
     const current = el.value;
-    el.innerHTML = (id === 'massParcel' ? '<option value="">Todas</option>' : '') + (parcels||[]).map(p=>`<option value="${p.id}">${p.code}</option>`).join('');
+    el.innerHTML = (id === 'massParcel' ? '<option value="">Todas</option>' : '<option value="">— Selecionar —</option>') + (parcels||[]).map(p=>`<option value="${p.id}">${p.code}</option>`).join('');
     el.value = current;
   });
+
+  const bVar = $('bulkVariety');
+  if(bVar) {
+    const current = bVar.value;
+    bVar.innerHTML = '<option value="">— Selecionar —</option>' + (varieties||[]).map(v=>`<option value="${v.id}">${v.name}</option>`).join('');
+    bVar.value = current;
+  }
 }
 
 async function saveBulk() {
-  const date=$('bulkDate').value, pId=$('bulkParcel').value, w=$('bulkWeight').value, v=$('bulkValue').value;
+  const date=$('bulkDate').value, pId=$('bulkParcel').value, vId=$('bulkVariety').value, w=$('bulkWeight').value, v=$('bulkValue').value;
   const cust=$('bulkCustomer').value.trim(), inv=$('bulkInvoice').value.trim(), waste=$('bulkIsWaste').checked;
   
   if(!date || !w) return alert('Preencha pelo menos Data e Peso.');
   const {error} = await sb.from('bulk_sales').insert([{
     tenant_id: tenantId,
     date,
-    parcel_id: pId || null,
+    parcel_id: pId ? parseInt(pId) : null,
+    variety_id: vId ? parseInt(vId) : null,
     weight_kg: parseFloat(w),
     total_value: waste ? 0 : (parseFloat(v) || 0),
     customer_name: cust || null,
