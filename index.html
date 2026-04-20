@@ -908,9 +908,11 @@ async function refreshFin(){
   mkChart('chartFinHourly',{type:'line',data:{labels:dates.map(d=>d[0]),datasets:[{label:'Custo',data:dates.map(d=>d[1]),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.1)',borderWidth:2,fill:true,tension:.3,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,ticks:{color:'#64748b',callback:v=>BRL(v)},grid:{color:'rgba(255,255,255,.04)'}},x:{grid:{display:false},ticks:{color:'#64748b'}}},plugins:{legend:{display:false},tooltip:{...TOPTS,callbacks:{label:c=>BRL(c.raw)}}}}});
 }
 
+
 // ══════════════════════════════════════
 // BALANÇO DE MASSA
 // ══════════════════════════════════════
+async function refreshMass() {
   const s=$('massStart').value, e=$('massEnd').value, pFilter=$('massParcel').value;
   
   // 1. Colheita (Estimativa por Carrões)
