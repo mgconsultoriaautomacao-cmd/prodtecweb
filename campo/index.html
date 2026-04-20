@@ -87,6 +87,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 .module-card{background:var(--card);border-radius:20px;padding:24px 20px;border:1px solid var(--border);cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
 .module-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--grad,linear-gradient(90deg,var(--green),#059669))}
 .module-card.orange::before{background:linear-gradient(90deg,var(--orange),#ea580c)}
+.module-card.purple::before{background:linear-gradient(90deg,#8b5cf6,#7c3aed)}
 .module-card:active{transform:scale(.98);border-color:var(--border2)}
 .module-icon{font-size:44px;margin-bottom:14px;display:block}
 .module-name{font-size:19px;font-weight:800;margin-bottom:4px}
@@ -247,6 +248,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       <div class="module-desc">Lance carrões por turno e calcule o rateio entre colhedores</div>
       <div class="module-arrow">›</div>
     </div>
+    <div class="module-card purple" onclick="showScreen('regField')">
+      <span class="module-icon">📍</span>
+      <div class="module-name">Cadastrar Campo</div>
+      <div class="module-desc">Cadastre novas parcelas/campos de produção diretamente</div>
+      <div class="module-arrow">›</div>
+    </div>
   </div>
 
   <div style="padding:0 16px">
@@ -289,13 +296,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 
     <div class="section"><div class="section-title">Tipo de Defeito</div></div>
     <div style="padding:0 16px">
-      <div class="issue-grid" id="issueGrid">
-        <div class="issue-opt" data-id="podridao" onclick="selectIssue('podridao')"><span class="icon">🦠</span><div class="label">Podridão</div></div>
-        <div class="issue-opt" data-id="dano_mecanico" onclick="selectIssue('dano_mecanico')"><span class="icon">💥</span><div class="label">Dano Mecânico</div></div>
-        <div class="issue-opt" data-id="tamanho" onclick="selectIssue('tamanho')"><span class="icon">📏</span><div class="label">Tamanho/Padrão</div></div>
-        <div class="issue-opt" data-id="maturacao" onclick="selectIssue('maturacao')"><span class="icon">🌿</span><div class="label">Maturação</div></div>
-        <div class="issue-opt" data-id="residuo" onclick="selectIssue('residuo')"><span class="icon">🧪</span><div class="label">Resíduo/Mancha</div></div>
-        <div class="issue-opt" data-id="outro" onclick="selectIssue('outro')"><span class="icon">❓</span><div class="label">Outro</div></div>
+      <div class="issue-grid" id="qIssueList">
+        <div class="loading"><div class="spinner"></div>Carregando defeitos...</div>
       </div>
     </div>
 
@@ -459,6 +461,31 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 
 </div>
 
+<!-- ══════════════ CADASTRAR CAMPO (NOVA PARCELA) ══════════════ -->
+<div id="screenRegField" class="screen">
+  <div class="header">
+    <div class="back-btn" onclick="showScreen('home')">‹</div>
+    <div class="header-title">📍 Cadastrar Campo</div>
+  </div>
+  <div style="padding:20px 16px">
+    <div class="card">
+      <div class="section-title">Identificação do Campo</div>
+      <div class="field-group">
+        <label class="field-label">Código/Nome da Parcela</label>
+        <input id="rfCode" placeholder="Ex: G01, Setor Sul, etc.">
+      </div>
+      <button class="btn btn-primary btn-full" onclick="submitNewField()">✅ Salvar Campo</button>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">Campos Cadastrados</div>
+      <div id="rfList" class="emp-list" style="margin-top:10px">
+        <div class="loading"><div class="spinner"></div>Carregando...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- CLOSURE MODAL -->
 <div id="screenClosure" class="screen" style="z-index:200;background:rgba(3,7,18,0.97);backdrop-filter:blur(12px)">
   <div class="header">
@@ -488,8 +515,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 // ═══════════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════════
-const SUPA_URL = 'https://yiigaohjvvieeooxsban.supabase.co';
-const SUPA_KEY = 'sb_publishable_t_6e3ZvN3VkT31VS8thpcg_6XclrsYR';
+const SUPA_URL = 'https://gknpviqughywjuuqnfmf.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrbnB2aXF1Z2h5d2p1dXFuZm1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NDM5MzAsImV4cCI6MjA4NzUxOTkzMH0.Geo14t0naNagF5eUEExHEaUTIgDgN5GETG6z7TtnVt4';
 const PRICES   = { MELANCIA: 3.00, MELAO: 4.00 };
 const BRL = v => 'R$ ' + Number(v||0).toFixed(2).replace('.',',');
 
@@ -528,6 +555,7 @@ function showScreen(name) {
   active.classList.add('active');
   if (name === 'quality') loadQHistory();
   if (name === 'carrao')  loadCHistory();
+  if (name === 'regField') loadRfFields();
 }
 
 function showQTab(tab) {
@@ -703,17 +731,81 @@ async function loadParcelas() {
     .order('code');
   parcelas = data || [];
   const sel = $('cParcela');
+  sel.innerHTML = '<option value="">— Selecionar Parcela —</option>';
   parcelas.forEach(p => {
     sel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`);
   });
 }
 
 // ═══════════════════════════════════════════
+// ──── MÓDULO REGISTRO DE CAMPO ────
+// ═══════════════════════════════════════════
+async function loadRfFields() {
+  const el = $('rfList');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div>Carregando...</div>';
+  const { data, error } = await sb.from('parcels')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .order('code');
+  if (error || !data?.length) { el.innerHTML = '<div class="empty">Nenhum campo cadastrado</div>'; return; }
+  el.innerHTML = data.map(p => `
+    <div class="emp-item" style="cursor:default">
+      <div class="emp-avatar" style="background:var(--blue-dim);color:var(--blue)">📍</div>
+      <div class="emp-name">${p.code}</div>
+      <div class="pill ${p.active?'pill-green':'pill-gray'}">${p.active?'Ativo':'Inativo'}</div>
+    </div>
+  `).join('');
+}
+
+async function submitNewField() {
+  const code = $('rfCode').value.trim();
+  if (!code) { toast('Informe o nome/código do campo', 'err'); return; }
+  
+  const loader = $('rfList');
+  const btn = document.querySelector('#screenRegField .btn-primary');
+  btn.disabled = true; btn.textContent = '⏳ Salvando...';
+
+  try {
+    const { error } = await sb.from('parcels').insert({
+      tenant_id: tenantId,
+      code: code,
+      active: true
+    });
+    if (error) throw error;
+    toast('✓ Campo cadastrado com sucesso!', 'ok');
+    $('rfCode').value = '';
+    await loadRfFields();
+    await loadParcelas(); // Update dropdown in Carrão module
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = '✅ Salvar Campo';
+  }
+}
+
+// ═══════════════════════════════════════════
 // ──── MÓDULO QUALIDADE ────
 // ═══════════════════════════════════════════
 function initQualityForm() {
-  const qualityRoles = ['PACKER', 'ADMIN', 'MANAGER', 'STACKER'];
+  const qualityRoles = ['PACKER', 'ADMIN', 'MANAGER', 'STACKER', 'COLHEDOR'];
   renderQEmpList(employees.filter(e => qualityRoles.includes(e.role)));
+  loadQualityIssues();
+}
+
+async function loadQualityIssues() {
+  const el = $('qIssueList');
+  if(!el) return;
+  const { data } = await sb.from('quality_issues').select('*').eq('tenant_id', tenantId).eq('active', true).order('name');
+  if(!data || !data.length) {
+    el.innerHTML = '<div style="grid-column:1/-1;color:var(--muted);font-size:12px;text-align:center;padding:20px">Nenhum defeito cadastrado no sistema.</div>';
+    return;
+  }
+  el.innerHTML = data.map(i => `
+    <div class="issue-opt" data-id="${i.name}" onclick="selectIssue('${i.name}')">
+      <span class="icon">${i.icon||'❓'}</span>
+      <div class="label">${i.name}</div>
+    </div>
+  `).join('');
 }
 
 function renderQEmpList(list) {
@@ -733,7 +825,7 @@ function renderQEmpList(list) {
 
 function filterQEmp() {
   const q = $('qEmpSearch').value.toLowerCase();
-  const qualityRoles = ['PACKER', 'ADMIN', 'MANAGER', 'STACKER'];
+  const qualityRoles = ['PACKER', 'ADMIN', 'MANAGER', 'STACKER', 'COLHEDOR'];
   renderQEmpList(employees.filter(e => e.name.toLowerCase().includes(q) && qualityRoles.includes(e.role)));
 }
 
@@ -934,7 +1026,8 @@ function issueLabel(id) {
 // ═══════════════════════════════════════════
 function initCarraoForm() {
   $('cDate').value = today();
-  renderCEmpList(employees);
+  const harvestRoles = ['COLHEDOR', 'ADMIN', 'MANAGER', 'STACKER'];
+  renderCEmpList(employees.filter(e => harvestRoles.includes(e.role)));
 }
 
 function renderCEmpList(list) {
