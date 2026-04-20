@@ -366,7 +366,15 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 
     <div class="section"><div class="section-title">Data</div></div>
     <div style="padding:0 16px">
-      <input type="date" id="cDate">
+      <input type="date" id="cDate" onchange="updateJulianLot()">
+    </div>
+    
+    <div style="background:rgba(255,165,0,0.1); border:1px solid rgba(255,165,0,0.3); border-radius:12px; padding:12px; margin:16px 16px 0; display:flex; justify-content:space-between; align-items:center">
+      <div>
+        <div style="font-size:10px; color:var(--orange); font-weight:700; text-transform:uppercase; letter-spacing:0.05em">Lote Juliano (Rastreabilidade)</div>
+        <div id="julianLotDisplay" style="font-size:20px; font-weight:900; color:#fff; font-family:monospace">---</div>
+      </div>
+      <div style="font-size:24px">🗓️</div>
     </div>
 
     <div class="section"><div class="section-title">Turno</div></div>
@@ -1024,8 +1032,21 @@ function issueLabel(id) {
 // ═══════════════════════════════════════════
 function initCarraoForm() {
   $('cDate').value = today();
+  updateJulianLot();
   const harvestRoles = ['COLHEDOR', 'ADMIN', 'MANAGER', 'STACKER'];
   renderCEmpList(employees.filter(e => harvestRoles.includes(e.role)));
+}
+
+function updateJulianLot() {
+  const dStr = $('cDate').value;
+  if (!dStr) return;
+  const d = new Date(dStr + 'T12:00:00');
+  const start = new Date(d.getFullYear(), 0, 0);
+  const diff = d - start;
+  const day = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const lot = day.toString().padStart(3, '0') + d.getFullYear().toString().slice(-2);
+  $('julianLotDisplay').textContent = lot;
+  cState.julianLot = lot;
 }
 
 function renderCEmpList(list) {
@@ -1134,6 +1155,7 @@ async function submitCarrao() {
     value_per_employee: parseFloat(perEmp.toFixed(2)),
     employee_count    : cState.workers.size,
     waste_kg          : parseFloat($('cWasteKg').value) || 0,
+    julian_lot        : cState.julianLot,
     registered_by     : regBy,
     synced            : true,
   };

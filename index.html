@@ -282,8 +282,14 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
   <div id="tab-bulk" class="tab">
     <h1 class="ptitle">📦 Vendas a Granel (Fruta Solta)</h1>
     <div class="card">
-      <div class="title">➕ Lançar Venda a Granel / Refugo</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
+        <div class="title" style="margin-bottom:0">➕ Lançar Venda a Granel / Refugo</div>
+        <div style="display:flex; gap:8px">
+          <input type="file" id="bulkXmlInput" accept=".xml" style="display:none" onchange="handleXmlImport(event)">
+          <button class="sec" onclick="$('bulkXmlInput').click()" style="padding:6px 12px; font-size:12px">📂 Importar XML (NF-e)</button>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr auto; gap:10px; align-items:end">
         <div><label class="flabel">Data</label><input type="date" id="bulkDate"/></div>
         <div><label class="flabel">Parcela</label><select id="bulkParcel"></select></div>
         <div><label class="flabel">Cliente / Destino</label><input id="bulkCustomer" placeholder="Ex: CEASA / Descarte"/></div>
@@ -958,7 +964,8 @@ async function refreshFin(){
   // 4. Build Cardex Ledger
   const events = [];
   (harvest||[]).forEach(h => {
-    events.push({ ts: h.date + 'T06:00:00', type: 'COLHEITA', parcel: '', desc: `${h.qty_carrocoes} carrões`, in: h.qty_carrocoes * weightPerCarrao, out: 0 });
+    const lot = h.julian_lot ? `<br><small style="color:var(--orange)">Lote: ${h.julian_lot}</small>` : '';
+    events.push({ ts: h.date + 'T06:00:00', type: 'COLHEITA', parcel: '', desc: `${h.qty_carrocoes} carrões ${lot}`, in: h.qty_carrocoes * weightPerCarrao, out: 0 });
     if(h.waste_kg > 0) events.push({ ts: h.date + 'T06:01:00', type: 'WASTE (CAMPO)', parcel: '', desc: `Perda em campo`, in: 0, out: h.waste_kg });
   });
   (packed||[]).forEach(p => events.push({ ts: p.ts, type: 'PACKING', parcel: p.parcel_code || '—', desc: p.weight_name || 'Caixa', in: 0, out: p.weight_kg || 0 }));
@@ -1040,6 +1047,46 @@ async function delBulk(id) {
   if(!confirm('Excluir lançamento?')) return;
   await sb.from('bulk_sales').delete().eq('id',id);
   loadBulk();
+}
+
+function handleXmlImport(e) {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    try {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(ev.target.result, "text/xml");
+      
+      // Basic NF-e structure
+      const nNF = xmlDoc.getElementsByTagName("nNF")[0]?.textContent;
+      const xNome = xmlDoc.getElementsByTagName("xNome")[0]?.textContent;
+      const dEmi = xmlDoc.getElementsByTagName("dEmi")[0]?.textContent || xmlDoc.getElementsByTagName("dhEmi")[0]?.textContent?.split('T')[0];
+      
+      let totalKg = 0, totalVal = 0;
+      const itens = xmlDoc.getElementsByTagName("det");
+      for(let i=0; i<itens.length; i++) {
+        const prod = itens[i].getElementsByTagName("prod")[0];
+        const qCom = parseFloat(prod.getElementsByTagName("qCom")[0]?.textContent || 0);
+        const vProd = parseFloat(prod.getElementsByTagName("vProd")[0]?.textContent || 0);
+        totalKg += qCom;
+        totalVal += vProd;
+      }
+      
+      if(dEmi) $('bulkDate').value = dEmi;
+      if(nNF) $('bulkInvoice').value = nNF;
+      if(xNome) $('bulkCustomer').value = xNome;
+      if(totalKg) $('bulkWeight').value = totalKg.toFixed(2);
+      if(totalVal) $('bulkValue').value = totalVal.toFixed(2);
+      
+      toast('✓ XML importado com sucesso!', 'ok');
+    } catch(err) {
+      console.error(err);
+      alert('Erro ao processar XML: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = ''; // Reset input
 }
 
 // ══════════════════════════════════════
