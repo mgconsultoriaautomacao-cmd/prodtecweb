@@ -540,8 +540,10 @@ async function doLogin(){
 }
 
 async function afterLogin(user){
-  const {data:tu} = await sb.from('tenant_users').select('tenant_id,role,whatsapp,tenants(*)').eq('user_id',user.id).single();
-  if(!tu){alert('Usuário não vinculado a empresa.');await sb.auth.signOut();return;}
+  const {data:tu, error:e1} = await sb.from('tenant_users').select('tenant_id,role,whatsapp').eq('user_id',user.id).single();
+  if(!tu || e1){alert('Usuário não vinculado a empresa.');await sb.auth.signOut();return;}
+  
+  const {data:tenant} = await sb.from('tenants').select('*').eq('id',tu.tenant_id).single();
   
   // Redirecionamento por Role
   if(tu.role === 'COLHEDOR' || tu.role === 'FIELD') {
@@ -550,8 +552,8 @@ async function afterLogin(user){
   }
 
   tenantId = tu.tenant_id;
-  tenantName = tu.tenants?.name || 'Empresa';
-  tenantConfig = tu.tenants || {};
+  tenantName = tenant?.name || 'Empresa';
+  tenantConfig = tenant || {};
   $('tenantBadge').textContent = tenantName;
 
   // Verificação de Admin Global (Manoel ou quem ele cadastrar)
