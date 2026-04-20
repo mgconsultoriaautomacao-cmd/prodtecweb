@@ -448,11 +448,17 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
           <span class="calc-val calc-per" id="calcPerEmp">— selecione funcionários</span>
         </div>
       </div>
-    </div>
-
-    <div class="section"><div class="section-title">Registrado por</div></div>
+    <div class="section"><div class="section-title">Assinatura / Ordem de Colheita</div></div>
     <div style="padding:0 16px">
-      <input id="cRegisteredBy" placeholder="Nome do responsável pelo registro">
+      <div class="field-group">
+        <label class="field-label">Registrado por</label>
+        <input id="cRegisteredBy" placeholder="Nome do representante de campo">
+      </div>
+      <div class="sig-wrap">
+        <canvas id="cSigCanvas" class="sig-canvas" width="800" height="240"></canvas>
+        <button class="sig-clear" onclick="clearCSig()">🗑 Apagar</button>
+      </div>
+      <div class="sig-hint">Assine para validar a Ordem de Colheita</div>
     </div>
 
     <div style="padding:16px">
@@ -1049,6 +1055,32 @@ function updateJulianLot() {
   cState.julianLot = lot;
 }
 
+// ── SIGNATURE HELPERS ──
+let cSigPad;
+function initCSignaturePad() {
+  const canvas = $('cSigCanvas');
+  const ctx = canvas.getContext('2d');
+  let drawing = false;
+  const getPos = e => {
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: cx - rect.left, y: cy - rect.top };
+  };
+  const start = e => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); };
+  const move = e => { if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); e.preventDefault(); };
+  const stop = () => { drawing = false; };
+  canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', stop);
+  canvas.addEventListener('touchstart', start); canvas.addEventListener('touchmove', move); window.addEventListener('touchend', stop);
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  cSigPad = { canvas, ctx, clear: () => ctx.clearRect(0, 0, canvas.width, canvas.height), isEmpty: () => {
+    const b = document.createElement('canvas'); b.width = canvas.width; b.height = canvas.height;
+    return canvas.toDataURL() === b.toDataURL();
+  }};
+}
+function clearCSig() { cSigPad.clear(); }
+function getCSig() { return cSigPad.isEmpty() ? null : cSigPad.canvas.toDataURL(); }
+
 function renderCEmpList(list) {
   const el = $('cEmpList');
   if (!list.length) { el.innerHTML = '<div class="empty">Nenhum funcionário encontrado</div>'; return; }
@@ -1156,6 +1188,7 @@ async function submitCarrao() {
     employee_count    : cState.workers.size,
     waste_kg          : parseFloat($('cWasteKg').value) || 0,
     julian_lot        : cState.julianLot,
+    digital_signature_base64: getCSig(),
     registered_by     : regBy,
     synced            : true,
   };
@@ -1196,6 +1229,7 @@ async function pushCarrao({ session, workers }) {
 function resetCForm() {
   cQty = 1; $('cQtyVal').textContent = 1;
   $('cWasteKg').value = '';
+  if(cSigPad) cSigPad.clear();
   cState.workers.clear();
   $('cRegisteredBy').value = '';
   $('cEmpSearch').value = '';
@@ -1222,18 +1256,20 @@ async function loadCHistory() {
         <div class="hist-top">
           <div>
             <div class="hist-name">${fruitIcon} ${s.qty_carrocoes} carrão(ões) — ${shiftLabel}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.date}</div>
+            <div style="font-size:11px;color:var(--orange);font-weight:700;margin-top:2px">LOTE: ${s.julian_lot || '—'}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">${s.date}</div>
           </div>
           <div class="hist-time" style="text-align:right">
             <div style="font-size:17px;font-weight:900;color:var(--green)">${BRL(s.total_value)}</div>
-            <div style="font-size:11px;color:var(--muted)">${BRL(s.value_per_employee)}/pessoa</div>
+            <div style="font-size:11px;color:var(--muted)">${BRL(s.value_per_employee)}/p</div>
           </div>
         </div>
         <div class="hist-meta" style="margin-top:8px">
           <span class="pill pill-orange">${s.employee_count} func.</span>
           <span class="pill pill-gray" style="font-size:10px">${emps || '—'}</span>
+          ${s.digital_signature_base64 ? '<span class="pill pill-green">✍️ ASSINADO</span>' : ''}
         </div>
-        ${s.registered_by ? `<div style="font-size:11px;color:var(--muted);margin-top:6px">Registrado por: ${s.registered_by}</div>` : ''}
+        ${s.registered_by ? `<div style="font-size:11px;color:var(--muted);margin-top:6px">Resp: ${s.registered_by}</div>` : ''}
       </div>
     `;
   }).join('');
@@ -1245,6 +1281,7 @@ async function loadCHistory() {
 document.addEventListener('DOMContentLoaded', async () => {
   await initApp();
   initSignaturePad();
+  initCSignaturePad();
   window.addEventListener('resize', () => {
     if (sigCanvas) initSignaturePad();
   });
