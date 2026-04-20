@@ -402,14 +402,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       </select>
     </div>
 
-    <div class="section"><div class="section-title">Quantidade de Carrões</div></div>
-    <div style="padding:0 16px">
-      <div class="counter-row">
-        <button class="counter-btn" onclick="cQtyChange(-1)">−</button>
-        <div class="counter-val" id="cQtyVal">1</div>
-        <button class="counter-btn" onclick="cQtyChange(1)">+</button>
-      </div>
       <div class="counter-label">carrões completos neste registro</div>
+    </div>
+
+    <div class="section"><div class="section-title">Refugo de Campo Estimado (Kg)</div></div>
+    <div style="padding:0 16px">
+      <input type="number" id="cWasteKg" placeholder="Peso estimado do refugo no campo" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border); background:rgba(255,255,255,0.05); color:#fff">
     </div>
 
     <div class="section">
@@ -1135,6 +1133,7 @@ async function submitCarrao() {
     total_value       : parseFloat(total.toFixed(2)),
     value_per_employee: parseFloat(perEmp.toFixed(2)),
     employee_count    : cState.workers.size,
+    waste_kg          : parseFloat($('cWasteKg').value) || 0,
     registered_by     : regBy,
     synced            : true,
   };
@@ -1174,6 +1173,7 @@ async function pushCarrao({ session, workers }) {
 
 function resetCForm() {
   cQty = 1; $('cQtyVal').textContent = 1;
+  $('cWasteKg').value = '';
   cState.workers.clear();
   $('cRegisteredBy').value = '';
   $('cEmpSearch').value = '';
