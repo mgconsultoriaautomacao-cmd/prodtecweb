@@ -194,7 +194,9 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
     <div class="fbar">
       <div class="f"><label class="flabel">Início</label><input type="date" id="massStart"/></div>
       <div class="f"><label class="flabel">Fim</label><input type="date" id="massEnd"/></div>
+      <div class="f"><label class="flabel">Filtrar Parcela</label><select id="massParcel"><option value="">Todas</option></select></div>
       <button onclick="refreshMass()">📊 Calcular Balanço</button>
+      <button class="sec" onclick="exportAuditPDF()">📜 Relatório Auditoria</button>
     </div>
     <div class="kgrid">
       <div class="kcard yellow"><div class="klabel">Colheita Estimada</div><div id="kpiMassHarvest" class="kval yellow">0 kg</div><div class="ksub">Baseado em carrões</div></div>
@@ -203,6 +205,13 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
       <div class="kcard"><div class="klabel">Eficiência / Perda</div><div id="kpiMassEfficiency" class="kval">0%</div><div class="ksub" id="kpiMassLoss">Perda: 0 kg</div></div>
     </div>
     <div class="card"><div class="title">📈 Comparativo de Fluxo (Tons)</div><div class="ch"><canvas id="chartMassBalance"></canvas></div></div>
+    <div class="card">
+      <div class="title">📋 Cardex de Rastreabilidade (Entradas e Saídas / Movimentação)</div>
+      <table id="massTable">
+        <thead><tr><th>Data/Hora</th><th>Tipo</th><th>Parcela</th><th>Descrição/Destino</th><th>Entrada (kg)</th><th>Saída (kg)</th><th>Saldo</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- ═══ RANKING ═══ -->
@@ -273,18 +282,24 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
   <div id="tab-bulk" class="tab">
     <h1 class="ptitle">📦 Vendas a Granel (Fruta Solta)</h1>
     <div class="card">
-      <div class="title">➕ Lançar Venda a Granel</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
+      <div class="title">➕ Lançar Venda a Granel / Refugo</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
         <div><label class="flabel">Data</label><input type="date" id="bulkDate"/></div>
         <div><label class="flabel">Parcela</label><select id="bulkParcel"></select></div>
+        <div><label class="flabel">Cliente / Destino</label><input id="bulkCustomer" placeholder="Ex: CEASA / Descarte"/></div>
+        <div><label class="flabel">Nota Fiscal</label><input id="bulkInvoice" placeholder="000..."/></div>
         <div><label class="flabel">Peso (Kg)</label><input type="number" id="bulkWeight" placeholder="0.00"/></div>
-        <div><label class="flabel">Valor Total (R$)</label><input type="number" id="bulkValue" placeholder="0.00"/></div>
+        <div><label class="flabel">Valor (R$)</label><input type="number" id="bulkValue" placeholder="0.00"/></div>
         <button onclick="saveBulk()">Salvar</button>
+      </div>
+      <div style="margin-top:12px; display:flex; align-items:center; gap:8px">
+        <input type="checkbox" id="bulkIsWaste" style="width:16px; height:16px">
+        <label for="bulkIsWaste" style="font-size:12px; color:var(--muted)">Este lançamento é um <b>Descarte/Refugo</b> (não gera receita)</label>
       </div>
     </div>
     <div class="card">
-      <div class="title">📋 Histórico de Vendas Granel</div>
-      <table id="bulkTable"><thead><tr><th>Data</th><th>Parcela</th><th>Peso (Kg)</th><th>Valor</th><th>Ações</th></tr></thead><tbody></tbody></table>
+      <div class="title">📋 Histórico de Vendas / Refugo</div>
+      <table id="bulkTable"><thead><tr><th>Data</th><th>Parcela</th><th>Cliente/Destino</th><th>NF</th><th>Peso</th><th>Valor</th><th>Ações</th></tr></thead><tbody></tbody></table>
     </div>
   </div>
 
@@ -655,7 +670,7 @@ async function refreshDash(){
   }
 
   buildDashCharts(scans, packerScans, s, e);
-  buildRankingGrid(packerScans, '#collabDetailList');
+  buildRankingGrid(scans, '#collabDetailList'); // Show all roles in dash ranking
   buildWeightDetail(packerScans);
 
   // Per parcela + Campo
@@ -784,6 +799,12 @@ async function refreshRanking(){
   const eb={};
   _rankScans.forEach(x=>{if(!eb[x.employee_name])eb[x.employee_name]={boxes:0,kg:0,role:x.role};eb[x.employee_name].boxes++;eb[x.employee_name].kg+=(x.weight_kg||0);});
   const sorted=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes).slice(0,10);
+  
+  if(sorted.length === 0) {
+    if(charts['chartRankCollab']) charts['chartRankCollab'].destroy();
+    return;
+  }
+
   mkChart('chartRankCollab',{type:'bar',data:{labels:sorted.map(e=>e[0]),datasets:[{data:sorted.map(e=>e[1]),backgroundColor:COLS.slice(0,sorted.length),borderRadius:7,barThickness:28}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b'}},y:{grid:{display:false},ticks:{color:'#f8fafc',font:{weight:'600',size:12}}}},plugins:{legend:{display:false},tooltip:TOPTS}}});
   buildRankingGrid(_rankScans,'rankGrid');
 }
@@ -883,30 +904,41 @@ async function refreshFin(){
 // ══════════════════════════════════════
 // BALANÇO DE MASSA
 // ══════════════════════════════════════
-async function refreshMass() {
-  const s=$('massStart').value, e=$('massEnd').value;
+  const s=$('massStart').value, e=$('massEnd').value, pFilter=$('massParcel').value;
   
   // 1. Colheita (Estimativa por Carrões)
-  const {data:harvest} = await sb.from('field_carrao_sessions').select('qty_carrocoes').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
+  let qH = sb.from('field_carrao_sessions').select('qty_carrocoes, waste_kg, date').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
+  if(pFilter) qH = qH.eq('parcel_id', pFilter);
+  const {data:harvest} = await qH;
   const totalCarrocoes = (harvest||[]).reduce((a,c)=>a+c.qty_carrocoes,0);
   const weightPerCarrao = tenantConfig.harvest_carrao_weight_kg || 300;
   const estHarvestKg = totalCarrocoes * weightPerCarrao;
+  const fieldWasteKg = (harvest||[]).reduce((a,c)=>a+Number(c.waste_kg||0),0);
   
   // 2. Produção (Real Embalada - PACKER)
-  const {data:packed} = await sb.from('production_scans').select('weight_kg').eq('tenant_id',tenantId).eq('role','PACKER').gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
+  let qP = sb.from('production_scans').select('weight_kg, ts, parcel_code, weight_name').eq('tenant_id',tenantId).eq('role','PACKER').gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
+  // Note: if filtered by parcel, we match by parcel_code string for simplicity in scans
+  if(pFilter) {
+    const selP = $('massParcel').options[$('massParcel').selectedIndex].text;
+    qP = qP.eq('parcel_code', selP);
+  }
+  const {data:packed} = await qP;
   const totalPackedKg = (packed||[]).reduce((a,p)=>a+(p.weight_kg||0),0);
   
-  // 3. Vendas Granel
-  const {data:bulk} = await sb.from('bulk_sales').select('weight_kg').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
-  const totalBulkKg = (bulk||[]).reduce((a,b)=>a+Number(b.weight_kg),0);
+  // 3. Vendas Granel / Refugo
+  let qB = sb.from('bulk_sales').select('*, parcels(code)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
+  if(pFilter) qB = qB.eq('parcel_id', pFilter);
+  const {data:bulk} = await qB;
+  const totalBulkKg = (bulk||[]).filter(b=>!b.is_waste).reduce((a,b)=>a+Number(b.weight_kg),0);
+  const packhouseWasteKg = (bulk||[]).filter(b=>b.is_waste).reduce((a,b)=>a+Number(b.weight_kg),0);
   
-  const totalOut = totalPackedKg + totalBulkKg;
-  const lossKg = estHarvestKg - totalOut;
+  const totalOut = totalPackedKg + totalBulkKg + packhouseWasteKg;
+  const lossKg = estHarvestKg - totalOut - fieldWasteKg;
   const efficiency = estHarvestKg > 0 ? (totalOut / estHarvestKg) * 100 : 100;
 
   $('kpiMassHarvest').textContent = (estHarvestKg/1000).toFixed(2) + ' Ton';
   $('kpiMassPacked').textContent  = (totalPackedKg/1000).toFixed(2) + ' Ton';
-  $('kpiMassBulk').textContent    = (totalBulkKg/1000).toFixed(2) + ' Ton';
+  $('kpiMassBulk').textContent    = ((totalBulkKg + packhouseWasteKg)/1000).toFixed(2) + ' Ton';
   $('kpiMassEfficiency').textContent = efficiency.toFixed(1) + '%';
   $('kpiMassEfficiency').className = 'kval ' + (efficiency > 90 ? 'green' : (efficiency > 80 ? 'yellow' : 'red'));
   $('kpiMassLoss').textContent = `Diferença: ${lossKg.toFixed(0)} kg`;
@@ -914,14 +946,44 @@ async function refreshMass() {
   mkChart('chartMassBalance', {
     type: 'bar',
     data: {
-      labels: ['Campo (Colheita)', 'Packing (Caixas)', 'Granel (Refugo)', 'Diferença'],
+      labels: ['Campo (Colheita)', 'Packing (Caixas)', 'Granel/Perda', 'Campo Waste', 'Diferença'],
       datasets: [{
-        data: [estHarvestKg/1000, totalPackedKg/1000, totalBulkKg/1000, lossKg/1000],
-        backgroundColor: ['#f59e0b', '#10b981', '#8b5cf6', '#ef4444']
+        data: [estHarvestKg/1000, totalPackedKg/1000, (totalBulkKg+packhouseWasteKg)/1000, fieldWasteKg/1000, lossKg/1000],
+        backgroundColor: ['#f59e0b', '#10b981', '#8b5cf6', '#64748b', '#ef4444']
       }]
     },
     options: { responsive:true, maintainAspectRatio:false, plugins: { legend: { display:false } } }
   });
+
+  // 4. Build Cardex Ledger
+  const events = [];
+  (harvest||[]).forEach(h => {
+    events.push({ ts: h.date + 'T06:00:00', type: 'COLHEITA', parcel: '', desc: `${h.qty_carrocoes} carrões`, in: h.qty_carrocoes * weightPerCarrao, out: 0 });
+    if(h.waste_kg > 0) events.push({ ts: h.date + 'T06:01:00', type: 'WASTE (CAMPO)', parcel: '', desc: `Perda em campo`, in: 0, out: h.waste_kg });
+  });
+  (packed||[]).forEach(p => events.push({ ts: p.ts, type: 'PACKING', parcel: p.parcel_code || '—', desc: p.weight_name || 'Caixa', in: 0, out: p.weight_kg || 0 }));
+  (bulk||[]).forEach(b => events.push({ ts: b.date + 'T18:00:00', type: b.is_waste ? 'WASTE (PACK)' : 'VENDA GRANEL', parcel: b.parcels?.code || '—', desc: `${b.customer_name || '—'} (NF: ${b.invoice_num || '—'})`, in: 0, out: Number(b.weight_kg) }));
+
+  events.sort((a,b) => new Date(a.ts) - new Date(b.ts));
+  
+  let running = 0;
+  $('massTable').querySelector('tbody').innerHTML = events.map(ev => {
+    const diff = ev.in - ev.out;
+    running += diff;
+    return `
+      <tr>
+        <td style="font-size:11px;color:var(--muted)">${new Date(ev.ts).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
+        <td><span class="badge ${ev.type.includes('COLHEITA')?'active':'packer'}" style="font-size:9px">${ev.type}</span></td>
+        <td><b>${ev.parcel}</b></td>
+        <td>${ev.desc}</td>
+        <td style="color:var(--green)">${ev.in ? ev.in.toFixed(1) : ''}</td>
+        <td style="color:var(--red)">${ev.out ? ev.out.toFixed(1) : ''}</td>
+        <td style="font-weight:700;color:${running < 0 ? 'var(--red)' : 'var(--blue)'}">${running.toFixed(1)} kg</td>
+      </tr>
+    `;
+  }).join('') || '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Sem movimentação no período.</td></tr>';
+  
+  _massEvents = events; // Store for PDF
 }
 
 // ══════════════════════════════════════
@@ -933,29 +995,45 @@ async function loadBulk() {
     <tr>
       <td>${b.date}</td>
       <td>${b.parcels?.code || '—'}</td>
-      <td>${b.weight_kg} kg</td>
-      <td>${BRL(b.total_value)}</td>
+      <td>${b.customer_name || '—'}</td>
+      <td>${b.invoice_num || '—'}</td>
+      <td><span class="badge ${b.is_waste?'danger':'packer'}">${b.weight_kg} kg</span></td>
+      <td>${b.is_waste ? '—' : BRL(b.total_value)}</td>
       <td><button class="danger" onclick="delBulk('${b.id}')">Excluir</button></td>
     </tr>
-  `).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">Sem vendas lançadas.</td></tr>';
+  `).join('') || '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">Sem lançamentos.</td></tr>';
   
   // Popula select de parcelas
   const {data:parcels} = await sb.from('parcels').select('id,code').eq('tenant_id',tenantId).eq('active',true);
-  $('bulkParcel').innerHTML = (parcels||[]).map(p=>`<option value="${p.id}">${p.code}</option>`).join('');
+  ['bulkParcel', 'massParcel'].forEach(id => {
+    const el = $(id); if(!el) return;
+    const current = el.value;
+    el.innerHTML = (id === 'massParcel' ? '<option value="">Todas</option>' : '') + (parcels||[]).map(p=>`<option value="${p.id}">${p.code}</option>`).join('');
+    el.value = current;
+  });
 }
 
 async function saveBulk() {
   const date=$('bulkDate').value, pId=$('bulkParcel').value, w=$('bulkWeight').value, v=$('bulkValue').value;
+  const cust=$('bulkCustomer').value.trim(), inv=$('bulkInvoice').value.trim(), waste=$('bulkIsWaste').checked;
+  
   if(!date || !w) return alert('Preencha pelo menos Data e Peso.');
   const {error} = await sb.from('bulk_sales').insert([{
     tenant_id: tenantId,
     date,
     parcel_id: pId || null,
     weight_kg: parseFloat(w),
-    total_value: parseFloat(v) || 0
+    total_value: waste ? 0 : (parseFloat(v) || 0),
+    customer_name: cust || null,
+    invoice_num: inv || null,
+    is_waste: waste
   }]);
   if(error) alert(error.message);
-  else { loadBulk(); $('bulkWeight').value=''; $('bulkValue').value=''; }
+  else { 
+    loadBulk(); 
+    ['bulkWeight', 'bulkValue', 'bulkCustomer', 'bulkInvoice'].forEach(id => $(id).value = '');
+    $('bulkIsWaste').checked = false;
+  }
 }
 
 async function delBulk(id) {
@@ -1029,20 +1107,26 @@ async function refreshLogs(){
 // FUNCIONÁRIOS
 // ══════════════════════════════════════
 async function loadEmps(){
-  const {data}=await sb.from('employees').select('*').eq('tenant_id',tenantId).order('name');
-  $('empTable').querySelector('tbody').innerHTML=(data||[]).map(e=>`
-    <tr>
-      <td><code style="background:rgba(255,255,255,.05);padding:2px 6px;border-radius:5px;font-size:12px">${e.barcode}</code></td>
-      <td><b>${e.name}</b></td>
-      <td><span class="badge ${e.role.toLowerCase()}">${e.role}</span></td>
-      <td>${e.whatsapp||'<span style="color:var(--muted)">—</span>'}</td>
-      <td><span class="badge ${e.active?'active':'inactive'}">${e.active?'Ativo':'Inativo'}</span></td>
-      <td>
-        <button class="danger" style="padding:4px 9px" onclick="delEmp('${e.id}')">Excluir</button>
-        <button class="sec" style="padding:4px 9px;margin-left:4px" onclick="toggleEmpActive('${e.id}',${e.active})">${e.active?'Desativar':'Ativar'}</button>
-      </td>
-    </tr>
-  `).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:28px">Nenhum funcionário.</td></tr>';
+  try {
+    const {data, error}=await sb.from('employees').select('*').eq('tenant_id',tenantId).order('name');
+    if(error) throw error;
+    $('empTable').querySelector('tbody').innerHTML=(data||[]).map(e=>`
+      <tr>
+        <td><code style="background:rgba(255,255,255,.05);padding:2px 6px;border-radius:5px;font-size:12px">${e.barcode}</code></td>
+        <td><b>${e.name}</b></td>
+        <td><span class="badge ${e.role.toLowerCase()}">${e.role}</span></td>
+        <td>${e.whatsapp||'<span style="color:var(--muted)">—</span>'}</td>
+        <td><span class="badge ${e.active?'active':'inactive'}">${e.active?'Ativo':'Inativo'}</span></td>
+        <td>
+          <button class="danger" style="padding:4px 9px" onclick="delEmp('${e.id}')">Excluir</button>
+          <button class="sec" style="padding:4px 9px;margin-left:4px" onclick="toggleEmpActive('${e.id}',${e.active})">${e.active?'Desativar':'Ativar'}</button>
+        </td>
+      </tr>
+    `).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:28px">Nenhum funcionário encontrado para esta empresa.</td></tr>';
+  } catch(err) {
+    console.error(err);
+    $('empTable').querySelector('tbody').innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--red);padding:28px">Erro ao carregar: ${err.message}</td></tr>`;
+  }
 }
 
 async function addEmp(){
@@ -1092,15 +1176,21 @@ async function loadMapSelects(){
   wSel.innerHTML=_weights.map(w=>`<option value="${w.id}">${w.name} (${w.weight_kg}kg)</option>`).join('');
 }
 async function loadMappings(){
-  const {data}=await sb.from('barcode_mappings').select('*,employees(name),box_weights(name)').eq('tenant_id',tenantId).order('barcode');
-  $('mapTable').querySelector('tbody').innerHTML=(data||[]).map(m=>`
-    <tr>
-      <td><code style="background:rgba(255,255,255,.05);padding:2px 6px;border-radius:5px">${m.barcode}</code></td>
-      <td>${m.employees?.name||'?'}</td>
-      <td>${m.box_weights?.name||'?'}</td>
-      <td><button class="danger" style="padding:4px 9px" onclick="delMapping('${m.id}')">Excluir</button></td>
-    </tr>
-  `).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:28px">Nenhum mapeamento.</td></tr>';
+  try {
+    const {data, error}=await sb.from('barcode_mappings').select('*,employees(name),box_weights(name)').eq('tenant_id',tenantId).order('barcode');
+    if(error) throw error;
+    $('mapTable').querySelector('tbody').innerHTML=(data||[]).map(m=>`
+      <tr>
+        <td><code style="background:rgba(255,255,255,.05);padding:2px 6px;border-radius:5px">${m.barcode}</code></td>
+        <td>${m.employees?.name||'<span style="color:var(--red)">Não encontrado</span>'}</td>
+        <td>${m.box_weights?.name||'<span style="color:var(--red)">Não encontrado</span>'}</td>
+        <td><button class="danger" style="padding:4px 9px" onclick="delMapping('${m.id}')">Excluir</button></td>
+      </tr>
+    `).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:28px">Nenhum mapeamento encontrado para esta empresa.</td></tr>';
+  } catch(err) {
+    console.error(err);
+    $('mapTable').querySelector('tbody').innerHTML=`<tr><td colspan="4" style="text-align:center;color:var(--red);padding:28px">Erro ao carregar: ${err.message}</td></tr>`;
+  }
 }
 async function addMapping(){
   const b=$('mapBarcode').value.trim(),empId=$('mapEmployee').value,wId=$('mapWeight').value;
@@ -1117,16 +1207,36 @@ const simpleList=(tbl,el,label,keyCol)=>async(items)=>{
   $(el).innerHTML=(items||[]).map(i=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span>${i[keyCol]}</span><button class="danger" style="padding:3px 8px" onclick="del_${tbl}('${i.id}')">×</button></div>`).join('')||`<div style="color:var(--muted);font-size:12px;padding:8px">Nenhum(a).</div>`;
 };
 
-async function loadFruits(){const {data}=await sb.from('fruits').select('*').eq('tenant_id',tenantId).order('name');simpleList('fruit','fruitList','Fruta','name')(data);}
-async function loadVarieties(){const {data}=await sb.from('varieties').select('*').eq('tenant_id',tenantId).order('name');simpleList('variety','varList','Variedade','name')(data);}
+async function loadFruits(){
+  try {
+    const {data, error}=await sb.from('fruits').select('*').eq('tenant_id',tenantId).order('name');
+    if(error) throw error;
+    simpleList('fruit','fruitList','Fruta','name')(data);
+  } catch(e) { console.error(e); }
+}
+async function loadVarieties(){
+  try {
+    const {data, error}=await sb.from('varieties').select('*').eq('tenant_id',tenantId).order('name');
+    if(error) throw error;
+    simpleList('variety','varList','Variedade','name')(data);
+  } catch(e) { console.error(e); }
+}
 async function loadParcels(){
-  const {data}=await sb.from('parcels').select('*').eq('tenant_id',tenantId).order('code');
-  $('parcelList').innerHTML=(data||[]).map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span>${p.code}</span><button class="danger" style="padding:3px 8px" onclick="del_parcel('${p.id}')">×</button></div>`).join('');
-  const sel=$('linkParcel');sel.innerHTML=data.map(p=>`<option value="${p.id}">${p.code}</option>`).join('');
+  try {
+    const {data, error}=await sb.from('parcels').select('*').eq('tenant_id',tenantId).order('code');
+    if(error) throw error;
+    const items = data || [];
+    $('parcelList').innerHTML=items.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span>${p.code}</span><button class="danger" style="padding:3px 8px" onclick="del_parcel('${p.id}')">×</button></div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">Nenhuma.</div>';
+    const sel=$('linkParcel');if(sel) sel.innerHTML=items.map(p=>`<option value="${p.id}">${p.code}</option>`).join('') || '<option value="">Sem parcelas</option>';
+  } catch(e) { console.error(e); }
 }
 async function loadLinks(){
-  const {data}=await sb.from('parcel_links').select('*,parcels(code),fruits(name),varieties(name)').eq('tenant_id',tenantId);
-  $('linkList').innerHTML=(data||[]).map(l=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span>📦 ${l.parcels?.code} → 🍈 ${l.fruits?.name} / ${l.varieties?.name}</span></div>`).join('');
+  try {
+    const {data, error}=await sb.from('parcel_links').select('*,parcels(code),fruits(name),varieties(name)').eq('tenant_id',tenantId);
+    if(error) throw error;
+    const items = data || [];
+    $('linkList').innerHTML=items.map(l=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span>📦 ${l.parcels?.code || '?'} → 🍈 ${l.fruits?.name || '?'} / ${l.varieties?.name || '?'}</span></div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">Nenhum vínculo.</div>';
+  } catch(e) { console.error(e); }
 }
 async function addFruit(){const n=$('fruitName').value.trim();if(!n)return;await sb.from('fruits').insert([{name:n,active:true,tenant_id:tenantId,updated_at:new Date().toISOString()}]);$('fruitName').value='';loadFruits();}
 async function addVariety(){const n=$('varName').value.trim();if(!n)return;await sb.from('varieties').insert([{name:n,active:true,tenant_id:tenantId,updated_at:new Date().toISOString()}]);$('varName').value='';loadVarieties();}
@@ -1149,7 +1259,38 @@ async function refreshQuality() {
   const {data}=await sb.from('quality_audits').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')).order('ts',{ascending:false});
   const qaTable = $('qaTable').querySelector('tbody');
   if(!qaTable) return;
-  qaTable.innerHTML = (data||[]).map(q => `<tr><td>${new Date(q.ts).toLocaleString('pt-BR')}</td><td>${q.employee_name||'--'}</td><td>${q.issue_type}</td><td>${q.penalty_boxes}</td><td>${q.inspector_name||'--'}</td></tr>`).join('') || '<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--muted)">Nenhum registro.</td></tr>';
+  
+  const audits = data || [];
+  qaTable.innerHTML = audits.map(q => `<tr><td>${new Date(q.ts).toLocaleString('pt-BR')}</td><td>${q.employee_name||'--'}</td><td>${q.issue_type}</td><td>${q.penalty_boxes}</td><td>${q.inspector_name||'--'}</td></tr>`).join('') || '<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--muted)">Nenhum registro.</td></tr>';
+  
+  // Build Distribution of Defects Chart
+  const issues = {};
+  audits.forEach(q => {
+    const label = q.issue_type || 'OUTRO';
+    issues[label] = (issues[label] || 0) + 1;
+  });
+  const iLabels = Object.keys(issues), iData = Object.values(issues);
+  mkChart('chartQA', {
+    type: 'pie',
+    data: { labels: iLabels, datasets: [{ data: iData, backgroundColor: COLS.slice(0, iLabels.length), borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } }, tooltip: TOPTS } }
+  });
+
+  // Build Main Offenders (Penalties)
+  const penalties = {};
+  audits.forEach(q => {
+    if(!q.employee_name) return;
+    if(!penalties[q.employee_name]) penalties[q.employee_name] = 0;
+    penalties[q.employee_name] += (q.penalty_boxes || 0);
+  });
+  const sortedP = Object.entries(penalties).sort((a,b) => b[1] - a[1]).slice(0, 5);
+  $('qaPenaltyList').innerHTML = sortedP.map(([name, val]) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(239,68,68,0.05);border-radius:10px;margin-bottom:6px;border:1px solid rgba(239,68,68,0.1)">
+      <div style="font-weight:700;font-size:13px">${name}</div>
+      <div style="color:var(--red);font-weight:800">${val} <span style="font-size:10px;font-weight:400">cx desc.</span></div>
+    </div>
+  `).join('') || '<div class="empty" style="padding:10px;font-size:11px">Sem penalidades.</div>';
+
   loadQualityIssues();
 }
 
@@ -1289,21 +1430,68 @@ function exportFinPDF(){
   doc.save(`prodtech-payroll-${s}-${e}.pdf`);
 }
 
-async function exportProducaoPDF(dateParam){
-  const date=dateParam||$('finalizeDate').value; if(!date)return;
-  const {data:scans}=await sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(date)).lte('ts',toISO(date,'23:59:59'));
-  if(!scans||!scans.length){alert('Nenhum registro para esta data.');return;}
+function exportAuditPDF(){
   const {jsPDF}=window.jspdf;const doc=new jsPDF();
-  pdfHeader(doc,'Folha de Produção Diária',date);
-  const eb={};
-  scans.forEach(x=>{if(!eb[x.employee_name])eb[x.employee_name]={boxes:0,kg:0,role:x.role,first:x.ts,last:x.ts};eb[x.employee_name].boxes++;eb[x.employee_name].kg+=(x.weight_kg||0);if(x.ts<eb[x.employee_name].first)eb[x.employee_name].first=x.ts;if(x.ts>eb[x.employee_name].last)eb[x.employee_name].last=x.ts;});
-  const sorted=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes);
-  doc.setFontSize(10);doc.text(`Total: ${scans.length} caixas | ${scans.reduce((a,x)=>a+(x.weight_kg||0),0).toFixed(1)} kg | ${sorted.length} colaboradores`,14,40);
-  doc.autoTable({startY:48,head:[['#','Colaborador','Função','Caixas','KG Total','Início','Fim']],body:sorted.map(([name,d],i)=>[i+1,name,d.role,d.boxes,d.kg.toFixed(1)+' kg',new Date(d.first).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),new Date(d.last).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})]),headStyles:{fillColor:[16,185,129]},alternateRowStyles:{fillColor:[245,247,250]},theme:'grid',styles:{fontSize:10,cellPadding:5},foot:[['','TOTAL','',scans.length,scans.reduce((a,x)=>a+(x.weight_kg||0),0).toFixed(1)+' kg','','']],footStyles:{fillColor:[15,23,42],textColor:255,fontStyle:'bold'}});
-  const y=doc.lastAutoTable.finalY+22;
-  if(y<265){doc.setFontSize(9);doc.setTextColor(100,116,139);doc.text('____________________________',14,y);doc.text('Supervisor / Responsável',14,y+7);doc.text(`Data: ${date}`,14,y+14);}
-  doc.save(`prodtech-producao-${date}.pdf`);
+  const s=$('massStart').value,e=$('massEnd').value, pId=$('massParcel').value;
+  const pName = pId ? $('massParcel').options[$('massParcel').selectedIndex].text : 'Filtro Global';
+  
+  // Custom Header for Audit
+  doc.setFillColor(15,23,42);doc.rect(0,0,210,40,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(18);doc.setFont('helvetica','bold');
+  doc.text('RELATÓRIO DE AUDITORIA E RECALL',14,15);
+  doc.setFontSize(10);doc.setFont('helvetica','normal');
+  doc.text(`Empresa: ${tenantName}`,14,24);
+  doc.text(`Período: ${s} a ${e} | Parcela: ${pName}`,14,29);
+  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`,14,34);
+  
+  doc.setTextColor(15,23,42);
+  doc.setFontSize(12); doc.setFont('helvetica','bold');
+  doc.text('Sumário do Balanço de Massa', 14, 50);
+  
+  const stats = [
+    ['Colheita Estimada (Campo)', $('kpiMassHarvest').textContent],
+    ['Produção Embalada (Real)', $('kpiMassPacked').textContent],
+    ['Vendas Granel / Refugo', $('kpiMassBulk').textContent],
+    ['Eficiência Global', $('kpiMassEfficiency').textContent],
+    ['Diferença / Perda', $('kpiMassLoss').textContent]
+  ];
+  
+  doc.autoTable({startY:55, head:[['Item','Valor']], body:stats, theme:'grid', headStyles:{fillColor:[59,130,246]}});
+  
+  doc.setFontSize(12); doc.text('Cardex de Movimentação (Rastreabilidade)', 14, doc.lastAutoTable.finalY + 15);
+  
+  const rows = (_massEvents||[]).map(ev => [
+    new Date(ev.ts).toLocaleString('pt-BR'),
+    ev.type,
+    ev.parcel,
+    ev.desc,
+    ev.in ? ev.in.toFixed(1) : '—',
+    ev.out ? ev.out.toFixed(1) : '—'
+  ]);
+  
+  doc.autoTable({
+    startY: doc.lastAutoTable.finalY + 20,
+    head:[['Data/Hora','Tipo','Parcela','Descrição/Nota/Cliente','Entrada (kg)','Saída (kg)']],
+    body: rows,
+    theme: 'striped',
+    styles: {fontSize:8},
+    headStyles: {fillColor:[15,23,42]}
+  });
+  
+  const y = doc.lastAutoTable.finalY + 30;
+  if(y < 260) {
+    doc.setFontSize(9); doc.setTextColor(100,116,139);
+    doc.text('Declaro que as informações acima são rastreáveis e auditáveis conforme padrões de segurança alimentar.', 14, y);
+    doc.text('____________________________________', 14, y+15);
+    doc.text('Assinatura do Responsável Técnico', 14, y+20);
+    doc.text('____________________________________', 120, y+15);
+    doc.text('Carimbo da Empresa', 120, y+20);
+  }
+  
+  doc.save(`audit-recall-${tenantName.replace(/\s+/g,'-')}-${s}.pdf`);
 }
+
+async function exportProducaoPDF(dateParam){
 
 // ══════════════════════════════════════
 // BARCODE_MAPPINGS table helper
