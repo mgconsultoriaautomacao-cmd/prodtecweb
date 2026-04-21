@@ -87,7 +87,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 .module-card{background:var(--card);border-radius:20px;padding:24px 20px;border:1px solid var(--border);cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
 .module-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--grad,linear-gradient(90deg,var(--green),#059669))}
 .module-card.orange::before{background:linear-gradient(90deg,var(--orange),#ea580c)}
-.module-card.purple::before{background:linear-gradient(90deg,#8b5cf6,#7c3aed)}
 .module-card:active{transform:scale(.98);border-color:var(--border2)}
 .module-icon{font-size:44px;margin-bottom:14px;display:block}
 .module-name{font-size:19px;font-weight:800;margin-bottom:4px}
@@ -248,12 +247,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       <div class="module-desc">Lance carrões por turno e calcule o rateio entre colhedores</div>
       <div class="module-arrow">›</div>
     </div>
-    <div class="module-card purple" onclick="showScreen('regField')">
-      <span class="module-icon">📍</span>
-      <div class="module-name">Cadastrar Campo</div>
-      <div class="module-desc">Cadastre novas parcelas/campos de produção diretamente</div>
-      <div class="module-arrow">›</div>
-    </div>
   </div>
 
   <div style="padding:0 16px">
@@ -271,81 +264,73 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 <div id="screenQuality" class="screen">
   <div class="header">
     <div class="back-btn" onclick="showScreen('home')">‹</div>
-    <div class="header-title">🔍 Auditoria de Qualidade</div>
+    <div class="header-title">🔍 Lançar Defeitos</div>
     <div id="qOnlineDot" class="online-dot"></div>
   </div>
   <div class="tab-bar">
-    <div class="tab-btn on" id="qTabNewBtn" onclick="showQTab('new')">+ Nova Auditoria</div>
-    <div class="tab-btn" id="qTabHistBtn" onclick="showQTab('hist')">📋 Histórico</div>
+    <div class="tab-btn on" id="qTabNewBtn" onclick="showQTab('new')">+ Novo Defeito</div>
+    <div class="tab-btn" id="qTabHistBtn" onclick="showQTab('hist')">📋 Lista Defeitos</div>
+    <div class="tab-btn" id="qTabMgmtBtn" onclick="showQTab('mgmt')">⚙️ Tipos</div>
   </div>
 
   <div style="padding:10px 16px 0">
-    <button class="btn btn-sec btn-full" style="padding:10px;font-size:12px" onclick="openClosure()">Finalizar Sessão / Assinar</button>
+    <button class="btn btn-sec btn-full" style="padding:10px;font-size:12px" onclick="openClosure()">✍️ Finalizar & Assinar</button>
   </div>
 
-  <!-- Tab: Nova Auditoria -->
+  <!-- Tab: Novo Defeito (Rápido) -->
   <div class="tab-pane on" id="qTabNew">
 
-    <div class="section"><div class="section-title">Funcionário Auditado</div></div>
+    <div class="section"><div class="section-title">Tipo de Defeito</div></div>
+    <div style="padding:0 16px">
+      <div class="issue-grid" id="issueGrid">
+        <!-- Carregado dinamicamente -->
+      </div>
+    </div>
+
+    <div class="section"><div class="section-title">Funcionário (Embalador)</div></div>
     <div style="padding:0 16px 8px">
-      <div class="emp-search"><span>🔎</span><input id="qEmpSearch" oninput="filterQEmp()" placeholder="Buscar funcionário..." autocomplete="off"></div>
-      <div class="emp-list" id="qEmpList">
+      <div class="emp-search"><span>🔎</span><input id="qEmpSearch" oninput="filterQEmp()" placeholder="Buscar embalador..." autocomplete="off"></div>
+      <div class="emp-list" id="qEmpList" style="max-height:180px;overflow-y:auto">
         <div class="loading"><div class="spinner"></div>Carregando...</div>
       </div>
     </div>
 
-    <div class="section"><div class="section-title">Tipo de Defeito</div></div>
-    <div style="padding:0 16px">
-      <div class="issue-grid" id="qIssueList">
-        <div class="loading"><div class="spinner"></div>Carregando defeitos...</div>
-      </div>
-    </div>
-
-    <div class="section"><div class="section-title">Caixas Descontadas</div></div>
+    <div class="section"><div class="section-title">Caixas com Defeito</div></div>
     <div style="padding:0 16px">
       <div class="counter-row">
         <button class="counter-btn" onclick="qPenaltyChange(-1)">−</button>
         <div class="counter-val" id="qPenaltyVal">1</div>
         <button class="counter-btn" onclick="qPenaltyChange(1)">+</button>
       </div>
-      <div class="counter-label">caixas deduzidas da produção do funcionário</div>
+      <div class="counter-label">caixas com defeito</div>
     </div>
 
-    <div class="section"><div class="section-title">Motivo / Observação</div></div>
+    <div class="section"><div class="section-title">Observação (Opcional)</div></div>
     <div style="padding:0 16px">
-      <textarea id="qReason" placeholder="Descreva o defeito observado..." rows="3" style="resize:none"></textarea>
-    </div>
-
-    <!-- PREP: Barcode scanner -->
-    <div style="padding:8px 16px">
-      <div class="prep-btn" onclick="toast('Leitura por barcode será ativada em breve','info')">
-        <span>📷</span> Ler barcode do funcionário
-        <span class="prep-badge">EM BREVE</span>
-      </div>
-    </div>
-
-    <div class="section"><div class="section-title">Assinatura do Inspetor</div></div>
-    <div style="padding:0 16px">
-      <div class="field-group">
-        <label class="field-label">Nome do Inspetor</label>
-        <input id="qInspectorName" placeholder="Nome de quem está auditando" autocomplete="name">
-      </div>
-      <div class="sig-wrap">
-        <canvas id="qSigCanvas" class="sig-canvas" width="800" height="240"></canvas>
-        <button class="sig-clear" onclick="clearSig()">🗑 Apagar</button>
-      </div>
-      <div class="sig-hint">Assine acima com o dedo ou caneta</div>
+      <textarea id="qReason" placeholder="Ex: Podridão em 2 unidades..." rows="2" style="resize:none;height:60px"></textarea>
     </div>
 
     <div style="padding:16px">
-      <button class="btn btn-primary btn-full" id="qSubmitBtn" onclick="submitQuality()">✅ Registrar Auditoria</button>
+      <button class="btn btn-primary btn-full" id="qSubmitBtn" onclick="submitQuality()">✅ Registrar Defeito</button>
     </div>
-
   </div>
 
-  <!-- Tab: Histórico -->
+  <!-- Tab: Lista de Defeitos do Dia -->
   <div class="tab-pane" id="qTabHist">
-    <div id="qHistList"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+    <div id="qHistList" style="padding:0 16px"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+  </div>
+
+  <!-- Tab: Gerenciar Tipos de Defeitos -->
+  <div class="tab-pane" id="qTabMgmt">
+    <div style="padding:16px 16px 0">
+      <div class="section"><div class="section-title">Adicionar Novo Tipo</div></div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <input id="newDefectEmoji" placeholder="🦠" style="width:50px;text-align:center;" maxlength="2">
+        <input id="newDefectName" placeholder="Nome do defeito (ex: Podridão)" style="flex:1">
+        <button class="btn btn-primary" onclick="addDefectType()" style="padding:12px 16px">+</button>
+      </div>
+      <div id="defectTypesList"></div>
+    </div>
   </div>
 </div>
 
@@ -366,15 +351,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 
     <div class="section"><div class="section-title">Data</div></div>
     <div style="padding:0 16px">
-      <input type="date" id="cDate" onchange="updateJulianLot()">
-    </div>
-    
-    <div style="background:rgba(255,165,0,0.1); border:1px solid rgba(255,165,0,0.3); border-radius:12px; padding:12px; margin:16px 16px 0; display:flex; justify-content:space-between; align-items:center">
-      <div>
-        <div style="font-size:10px; color:var(--orange); font-weight:700; text-transform:uppercase; letter-spacing:0.05em">Lote Juliano (Rastreabilidade)</div>
-        <div id="julianLotDisplay" style="font-size:20px; font-weight:900; color:#fff; font-family:monospace">---</div>
-      </div>
-      <div style="font-size:24px">🗓️</div>
+      <input type="date" id="cDate">
     </div>
 
     <div class="section"><div class="section-title">Turno</div></div>
@@ -410,12 +387,21 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       </select>
     </div>
 
-      <div class="counter-label">carrões completos neste registro</div>
+    <div class="section"><div class="section-title">Variedade</div></div>
+    <div style="padding:0 16px">
+      <select id="cVariety">
+        <option value="">— Selecionar Variedade —</option>
+      </select>
     </div>
 
-    <div class="section"><div class="section-title">Refugo de Campo Estimado (Kg)</div></div>
+    <div class="section"><div class="section-title">Quantidade de Carrões</div></div>
     <div style="padding:0 16px">
-      <input type="number" id="cWasteKg" placeholder="Peso estimado do refugo no campo" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border); background:rgba(255,255,255,0.05); color:#fff">
+      <div class="counter-row">
+        <button class="counter-btn" onclick="cQtyChange(-1)">−</button>
+        <div class="counter-val" id="cQtyVal">1</div>
+        <button class="counter-btn" onclick="cQtyChange(1)">+</button>
+      </div>
+      <div class="counter-label">carrões completos neste registro</div>
     </div>
 
     <div class="section">
@@ -448,17 +434,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
           <span class="calc-val calc-per" id="calcPerEmp">— selecione funcionários</span>
         </div>
       </div>
-    <div class="section"><div class="section-title">Assinatura / Ordem de Colheita</div></div>
+    </div>
+
+    <div class="section"><div class="section-title">Registrado por</div></div>
     <div style="padding:0 16px">
-      <div class="field-group">
-        <label class="field-label">Registrado por</label>
-        <input id="cRegisteredBy" placeholder="Nome do representante de campo">
-      </div>
-      <div class="sig-wrap">
-        <canvas id="cSigCanvas" class="sig-canvas" width="800" height="240"></canvas>
-        <button class="sig-clear" onclick="clearCSig()">🗑 Apagar</button>
-      </div>
-      <div class="sig-hint">Assine para validar a Ordem de Colheita</div>
+      <input id="cRegisteredBy" placeholder="Nome do responsável pelo registro">
     </div>
 
     <div style="padding:16px">
@@ -473,31 +453,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 
 </div>
 
-<!-- ══════════════ CADASTRAR CAMPO (NOVA PARCELA) ══════════════ -->
-<div id="screenRegField" class="screen">
-  <div class="header">
-    <div class="back-btn" onclick="showScreen('home')">‹</div>
-    <div class="header-title">📍 Cadastrar Campo</div>
-  </div>
-  <div style="padding:20px 16px">
-    <div class="card">
-      <div class="section-title">Identificação do Campo</div>
-      <div class="field-group">
-        <label class="field-label">Código/Nome da Parcela</label>
-        <input id="rfCode" placeholder="Ex: G01, Setor Sul, etc.">
-      </div>
-      <button class="btn btn-primary btn-full" onclick="submitNewField()">✅ Salvar Campo</button>
-    </div>
-    
-    <div class="section">
-      <div class="section-title">Campos Cadastrados</div>
-      <div id="rfList" class="emp-list" style="margin-top:10px">
-        <div class="loading"><div class="spinner"></div>Carregando...</div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- CLOSURE MODAL -->
 <div id="screenClosure" class="screen" style="z-index:200;background:rgba(3,7,18,0.97);backdrop-filter:blur(12px)">
   <div class="header">
@@ -507,15 +462,19 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   <div style="padding:24px 20px">
     <div class="card" style="margin-bottom:20px;border-color:var(--green)">
       <div style="font-weight:800;font-size:18px;color:var(--green);margin-bottom:8px">Validação dos Lançamentos</div>
-      <div style="font-size:13px;color:var(--muted2);line-height:1.5">Assine para confirmar todos os registros da sua sessão.</div>
+      <div style="font-size:13px;color:var(--muted2);line-height:1.5">Assine para confirmar todos os registros de qualidade da sua sessão.</div>
     </div>
-    <div class="section-title">Sua Assinatura</div>
+    <div class="section-title" style="margin-bottom:10px">Nome do Inspetor</div>
+    <div style="margin-bottom:20px">
+      <input id="closureInspectorName" placeholder="Seu nome completo" autocomplete="name">
+    </div>
+    <div class="section-title">Assinatura Digital</div>
     <div class="sig-wrap">
       <canvas id="closureSigCanvas" class="sig-canvas" width="800" height="240"></canvas>
       <button class="sig-clear" onclick="clearClosureSig()">🗑 Limpar</button>
     </div>
-    <div class="sig-hint" style="margin-bottom:24px">Assinatura válida para auditoria</div>
-    <button class="btn btn-primary btn-full" onclick="saveClosure()">Confirmar e Finalizar</button>
+    <div class="sig-hint" style="margin-bottom:24px">Assine acima com o dedo ou caneta</div>
+    <button class="btn btn-primary btn-full" onclick="saveClosure()">✅ Confirmar e Finalizar</button>
     <button class="btn btn-sec btn-full" style="margin-top:12px" onclick="showScreen('home')">Cancelar</button>
   </div>
 </div>
@@ -527,8 +486,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 // ═══════════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════════
-const SUPA_URL = 'https://gknpviqughywjuuqnfmf.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrbnB2aXF1Z2h5d2p1dXFuZm1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NDM5MzAsImV4cCI6MjA4NzUxOTkzMH0.Geo14t0naNagF5eUEExHEaUTIgDgN5GETG6z7TtnVt4';
+const SUPA_URL = 'https://yiigaohjvvieeooxsban.supabase.co';
+const SUPA_KEY = 'sb_publishable_t_6e3ZvN3VkT31VS8thpcg_6XclrsYR';
 const PRICES   = { MELANCIA: 3.00, MELAO: 4.00 };
 const BRL = v => 'R$ ' + Number(v||0).toFixed(2).replace('.',',');
 
@@ -567,14 +526,15 @@ function showScreen(name) {
   active.classList.add('active');
   if (name === 'quality') loadQHistory();
   if (name === 'carrao')  loadCHistory();
-  if (name === 'regField') loadRfFields();
 }
 
 function showQTab(tab) {
-  $('qTabNew').className = 'tab-pane' + (tab==='new'?' on':'');
-  $('qTabHist').className = 'tab-pane' + (tab==='hist'?' on':'');
-  $('qTabNewBtn').className = 'tab-btn' + (tab==='new'?' on':'');
-  $('qTabHistBtn').className = 'tab-btn' + (tab==='hist'?' on':'');
+  $('qTabNew').className    = 'tab-pane' + (tab==='new'  ?' on':'');
+  $('qTabHist').className   = 'tab-pane' + (tab==='hist' ?' on':'');
+  $('qTabMgmt').className   = 'tab-pane' + (tab==='mgmt' ?' on':'');
+  $('qTabNewBtn').className  = 'tab-btn'  + (tab==='new'  ?' on':'');
+  $('qTabHistBtn').className = 'tab-btn'  + (tab==='hist' ?' on':'');
+  $('qTabMgmtBtn').className = 'tab-btn'  + (tab==='mgmt' ?' on':'');
   if (tab === 'hist') loadQHistory();
 }
 function showCTab(tab) {
@@ -709,7 +669,8 @@ async function afterLogin(u) {
   $('loggedAs').textContent   = u.email;
   await loadEmployees();
   await loadParcelas();
-  initQualityForm();
+  await loadVarieties();
+  await initQualityForm();
   initCarraoForm();
   await updateSyncBadge();
   showScreen('home');
@@ -743,112 +704,77 @@ async function loadParcelas() {
     .order('code');
   parcelas = data || [];
   const sel = $('cParcela');
-  sel.innerHTML = '<option value="">— Selecionar Parcela —</option>';
   parcelas.forEach(p => {
     sel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`);
   });
 }
 
-// ═══════════════════════════════════════════
-// ──── MÓDULO REGISTRO DE CAMPO ────
-// ═══════════════════════════════════════════
-async function loadRfFields() {
-  const el = $('rfList');
-  el.innerHTML = '<div class="loading"><div class="spinner"></div>Carregando...</div>';
-  const { data, error } = await sb.from('parcels')
-    .select('*')
+let varieties = [];
+async function loadVarieties() {
+  const { data } = await sb.from('varieties')
+    .select('id, name')
     .eq('tenant_id', tenantId)
-    .order('code');
-  if (error || !data?.length) { el.innerHTML = '<div class="empty">Nenhum campo cadastrado</div>'; return; }
-  el.innerHTML = data.map(p => `
-    <div class="emp-item" style="cursor:default">
-      <div class="emp-avatar" style="background:var(--blue-dim);color:var(--blue)">📍</div>
-      <div class="emp-name">${p.code}</div>
-      <div class="pill ${p.active?'pill-green':'pill-gray'}">${p.active?'Ativo':'Inativo'}</div>
-    </div>
-  `).join('');
-}
-
-async function submitNewField() {
-  const code = $('rfCode').value.trim();
-  if (!code) { toast('Informe o nome/código do campo', 'err'); return; }
-  
-  const loader = $('rfList');
-  const btn = document.querySelector('#screenRegField .btn-primary');
-  btn.disabled = true; btn.textContent = '⏳ Salvando...';
-
-  try {
-    const { error } = await sb.from('parcels').insert({
-      tenant_id: tenantId,
-      code: code,
-      active: true
-    });
-    if (error) throw error;
-    toast('✓ Campo cadastrado com sucesso!', 'ok');
-    $('rfCode').value = '';
-    await loadRfFields();
-    await loadParcelas(); // Update dropdown in Carrão module
-  } catch(e) {
-    toast('Erro: ' + e.message, 'err');
-  } finally {
-    btn.disabled = false; btn.textContent = '✅ Salvar Campo';
-  }
+    .eq('active', 1)
+    .order('name');
+  varieties = data || [];
+  const sel = $('cVariety');
+  varieties.forEach(v => {
+    sel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`);
+  });
 }
 
 // ═══════════════════════════════════════════
 // ──── MÓDULO QUALIDADE ────
 // ═══════════════════════════════════════════
-function initQualityForm() {
-  const qualityRoles = ['PACKER', 'ADMIN', 'MANAGER', 'STACKER', 'COLHEDOR'];
-  renderQEmpList(employees.filter(e => qualityRoles.includes(e.role)));
-  loadQualityIssues();
+let defectTypes = []; // Carregado do banco
+
+async function initQualityForm() {
+  await loadDefectTypes();
+  renderQEmpList(employees.filter(e => ['PACKER','EMBALADOR'].includes(e.role)));
 }
 
-async function loadQualityIssues() {
-  const el = $('qIssueList');
-  if(!el) return;
-  const { data } = await sb.from('quality_issues').select('*').eq('tenant_id', tenantId).eq('active', true).order('name');
-  if(!data || !data.length) {
-    el.innerHTML = '<div style="grid-column:1/-1;color:var(--muted);font-size:12px;text-align:center;padding:20px">Nenhum defeito cadastrado no sistema.</div>';
-    return;
-  }
-  el.innerHTML = data.map(i => `
-    <div class="issue-opt" data-id="${i.name}" onclick="selectIssue('${i.name}')">
-      <span class="icon">${i.icon||'❓'}</span>
-      <div class="label">${i.name}</div>
+async function loadDefectTypes() {
+  const { data } = await sb.from('quality_issues')
+    .select('id, name, icon')
+    .eq('tenant_id', tenantId)
+    .eq('active', true)
+    .order('name');
+  
+  defectTypes = data || [
+    { id: uuid(), name: 'Podridão', icon: '🦠' },
+    { id: uuid(), name: 'Dano Mecânico', icon: '💥' },
+    { id: uuid(), name: 'Tamanho/Padrão', icon: '📏' },
+    { id: uuid(), name: 'Maturação', icon: '🌿' },
+    { id: uuid(), name: 'Resíduo/Mancha', icon: '🧪' },
+  ];
+  
+  renderDefectTypes();
+  renderDefectManagement();
+}
+
+function renderDefectTypes() {
+  const grid = $('issueGrid');
+  grid.innerHTML = defectTypes.slice(0, 6).map(d => `
+    <div class="issue-opt" data-id="${d.id}" onclick="selectIssue('${d.id}')">
+      <span class="icon">${d.icon}</span>
+      <div class="label">${d.name}</div>
     </div>
   `).join('');
 }
 
-function renderQEmpList(list) {
-  const el = $('qEmpList');
-  if (!list.length) { el.innerHTML = '<div class="empty">Nenhum funcionário encontrado</div>'; return; }
-  el.innerHTML = list.map(e => `
-    <div class="emp-item ${qState.empId===e.id?'on':''}" id="qemp-${e.id}" onclick="selectQEmp(${e.id},'${e.name.replace(/'/g,"\\'")}')">
-      <div class="emp-avatar">${e.name[0].toUpperCase()}</div>
+function renderDefectManagement() {
+  const list = $('defectTypesList');
+  if (!list) return;
+  list.innerHTML = '<div class="section"><div class="section-title">Tipos Cadastrados</div></div>' + 
+    defectTypes.map(d => `
+    <div class="hist-item" style="display:flex;justify-content:space-between;align-items:center">
       <div>
-        <div class="emp-name">${e.name}</div>
-        <div style="font-size:11px;color:var(--muted)">${e.role}</div>
+        <span style="font-size:24px">${d.icon}</span>
+        <span style="margin-left:8px;font-weight:600">${d.name}</span>
       </div>
-      <div class="emp-check">${qState.empId===e.id?'✓':''}</div>
+      <button class="btn btn-danger" style="padding:6px 12px;font-size:12px" onclick="removeDefectType('${d.id}')">Remover</button>
     </div>
   `).join('');
-}
-
-function filterQEmp() {
-  const q = $('qEmpSearch').value.toLowerCase();
-  const qualityRoles = ['PACKER', 'ADMIN', 'MANAGER', 'STACKER', 'COLHEDOR'];
-  renderQEmpList(employees.filter(e => e.name.toLowerCase().includes(q) && qualityRoles.includes(e.role)));
-}
-
-function selectQEmp(id, name) {
-  qState.empId   = id;
-  qState.empName = name;
-  document.querySelectorAll('#qEmpList .emp-item').forEach(el => {
-    const eid = parseInt(el.id.replace('qemp-',''));
-    el.classList.toggle('on', eid === id);
-    el.querySelector('.emp-check').textContent = eid === id ? '✓' : '';
-  });
 }
 
 function selectIssue(id) {
@@ -856,6 +782,48 @@ function selectIssue(id) {
   document.querySelectorAll('.issue-opt').forEach(el =>
     el.classList.toggle('on', el.dataset.id === id)
   );
+}
+
+async function addDefectType() {
+  const emoji = $('newDefectEmoji').value.trim();
+  const name = $('newDefectName').value.trim();
+  if (!emoji || !name) { toast('Preencha emoji e nome', 'err'); return; }
+  
+  try {
+    const { error } = await sb.from('quality_issues').insert({
+      tenant_id: tenantId,
+      name: name,
+      icon: emoji,
+      active: true
+    });
+    if (error) throw error;
+    toast('✓ Tipo de defeito adicionado!', 'ok');
+    $('newDefectEmoji').value = '';
+    $('newDefectName').value = '';
+    await loadDefectTypes();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  }
+}
+
+async function removeDefectType(id) {
+  if (!confirm('Remover este tipo de defeito?')) return;
+  try {
+    const { error } = await sb.from('quality_issues').update({ active: false }).eq('id', id);
+    if (error) throw error;
+    toast('✓ Removido!', 'ok');
+    await loadDefectTypes();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  }
+}
+
+// UUID simples
+function uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 }
 
 let qPenalty = 1;
@@ -910,33 +878,62 @@ function getSigData() {
   return sigCanvas.toDataURL('image/png', 0.7);
 }
 
+// ── Quality Employee Selector ──
+function renderQEmpList(list) {
+  const el = $('qEmpList');
+  if (!list.length) { el.innerHTML = '<div class="empty">Nenhum embalador encontrado</div>'; return; }
+  el.innerHTML = list.map(e => `
+    <div class="emp-item ${qState.empId===e.id?'on':''}" id="qemp-${e.id}" onclick="selectQEmp(${e.id},'${e.name.replace(/'/g,"\\'")}')">
+      <div class="emp-avatar">${e.name[0].toUpperCase()}</div>
+      <div>
+        <div class="emp-name">${e.name}</div>
+        <div style="font-size:11px;color:var(--muted)">${e.role}</div>
+      </div>
+      <div class="emp-check">${qState.empId===e.id?'✓':''}</div>
+    </div>
+  `).join('');
+}
+
+function filterQEmp() {
+  const q = $('qEmpSearch').value.toLowerCase();
+  renderQEmpList(employees.filter(e => ['PACKER','EMBALADOR'].includes(e.role) && e.name.toLowerCase().includes(q)));
+}
+
+function selectQEmp(id, name) {
+  qState.empId   = id;
+  qState.empName = name;
+  document.querySelectorAll('#qEmpList .emp-item').forEach(el => {
+    const eid = parseInt(el.id.replace('qemp-',''));
+    el.classList.toggle('on', eid === id);
+    el.querySelector('.emp-check').textContent = eid === id ? '✓' : '';
+  });
+}
+
 // -- Submit Quality --
 async function submitQuality() {
-  if (!qState.empId)  { toast('Selecione um funcionário', 'err'); return; }
   if (!qState.issue)  { toast('Selecione o tipo de defeito', 'err'); return; }
-  // Inspetor vem automaticamente do email de login
-  const inspector = window.currentInspector || 'Sistema';
 
   const btn = $('qSubmitBtn');
   btn.disabled = true; btn.textContent = '⏳ Salvando...';
 
   const payload = {
-    tenant_id      : tenantId,
-    ts             : new Date().toISOString(),
-    employee_id    : qState.empId,
-    employee_name  : qState.empName,
-    issue_type     : qState.issue,
-    penalty_boxes  : qPenalty,
-    reason         : $('qReason').value.trim() || null,
-    inspector_name : inspector,
-    signature_base64: null,
-    synced         : true,
+    tenant_id       : tenantId,
+    ts              : new Date().toISOString(),
+    employee_id     : qState.empId   || null,
+    employee_name   : qState.empName || null,
+    issue_type      : qState.issue,
+    penalty_boxes   : qPenalty,
+    reason          : $('qReason').value.trim() || null,
+    inspector_name  : null,  // Preenchido no closure
+    signature_base64: null,  // Preenchido no closure
+    synced          : true,
   };
 
   try {
     await pushQuality(payload);
-    toast('✓ Auditoria registrada!', 'ok');
+    toast('✓ Defeito registrado!', 'ok');
     resetQForm();
+    loadQHistory();
   } catch(e) {
     if (!isOnline) {
       await idbAdd({ type: 'quality', data: { ...payload, synced: false } });
@@ -947,7 +944,7 @@ async function submitQuality() {
       toast('Erro ao salvar: ' + e.message, 'err');
     }
   } finally {
-    btn.disabled = false; btn.textContent = '✅ Registrar Auditoria';
+    btn.disabled = false; btn.textContent = '✅ Registrar Defeito';
   }
 }
 
@@ -957,13 +954,15 @@ async function pushQuality(payload) {
 }
 
 function resetQForm() {
-  qState.empId = null; qState.empName = ''; qState.issue = null;
-  qPenalty = 1; $('qPenaltyVal').textContent = 1;
+  qState.issue   = null;
+  qState.empId   = null;
+  qState.empName = '';
+  qPenalty = 1;
+  $('qPenaltyVal').textContent = 1;
   $('qReason').value = '';
-  document.querySelectorAll('#qEmpList .emp-item').forEach(el => {
-    el.classList.remove('on'); el.querySelector('.emp-check').textContent = '';
-  });
+  $('qEmpSearch').value = '';
   document.querySelectorAll('.issue-opt').forEach(el => el.classList.remove('on'));
+  renderQEmpList(employees.filter(e => ['PACKER','EMBALADOR'].includes(e.role)));
 }
 
 // -- Closure Screen --
@@ -998,8 +997,31 @@ function initClosureSig() {
 function clearClosureSig() { if(cSigCtx) { cSigCtx.clearRect(0,0,cSigCanvas.width,cSigCanvas.height); cSigHasData=false; } }
 async function saveClosure() {
   if (!cSigHasData) { toast('Assine para confirmar', 'err'); return; }
-  toast('✓ Sessão finalizada com sucesso!', 'ok');
-  setTimeout(() => showScreen('home'), 1200);
+  const inspectorName = $('closureInspectorName').value.trim() || window.currentInspector || 'Inspetor';
+  const sig = cSigCanvas.toDataURL('image/png', 0.7);
+
+  // Busca registros de qualidade do dia sem assinatura e atualiza
+  try {
+    const todayStr = today();
+    const { data: recs } = await sb.from('quality_audits')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .gte('ts', todayStr + 'T00:00:00')
+      .lte('ts', todayStr + 'T23:59:59')
+      .is('inspector_name', null);
+
+    if (recs && recs.length > 0) {
+      const ids = recs.map(r => r.id);
+      await sb.from('quality_audits')
+        .update({ inspector_name: inspectorName, signature_base64: sig })
+        .in('id', ids);
+    }
+    toast(`✓ Sessão finalizada! ${recs?.length||0} registro(s) assinado(s).`, 'ok');
+  } catch(e) {
+    console.warn('Closure update error:', e);
+    toast('✓ Sessão finalizada!', 'ok');
+  }
+  setTimeout(() => showScreen('home'), 1500);
 }
 
 // ── Quality History ──
@@ -1029,8 +1051,8 @@ async function loadQHistory() {
 }
 
 function issueLabel(id) {
-  const map = {podridao:'🦠 Podridão',dano_mecanico:'💥 Dano Mecânico',tamanho:'📏 Tamanho',maturacao:'🌿 Maturação',residuo:'🧪 Resíduo',outro:'❓ Outro'};
-  return map[id] || id || '—';
+  const defect = defectTypes.find(d => d.id === id);
+  return defect ? `${defect.icon} ${defect.name}` : id || '—';
 }
 
 // ═══════════════════════════════════════════
@@ -1038,48 +1060,9 @@ function issueLabel(id) {
 // ═══════════════════════════════════════════
 function initCarraoForm() {
   $('cDate').value = today();
-  updateJulianLot();
-  const harvestRoles = ['COLHEDOR', 'ADMIN', 'MANAGER', 'STACKER'];
-  renderCEmpList(employees.filter(e => harvestRoles.includes(e.role)));
+  // Apenas COLHEDOR (colheitadores)
+  renderCEmpList(employees.filter(e => e.role === 'COLHEDOR'));
 }
-
-function updateJulianLot() {
-  const dStr = $('cDate').value;
-  if (!dStr) return;
-  const d = new Date(dStr + 'T12:00:00');
-  const start = new Date(d.getFullYear(), 0, 0);
-  const diff = d - start;
-  const day = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const lot = day.toString().padStart(3, '0') + d.getFullYear().toString().slice(-2);
-  $('julianLotDisplay').textContent = lot;
-  cState.julianLot = lot;
-}
-
-// ── SIGNATURE HELPERS ──
-let cSigPad;
-function initCSignaturePad() {
-  const canvas = $('cSigCanvas');
-  const ctx = canvas.getContext('2d');
-  let drawing = false;
-  const getPos = e => {
-    const rect = canvas.getBoundingClientRect();
-    const cx = e.touches ? e.touches[0].clientX : e.clientX;
-    const cy = e.touches ? e.touches[0].clientY : e.clientY;
-    return { x: cx - rect.left, y: cy - rect.top };
-  };
-  const start = e => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); };
-  const move = e => { if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); e.preventDefault(); };
-  const stop = () => { drawing = false; };
-  canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', stop);
-  canvas.addEventListener('touchstart', start); canvas.addEventListener('touchmove', move); window.addEventListener('touchend', stop);
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.lineCap = 'round';
-  cSigPad = { canvas, ctx, clear: () => ctx.clearRect(0, 0, canvas.width, canvas.height), isEmpty: () => {
-    const b = document.createElement('canvas'); b.width = canvas.width; b.height = canvas.height;
-    return canvas.toDataURL() === b.toDataURL();
-  }};
-}
-function clearCSig() { cSigPad.clear(); }
-function getCSig() { return cSigPad.isEmpty() ? null : cSigPad.canvas.toDataURL(); }
 
 function renderCEmpList(list) {
   const el = $('cEmpList');
@@ -1098,7 +1081,8 @@ function renderCEmpList(list) {
 
 function filterCEmp() {
   const q = $('cEmpSearch').value.toLowerCase();
-  renderCEmpList(employees.filter(e => e.name.toLowerCase().includes(q)));
+  // Apenas COLHEDOR (colheitadores)
+  renderCEmpList(employees.filter(e => e.role === 'COLHEDOR' && e.name.toLowerCase().includes(q)));
 }
 
 function toggleCWorker(id, name) {
@@ -1113,7 +1097,8 @@ function toggleCWorker(id, name) {
 }
 
 function toggleAllCEmp() {
-  const filtered = employees.filter(e => $('cemp-' + e.id));
+  // Filtra apenas os COLHEDORES que estão visíveis no DOM
+  const filtered = employees.filter(e => e.role === 'COLHEDOR' && $('cemp-' + e.id));
   const allOn = filtered.every(e => cState.workers.has(e.id));
   filtered.forEach(e => {
     if (allOn) cState.workers.delete(e.id);
@@ -1186,9 +1171,6 @@ async function submitCarrao() {
     total_value       : parseFloat(total.toFixed(2)),
     value_per_employee: parseFloat(perEmp.toFixed(2)),
     employee_count    : cState.workers.size,
-    waste_kg          : parseFloat($('cWasteKg').value) || 0,
-    julian_lot        : cState.julianLot,
-    digital_signature_base64: getCSig(),
     registered_by     : regBy,
     synced            : true,
   };
@@ -1201,14 +1183,16 @@ async function submitCarrao() {
   btn.disabled = true; btn.textContent = '⏳ Salvando...';
 
   try {
-    await pushCarrao({ session, workers: workersArr });
+    const savedSession = await pushCarrao({ session, workers: workersArr });
     toast('✓ Carrões registrados!', 'ok');
+    showOrdemColheita({ session, workers: workersArr });
     resetCForm();
   } catch(e) {
     if (!isOnline) {
       await idbAdd({ type: 'carrao', data: { session: { ...session, synced: false }, workers: workersArr } });
       await updateSyncBadge();
       toast('📥 Salvo offline — sincronizará quando online', 'ok');
+      showOrdemColheita({ session, workers: workersArr });
       resetCForm();
     } else {
       toast('Erro: ' + e.message, 'err');
@@ -1216,6 +1200,87 @@ async function submitCarrao() {
   } finally {
     btn.disabled = false; btn.textContent = '🚜 Registrar Carrões';
   }
+}
+
+// ── Ordem de Colheita PDF ──
+function showOrdemColheita({ session, workers }) {
+  const parcela = parcelas.find(p => p.id == session.parcel_id);
+  const variety = varieties.find(v => v.id == $('cVariety').value);
+  const parcelaCode = parcela?.code || '—';
+  const varietyName = variety?.name || '—';
+  const shiftLabel = session.shift === 'MANHA' ? 'Manhã' : 'Tarde';
+  const fruitIcon  = session.fruit_type === 'MELANCIA' ? '🍉 Melancia' : '🍈 Melão';
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('pt-BR');
+  const timeStr = now.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+
+  // Código Juliano: AAAASSMP (Ano + Semana + Parcela)
+  const weekNum = Math.ceil((((now - new Date(now.getFullYear(), 0, 1)) / 86400000) + 1) / 7);
+  const julCode = String(now.getFullYear()).slice(-2) + String(weekNum).padStart(2,'0') + parcelaCode.replace(/\D/g,'').slice(0,3);
+
+  const workerRows = workers.map(w =>
+    `<tr><td>${w.employee_name}</td><td style="text-align:right">${BRL(w.value_received)}</td></tr>`
+  ).join('');
+
+  const html = `
+    <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+    <title>Ordem de Colheita</title>
+    <style>
+      body{font-family:Arial,sans-serif;margin:0;padding:24px;color:#111;font-size:14px}
+      .header{text-align:center;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:16px}
+      .header h1{margin:0;font-size:22px} .header p{margin:4px 0;font-size:12px;color:#555}
+      .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+      .field{background:#f5f5f5;border-radius:6px;padding:10px}
+      .label{font-size:10px;text-transform:uppercase;color:#777;font-weight:700;margin-bottom:4px}
+      .val{font-size:16px;font-weight:800}
+      table{width:100%;border-collapse:collapse;margin-top:8px}
+      th{background:#111;color:#fff;padding:8px 10px;font-size:12px;text-align:left}
+      td{padding:8px 10px;border-bottom:1px solid #ddd;font-size:13px}
+      .total{background:#e8fce8;font-weight:800}
+      .code{background:#111;color:#fff;text-align:center;padding:12px;border-radius:8px;margin:16px 0}
+      .code .lbl{font-size:11px;color:#aaa;margin-bottom:4px}
+      .code .num{font-size:28px;font-weight:900;letter-spacing:4px}
+      .footer{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px;padding-top:16px;border-top:1px solid #ddd}
+      .sig-box{border-bottom:1px solid #111;height:50px;margin-top:24px}
+      .sig-label{font-size:11px;color:#777;margin-top:6px;text-align:center}
+      @media print{body{padding:12px} button{display:none!important}}
+    </style></head><body>
+    <div class="header">
+      <h1>📋 Ordem de Colheita</h1>
+      <p>${tenantName} — Emitida em ${dateStr} às ${timeStr}</p>
+    </div>
+    <div class="grid">
+      <div class="field"><div class="label">Fruta</div><div class="val">${fruitIcon}</div></div>
+      <div class="field"><div class="label">Variedade</div><div class="val">${varietyName}</div></div>
+      <div class="field"><div class="label">Parcela</div><div class="val">${parcelaCode}</div></div>
+      <div class="field"><div class="label">Turno</div><div class="val">${shiftLabel}</div></div>
+      <div class="field"><div class="label">Data</div><div class="val">${session.date}</div></div>
+      <div class="field"><div class="label">Qtd de Carrões</div><div class="val">${session.qty_carrocoes}</div></div>
+    </div>
+    <div class="code">
+      <div class="lbl">Código de Rastreabilidade Juliano</div>
+      <div class="num">${julCode || '—'}</div>
+    </div>
+    <table>
+      <thead><tr><th>Funcionário</th><th style="text-align:right">Valor a Receber</th></tr></thead>
+      <tbody>
+        ${workerRows}
+        <tr class="total"><td><strong>TOTAL</strong></td><td style="text-align:right"><strong>${BRL(session.total_value)}</strong></td></tr>
+      </tbody>
+    </table>
+    <div class="footer">
+      <div><div class="sig-box"></div><div class="sig-label">Responsável pelo Registro</div></div>
+      <div><div class="sig-box"></div><div class="sig-label">Supervisor de Campo</div></div>
+    </div>
+    <div style="text-align:center;margin-top:16px">
+      <button onclick="window.print()" style="padding:12px 32px;background:#111;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨 Imprimir / Salvar PDF</button>
+    </div>
+    </body></html>
+  `;
+
+  const w = window.open('', '_blank', 'width=700,height=900');
+  if (w) { w.document.write(html); w.document.close(); }
+  else toast('Permita pop-ups para imprimir a ordem', 'err');
 }
 
 async function pushCarrao({ session, workers }) {
@@ -1228,12 +1293,11 @@ async function pushCarrao({ session, workers }) {
 
 function resetCForm() {
   cQty = 1; $('cQtyVal').textContent = 1;
-  $('cWasteKg').value = '';
-  if(cSigPad) cSigPad.clear();
   cState.workers.clear();
   $('cRegisteredBy').value = '';
   $('cEmpSearch').value = '';
-  renderCEmpList(employees);
+  // Somente COLHEDOR no reset
+  renderCEmpList(employees.filter(e => e.role === 'COLHEDOR'));
   updateCalcPreview();
 }
 
@@ -1256,20 +1320,18 @@ async function loadCHistory() {
         <div class="hist-top">
           <div>
             <div class="hist-name">${fruitIcon} ${s.qty_carrocoes} carrão(ões) — ${shiftLabel}</div>
-            <div style="font-size:11px;color:var(--orange);font-weight:700;margin-top:2px">LOTE: ${s.julian_lot || '—'}</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:2px">${s.date}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.date}</div>
           </div>
           <div class="hist-time" style="text-align:right">
             <div style="font-size:17px;font-weight:900;color:var(--green)">${BRL(s.total_value)}</div>
-            <div style="font-size:11px;color:var(--muted)">${BRL(s.value_per_employee)}/p</div>
+            <div style="font-size:11px;color:var(--muted)">${BRL(s.value_per_employee)}/pessoa</div>
           </div>
         </div>
         <div class="hist-meta" style="margin-top:8px">
           <span class="pill pill-orange">${s.employee_count} func.</span>
           <span class="pill pill-gray" style="font-size:10px">${emps || '—'}</span>
-          ${s.digital_signature_base64 ? '<span class="pill pill-green">✍️ ASSINADO</span>' : ''}
         </div>
-        ${s.registered_by ? `<div style="font-size:11px;color:var(--muted);margin-top:6px">Resp: ${s.registered_by}</div>` : ''}
+        ${s.registered_by ? `<div style="font-size:11px;color:var(--muted);margin-top:6px">Registrado por: ${s.registered_by}</div>` : ''}
       </div>
     `;
   }).join('');
@@ -1281,7 +1343,6 @@ async function loadCHistory() {
 document.addEventListener('DOMContentLoaded', async () => {
   await initApp();
   initSignaturePad();
-  initCSignaturePad();
   window.addEventListener('resize', () => {
     if (sigCanvas) initSignaturePad();
   });

@@ -129,7 +129,8 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
 
   <div class="nav-group">Operação</div>
   <div class="nav" onclick="showTab('finalize',this)">✅ Finalizar Dia</div>
-  <div class="nav" onclick="showTab('bulk',this)">📦 Vendas a Granel</div>
+  <div class="nav" onclick="showTab('nfe',this)">📄 Vendas NF-e</div>
+  <div class="nav" onclick="showTab('bulk',this)">🗑️ Refugo/Descarte</div>
   <div class="nav" onclick="showTab('logs',this)">📋 Logs de Produção</div>
   <div class="nav" onclick="showTab('quality',this)">🕵️ Qualidade</div>
 
@@ -278,17 +279,11 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
     </div>
   </div>
 
-  <!-- ═══ VENDAS A GRANEL ═══ -->
+  <!-- ═══ VENDAS A GRANEL / REFUGO ═══ -->
   <div id="tab-bulk" class="tab">
-    <h1 class="ptitle">📦 Vendas a Granel (Fruta Solta)</h1>
+    <h1 class="ptitle">🗑️ Refugo / Descarte (Fruta Solta sem NF)</h1>
     <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
-        <div class="title" style="margin-bottom:0">➕ Lançar Venda a Granel / Refugo</div>
-        <div style="display:flex; gap:8px">
-          <input type="file" id="bulkXmlInput" accept=".xml" style="display:none" onchange="handleXmlImport(event)">
-          <button class="sec" onclick="$('bulkXmlInput').click()" style="padding:6px 12px; font-size:12px">📂 Importar XML (NF-e)</button>
-        </div>
-      </div>
+      <div class="title">➕ Lançar Venda a Granel / Refugo</div>
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1.5fr 1fr 1fr 1fr auto; gap:10px; align-items:end">
         <div><label class="flabel">Data</label><input type="date" id="bulkDate"/></div>
         <div><label class="flabel">Parcela</label><select id="bulkParcel"></select></div>
@@ -307,6 +302,40 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
     <div class="card">
       <div class="title">📋 Histórico de Vendas / Refugo</div>
       <table id="bulkTable"><thead><tr><th>Data</th><th>Parcela</th><th>Cliente/Destino</th><th>NF</th><th>Peso</th><th>Valor</th><th>Ações</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <!-- ═══ VENDAS NF-e ═══ -->
+  <div id="tab-nfe" class="tab">
+    <h1 class="ptitle">📄 Vendas com Nota Fiscal (NF-e)</h1>
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
+        <div class="title" style="margin-bottom:0">➕ Registrar Venda NF-e</div>
+        <div style="display:flex; gap:8px">
+          <input type="file" id="nfeXmlInput" accept=".xml" style="display:none" onchange="handleNfeXmlImport(event)">
+          <button class="sec" onclick="$('nfeXmlInput').click()" style="padding:6px 14px; font-size:12px">📂 Importar XML NF-e</button>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr; gap:10px; align-items:end; margin-bottom:10px">
+        <div><label class="flabel">Data</label><input type="date" id="nfeDate"/></div>
+        <div><label class="flabel">Número NF</label><input id="nfeNumber" placeholder="000001"/></div>
+        <div><label class="flabel">Parcela</label><select id="nfeParcel"></select></div>
+        <div><label class="flabel">Variedade</label><select id="nfeVariety"></select></div>
+        <div><label class="flabel">Cliente</label><input id="nfeCustomer" placeholder="Nome do comprador"/></div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:10px; align-items:end">
+        <div><label class="flabel">Peso Total (Kg)</label><input type="number" id="nfeWeight" placeholder="0.00"/></div>
+        <div><label class="flabel">Valor Total (R$)</label><input type="number" id="nfeValue" placeholder="0.00"/></div>
+        <div><label class="flabel">Observação</label><input id="nfeNotes" placeholder="Opcional"/></div>
+        <button onclick="saveNFe()" style="background:var(--green)">💾 Salvar NF-e</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="title">📋 Histórico de Vendas com NF-e</div>
+      <table id="nfeTable">
+        <thead><tr><th>Data</th><th>Nº NF</th><th>Parcela</th><th>Variedade</th><th>Cliente</th><th>Peso</th><th>Valor</th><th>Ações</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
   </div>
 
@@ -575,7 +604,7 @@ async function afterLogin(user){
   if(culture !== 'MAMAO') {$('navTrace').style.display='flex';}
 
   const t = today();
-  ['dashStart','dashEnd','rankStart','rankEnd','finStart','finEnd','logStart','logEnd','finalizeDate','qaStart','qaEnd','massStart','massEnd','bulkDate'].forEach(id=>{const el=$(id);if(el)el.value=t;});
+  ['dashStart','dashEnd','rankStart','rankEnd','finStart','finEnd','logStart','logEnd','finalizeDate','qaStart','qaEnd','massStart','massEnd','bulkDate','nfeDate'].forEach(id=>{const el=$(id);if(el)el.value=t;});
 
   await Promise.all([loadEmpSelectAll(), loadWeightSelectAll()]);
   await refreshDash();
@@ -620,6 +649,7 @@ function showTab(n,el){
     quality:refreshQuality,
     mass:refreshMass,
     bulk:loadBulk,
+    nfe:loadNFe,
     finalize:loadManagers,
     logs:()=>{}
   };
@@ -1065,43 +1095,130 @@ async function delBulk(id) {
 }
 
 function handleXmlImport(e) {
+  // Handler legado — redireciona para NF-e
+  handleNfeXmlImport(e);
+}
+
+// ══════════════════════════════════════
+// VENDAS NF-e
+// ══════════════════════════════════════
+async function loadNFe() {
+  // Usa a tabela bulk_sales com invoice_num preenchido como NF-e
+  const {data} = await sb.from('bulk_sales')
+    .select('*, parcels(code), varieties(name)')
+    .eq('tenant_id', tenantId)
+    .not('invoice_num', 'is', null)
+    .order('date', {ascending: false});
+
+  $('nfeTable').querySelector('tbody').innerHTML = (data||[]).map(b => `
+    <tr>
+      <td>${b.date}</td>
+      <td><strong>${b.invoice_num || '—'}</strong></td>
+      <td>${b.parcels?.code || '—'}</td>
+      <td>${b.varieties?.name || '—'}</td>
+      <td>${b.customer_name || '—'}</td>
+      <td>${b.weight_kg} kg</td>
+      <td style="color:var(--green);font-weight:700">${BRL(b.total_value)}</td>
+      <td><button class="danger" onclick="delNFe('${b.id}')">Excluir</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">Nenhuma NF-e registrada.</td></tr>';
+
+  // Popula selects de parcela e variedade no form NF-e
+  const {data:parcels}   = await sb.from('parcels').select('id,code').eq('tenant_id',tenantId).eq('active',true);
+  const {data:varieties} = await sb.from('varieties').select('id,name').eq('tenant_id',tenantId).eq('active',true);
+
+  const nfeP = $('nfeParcel');
+  if(nfeP) {
+    const cur = nfeP.value;
+    nfeP.innerHTML = '<option value="">— Selecionar —</option>' + (parcels||[]).map(p=>`<option value="${p.id}">${p.code}</option>`).join('');
+    nfeP.value = cur;
+  }
+  const nfeV = $('nfeVariety');
+  if(nfeV) {
+    const cur = nfeV.value;
+    nfeV.innerHTML = '<option value="">— Selecionar —</option>' + (varieties||[]).map(v=>`<option value="${v.id}">${v.name}</option>`).join('');
+    nfeV.value = cur;
+  }
+  // Data padrão
+  const nfeDate = $('nfeDate');
+  if(nfeDate && !nfeDate.value) nfeDate.value = today();
+}
+
+async function saveNFe() {
+  const date   = $('nfeDate').value;
+  const nfNum  = $('nfeNumber').value.trim();
+  const pId    = $('nfeParcel').value;
+  const vId    = $('nfeVariety').value;
+  const cust   = $('nfeCustomer').value.trim();
+  const w      = $('nfeWeight').value;
+  const value  = $('nfeValue').value;
+  const notes  = $('nfeNotes').value.trim();
+
+  if(!date || !nfNum || !w) { alert('Preencha Data, Número NF e Peso.'); return; }
+
+  const {error} = await sb.from('bulk_sales').insert([{
+    tenant_id    : tenantId,
+    date,
+    parcel_id    : pId ? parseInt(pId) : null,
+    variety_id   : vId ? parseInt(vId) : null,
+    weight_kg    : parseFloat(w),
+    total_value  : parseFloat(value) || 0,
+    customer_name: cust || null,
+    invoice_num  : nfNum,
+    is_waste     : false,
+    notes        : notes || null,
+  }]);
+  if(error) { alert(error.message); return; }
+  loadNFe();
+  ['nfeNumber','nfeCustomer','nfeWeight','nfeValue','nfeNotes'].forEach(id => $(id).value = '');
+  toast('✓ NF-e registrada!', 'ok');
+}
+
+async function delNFe(id) {
+  if(!confirm('Excluir esta NF-e?')) return;
+  await sb.from('bulk_sales').delete().eq('id',id);
+  loadNFe();
+}
+
+function handleNfeXmlImport(e) {
   const file = e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
   reader.onload = async (ev) => {
     try {
       const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(ev.target.result, "text/xml");
-      
-      // Basic NF-e structure
-      const nNF = xmlDoc.getElementsByTagName("nNF")[0]?.textContent;
-      const xNome = xmlDoc.getElementsByTagName("xNome")[0]?.textContent;
-      const dEmi = xmlDoc.getElementsByTagName("dEmi")[0]?.textContent || xmlDoc.getElementsByTagName("dhEmi")[0]?.textContent?.split('T')[0];
-      
+      const xmlDoc = parser.parseFromString(ev.target.result, 'text/xml');
+
+      const nNF  = xmlDoc.getElementsByTagName('nNF')[0]?.textContent;
+      const xNome = xmlDoc.getElementsByTagName('xNome')[0]?.textContent;
+      const dEmi  = xmlDoc.getElementsByTagName('dEmi')[0]?.textContent
+                 || xmlDoc.getElementsByTagName('dhEmi')[0]?.textContent?.split('T')[0];
+
       let totalKg = 0, totalVal = 0;
-      const itens = xmlDoc.getElementsByTagName("det");
+      const itens = xmlDoc.getElementsByTagName('det');
       for(let i=0; i<itens.length; i++) {
-        const prod = itens[i].getElementsByTagName("prod")[0];
-        const qCom = parseFloat(prod.getElementsByTagName("qCom")[0]?.textContent || 0);
-        const vProd = parseFloat(prod.getElementsByTagName("vProd")[0]?.textContent || 0);
-        totalKg += qCom;
+        const prod  = itens[i].getElementsByTagName('prod')[0];
+        const qCom  = parseFloat(prod?.getElementsByTagName('qCom')[0]?.textContent || 0);
+        const vProd = parseFloat(prod?.getElementsByTagName('vProd')[0]?.textContent || 0);
+        totalKg  += qCom;
         totalVal += vProd;
       }
-      
-      if(dEmi) $('bulkDate').value = dEmi;
-      if(nNF) $('bulkInvoice').value = nNF;
-      if(xNome) $('bulkCustomer').value = xNome;
-      if(totalKg) $('bulkWeight').value = totalKg.toFixed(2);
-      if(totalVal) $('bulkValue').value = totalVal.toFixed(2);
-      
-      toast('✓ XML importado com sucesso!', 'ok');
+
+      // Preenche o formulário NF-e
+      if(dEmi)     $('nfeDate').value     = dEmi;
+      if(nNF)      $('nfeNumber').value   = nNF;
+      if(xNome)    $('nfeCustomer').value = xNome;
+      if(totalKg)  $('nfeWeight').value   = totalKg.toFixed(2);
+      if(totalVal) $('nfeValue').value    = totalVal.toFixed(2);
+
+      toast('✓ XML NF-e importado! Revise e salve.', 'ok');
     } catch(err) {
       console.error(err);
       alert('Erro ao processar XML: ' + err.message);
     }
   };
   reader.readAsText(file);
-  e.target.value = ''; // Reset input
+  e.target.value = '';
 }
 
 // ══════════════════════════════════════
