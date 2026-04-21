@@ -305,3 +305,4 @@ CREATE POLICY "fce_tenant_all" ON field_carrao_employees
 -- Após executar, adicione no web dashboard (Funcionários)
 -- os colhedores de campo com Função = "COLHEDOR"
 -- ================================================================
+const SUPA_URL = 'https://gknpviqughywjuuqnfmf.supabase.co';
