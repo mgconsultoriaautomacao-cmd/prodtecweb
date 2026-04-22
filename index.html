@@ -1566,7 +1566,11 @@ async function loadLinks(){
     const {data, error}=await sb.from('parcel_links').select('*,parcels(code),fruits(name),varieties(name)').eq('tenant_id',tenantId);
     if(error) throw error;
     const items = data || [];
-    $('linkList').innerHTML=items.map(l=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span>📦 ${l.parcels?.code || '?'} → 🍈 ${l.fruits?.name || '?'} / ${l.varieties?.name || '?'}</span></div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">Nenhum vínculo.</div>';
+    $('linkList').innerHTML=items.map(l=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <span>📦 ${l.parcels?.code || '?'} → 🍈 ${l.fruits?.name || '?'} / ${l.varieties?.name || '?'}</span>
+        <button class="danger" style="padding:3px 8px" onclick="window.del_link('${l.id}')">×</button>
+      </div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">Nenhum vínculo.</div>';
   } catch(e) { console.error(e); }
 }
 async function addFruit(){
@@ -1601,9 +1605,10 @@ window.edit_parcel = async(id, code, pCode) => {
 async function addLink(){
   const pId=$('linkParcel').value,fId=$('linkFruit').value,vId=$('linkVariety').value;
   if(!pId||!fId)return;
-  await sb.from('parcel_links').upsert([{parcel_id:pId,fruit_id:fId,variety_id:vId,tenant_id:tenantId}],{onConflict:'parcel_id'});
+  await sb.from('parcel_links').upsert([{parcel_id:pId,fruit_id:fId,variety_id:vId,tenant_id:tenantId}],{onConflict:'parcel_id,fruit_id,variety_id'});
   loadLinks();
 }
+window.del_link=async(id)=>{ if(confirm('Excluir este vínculo?')){ await sb.from('parcel_links').delete().eq('id',id); loadLinks(); } };
 window.del_fruit=async(id)=>{await sb.from('fruits').delete().eq('id',id);loadFruits();};
 window.del_variety=async(id)=>{await sb.from('varieties').delete().eq('id',id);loadVarieties();};
 window.del_parcel=async(id)=>{await sb.from('parcels').delete().eq('id',id);loadParcels();};
