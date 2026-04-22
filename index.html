@@ -492,6 +492,42 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
     </div>
   </div>
 
+  <!-- ═══ CONFIGURAÇÕES ═══ -->
+  <div id="tab-settings" class="tab">
+    <h1 class="ptitle">⚙️ Configurações do Tenant</h1>
+    <div class="grid2">
+      <div class="card">
+        <div class="title">🏢 Dados da Empresa</div>
+        <div style="margin-bottom:12px"><label class="flabel">Nome da Empresa</label><input id="cfgName" placeholder="Ex: Fazenda Santa Maria"/></div>
+        <div style="margin-bottom:12px"><label class="flabel">Tipo de Cultura</label>
+          <select id="cfgCulture"><option value="MAMAO">Mamão</option><option value="MELAO">Melão/Melancia (com rastreabilidade)</option><option value="OUTRO">Outro</option></select>
+        </div>
+      </div>
+      <div class="card">
+        <div class="title">🎯 Metas de Produção</div>
+        <div class="grid2" style="gap:10px">
+          <div><label class="flabel">Meta Packer (cx/h)</label><input id="cfgMetaPacker" type="number" placeholder="Ex: 50"/></div>
+          <div><label class="flabel">Meta Stacker (cx/h)</label><input id="cfgMetaStacker" type="number" placeholder="Ex: 200"/></div>
+          <div><label class="flabel">Valor Packer (R$/cx)</label><input id="cfgValPacker" type="number" step="0.01" placeholder="Ex: 0.50"/></div>
+          <div><label class="flabel">Valor Stacker (R$/cx)</label><input id="cfgValStacker" type="number" step="0.01" placeholder="Ex: 0.15"/></div>
+        </div>
+        <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+            <div><label class="flabel">Peso Estimado p/ Carrão (Kg)</label><input type="number" id="cfgCarraoWeight" placeholder="300"/></div>
+            <div><label class="flabel">Preço p/ Carrão Colhido (R$)</label><input type="number" id="cfgCarraoPrice" placeholder="2.00"/></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="title">📱 Evolution API (WhatsApp)</div>
+        <div style="margin-bottom:10px"><label class="flabel">URL da API</label><input id="cfgEvoUrl" placeholder="https://sua-evolution-api.com"/></div>
+        <div style="margin-bottom:10px"><label class="flabel">API Key</label><input id="cfgEvoKey" type="password" placeholder="sua-chave"/></div>
+        <div style="margin-bottom:10px"><label class="flabel">Instância</label><input id="cfgEvoInstance" placeholder="nome-da-instancia"/></div>
+      </div>
+      <div class="card">
+        <div class="title">👥 Usuários com acesso ao painel</div>
+        <table id="usersTable"><thead><tr><th>Usuário</th><th>Papel</th><th>WhatsApp</th></tr></thead><tbody></tbody></table>
+      </div>
     </div>
     <button id="cfgSaveBtn" onclick="saveSettings()" style="margin-top:4px">💾 Salvar Configurações</button>
     <div id="cfgStatus" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>
@@ -583,9 +619,11 @@ async function doLogin(){
 }
 
 async function afterLogin(user){
-  const {data:tu, error:e1} = await sb.from('tenant_users').select('tenant_id,role,whatsapp').eq('user_id',user.id).single();
-  if(!tu || e1){alert('Usuário não vinculado a empresa.');await sb.auth.signOut();return;}
+  // Permite múltiplos registros (multi-tenant)
+  const {data:tenants, error:e1} = await sb.from('tenant_users').select('tenant_id,role,whatsapp').eq('user_id',user.id);
+  if(!tenants || tenants.length === 0 || e1){alert('Usuário não vinculado a empresa.');await sb.auth.signOut();return;}
   
+  const tu = tenants[0]; // Pega a primeira como padrão
   const {data:tenant} = await sb.from('tenants').select('*').eq('id',tu.tenant_id).single();
   
   // Redirecionamento por Role
@@ -1580,18 +1618,13 @@ async function linkUser() {
   const role  = $('linkUserRole').value;
   if(!email) return;
 
-  // No Supabase, vinculamos por ID de usuário. 
-  // Para converter e-mail -> ID sem acesso total a auth.users, 
-  // costumamos usar uma RPC ou simplesmente pedir o ID se for admin.
-  // Como aqui é uma interface para o Manoel, vamos tentar via UUID direto ou e-mail se a tabela permitir.
-  
-  const {error} = await sb.from('tenant_users').insert({
-    user_id: email, // Nota: Se o banco usar UUID, isso vai falhar a menos que usemos RPC. 
-    tenant_id: tId,
-    role: role
+  const {error} = await sb.rpc('link_user_by_email', {
+    target_email: email,
+    target_tenant_id: tId,
+    target_role: role
   });
-  if(error) alert('Erro: Verifique se o e-mail/ID está correto no Supabase Auth. ' + error.message);
-  else { $('linkUserEmail').value=''; loadAdminData(); }
+  if(error) alert('Erro: ' + error.message);
+  else { $('linkUserEmail').value=''; loadAdminData(); alert('✓ Usuário vinculado com sucesso!'); }
 }
 
 async function unlinkUser(id) {
