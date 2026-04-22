@@ -344,6 +344,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   <div class="tab-bar">
     <div class="tab-btn on" id="cTabNewBtn" onclick="showCTab('new')">+ Novo Carrão</div>
     <div class="tab-btn" id="cTabHistBtn" onclick="showCTab('hist')">📋 Histórico</div>
+    <div class="tab-btn" id="cTabPhBtn" onclick="showCTab('ph')">🏢 Packing House</div>
   </div>
 
   <!-- Tab: Novo Carrão -->
@@ -446,9 +447,37 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
     </div>
   </div>
 
-  <!-- Tab: Histórico -->
-  <div class="tab-pane" id="cTabHist">
-    <div id="cHistList"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+  <!-- Tab: Packing House Validation -->
+  <div class="tab-pane" id="cTabPh">
+    <div style="padding:16px">
+      <div class="card" style="margin-bottom:16px;border-color:var(--blue)">
+        <div style="font-weight:800;font-size:16px;color:var(--blue);margin-bottom:4px">Validação de Recebimento</div>
+        <div style="font-size:12px;color:var(--muted2)">Assine para confirmar a chegada dos carrões no Packing House.</div>
+      </div>
+      
+      <div class="section-title">Filtrar por Parcela</div>
+      <select id="phParcela" onchange="loadPhPending()" style="margin-bottom:12px">
+        <option value="">— Todas as Parcelas —</option>
+      </select>
+      
+      <div id="phList" style="margin-bottom:20px">
+        <div class="empty">Selecione uma parcela para ver pendências</div>
+      </div>
+
+      <div id="phSignArea" style="display:none">
+        <div class="section-title">Responsável Packing House</div>
+        <input id="phInspectorName" placeholder="Nome do encarregado" style="margin-bottom:16px">
+        
+        <div class="section-title">Assinatura</div>
+        <div class="sig-wrap">
+          <canvas id="phSigCanvas" class="sig-canvas" width="800" height="200"></canvas>
+          <button class="sig-clear" onclick="clearPhSig()">🗑 Limpar</button>
+        </div>
+        <div class="sig-hint" style="margin-bottom:20px">Sua assinatura valerá para todos os itens acima</div>
+        
+        <button class="btn btn-primary btn-full" onclick="savePhSignature()">✅ Confirmar Recebimento</button>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -538,11 +567,17 @@ function showQTab(tab) {
   if (tab === 'hist') loadQHistory();
 }
 function showCTab(tab) {
-  $('cTabNew').className = 'tab-pane' + (tab==='new'?' on':'');
-  $('cTabHist').className = 'tab-pane' + (tab==='hist'?' on':'');
-  $('cTabNewBtn').className = 'tab-btn' + (tab==='new'?' on':'');
-  $('cTabHistBtn').className = 'tab-btn' + (tab==='hist'?' on':'');
+  $('cTabNew').className    = 'tab-pane' + (tab==='new' ?' on':'');
+  $('cTabHist').className   = 'tab-pane' + (tab==='hist'?' on':'');
+  $('cTabPh').className     = 'tab-pane' + (tab==='ph'  ?' on':'');
+  $('cTabNewBtn').className  = 'tab-btn'  + (tab==='new' ?' on':'');
+  $('cTabHistBtn').className = 'tab-btn'  + (tab==='hist'?' on':'');
+  $('cTabPhBtn').className   = 'tab-btn'  + (tab==='ph'  ?' on':'');
   if (tab === 'hist') loadCHistory();
+  if (tab === 'ph') {
+    loadPhParcelas();
+    setTimeout(initPhSig, 100);
+  }
 }
 
 function updateOnlineDots() {
@@ -672,6 +707,7 @@ async function afterLogin(u) {
   await loadVarieties();
   await initQualityForm();
   initCarraoForm();
+  loadPhParcelas(); // Carrega parcelas para o PH
   await updateSyncBadge();
   showScreen('home');
   if ('serviceWorker' in navigator) {
@@ -883,13 +919,13 @@ function renderQEmpList(list) {
   const el = $('qEmpList');
   if (!list.length) { el.innerHTML = '<div class="empty">Nenhum embalador encontrado</div>'; return; }
   el.innerHTML = list.map(e => `
-    <div class="emp-item ${qState.empId===e.id?'on':''}" id="qemp-${e.id}" onclick="selectQEmp(${e.id},'${e.name.replace(/'/g,"\\'")}')">
+    <div class="emp-item ${qState.empId == e.id ? 'on' : ''}" data-id="${e.id}" onclick="selectQEmp('${e.id}','${e.name.replace(/'/g,"\\'")}')">
       <div class="emp-avatar">${e.name[0].toUpperCase()}</div>
       <div>
         <div class="emp-name">${e.name}</div>
         <div style="font-size:11px;color:var(--muted)">${e.role}</div>
       </div>
-      <div class="emp-check">${qState.empId===e.id?'✓':''}</div>
+      <div class="emp-check">${qState.empId == e.id ? '✓' : ''}</div>
     </div>
   `).join('');
 }
@@ -903,9 +939,9 @@ function selectQEmp(id, name) {
   qState.empId   = id;
   qState.empName = name;
   document.querySelectorAll('#qEmpList .emp-item').forEach(el => {
-    const eid = parseInt(el.id.replace('qemp-',''));
-    el.classList.toggle('on', eid === id);
-    el.querySelector('.emp-check').textContent = eid === id ? '✓' : '';
+    const eid = el.dataset.id;
+    el.classList.toggle('on', eid == id);
+    el.querySelector('.emp-check').textContent = eid == id ? '✓' : '';
   });
 }
 
@@ -1068,13 +1104,13 @@ function renderCEmpList(list) {
   const el = $('cEmpList');
   if (!list.length) { el.innerHTML = '<div class="empty">Nenhum funcionário encontrado</div>'; return; }
   el.innerHTML = list.map(e => `
-    <div class="emp-item ${cState.workers.has(e.id)?'on':''}" id="cemp-${e.id}" onclick="toggleCWorker(${e.id},'${e.name.replace(/'/g,"\\'")}')">
+    <div class="emp-item ${cState.workers.has(String(e.id))?'on':''}" data-id="${e.id}" onclick="toggleCWorker('${e.id}','${e.name.replace(/'/g,"\\'")}')">
       <div class="emp-avatar">${e.name[0].toUpperCase()}</div>
       <div>
         <div class="emp-name">${e.name}</div>
         <div style="font-size:11px;color:var(--muted)">${e.role}</div>
       </div>
-      <div class="emp-check">${cState.workers.has(e.id)?'✓':''}</div>
+      <div class="emp-check">${cState.workers.has(String(e.id))?'✓':''}</div>
     </div>
   `).join('');
 }
@@ -1086,9 +1122,10 @@ function filterCEmp() {
 }
 
 function toggleCWorker(id, name) {
+  id = String(id);
   if (cState.workers.has(id)) cState.workers.delete(id);
   else cState.workers.set(id, name);
-  const el = $('cemp-' + id);
+  const el = document.querySelector(`.emp-item[data-id="${id}"]`);
   if (el) {
     el.classList.toggle('on', cState.workers.has(id));
     el.querySelector('.emp-check').textContent = cState.workers.has(id) ? '✓' : '';
@@ -1097,13 +1134,13 @@ function toggleCWorker(id, name) {
 }
 
 function toggleAllCEmp() {
-  // Filtra apenas os COLHEDORES que estão visíveis no DOM
-  const filtered = employees.filter(e => e.role === 'COLHEDOR' && $('cemp-' + e.id));
-  const allOn = filtered.every(e => cState.workers.has(e.id));
+  const filtered = employees.filter(e => e.role === 'COLHEDOR' && document.querySelector(`.emp-item[data-id="${e.id}"]`));
+  const allOn = filtered.every(e => cState.workers.has(String(e.id)));
   filtered.forEach(e => {
-    if (allOn) cState.workers.delete(e.id);
-    else cState.workers.set(e.id, e.name);
-    const el = $('cemp-' + e.id);
+    const sid = String(e.id);
+    if (allOn) cState.workers.delete(sid);
+    else cState.workers.set(sid, e.name);
+    const el = document.querySelector(`.emp-item[data-id="${sid}"]`);
     if (el) {
       el.classList.toggle('on', !allOn);
       el.querySelector('.emp-check').textContent = !allOn ? '✓' : '';
@@ -1160,18 +1197,28 @@ async function submitCarrao() {
   const total    = cQty * price;
   const perEmp   = total / cState.workers.size;
 
+  // Código Juliano: SS PP DDD (Semana + Parcela + Dia do Ano)
+  const now = new Date();
+  const weekNum = Math.ceil((((now - new Date(now.getFullYear(), 0, 1)) / 86400000) + 1) / 7);
+  const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+  const parcela = parcelas.find(p => p.id == parcelaId);
+  const parcelaCode = parcela?.code || '00';
+  const julianLot = `${weekNum} ${parcelaCode} ${dayOfYear}`;
+
   const session = {
     tenant_id         : tenantId,
     date              : date,
     shift             : cState.shift,
     fruit_type        : cState.fruit,
-    parcel_id         : parcelaId ? parseInt(parcelaId) : null,
+    parcel_id         : parcelaId && !isNaN(parcelaId) ? parseInt(parcelaId) : null,
+    variety_id        : $('cVariety').value && !isNaN($('cVariety').value) ? parseInt($('cVariety').value) : null,
     qty_carrocoes     : cQty,
     price_per_carrao  : price,
     total_value       : parseFloat(total.toFixed(2)),
     value_per_employee: parseFloat(perEmp.toFixed(2)),
     employee_count    : cState.workers.size,
     registered_by     : regBy,
+    julian_lot        : julianLot,
     synced            : true,
   };
 
@@ -1214,13 +1261,12 @@ function showOrdemColheita({ session, workers }) {
   const dateStr = now.toLocaleDateString('pt-BR');
   const timeStr = now.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
 
-  // Código Juliano: AAAASSMP (Ano + Semana + Parcela)
-  const weekNum = Math.ceil((((now - new Date(now.getFullYear(), 0, 1)) / 86400000) + 1) / 7);
-  const julCode = String(now.getFullYear()).slice(-2) + String(weekNum).padStart(2,'0') + parcelaCode.replace(/\D/g,'').slice(0,3);
-
   const workerRows = workers.map(w =>
     `<tr><td>${w.employee_name}</td><td style="text-align:right">${BRL(w.value_received)}</td></tr>`
   ).join('');
+
+  // Rastreabilidade Juliano solicitado: Semana Parcela DiaJuliano
+  const julCode = session.julian_lot || '—';
 
   const html = `
     <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
@@ -1269,8 +1315,8 @@ function showOrdemColheita({ session, workers }) {
       </tbody>
     </table>
     <div class="footer">
-      <div><div class="sig-box"></div><div class="sig-label">Responsável pelo Registro</div></div>
-      <div><div class="sig-box"></div><div class="sig-label">Supervisor de Campo</div></div>
+      <div><div class="sig-box"></div><div class="sig-label">Assinatura: Colheita</div></div>
+      <div><div class="sig-box"></div><div class="sig-label">Assinatura: Packing House</div></div>
     </div>
     <div style="text-align:center;margin-top:16px">
       <button onclick="window.print()" style="padding:12px 32px;background:#111;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨 Imprimir / Salvar PDF</button>
@@ -1299,6 +1345,96 @@ function resetCForm() {
   // Somente COLHEDOR no reset
   renderCEmpList(employees.filter(e => e.role === 'COLHEDOR'));
   updateCalcPreview();
+}
+
+// ── Packing House Logic ──
+function loadPhParcelas() {
+  const sel = $('phParcela');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Todas as Parcelas —</option>';
+  parcelas.forEach(p => sel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`));
+}
+
+let phRecords = [];
+async function loadPhPending() {
+  const el = $('phList');
+  const pid = $('phParcela').value;
+  el.innerHTML = '<div class="loading"><div class="spinner"></div>Buscando carrões...</div>';
+  $('phSignArea').style.display = 'none';
+
+  let query = sb.from('field_carrao_sessions')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .is('ph_signature_base64', null)
+    .order('date', {ascending:false});
+  
+  if (pid) query = query.eq('parcel_id', pid);
+
+  const { data, error } = await query.limit(20);
+  if (error || !data?.length) {
+    el.innerHTML = '<div class="empty">Nenhum carrão pendente de validação nesta parcela</div>';
+    return;
+  }
+
+  phRecords = data;
+  el.innerHTML = data.map(r => `
+    <div class="hist-item" style="padding:10px;margin-bottom:6px;border-style:dashed">
+      <div style="display:flex;justify-content:space-between">
+        <span style="font-weight:700">${r.fruit_type} — ${r.qty_carrocoes} un</span>
+        <span style="font-size:11px;color:var(--muted)">${r.date}</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:2px">Lote: ${r.julian_lot || '—'} | Reg: ${r.registered_by}</div>
+    </div>
+  `).join('');
+  $('phSignArea').style.display = 'block';
+}
+
+let phSigCtx, phSigCanvas, phSigHasData = false, phSigDrawing = false;
+function initPhSig() {
+  phSigCanvas = $('phSigCanvas');
+  if (!phSigCanvas) return;
+  phSigCtx = phSigCanvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = phSigCanvas.getBoundingClientRect();
+  phSigCanvas.width = rect.width * dpr;
+  phSigCanvas.height = rect.height * dpr;
+  phSigCtx.scale(dpr, dpr);
+  phSigCtx.strokeStyle = '#3b82f6';
+  phSigCtx.lineWidth = 3;
+  phSigCtx.lineCap = 'round'; phSigCtx.lineJoin = 'round';
+  const getPos = e => { const r = phSigCanvas.getBoundingClientRect(); const s = e.touches ? e.touches[0] : e; return {x: s.clientX-r.left, y: s.clientY-r.top}; };
+  const start = e => { e.preventDefault(); phSigDrawing=true; const p=getPos(e); phSigCtx.beginPath(); phSigCtx.moveTo(p.x,p.y); };
+  const move  = e => { e.preventDefault(); if(!phSigDrawing)return; const p=getPos(e); phSigCtx.lineTo(p.x,p.y); phSigCtx.stroke(); phSigHasData=true; };
+  phSigCanvas.addEventListener('touchstart', start, {passive:false});
+  phSigCanvas.addEventListener('touchmove',  move,  {passive:false});
+  phSigCanvas.addEventListener('touchend',   () => phSigDrawing=false);
+  phSigCanvas.addEventListener('mousedown',  start);
+  phSigCanvas.addEventListener('mousemove',  move);
+  window.addEventListener('mouseup', () => phSigDrawing=false);
+}
+function clearPhSig() { if(phSigCtx) { phSigCtx.clearRect(0,0,phSigCanvas.width,phSigCanvas.height); phSigHasData=false; } }
+
+async function savePhSignature() {
+  if (!phSigHasData) { toast('Assine para confirmar', 'err'); return; }
+  const name = $('phInspectorName').value.trim();
+  if (!name) { toast('Informe seu nome', 'err'); return; }
+  
+  const sig = phSigCanvas.toDataURL('image/png', 0.7);
+  const ids = phRecords.map(r => r.id);
+  
+  try {
+    const { error } = await sb.from('field_carrao_sessions')
+      .update({ ph_signature_base64: sig, ph_inspector_name: name })
+      .in('id', ids);
+    if (error) throw error;
+    
+    toast(`✓ ${ids.length} carrão(ões) validados!`, 'ok');
+    clearPhSig();
+    $('phInspectorName').value = '';
+    loadPhPending();
+  } catch(e) {
+    toast('Erro ao salvar: ' + e.message, 'err');
+  }
 }
 
 // ── Carrão History ──
