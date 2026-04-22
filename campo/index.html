@@ -961,6 +961,18 @@ function selectQEmp(id, name) {
 }
 
 // -- Submit Quality --
+function loadQualitySelects() {
+  const pSel = $('qParcela');
+  const vSel = $('qVariety');
+  if (!pSel || !vSel) return;
+  
+  pSel.innerHTML = '<option value="">(Opcional) Selecione Parcela</option>' + 
+    parcelas.map(p => `<option value="${p.id}">${p.code}</option>`).join('');
+    
+  vSel.innerHTML = '<option value="">(Opcional) Selecione Variedade</option>' + 
+    varieties.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+}
+
 async function submitQuality() {
   if (!qState.issue)  { toast('Selecione o tipo de defeito', 'err'); return; }
 
@@ -1506,9 +1518,7 @@ async function loadCHistory() {
 // ═══════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
   await initApp();
-  window.addEventListener('resize', () => {
-    if (sigCanvas) initSignaturePad();
-  });
+  // Listener de redimensionamento removido para evitar ReferenceError (sigCanvas)
   updateCalcPreview();
 });
 </script>

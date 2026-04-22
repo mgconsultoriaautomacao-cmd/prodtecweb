@@ -331,57 +331,60 @@ ALTER TABLE tenants ADD COLUMN IF NOT EXISTS farm_code TEXT DEFAULT '4';
 -- UPDATE tenants SET farm_code = '4' WHERE slug = 'BOM JESUS';
 
 -- ================================================================
+-- CONSOLIDAÇÃO EXTRAORDINÁRIA: UUID & AUDITORIA (GlobalG.A.P.)
 -- ================================================================
--- RPC: Vincular Usuário por E-mail (Super Admin)
--- ================================================================
+
+-- 1. EXTENSÃO DOS TENANTS (Configurações Profissionais)
+ALTER TABLE tenants 
+  ADD COLUMN IF NOT EXISTS culture_type             TEXT DEFAULT 'MELAO',
+  ADD COLUMN IF NOT EXISTS value_per_carrao         DECIMAL(10,2) DEFAULT 2.00,
+  ADD COLUMN IF NOT EXISTS target_per_hour_packer   DECIMAL(10,2),
+  ADD COLUMN IF NOT EXISTS target_per_hour_stacker  DECIMAL(10,2),
+  ADD COLUMN IF NOT EXISTS value_per_box_packer     DECIMAL(10,2),
+  ADD COLUMN IF NOT EXISTS value_per_box_stacker    DECIMAL(10,2);
+
+-- 2. SUPORTE A AUDITORIA EM PARCELAS (Código P / IDAR)
+ALTER TABLE parcels ADD COLUMN IF NOT EXISTS p_code TEXT;
+COMMENT ON COLUMN parcels.p_code IS 'Código IDAR / Código P para o Caderno de Campo (ID Agro-Rastreador)';
+
+-- 3. MIGRAÇÃO UNIFICADA PARA UUID (Resolve Erros 400)
+-- Tabelas afetadas: bulk_sales, field_carrao_sessions, quality_audits
+
+-- Bulk Sales
+ALTER TABLE bulk_sales DROP COLUMN IF EXISTS parcel_id, DROP COLUMN IF EXISTS variety_id;
+ALTER TABLE bulk_sales ADD COLUMN parcel_id UUID REFERENCES parcels(id), ADD COLUMN variety_id UUID REFERENCES varieties(id);
+
+-- Field Carrao Sessions
+ALTER TABLE field_carrao_sessions DROP COLUMN IF EXISTS parcel_id;
+ALTER TABLE field_carrao_sessions ADD COLUMN parcel_id UUID REFERENCES parcels(id);
+
+-- Quality Audits
+ALTER TABLE quality_audits DROP COLUMN IF EXISTS parcel_id;
+ALTER TABLE quality_audits ADD COLUMN parcel_id UUID REFERENCES parcels(id);
+
+-- Field Carrao Employees (Join UUID)
+ALTER TABLE field_carrao_employees DROP COLUMN IF EXISTS employee_id;
+ALTER TABLE field_carrao_employees ADD COLUMN employee_id UUID REFERENCES employees(id);
+
+-- 4. RPC: VINCULAR USUÁRIO POR E-MAIL (Versão Final)
 CREATE OR REPLACE FUNCTION link_user_by_email(target_email TEXT, target_tenant_id UUID, target_role TEXT)
 RETURNS VOID AS $$
 DECLARE
     target_user_id UUID;
 BEGIN
-    -- Busca o ID na tabela de auth
     SELECT id INTO target_user_id FROM auth.users WHERE email = target_email LIMIT 1;
-    
     IF target_user_id IS NULL THEN
         RAISE EXCEPTION 'Usuário com e-mail % não encontrado no sistema.', target_email;
     END IF;
-
     INSERT INTO public.tenant_users (tenant_id, user_id, role)
     VALUES (target_tenant_id, target_user_id, target_role)
     ON CONFLICT (tenant_id, user_id) DO UPDATE SET role = target_role;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- ================================================================
--- CORREÇÃO: UUID em bulk_sales e RPC de Vínculo
--- ================================================================
+-- 5. ÍNDICES DE PERFORMANCE PARA RASTREABILIDADE
+CREATE INDEX IF NOT EXISTS idx_fcs_parcel_id ON field_carrao_sessions(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_qa_parcel_id  ON quality_audits(parcel_id);
 
--- 1. CORRIGIR TIPOS DE COLUNA (BIGINT -> UUID)
--- Isso permite o JOIN correto com as tabelas de parcels e varieties
-ALTER TABLE bulk_sales 
-  DROP COLUMN IF EXISTS parcel_id,
-  DROP COLUMN IF EXISTS variety_id;
-
-ALTER TABLE bulk_sales
-  ADD COLUMN parcel_id  UUID REFERENCES parcels(id),
-  ADD COLUMN variety_id UUID REFERENCES varieties(id);
-
--- 2. RPC: Vincular Usuário por E-mail (Caso não tenha sido rodado)
-CREATE OR REPLACE FUNCTION link_user_by_email(target_email TEXT, target_tenant_id UUID, target_role TEXT)
-RETURNS VOID AS $$
-DECLARE
-    target_user_id UUID;
-BEGIN
-    SELECT id INTO target_user_id FROM auth.users WHERE email = target_email LIMIT 1;
-    IF target_user_id IS NULL THEN
-        RAISE EXCEPTION 'Usuário com e-mail % não encontrado.', target_email;
-    END IF;
-    INSERT INTO public.tenant_users (tenant_id, user_id, role)
-    VALUES (target_tenant_id, target_user_id, target_role)
-    ON CONFLICT (tenant_id, user_id) DO UPDATE SET role = target_role;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- INSTRUÇÃO FINAL
--- Execute o bloco acima no SQL Editor para estabilizar os relatórios.
+-- INSTRUÇÃO FINAL: EXECUTE TODO O BLOCO ACIMA PARA ESTABILIDADE TOTAL
 -- ================================================================

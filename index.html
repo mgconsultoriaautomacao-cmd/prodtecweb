@@ -214,7 +214,7 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
     <div class="card">
       <div class="title">📋 Cardex de Rastreabilidade (Entradas e Saídas / Movimentação)</div>
       <table id="massTable">
-        <thead><tr><th>Data/Hora</th><th>Tipo</th><th>Parcela</th><th>Descrição/Destino</th><th>Entrada (kg)</th><th>Saída (kg)</th><th>Saldo</th></tr></thead>
+        <thead><tr><th>Data/Hora</th><th>Tipo</th><th>Parcela</th><th>Descrição/Destino</th><th>Entrada (kg)</th><th>Saída (kg)</th><th>Ações</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -476,7 +476,11 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
       </div>
       <div class="card">
         <div class="title">🚜 Parcelas</div>
-        <div style="display:flex;gap:8px;margin-bottom:10px"><input id="parcelCode" placeholder="Código da parcela"/><button onclick="addParcel()" style="padding:9px 14px">+</button></div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input id="parcelCode" placeholder="Código (ex: P1)" style="flex:1"/>
+          <input id="parcelPCode" placeholder="Cód. P (IDAR)" style="width:100px"/>
+          <button onclick="addParcel()" style="padding:9px 14px">+</button>
+        </div>
         <div id="parcelList"></div>
       </div>
     </div>
@@ -1054,8 +1058,8 @@ async function refreshMass() {
   const events = [];
   (harvest||[]).forEach(h => {
     const lot = h.julian_lot ? `<br><small style="color:var(--orange)">Lote: ${h.julian_lot}</small>` : '';
-    events.push({ ts: h.date + 'T06:00:00', type: 'COLHEITA', parcel: '', desc: `${h.qty_carrocoes} carrões ${lot}`, in: h.qty_carrocoes * weightPerCarrao, out: 0 });
-    if(h.waste_kg > 0) events.push({ ts: h.date + 'T06:01:00', type: 'WASTE (CAMPO)', parcel: '', desc: `Perda em campo`, in: 0, out: h.waste_kg });
+    events.push({ ts: h.date + 'T06:00:00', type: 'COLHEITA', parcel: h.parcels?.code || '—', desc: `${h.qty_carrocoes} carrões ${lot}`, in: h.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300), out: 0, sessionId: h.id });
+    if(h.waste_kg > 0) events.push({ ts: h.date + 'T06:01:00', type: 'WASTE (CAMPO)', parcel: h.parcels?.code || '—', desc: `Perda em campo`, in: 0, out: h.waste_kg });
   });
   (packed||[]).forEach(p => events.push({ ts: p.ts, type: 'PACKING', parcel: p.parcel_code || '—', desc: p.weight_name || 'Caixa', in: 0, out: p.weight_kg || 0 }));
   (bulk||[]).forEach(b => events.push({ ts: b.date + 'T18:00:00', type: b.is_waste ? 'WASTE (PACK)' : 'VENDA GRANEL', parcel: b.parcels?.code || '—', desc: `${b.customer_name || '—'} (NF: ${b.invoice_num || '—'})`, in: 0, out: Number(b.weight_kg) }));
@@ -1068,13 +1072,15 @@ async function refreshMass() {
     running += diff;
     return `
       <tr>
-        <td style="font-size:11px;color:var(--muted)">${new Date(ev.ts).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
+        <td style="font-size:11px;color:var(--muted)">${new Date(ev.ts).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})}</td>
         <td><span class="badge ${ev.type.includes('COLHEITA')?'active':'packer'}" style="font-size:9px">${ev.type}</span></td>
         <td><b>${ev.parcel}</b></td>
         <td>${ev.desc}</td>
         <td style="color:var(--green)">${ev.in ? ev.in.toFixed(1) : ''}</td>
         <td style="color:var(--red)">${ev.out ? ev.out.toFixed(1) : ''}</td>
-        <td style="font-weight:700;color:${running < 0 ? 'var(--red)' : 'var(--blue)'}">${running.toFixed(1)} kg</td>
+        <td>
+          ${ev.sessionId ? `<button class="sec" style="padding:3px 8px" onclick="exportHarvestOrderPDF('${ev.sessionId}')">📄 Imprimir Ordem</button>` : '—'}
+        </td>
       </tr>
     `;
   }).join('') || '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Sem movimentação no período.</td></tr>';
@@ -1126,8 +1132,8 @@ async function saveBulk() {
   const {error} = await sb.from('bulk_sales').insert([{
     tenant_id: tenantId,
     date,
-    parcel_id: pId ? parseInt(pId) : null,
-    variety_id: vId ? parseInt(vId) : null,
+    parcel_id: pId || null,
+    variety_id: vId || null,
     weight_kg: parseFloat(w),
     total_value: waste ? 0 : (parseFloat(v) || 0),
     customer_name: cust || null,
@@ -1464,14 +1470,28 @@ async function loadVarieties(){
     simpleList('variety','varList','Variedade','name')(data);
   } catch(e) { console.error(e); }
 }
-async function loadParcels(){
+async function loadParcels() {
   try {
-    const {data, error}=await sb.from('parcels').select('*').eq('tenant_id',tenantId).order('code');
-    if(error) throw error;
+    const { data, error } = await sb.from('parcels').select('*').eq('tenant_id', tenantId).order('code');
+    if (error) throw error;
     const items = data || [];
-    $('parcelList').innerHTML=items.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span>${p.code}</span><button class="danger" style="padding:3px 8px" onclick="del_parcel('${p.id}')">×</button></div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">Nenhuma.</div>';
-    const sel=$('linkParcel');if(sel) sel.innerHTML=items.map(p=>`<option value="${p.id}">${p.code}</option>`).join('') || '<option value="">Sem parcelas</option>';
-  } catch(e) { console.error(e); }
+    $('parcelList').innerHTML = items.map(p => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <div>
+          <span style="font-weight:700;color:var(--blue);margin-right:8px">${p.code}</span>
+          <span style="font-size:11px;color:var(--muted)">IDAR: ${p.p_code || '—'}</span>
+        </div>
+        <button class="danger" style="padding:3px 8px" onclick="window.del_parcel('${p.id}')">×</button>
+      </div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">Nenhuma.</div>';
+    
+    const sel = $('linkParcel');
+    const massSel = $('massParcel');
+    const bulkSel = $('bulkParcel');
+    const nfeSel = $('nfeParcel');
+    
+    const options = items.map(p => `<option value="${p.id}">${p.code} (${p.p_code || 'S/P'})</option>`).join('');
+    [sel, massSel, bulkSel, nfeSel].forEach(s => { if(s) s.innerHTML = '<option value="">Selecione...</option>' + options; });
+  } catch (e) { console.error(e); }
 }
 async function loadLinks(){
   try {
@@ -1483,7 +1503,14 @@ async function loadLinks(){
 }
 async function addFruit(){const n=$('fruitName').value.trim();if(!n)return;await sb.from('fruits').insert([{name:n,active:true,track_code:null,tenant_id:tenantId,updated_at:new Date().toISOString()}]);$('fruitName').value='';loadFruits();}
 async function addVariety(){const n=$('varName').value.trim();if(!n)return;await sb.from('varieties').insert([{name:n,active:true,track_code:null,tenant_id:tenantId,updated_at:new Date().toISOString()}]);$('varName').value='';loadVarieties();}
-async function addParcel(){const n=$('parcelCode').value.trim();if(!n)return;await sb.from('parcels').insert([{code:n,active:true,tenant_id:tenantId,updated_at:new Date().toISOString()}]);$('parcelCode').value='';loadParcels();}
+async function addParcel() {
+  const n = $('parcelCode').value.trim();
+  const p = $('parcelPCode').value.trim();
+  if (!n) return;
+  await sb.from('parcels').insert([{ code: n, p_code: p, active: true, tenant_id: tenantId, updated_at: new Date().toISOString() }]);
+  $('parcelCode').value = ''; $('parcelPCode').value = '';
+  loadParcels();
+}
 async function addLink(){
   const pId=$('linkParcel').value,fId=$('linkFruit').value,vId=$('linkVariety').value;
   if(!pId||!fId)return;
@@ -1666,7 +1693,8 @@ async function loadSettings(){
 async function saveSettings(){
   const btn=$('cfgSaveBtn'),st=$('cfgStatus');
   btn.disabled=true;st.textContent='Salvando...';
-  const {error}=await sb.from('tenants').update({
+  
+  const payload = {
     name:$('cfgName').value.trim(),
     culture_type:$('cfgCulture').value,
     target_per_hour_packer:parseFloat($('cfgMetaPacker').value)||null,
@@ -1678,10 +1706,16 @@ async function saveSettings(){
     evo_instance:$('cfgEvoInstance').value.trim()||null,
     harvest_carrao_weight_kg:parseFloat($('cfgCarraoWeight').value)||300,
     value_per_carrao:parseFloat($('cfgCarraoPrice').value)||2.0
-  }).eq('id',tenantId);
+  };
+
+  const {error}=await sb.from('tenants').update(payload).eq('id',tenantId);
   btn.disabled=false;
-  if(error){st.innerHTML=`<span style="color:var(--red)">Erro: ${error.message}</span>`;}
-  else{st.innerHTML=`<span style="color:var(--green)">✓ Configurações salvas!</span>`;await loadSettings();}
+  if(error) {
+    st.innerHTML=`<span style="color:var(--red)">Erro: ${error.message}</span>`;
+  } else {
+    st.innerHTML=`<span style="color:var(--green)">✓ Configurações salvas com sucesso!</span>`;
+    await loadSettings();
+  }
 }
 
 // ══════════════════════════════════════
@@ -1727,7 +1761,13 @@ function exportFinPDF(){
   doc.setFontSize(11);doc.setFont('helvetica','bold');
   doc.text(`Total do Período: ${$('finKpiTotal').textContent}`,14,41);
   
-  // Agrupar por funcionário para o PDF (Sumarizado)
+function exportFinPDF(){
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  const s=$('finStart').value,e=$('finEnd').value;
+  pdfHeader(doc,'Folha de Pagamento Consolidada',`${s} a ${e}`);
+  doc.setFontSize(11);doc.setFont('helvetica','bold');
+  doc.text(`Total do Período: ${$('finKpiTotal').textContent}`,14,41);
+  
   const empSum={};
   _finData.forEach(d=>{
     if(!empSum[d.employee_name])empSum[d.employee_name]={name:d.employee_name,role:d.role,boxes:0,kg:0,val:0};
@@ -1747,6 +1787,61 @@ function exportFinPDF(){
     doc.text('Data: ___/___/______',140,y+20);
   }
   doc.save(`prodtech-payroll-${s}-${e}.pdf`);
+}
+
+function exportHarvestOrderPDF(sid) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const s = _massSessions.find(x => x.id === sid);
+  if (!s) { alert('Sessão não encontrada para exportação.'); return; }
+
+  pdfHeader(doc, 'ORDEM DE COLHEITA', `Lote (Julian): ${s.julian_lot || '—'}`);
+
+  doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+  doc.text('Dados Geográficos e Operacionais', 14, 45);
+  doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+  doc.text(`Data: ${new Date(s.date).toLocaleDateString('pt-BR')} | Turno: ${s.shift}`, 14, 52);
+  doc.text(`Parcela/Gleba: ${s.parcels?.code || '—'} (Cód. P / IDAR: ${s.parcels?.p_code || '—'})`, 14, 58);
+  doc.text(`Cultura: ${s.fruit_type}`, 14, 64);
+  doc.text(`Quantidade Colhida: ${s.qty_carrocoes} Carrão(ões)`, 14, 70);
+
+  doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+  doc.text('Equipe de Colhedores Registrados', 14, 85);
+  
+  const emps = _massEmployees.filter(e => e.session_id === sid).map((e, i) => [i + 1, e.employee_name, BRL(e.value_received)]);
+  doc.autoTable({
+    startY: 90,
+    head: [['#', 'Colaborador', 'Remuneração Estimada']],
+    body: emps,
+    theme: 'grid',
+    headStyles: { fillColor: [245, 158, 11] },
+    styles: { fontSize: 9 }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 25;
+  doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+  doc.text('Controle de Rastreabilidade e Auditoria', 14, finalY);
+  doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
+  doc.text('Documento gerado para fins de conformidade com normas GlobalG.A.P. e SMETA.', 14, finalY + 7);
+  
+  // Signatures
+  if (s.digital_signature_base64) {
+    doc.addImage(s.digital_signature_base64, 'PNG', 14, finalY + 15, 35, 15);
+    doc.setFontSize(8); doc.text('Resp. Colheita (Digital)', 14, finalY + 35);
+  } else {
+    doc.text('________________________', 14, finalY + 25);
+    doc.setFontSize(8); doc.text('Responsável Colheita', 14, finalY + 30);
+  }
+
+  if (s.ph_signature_base64) {
+    doc.addImage(s.ph_signature_base64, 'PNG', 110, finalY + 15, 35, 15);
+    doc.setFontSize(8); doc.text(`Recebimento Packing: ${s.ph_inspector_name || '—'}`, 110, finalY + 35);
+  } else {
+    doc.text('________________________', 110, finalY + 25);
+    doc.setFontSize(8); doc.text('Recebimento Packing House', 110, finalY + 30);
+  }
+
+  doc.save(`ordem-colheita-${s.julian_lot || s.id}.pdf`);
 }
 
 function exportAuditPDF(){
