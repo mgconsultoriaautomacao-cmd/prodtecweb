@@ -532,7 +532,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 // ═══════════════════════════════════════════
 const SUPA_URL = 'https://yiigaohjvvieeooxsban.supabase.co';
 const SUPA_KEY = 'sb_publishable_t_6e3ZvN3VkT31VS8thpcg_6XclrsYR';
-const PRICES   = { MELANCIA: 3.00, MELAO: 4.00 };
 const BRL = v => 'R$ ' + Number(v||0).toFixed(2).replace('.',',');
 
 // ═══════════════════════════════════════════
@@ -1212,7 +1211,7 @@ function cQtyChange(d) {
 }
 
 function updateCalcPreview() {
-  const price    = PRICES[cState.fruit] || 3;
+  const price    = window.pricePerCarrao || 2.00;
   const total    = cQty * price;
   const empCount = cState.workers.size;
   const perEmp   = empCount > 0 ? total / empCount : null;
