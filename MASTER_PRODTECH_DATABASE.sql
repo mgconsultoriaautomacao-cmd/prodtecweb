@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS tenants (
   evo_instance text,  -- nome da instância
   -- Config horário
   timezone    text DEFAULT 'America/Sao_Paulo',
+  farm_code   text DEFAULT '4',  -- Código da fazenda para rastreabilidade (1 dígito)
   created_at  timestamptz DEFAULT now()
 );
 
@@ -184,7 +185,9 @@ COMMENT ON COLUMN field_carrao_sessions.waste_kg IS 'Refugo estimado em campo (n
 -- 1. ADICIONAR tenant_id NAS TABELAS DE SUPORTE
 ALTER TABLE parcels    ADD COLUMN IF NOT EXISTS tenant_id uuid REFERENCES tenants(id);
 ALTER TABLE fruits     ADD COLUMN IF NOT EXISTS tenant_id uuid REFERENCES tenants(id);
+ALTER TABLE fruits     ADD COLUMN IF NOT EXISTS track_code text; -- Código para rastreabilidade (1 dígito)
 ALTER TABLE varieties  ADD COLUMN IF NOT EXISTS tenant_id uuid REFERENCES tenants(id);
+ALTER TABLE varieties  ADD COLUMN IF NOT EXISTS track_code text; -- Código para rastreabilidade (1 dígito)
 
 -- 2. CRIAR TABELA DE DEFEITOS (QUALITY ISSUES)
 CREATE TABLE IF NOT EXISTS quality_issues (

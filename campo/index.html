@@ -694,11 +694,12 @@ async function doLogin() {
 async function afterLogin(u) {
   user = u;
   const { data: tu } = await sb.from('tenant_users')
-    .select('tenant_id, tenants(name)')
+    .select('tenant_id, tenants(name, farm_code)')
     .eq('user_id', u.id).single();
   if (!tu) { alert('Usuário não vinculado a uma empresa.'); await sb.auth.signOut(); return; }
   tenantId   = tu.tenant_id;
   tenantName = tu.tenants?.name || 'Empresa';
+  window.farmCode = tu.tenants?.farm_code || '4';
   window.currentInspector = u.email.split('@')[0];
   $('homeTenant').textContent = tenantName;
   $('loggedAs').textContent   = u.email;
@@ -748,7 +749,7 @@ async function loadParcelas() {
 let varieties = [];
 async function loadVarieties() {
   const { data } = await sb.from('varieties')
-    .select('id, name')
+    .select('id, name, track_code')
     .eq('tenant_id', tenantId)
     .eq('active', 1)
     .order('name');
@@ -1197,13 +1198,19 @@ async function submitCarrao() {
   const total    = cQty * price;
   const perEmp   = total / cState.workers.size;
 
-  // Código Juliano: SS PP DDD (Semana + Parcela + Dia do Ano)
+  // Novo Código Juliano: F PPP V DDD
+  // F: Farm Code, PPP: Parcela (3 digitos), V: Variety Code, DDD: Julian Day (3 digitos)
   const now = new Date();
-  const weekNum = Math.ceil((((now - new Date(now.getFullYear(), 0, 1)) / 86400000) + 1) / 7);
   const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
-  const parcela = parcelas.find(p => p.id == parcelaId);
-  const parcelaCode = parcela?.code || '00';
-  const julianLot = `${weekNum} ${parcelaCode} ${dayOfYear}`;
+  const parcela   = parcelas.find(p => p.id == parcelaId);
+  const variety   = varieties.find(v => v.id == $('cVariety').value);
+  
+  const F   = window.farmCode || '4';
+  const PPP = String(parcela?.code || '0').replace(/\D/g,'').padStart(3, '0');
+  const V   = String(variety?.track_code || '1');
+  const DDD = String(dayOfYear).padStart(3, '0');
+  
+  const julianLot = `${F}${PPP}${V}${DDD}`;
 
   const session = {
     tenant_id         : tenantId,
