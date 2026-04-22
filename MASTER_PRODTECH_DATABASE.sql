@@ -444,5 +444,61 @@ CREATE POLICY pl_tenant_all ON parcel_links
 ALTER TABLE field_carrao_employees DROP CONSTRAINT IF EXISTS field_carrao_employees_pkey;
 ALTER TABLE field_carrao_employees ADD PRIMARY KEY (session_id, employee_id);
 
+-- ================================================================
+-- 🚀 SCRIPT DE REPARO CONSOLIDADO (FINAL STABILIZATION)
+-- ================================================================
+
+-- 1. CORREÇÃO DE FUNCIONÁRIOS (MULTI-TENANT SAFE)
+-- Remove travas globais de nome e código de barras que impedem uso em empresas diferentes
+ALTER TABLE employees DROP CONSTRAINT IF EXISTS employees_barcode_key;
+ALTER TABLE employees DROP CONSTRAINT IF EXISTS employees_name_key;
+ALTER TABLE employees DROP CONSTRAINT IF EXISTS employees_tenant_id_barcode_key;
+ALTER TABLE employees DROP CONSTRAINT IF EXISTS employees_tenant_id_name_key;
+
+-- Recria as travas agora vinculadas à empresa (tenant_id)
+ALTER TABLE employees ADD CONSTRAINT employees_tenant_id_barcode_key UNIQUE (tenant_id, barcode);
+ALTER TABLE employees ADD CONSTRAINT employees_tenant_id_name_key UNIQUE (tenant_id, name);
+
+-- 2. RECONCILIAÇÃO DE TIPOS UUID (OPERAÇÕES)
+-- Garante que parcelas e variedades sejam sempre UUID para evitar erro 400
+DO $$ 
+BEGIN
+    -- Quality Audits
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quality_audits' AND column_name='parcel_id' AND data_type='bigint') THEN
+        ALTER TABLE quality_audits DROP COLUMN parcel_id;
+        ALTER TABLE quality_audits ADD COLUMN parcel_id UUID REFERENCES parcels(id);
+    END IF;
+
+    -- Field Carrao Sessions
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='field_carrao_sessions' AND column_name='parcel_id' AND data_type='bigint') THEN
+        ALTER TABLE field_carrao_sessions DROP COLUMN parcel_id;
+        ALTER TABLE field_carrao_sessions ADD COLUMN parcel_id UUID REFERENCES parcels(id);
+    END IF;
+
+    -- Bulk Sales
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bulk_sales' AND column_name='parcel_id' AND data_type='bigint') THEN
+        ALTER TABLE bulk_sales DROP COLUMN parcel_id;
+        ALTER TABLE bulk_sales ADD COLUMN parcel_id UUID REFERENCES parcels(id);
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bulk_sales' AND column_name='variety_id' AND data_type='bigint') THEN
+        ALTER TABLE bulk_sales DROP COLUMN variety_id;
+        ALTER TABLE bulk_sales ADD COLUMN variety_id UUID REFERENCES varieties(id);
+    END IF;
+END $$;
+
+-- 3. GARANTIA DE ÍNDICE DE VÍNCULO (UPSERT)
+-- Necessário para o comando do painel web funcionar (on_conflict)
+ALTER TABLE parcel_links DROP CONSTRAINT IF EXISTS parcel_links_parcel_id_fruit_id_variety_id_key;
+ALTER TABLE parcel_links ADD CONSTRAINT parcel_links_parcel_id_fruit_id_variety_id_key UNIQUE (parcel_id, fruit_id, variety_id);
+
 -- INSTRUÇÃO FINAL: EXECUTE TODO O BLOCO ACIMA PARA ESTABILIDADE TOTAL
 -- ================================================================
+
+-- 4. CONFIGURAÇÃO INICIAL DINÂMICA (Exemplo para o tenant atual)
+-- Isso garante que o App de Campo já comece com valores reais
+UPDATE deployments SET farm_code = '4', value_per_carrao = 2.00 WHERE farm_code IS NULL;
+UPDATE tenants SET farm_code = '4', value_per_carrao = 2.00 WHERE farm_code IS NULL;
+
+-- 5. ÍNDICES DE PERFORMANCE ADICIONAIS
+CREATE INDEX IF NOT EXISTS idx_fruits_tenant_active ON fruits(tenant_id, active);
+CREATE INDEX IF NOT EXISTS idx_varieties_tenant_active ON varieties(tenant_id, active);
