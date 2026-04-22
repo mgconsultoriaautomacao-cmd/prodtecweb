@@ -218,6 +218,27 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
         <tbody></tbody>
       </table>
     </div>
+
+    <!-- 🚜 SESSÕES DE COLHEITA (CARRÕES) -->
+    <div class="card">
+      <div class="title">🚜 Sessões de Colheita (Carrões de Campo)</div>
+      <div style="overflow-x:auto">
+        <table id="harvestSessionsTable">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Turno</th>
+              <th>Parcela</th>
+              <th>Fruta</th>
+              <th>Qtd Carrões</th>
+              <th>Colhedores</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- ═══ RANKING ═══ -->
@@ -1023,6 +1044,9 @@ async function refreshMass() {
   }
   const {data:packed} = await qP;
   const totalPackedKg = (packed||[]).reduce((a,p)=>a+(p.weight_kg||0),0);
+
+  // 2.1. Carregar Sessões de Colheita (Carrões) - Detalhado
+  await loadFieldSessions(s, e, pFilter);
   
   // 3. Vendas Granel / Refugo
   let qB = sb.from('bulk_sales').select('*, parcels(code)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
@@ -1086,6 +1110,43 @@ async function refreshMass() {
   }).join('') || '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Sem movimentação no período.</td></tr>';
   
   _massEvents = events; // Store for PDF
+}
+
+async function loadFieldSessions(s, e, pFilter) {
+  const tbody = $('harvestSessionsTable').querySelector('tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Carregando sessões...</td></tr>';
+
+  let q = sb.from('field_carrao_sessions')
+    .select('*, parcels(code, p_code)')
+    .eq('tenant_id', tenantId)
+    .gte('date', s)
+    .lte('date', e)
+    .order('date', {ascending: false});
+  
+  if(pFilter) q = q.eq('parcel_id', pFilter);
+
+  const {data, error} = await q;
+  if(error) { console.error(error); return; }
+
+  if(!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">Nenhuma sessão de colheita encontrada no período.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = data.map(sess => `
+    <tr>
+      <td>${new Date(sess.date).toLocaleDateString('pt-BR')}</td>
+      <td><span class="badge ${sess.shift === 'MANHA' ? 'active' : 'packer'}">${sess.shift === 'MANHA' ? '🌅 Manhã' : '🌇 Tarde'}</span></td>
+      <td><b>${sess.parcels?.code || '—'}</b><br><small>IDAR: ${sess.parcels?.p_code || '—'}</small></td>
+      <td>${sess.fruit_type === 'MELAO' ? '🍈 Melão' : '🍉 Melancia'}</td>
+      <td style="font-weight:700;color:var(--blue)">${sess.qty_carrocoes}</td>
+      <td>${sess.employee_count} func.</td>
+      <td>
+        <button class="sec" style="padding:4px 10px" onclick="exportHarvestOrderPDF('${sess.id}')">📄 PDF</button>
+      </td>
+    </tr>
+  `).join('');
 }
 
 // ══════════════════════════════════════
@@ -1461,6 +1522,8 @@ async function loadFruits(){
     const {data, error}=await sb.from('fruits').select('*').eq('tenant_id',tenantId).order('name');
     if(error) throw error;
     simpleList('fruit','fruitList','Fruta','name')(data);
+    const sel = $('linkFruit');
+    if(sel) sel.innerHTML = '<option value="">Selecione...</option>' + (data||[]).map(f=>`<option value="${f.id}">${f.name}</option>`).join('');
   } catch(e) { console.error(e); }
 }
 async function loadVarieties(){
@@ -1468,6 +1531,8 @@ async function loadVarieties(){
     const {data, error}=await sb.from('varieties').select('*').eq('tenant_id',tenantId).order('name');
     if(error) throw error;
     simpleList('variety','varList','Variedade','name')(data);
+    const sel = $('linkVariety');
+    if(sel) sel.innerHTML = '<option value="">Selecione...</option>' + (data||[]).map(v=>`<option value="${v.id}">${v.name}</option>`).join('');
   } catch(e) { console.error(e); }
 }
 async function loadParcels() {
@@ -1481,7 +1546,10 @@ async function loadParcels() {
           <span style="font-weight:700;color:var(--blue);margin-right:8px">${p.code}</span>
           <span style="font-size:11px;color:var(--muted)">IDAR: ${p.p_code || '—'}</span>
         </div>
-        <button class="danger" style="padding:3px 8px" onclick="window.del_parcel('${p.id}')">×</button>
+        <div>
+          <button class="sec" style="padding:3px 8px;margin-right:4px" onclick="window.edit_parcel('${p.id}','${p.code}','${p.p_code||''}')">✏️</button>
+          <button class="danger" style="padding:3px 8px" onclick="window.del_parcel('${p.id}')">×</button>
+        </div>
       </div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">Nenhuma.</div>';
     
     const sel = $('linkParcel');
@@ -1501,16 +1569,35 @@ async function loadLinks(){
     $('linkList').innerHTML=items.map(l=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span>📦 ${l.parcels?.code || '?'} → 🍈 ${l.fruits?.name || '?'} / ${l.varieties?.name || '?'}</span></div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">Nenhum vínculo.</div>';
   } catch(e) { console.error(e); }
 }
-async function addFruit(){const n=$('fruitName').value.trim();if(!n)return;await sb.from('fruits').insert([{name:n,active:true,track_code:null,tenant_id:tenantId,updated_at:new Date().toISOString()}]);$('fruitName').value='';loadFruits();}
-async function addVariety(){const n=$('varName').value.trim();if(!n)return;await sb.from('varieties').insert([{name:n,active:true,track_code:null,tenant_id:tenantId,updated_at:new Date().toISOString()}]);$('varName').value='';loadVarieties();}
+async function addFruit(){
+  const n=$('fruitName').value.trim();if(!n)return;
+  const {error}=await sb.from('fruits').insert([{name:n,active:true,track_code:null,tenant_id:tenantId}]);
+  if(error) alert('Erro: ' + error.message);
+  else { $('fruitName').value=''; loadFruits(); }
+}
+async function addVariety(){
+  const n=$('varName').value.trim();if(!n)return;
+  const {error}=await sb.from('varieties').insert([{name:n,active:true,track_code:null,tenant_id:tenantId}]);
+  if(error) alert('Erro: ' + error.message);
+  else { $('varName').value=''; loadVarieties(); }
+}
 async function addParcel() {
   const n = $('parcelCode').value.trim();
   const p = $('parcelPCode').value.trim();
   if (!n) return;
-  await sb.from('parcels').insert([{ code: n, p_code: p, active: true, tenant_id: tenantId, updated_at: new Date().toISOString() }]);
-  $('parcelCode').value = ''; $('parcelPCode').value = '';
-  loadParcels();
+  const {error}=await sb.from('parcels').insert([{ code: n, p_code: p, active: true, tenant_id: tenantId }]);
+  if(error) alert('Erro: ' + error.message);
+  else { $('parcelCode').value = ''; $('parcelPCode').value = ''; loadParcels(); }
 }
+window.edit_parcel = async(id, code, pCode) => {
+  const nCode = prompt('Novo Código da Parcela:', code);
+  const nPCode = prompt('Novo Código P (IDAR):', pCode);
+  if(nCode !== null) {
+    const {error} = await sb.from('parcels').update({code: nCode, p_code: nPCode}).eq('id', id);
+    if(error) alert(error.message);
+    else loadParcels();
+  }
+};
 async function addLink(){
   const pId=$('linkParcel').value,fId=$('linkFruit').value,vId=$('linkVariety').value;
   if(!pId||!fId)return;
