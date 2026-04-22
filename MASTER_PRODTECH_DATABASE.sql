@@ -229,57 +229,56 @@ CREATE INDEX IF NOT EXISTS idx_varieties_tenant ON varieties(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_qi_tenant ON quality_issues(tenant_id);
 -- ================================================================
 -- MIGRAÇÃO: PWA de Campo — Qualidade + Carrões de Colheita
--- Execute no Supabase SQL Editor (uma vez)
+-- ================================================================
+-- 🚀 RECONSTRUÇÃO OPERACIONAL DEFINITIVA (ESTABILIZAÇÃO TOTAL)
 -- ================================================================
 
--- 1. EXPANDIR quality_audits com campos de compliance
--- ----------------------------------------------------------------
-ALTER TABLE quality_audits
-  ADD COLUMN IF NOT EXISTS inspector_name   TEXT,
-  ADD COLUMN IF NOT EXISTS signature_base64 TEXT,
-  ADD COLUMN IF NOT EXISTS photo_url        TEXT,    -- infra pronta, opcional
-  ADD COLUMN IF NOT EXISTS parcel_id        BIGINT;
+-- 1. Limpeza de tabelas antigas para evitar conflitos de tipo (CUIDADO: Apaga dados de teste)
+DROP TABLE IF EXISTS field_carrao_employees CASCADE;
+DROP TABLE IF EXISTS field_carrao_sessions CASCADE;
 
--- 2. SUPORTE A FUNCIONÁRIOS COLHEDORES
--- ----------------------------------------------------------------
--- Adicionar colhedores via web dashboard com role = 'COLHEDOR'
--- A coluna role já existe na tabela employees
-
--- 3. CRIAR TABELA field_carrao_sessions
--- ----------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS field_carrao_sessions (
+-- 2. Recriação: field_carrao_sessions
+CREATE TABLE field_carrao_sessions (
   id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id           UUID         NOT NULL,
+  tenant_id           UUID         NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   ts                  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   date                DATE         NOT NULL,
   shift               TEXT         NOT NULL CHECK (shift IN ('MANHA', 'TARDE')),
   fruit_type          TEXT         NOT NULL CHECK (fruit_type IN ('MELANCIA', 'MELAO')),
-  parcel_id           BIGINT,
+  parcel_id           UUID         REFERENCES parcels(id) ON DELETE SET NULL,
+  variety_id          UUID         REFERENCES varieties(id) ON DELETE SET NULL,
   qty_carrocoes       INTEGER      NOT NULL CHECK (qty_carrocoes > 0),
   price_per_carrao    DECIMAL(10,2) NOT NULL,
   total_value         DECIMAL(10,2) NOT NULL,
   value_per_employee  DECIMAL(10,2) NOT NULL,
   employee_count      INTEGER      NOT NULL DEFAULT 1,
   registered_by       TEXT         NOT NULL,
-  notes               TEXT,
+  julian_lot          TEXT,
+  ph_signature_base64 TEXT,      -- Assinatura do fiscal (base64)
+  ph_inspector_name   TEXT,      -- Nome do fiscal
+  waste_kg            DECIMAL(10,2) DEFAULT 0, -- Refugo em campo
   synced              BOOLEAN      DEFAULT TRUE,
   created_at          TIMESTAMPTZ  DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_fcs_tenant_date  ON field_carrao_sessions(tenant_id, date DESC);
-CREATE INDEX IF NOT EXISTS idx_fcs_tenant_shift ON field_carrao_sessions(tenant_id, date, shift);
-
--- 4. CRIAR TABELA field_carrao_employees (many-to-many)
--- ----------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS field_carrao_employees (
+-- 3. Recriação: field_carrao_employees (M:N)
+CREATE TABLE field_carrao_employees (
   session_id     UUID          NOT NULL REFERENCES field_carrao_sessions(id) ON DELETE CASCADE,
-  employee_id    BIGINT        NOT NULL,
-  employee_name  TEXT          NOT NULL,
+  employee_id    UUID          NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  employee_name  TEXT,         -- Cache do nome para agilidade
   value_received DECIMAL(10,2) NOT NULL,
   PRIMARY KEY (session_id, employee_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_fce_session ON field_carrao_employees(session_id);
+
+-- 4. Ajuste Definitivo: quality_audits (Garantir UUID e novos campos)
+ALTER TABLE quality_audits DROP COLUMN IF EXISTS parcel_id CASCADE;
+ALTER TABLE quality_audits DROP COLUMN IF EXISTS variety_id CASCADE;
+ALTER TABLE quality_audits ADD COLUMN parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL;
+ALTER TABLE quality_audits ADD COLUMN variety_id UUID REFERENCES varieties(id) ON DELETE SET NULL;
+ALTER TABLE quality_audits ADD COLUMN IF NOT EXISTS inspector_name TEXT;
+ALTER TABLE quality_audits ADD COLUMN IF NOT EXISTS signature_base64 TEXT;
 
 -- 5. ROW LEVEL SECURITY
 -- ----------------------------------------------------------------
@@ -490,9 +489,10 @@ BEGIN
 END $$;
 
 -- 3. GARANTIA DE ÍNDICE DE VÍNCULO (UPSERT)
--- Necessário para o comando do painel web funcionar (on_conflict)
+-- Necessário para o comando do painel web funcionar (on_conflict) multi-tenant
 ALTER TABLE parcel_links DROP CONSTRAINT IF EXISTS parcel_links_parcel_id_fruit_id_variety_id_key;
-ALTER TABLE parcel_links ADD CONSTRAINT parcel_links_parcel_id_fruit_id_variety_id_key UNIQUE (parcel_id, fruit_id, variety_id);
+ALTER TABLE parcel_links DROP CONSTRAINT IF EXISTS parcel_links_tenant_parcel_fruit_variety_key;
+ALTER TABLE parcel_links ADD CONSTRAINT parcel_links_tenant_parcel_fruit_variety_key UNIQUE (tenant_id, parcel_id, fruit_id, variety_id);
 
 -- INSTRUÇÃO FINAL: EXECUTE TODO O BLOCO ACIMA PARA ESTABILIDADE TOTAL
 -- ================================================================
