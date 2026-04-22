@@ -416,5 +416,33 @@ END $$;
 -- UPDATE varieties SET tenant_id = (SELECT tenant_id FROM tenant_users LIMIT 1) WHERE tenant_id IS NULL;
 ALTER TABLE varieties ADD CONSTRAINT varieties_tenant_id_name_key UNIQUE (tenant_id, name);
 
+-- ================================================================
+-- FIX: SUPORTE A MÚLTIPLOS VÍNCULOS E ESTABILIDADE DE CARRÕES
+-- ================================================================
+
+-- 1. Criação formal da tabela de vínculos (caso não exista)
+CREATE TABLE IF NOT EXISTS parcel_links (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    parcel_id   UUID NOT NULL REFERENCES parcels(id) ON DELETE CASCADE,
+    fruit_id    UUID NOT NULL REFERENCES fruits(id) ON DELETE CASCADE,
+    variety_id  UUID NOT NULL REFERENCES varieties(id) ON DELETE CASCADE,
+    active      BOOLEAN DEFAULT TRUE,
+    created_at  TIMESTAMPTZ DEFAULT NOW(),
+    -- Permite o mesmo fruto em parcelas diferentes, mas evita o exato mesmo vínculo duplicado
+    UNIQUE (parcel_id, fruit_id, variety_id) 
+);
+
+-- 2. Habilita RLS para parcel_links
+ALTER TABLE parcel_links ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS pl_tenant_all ON parcel_links;
+CREATE POLICY pl_tenant_all ON parcel_links 
+  FOR ALL USING (tenant_id = get_my_tenant_id());
+
+-- 3. FIX: Restaurar Chave Primária em field_carrao_employees
+-- Após a migração para UUID em employee_id, a PK original precisa ser restaurada
+ALTER TABLE field_carrao_employees DROP CONSTRAINT IF EXISTS field_carrao_employees_pkey;
+ALTER TABLE field_carrao_employees ADD PRIMARY KEY (session_id, employee_id);
+
 -- INSTRUÇÃO FINAL: EXECUTE TODO O BLOCO ACIMA PARA ESTABILIDADE TOTAL
 -- ================================================================
