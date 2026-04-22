@@ -331,6 +331,27 @@ ALTER TABLE tenants ADD COLUMN IF NOT EXISTS farm_code TEXT DEFAULT '4';
 -- UPDATE tenants SET farm_code = '4' WHERE slug = 'BOM JESUS';
 
 -- ================================================================
+-- ================================================================
+-- RPC: Vincular Usuário por E-mail (Super Admin)
+-- ================================================================
+CREATE OR REPLACE FUNCTION link_user_by_email(target_email TEXT, target_tenant_id UUID, target_role TEXT)
+RETURNS VOID AS $$
+DECLARE
+    target_user_id UUID;
+BEGIN
+    -- Busca o ID na tabela de auth
+    SELECT id INTO target_user_id FROM auth.users WHERE email = target_email LIMIT 1;
+    
+    IF target_user_id IS NULL THEN
+        RAISE EXCEPTION 'Usuário com e-mail % não encontrado no sistema.', target_email;
+    END IF;
+
+    INSERT INTO public.tenant_users (tenant_id, user_id, role)
+    VALUES (target_tenant_id, target_user_id, target_role)
+    ON CONFLICT (tenant_id, user_id) DO UPDATE SET role = target_role;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- INSTRUÇÃO FINAL
 -- Após executar, adicione no web dashboard (Funcionários)
 -- os colhedores de campo com Função = "COLHEDOR"
