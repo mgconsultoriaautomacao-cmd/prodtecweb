@@ -1761,13 +1761,6 @@ function exportFinPDF(){
   doc.setFontSize(11);doc.setFont('helvetica','bold');
   doc.text(`Total do Período: ${$('finKpiTotal').textContent}`,14,41);
   
-function exportFinPDF(){
-  const {jsPDF}=window.jspdf;const doc=new jsPDF();
-  const s=$('finStart').value,e=$('finEnd').value;
-  pdfHeader(doc,'Folha de Pagamento Consolidada',`${s} a ${e}`);
-  doc.setFontSize(11);doc.setFont('helvetica','bold');
-  doc.text(`Total do Período: ${$('finKpiTotal').textContent}`,14,41);
-  
   const empSum={};
   _finData.forEach(d=>{
     if(!empSum[d.employee_name])empSum[d.employee_name]={name:d.employee_name,role:d.role,boxes:0,kg:0,val:0};
