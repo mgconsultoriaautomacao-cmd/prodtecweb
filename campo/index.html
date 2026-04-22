@@ -280,12 +280,17 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   <!-- Tab: Novo Defeito (Rápido) -->
   <div class="tab-pane on" id="qTabNew">
 
-    <div class="section"><div class="section-title">Tipo de Defeito</div></div>
-    <div style="padding:0 16px">
-      <div class="issue-grid" id="issueGrid">
-        <!-- Carregado dinamicamente -->
-      </div>
+    <div class="section"><div class="section-title">Parcela / Variedade (Opcional)</div></div>
+    <div style="padding:0 16px; display:grid; grid-template-columns:1fr 1fr; gap:8px">
+      <select id="qParcela" onchange="qState.parcelId=this.value" style="font-size:12px">
+        <option value="">— Parcela —</option>
+      </select>
+      <select id="qVariety" onchange="qState.varietyId=this.value" style="font-size:12px">
+        <option value="">— Variedade —</option>
+      </select>
     </div>
+
+    <div class="section"><div class="section-title">Tipo de Defeito</div></div>
 
     <div class="section"><div class="section-title">Funcionário (Embalador)</div></div>
     <div style="padding:0 16px 8px">
@@ -447,6 +452,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
     </div>
   </div>
 
+  <!-- Tab: Histórico -->
+  <div class="tab-pane" id="cTabHist">
+    <div id="cHistList" style="padding:0 16px"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+  </div>
+
   <!-- Tab: Packing House Validation -->
   <div class="tab-pane" id="cTabPh">
     <div style="padding:16px">
@@ -528,7 +538,7 @@ let employees  = [];   // [{id, name, role}]
 let parcelas   = [];   // [{id, code}]
 let isOnline   = navigator.onLine;
 
-const qState = { empId: null, empName: '', issue: null, penalty: 1 };
+const qState = { empId: null, empName: '', issue: null, penalty: 1, parcelId: null, varietyId: null };
 const cState = { shift: 'MANHA', fruit: 'MELANCIA', parcelaId: null, qty: 1, workers: new Map() };
 
 // ═══════════════════════════════════════════
@@ -727,6 +737,7 @@ async function afterLogin(u) {
   await initQualityForm();
   initCarraoForm();
   loadPhParcelas();
+  loadQualitySelects(); // Popula os selects de parcela/variedade na qualidade
   await updateSyncBadge();
   showScreen('home');
   if ('serviceWorker' in navigator) {
@@ -887,40 +898,7 @@ function qPenaltyChange(d) {
   $('qPenaltyVal').textContent = qPenalty;
 }
 
-// ── Signature Pad ──
-let sigDrawing = false;
-let sigCtx, sigCanvas;
-let sigHasData = false;
-
-function initSignaturePad() {
-  sigCanvas = $('qSigCanvas');
-  sigCtx    = sigCanvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  const rect = sigCanvas.getBoundingClientRect();
-  sigCanvas.width  = rect.width  * dpr;
-  sigCanvas.height = rect.height * dpr;
-  sigCtx.scale(dpr, dpr);
-  sigCtx.strokeStyle = '#10b981';
-  sigCtx.lineWidth   = 2.5;
-  sigCtx.lineCap     = 'round';
-  sigCtx.lineJoin    = 'round';
-
-  function getPos(e) {
-    const r = sigCanvas.getBoundingClientRect();
-    const src = e.touches ? e.touches[0] : e;
-    return { x: src.clientX - r.left, y: src.clientY - r.top };
-  }
-  function start(e) { e.preventDefault(); sigDrawing = true; const p = getPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); }
-  function move(e)  { e.preventDefault(); if (!sigDrawing) return; const p = getPos(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); sigHasData = true; }
-  function end()    { sigDrawing = false; }
-
-  sigCanvas.addEventListener('touchstart', start, { passive:false });
-  sigCanvas.addEventListener('touchmove',  move,  { passive:false });
-  sigCanvas.addEventListener('touchend',   end);
-  sigCanvas.addEventListener('mousedown',  start);
-  sigCanvas.addEventListener('mousemove',  move);
-  sigCanvas.addEventListener('mouseup',    end);
-}
+// Signature logic is handled in closure and PH tabs.
 
 function clearSig() {
   if (!sigCtx) return;
@@ -979,8 +957,10 @@ async function submitQuality() {
     issue_type      : qState.issue,
     penalty_boxes   : qPenalty,
     reason          : $('qReason').value.trim() || null,
-    inspector_name  : null,  // Preenchido no closure
-    signature_base64: null,  // Preenchido no closure
+    inspector_name  : null,
+    signature_base64: null,
+    parcel_id       : qState.parcelId  || null,
+    variety_id      : qState.varietyId || null,
     synced          : true,
   };
 
@@ -1009,9 +989,13 @@ async function pushQuality(payload) {
 }
 
 function resetQForm() {
-  qState.issue   = null;
-  qState.empId   = null;
-  qState.empName = '';
+  qState.issue     = null;
+  qState.empId     = null;
+  qState.empName   = '';
+  qState.parcelId  = null;
+  qState.varietyId = null;
+  if($('qParcela')) $('qParcela').value = '';
+  if($('qVariety')) $('qVariety').value = '';
   qPenalty = 1;
   $('qPenaltyVal').textContent = 1;
   $('qReason').value = '';
@@ -1235,8 +1219,8 @@ async function submitCarrao() {
     date              : date,
     shift             : cState.shift,
     fruit_type        : cState.fruit,
-    parcel_id         : parcelaId && !isNaN(parcelaId) ? parseInt(parcelaId) : null,
-    variety_id        : $('cVariety').value && !isNaN($('cVariety').value) ? parseInt($('cVariety').value) : null,
+    parcel_id         : parcelaId || null,
+    variety_id        : $('cVariety').value || null,
     qty_carrocoes     : cQty,
     price_per_carrao  : price,
     total_value       : parseFloat(total.toFixed(2)),
@@ -1465,6 +1449,7 @@ async function savePhSignature() {
 // ── Carrão History ──
 async function loadCHistory() {
   const el = $('cHistList');
+  if (!el) return;
   el.innerHTML = '<div class="loading"><div class="spinner"></div>Carregando...</div>';
   const { data, error } = await sb.from('field_carrao_sessions')
     .select('*, field_carrao_employees(employee_name, value_received)')
@@ -1503,7 +1488,6 @@ async function loadCHistory() {
 // ═══════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
   await initApp();
-  initSignaturePad();
   window.addEventListener('resize', () => {
     if (sigCanvas) initSignaturePad();
   });

@@ -309,6 +309,28 @@ CREATE POLICY "fce_tenant_all" ON field_carrao_employees
   );
 
 -- ================================================================
+-- FINALIZAÇÃO: AJUSTES FINAIS DE RASTREABILIDADE E ASSINATURAS
+-- ================================================================
+
+-- 1. Garante colunas de assinatura e lote na tabela de colheita
+ALTER TABLE field_carrao_sessions 
+    ADD COLUMN IF NOT EXISTS julian_lot           TEXT,
+    ADD COLUMN IF NOT EXISTS ph_signature_base64  TEXT,
+    ADD COLUMN IF NOT EXISTS ph_inspector_name    TEXT;
+
+-- 2. Garante códigos de rastreabilidade para frutas e variedades
+ALTER TABLE fruits    ADD COLUMN IF NOT EXISTS track_code TEXT;
+ALTER TABLE varieties ADD COLUMN IF NOT EXISTS track_code TEXT;
+
+-- 3. Garante coluna de fazenda no Tenant
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS farm_code TEXT DEFAULT '4';
+
+-- Sugestão de Preenchimento Inicial
+-- UPDATE varieties SET track_code = '1' WHERE name ILIKE '%AMARELO%';
+-- UPDATE varieties SET track_code = '2' WHERE name ILIKE '%Pele de Sapo%';
+-- UPDATE tenants SET farm_code = '4' WHERE slug = 'BOM JESUS';
+
+-- ================================================================
 -- INSTRUÇÃO FINAL
 -- Após executar, adicione no web dashboard (Funcionários)
 -- os colhedores de campo com Função = "COLHEDOR"
