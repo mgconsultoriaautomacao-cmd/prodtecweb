@@ -693,13 +693,31 @@ async function doLogin() {
 
 async function afterLogin(u) {
   user = u;
-  const { data: tu } = await sb.from('tenant_users')
-    .select('tenant_id, tenants(name, farm_code)')
-    .eq('user_id', u.id).single();
-  if (!tu) { alert('Usuário não vinculado a uma empresa.'); await sb.auth.signOut(); return; }
+  const { data: tuList, error: tuErr } = await sb.from('tenant_users')
+    .select('tenant_id, tenants(name)')
+    .eq('user_id', u.id);
+  
+  if (tuErr) { console.error('Erro ao buscar tenant:', tuErr); }
+  if (!tuList || tuList.length === 0) { alert('Usuário não vinculado a uma empresa.'); await sb.auth.signOut(); return; }
+
+  let tu;
+  if (tuList.length === 1) {
+    tu = tuList[0];
+  } else {
+    // Múltiplos tenants — deixar o usuário escolher
+    const names = tuList.map((t, i) => `${i+1}. ${t.tenants?.name || 'Empresa'}`).join('\n');
+    const choice = prompt(`Você pertence a ${tuList.length} empresas.\nEscolha o número:\n\n${names}`);
+    const idx = parseInt(choice) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= tuList.length) {
+      tu = tuList[0];
+    } else {
+      tu = tuList[idx];
+    }
+  }
+
   tenantId   = tu.tenant_id;
   tenantName = tu.tenants?.name || 'Empresa';
-  window.farmCode = tu.tenants?.farm_code || '4';
+  window.farmCode = '4'; // Padrão até farm_code ser adicionado no banco
   window.currentInspector = u.email.split('@')[0];
   $('homeTenant').textContent = tenantName;
   $('loggedAs').textContent   = u.email;
@@ -708,7 +726,7 @@ async function afterLogin(u) {
   await loadVarieties();
   await initQualityForm();
   initCarraoForm();
-  loadPhParcelas(); // Carrega parcelas para o PH
+  loadPhParcelas();
   await updateSyncBadge();
   showScreen('home');
   if ('serviceWorker' in navigator) {
@@ -749,7 +767,7 @@ async function loadParcelas() {
 let varieties = [];
 async function loadVarieties() {
   const { data } = await sb.from('varieties')
-    .select('id, name, track_code')
+    .select('id, name')
     .eq('tenant_id', tenantId)
     .eq('active', 1)
     .order('name');
