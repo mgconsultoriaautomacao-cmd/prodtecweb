@@ -243,8 +243,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
     </div>
     <div class="module-card orange" onclick="showScreen('carrao')">
       <span class="module-icon">🚜</span>
-      <div class="module-name">Carrões de Colheita</div>
-      <div class="module-desc">Lance carrões por turno e calcule o rateio entre colhedores</div>
+      <div class="module-name">Carrocões de Colheita</div>
+      <div class="module-desc">Lance carrocões por turno e calcule o rateio entre colhedores</div>
       <div class="module-arrow">›</div>
     </div>
   </div>
@@ -344,20 +344,20 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   </div>
 </div>
 
-<!-- ══════════════ CARRÃO ══════════════ -->
+<!-- ══════════════ CARROCÕES ══════════════ -->
 <div id="screenCarrao" class="screen">
   <div class="header">
     <div class="back-btn" onclick="showScreen('home')">‹</div>
-    <div class="header-title">🚜 Carrões de Colheita</div>
+    <div class="header-title">🚜 Carrocões de Colheita</div>
     <div id="cOnlineDot" class="online-dot"></div>
   </div>
   <div class="tab-bar">
-    <div class="tab-btn on" id="cTabNewBtn" onclick="showCTab('new')">+ Novo Carrão</div>
+    <div class="tab-btn on" id="cTabNewBtn" onclick="showCTab('new')">+ Novo Carrocão</div>
     <div class="tab-btn" id="cTabHistBtn" onclick="showCTab('hist')">📋 Histórico</div>
     <div class="tab-btn" id="cTabPhBtn" onclick="showCTab('ph')">🏢 Packing House</div>
   </div>
 
-  <!-- Tab: Novo Carrão -->
+  <!-- Tab: Novo Carrocão -->
   <div class="tab-pane on" id="cTabNew">
 
     <div class="section"><div class="section-title">Data</div></div>
@@ -382,11 +382,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       <div class="toggle-group cols2">
         <div class="toggle-opt on" data-type="MELANCIA" onclick="setFruit('MELANCIA')">
           <span class="icon">🍉</span>Melancia
-          <div class="price">R$ 3,00 / carrão</div>
+          <div class="price">R$ 3,00 / carrocão</div>
         </div>
         <div class="toggle-opt" data-type="MELAO" onclick="setFruit('MELAO')">
           <span class="icon">🍈</span>Melão
-          <div class="price">R$ 4,00 / carrão</div>
+          <div class="price">R$ 4,00 / carrocão</div>
         </div>
       </div>
     </div>
@@ -405,14 +405,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       </select>
     </div>
 
-    <div class="section"><div class="section-title">Quantidade de Carrões</div></div>
+    <div class="section"><div class="section-title">Quantidade de Carrocões</div></div>
     <div style="padding:0 16px">
       <div class="counter-row">
         <button class="counter-btn" onclick="cQtyChange(-1)">−</button>
         <div class="counter-val" id="cQtyVal">1</div>
         <button class="counter-btn" onclick="cQtyChange(1)">+</button>
       </div>
-      <div class="counter-label">carrões completos neste registro</div>
+      <div class="counter-label">carrocões completos neste registro</div>
     </div>
 
     <div class="section">
@@ -453,7 +453,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
     </div>
 
     <div style="padding:16px">
-      <button class="btn btn-orange btn-full" id="cSubmitBtn" onclick="submitCarrao()">🚜 Registrar Carrões</button>
+      <button class="btn btn-orange btn-full" id="cSubmitBtn" onclick="submitCarrao()">🚜 Registrar Carrocões</button>
     </div>
   </div>
 
@@ -1465,7 +1465,7 @@ async function savePhSignature() {
       .in('id', ids);
     if (error) throw error;
     
-    toast(`✓ ${ids.length} carrão(ões) validados!`, 'ok');
+    toast(`✓ ${ids.length} carrocão(ões) validados!`, 'ok');
     clearPhSig();
     $('phInspectorName').value = '';
     loadPhPending();
@@ -1474,7 +1474,7 @@ async function savePhSignature() {
   }
 }
 
-// ── Carrão History ──
+// ── Carrocão History ──
 async function loadCHistory() {
   const el = $('cHistList');
   if (!el) return;
@@ -1484,7 +1484,7 @@ async function loadCHistory() {
     .eq('tenant_id', tenantId)
     .order('ts', { ascending: false })
     .limit(40);
-  if (error || !data?.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🚜</div>Nenhum carrão registrado</div>'; return; }
+  if (error || !data?.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🚜</div>Nenhum carrocão registrado</div>'; return; }
   el.innerHTML = data.map(s => {
     const emps = (s.field_carrao_employees||[]).map(e => e.employee_name).join(', ');
     const shiftLabel = s.shift === 'MANHA' ? '🌅 Manhã' : '🌇 Tarde';
@@ -1493,7 +1493,7 @@ async function loadCHistory() {
       <div class="hist-item orange">
         <div class="hist-top">
           <div>
-            <div class="hist-name">${fruitIcon} ${s.qty_carrocoes} carrão(ões) — ${shiftLabel}</div>
+            <div class="hist-name">${fruitIcon} ${s.qty_carrocoes} carrocão(ões) — ${shiftLabel}</div>
             <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.date}</div>
           </div>
           <div class="hist-time" style="text-align:right">

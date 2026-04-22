@@ -205,7 +205,7 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
       <button class="sec" onclick="exportAuditPDF()">📜 Relatório Auditoria</button>
     </div>
     <div class="kgrid">
-      <div class="kcard yellow"><div class="klabel">Colheita Estimada</div><div id="kpiMassHarvest" class="kval yellow">0 kg</div><div class="ksub">Baseado em carrões</div></div>
+      <div class="kcard yellow"><div class="klabel">Colheita Estimada</div><div id="kpiMassHarvest" class="kval yellow">0 kg</div><div class="ksub">Baseado em carrocões</div></div>
       <div class="kcard green"><div class="klabel">Produção Embalada</div><div id="kpiMassPacked" class="kval green">0 kg</div><div class="ksub">Peso real das caixas</div></div>
       <div class="kcard purple"><div class="klabel">Vendas a Granel</div><div id="kpiMassBulk" class="kval purple">0 kg</div><div class="ksub">Lançamento manual</div></div>
       <div class="kcard"><div class="klabel">Eficiência / Perda</div><div id="kpiMassEfficiency" class="kval">0%</div><div class="ksub" id="kpiMassLoss">Perda: 0 kg</div></div>
@@ -219,9 +219,9 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
       </table>
     </div>
 
-    <!-- 🚜 SESSÕES DE COLHEITA (CARRÕES) -->
+    <!-- 🚜 SESSÕES DE COLHEITA (CARROCÕES) -->
     <div class="card">
-      <div class="title">🚜 Sessões de Colheita (Carrões de Campo)</div>
+      <div class="title">🚜 Sessões de Colheita (Carrocões de Campo)</div>
       <div style="overflow-x:auto">
         <table id="harvestSessionsTable">
           <thead>
@@ -230,7 +230,7 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
               <th>Turno</th>
               <th>Parcela</th>
               <th>Fruta</th>
-              <th>Qtd Carrões</th>
+              <th>Qtd Carrocões</th>
               <th>Colhedores</th>
               <th>Ações</th>
             </tr>
@@ -538,8 +538,8 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
         </div>
         <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-            <div><label class="flabel">Peso Estimado p/ Carrão (Kg)</label><input type="number" id="cfgCarraoWeight" placeholder="300"/></div>
-            <div><label class="flabel">Preço p/ Carrão Colhido (R$)</label><input type="number" id="cfgCarraoPrice" placeholder="2.00"/></div>
+            <div><label class="flabel">Peso Estimado p/ Carrocão (Kg)</label><input type="number" id="cfgCarraoWeight" placeholder="300"/></div>
+            <div><label class="flabel">Preço p/ Carrocão Colhido (R$)</label><input type="number" id="cfgCarraoPrice" placeholder="2.00"/></div>
           </div>
         </div>
       </div>
@@ -618,6 +618,10 @@ const MEDALS = ['🥇','🥈','🥉'];
 
 let sb=null, tenantId=null, tenantName='', tenantConfig={};
 let charts = {};
+let _massEvents = [];
+let _massSessions = [];
+let _massEmployees = [];
+let _finData = [];
 
 function mkChart(id,cfg){ if(charts[id])charts[id].destroy(); charts[id]=new Chart(document.getElementById(id),cfg); return charts[id]; }
 function $(id){return document.getElementById(id)}
@@ -814,8 +818,8 @@ async function buildParcelStats(scans, sessions){
   const fieldMap = {};
   (sessions||[]).forEach(ss => {
     const id = ss.parcel_id || 'unkn';
-    if(!fieldMap[id]) fieldMap[id] = { carrões:0, valorLabor:0 };
-    fieldMap[id].carrões += ss.qty_carrocoes;
+    if(!fieldMap[id]) fieldMap[id] = { carrocoes:0, valorLabor:0 };
+    fieldMap[id].carrocoes += ss.qty_carrocoes;
     fieldMap[id].valorLabor += Number(ss.total_value);
   });
 
@@ -930,7 +934,6 @@ async function refreshRanking(){
 // ══════════════════════════════════════
 // FINANCEIRO
 // ══════════════════════════════════════
-let _finData=[];
 async function refreshFin(){
   if(!sb||!tenantId)return;
   const s=$('finStart').value,e=$('finEnd').value,role=$('finRole').value;
@@ -1026,7 +1029,7 @@ async function refreshFin(){
 async function refreshMass() {
   const s=$('massStart').value, e=$('massEnd').value, pFilter=$('massParcel').value;
   
-  // 1. Colheita (Estimativa por Carrões)
+  // 1. Colheita (Estimativa por Carrocões)
   let qH = sb.from('field_carrao_sessions').select('qty_carrocoes, waste_kg, date').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
   if(pFilter) qH = qH.eq('parcel_id', pFilter);
   const {data:harvest} = await qH;
@@ -1045,7 +1048,7 @@ async function refreshMass() {
   const {data:packed} = await qP;
   const totalPackedKg = (packed||[]).reduce((a,p)=>a+(p.weight_kg||0),0);
 
-  // 2.1. Carregar Sessões de Colheita (Carrões) - Detalhado
+  // 2.1. Carregar Sessões de Colheita (Carrocões) - Detalhado
   await loadFieldSessions(s, e, pFilter);
   
   // 3. Vendas Granel / Refugo
@@ -1082,7 +1085,7 @@ async function refreshMass() {
   const events = [];
   (harvest||[]).forEach(h => {
     const lot = h.julian_lot ? `<br><small style="color:var(--orange)">Lote: ${h.julian_lot}</small>` : '';
-    events.push({ ts: h.date + 'T06:00:00', type: 'COLHEITA', parcel: h.parcels?.code || '—', desc: `${h.qty_carrocoes} carrões ${lot}`, in: h.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300), out: 0, sessionId: h.id });
+    events.push({ ts: h.date + 'T06:00:00', type: 'COLHEITA', parcel: h.parcels?.code || '—', desc: `${h.qty_carrocoes} carrocões ${lot}`, in: h.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300), out: 0, sessionId: h.id });
     if(h.waste_kg > 0) events.push({ ts: h.date + 'T06:01:00', type: 'WASTE (CAMPO)', parcel: h.parcels?.code || '—', desc: `Perda em campo`, in: 0, out: h.waste_kg });
   });
   (packed||[]).forEach(p => events.push({ ts: p.ts, type: 'PACKING', parcel: p.parcel_code || '—', desc: p.weight_name || 'Caixa', in: 0, out: p.weight_kg || 0 }));
@@ -1129,12 +1132,23 @@ async function loadFieldSessions(s, e, pFilter) {
   const {data, error} = await q;
   if(error) { console.error(error); return; }
 
-  if(!data || data.length === 0) {
+  _massSessions = data || []; // Persist for PDF export
+
+  // Load related employees for PDF details
+  const sessionIds = _massSessions.map(s => s.id);
+  if (sessionIds.length > 0) {
+    const { data: emps } = await sb.from('field_carrao_employees')
+      .select('*')
+      .in('session_id', sessionIds);
+    _massEmployees = emps || [];
+  }
+
+  if(!_massSessions.length) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">Nenhuma sessão de colheita encontrada no período.</td></tr>';
     return;
   }
 
-  tbody.innerHTML = data.map(sess => {
+  tbody.innerHTML = _massSessions.map(sess => {
     const isValidated = !!sess.ph_signature_base64;
     return `
     <tr>
@@ -1607,7 +1621,7 @@ window.edit_parcel = async(id, code, pCode) => {
 async function addLink(){
   const pId=$('linkParcel').value,fId=$('linkFruit').value,vId=$('linkVariety').value;
   if(!pId||!fId)return;
-  await sb.from('parcel_links').upsert([{parcel_id:pId,fruit_id:fId,variety_id:vId,tenant_id:tenantId}],{onConflict:'parcel_id,fruit_id,variety_id'});
+  await sb.from('parcel_links').upsert([{parcel_id:pId,fruit_id:fId,variety_id:vId,tenant_id:tenantId}],{onConflict:'tenant_id,parcel_id,fruit_id,variety_id'});
   loadLinks();
 }
 window.del_link=async(id)=>{ if(confirm('Excluir este vínculo?')){ await sb.from('parcel_links').delete().eq('id',id); loadLinks(); } };
@@ -1890,7 +1904,7 @@ function exportHarvestOrderPDF(sid) {
   doc.text(`Data: ${new Date(s.date).toLocaleDateString('pt-BR')} | Turno: ${s.shift}`, 14, 52);
   doc.text(`Parcela/Gleba: ${s.parcels?.code || '—'} (Cód. P / IDAR: ${s.parcels?.p_code || '—'})`, 14, 58);
   doc.text(`Cultura: ${s.fruit_type}`, 14, 64);
-  doc.text(`Quantidade Colhida: ${s.qty_carrocoes} Carrão(ões)`, 14, 70);
+  doc.text(`Quantidade Colhida: ${s.qty_carrocoes} Carrocão(ões)`, 14, 70);
 
   doc.setFontSize(11); doc.setFont('helvetica', 'bold');
   doc.text('Equipe de Colhedores Registrados', 14, 85);
