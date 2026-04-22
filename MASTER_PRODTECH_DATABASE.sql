@@ -386,5 +386,35 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE INDEX IF NOT EXISTS idx_fcs_parcel_id ON field_carrao_sessions(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_qa_parcel_id  ON quality_audits(parcel_id);
 
+-- ================================================================
+-- FIX: UNICIDADE MULTI-TENANT (FRUTAS E VARIEDADES)
+-- Resolve o erro 409 Conflict ao cadastrar nomes iguais em empresas diferentes
+-- ================================================================
+
+-- 1. Limpeza de Frutas
+ALTER TABLE fruits DROP CONSTRAINT IF EXISTS fruits_name_key;
+ALTER TABLE fruits DROP CONSTRAINT IF EXISTS fruits_tenant_id_name_key; -- caso exista
+DO $$ 
+BEGIN 
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fruits_name_key') THEN
+        ALTER TABLE fruits DROP CONSTRAINT fruits_name_key;
+    END IF;
+END $$;
+-- Garante que registros antigos sem empresa sejam vinculados (opcional, mas recomendado)
+-- UPDATE fruits SET tenant_id = (SELECT tenant_id FROM tenant_users LIMIT 1) WHERE tenant_id IS NULL;
+ALTER TABLE fruits ADD CONSTRAINT fruits_tenant_id_name_key UNIQUE (tenant_id, name);
+
+-- 2. Limpeza de Variedades
+ALTER TABLE varieties DROP CONSTRAINT IF EXISTS varieties_name_key;
+ALTER TABLE varieties DROP CONSTRAINT IF EXISTS varieties_tenant_id_name_key; -- caso exista
+DO $$ 
+BEGIN 
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'varieties_name_key') THEN
+        ALTER TABLE varieties DROP CONSTRAINT varieties_name_key;
+    END IF;
+END $$;
+-- UPDATE varieties SET tenant_id = (SELECT tenant_id FROM tenant_users LIMIT 1) WHERE tenant_id IS NULL;
+ALTER TABLE varieties ADD CONSTRAINT varieties_tenant_id_name_key UNIQUE (tenant_id, name);
+
 -- INSTRUÇÃO FINAL: EXECUTE TODO O BLOCO ACIMA PARA ESTABILIDADE TOTAL
 -- ================================================================
