@@ -494,14 +494,45 @@ ALTER TABLE parcel_links DROP CONSTRAINT IF EXISTS parcel_links_parcel_id_fruit_
 ALTER TABLE parcel_links DROP CONSTRAINT IF EXISTS parcel_links_tenant_parcel_fruit_variety_key;
 ALTER TABLE parcel_links ADD CONSTRAINT parcel_links_tenant_parcel_fruit_variety_key UNIQUE (tenant_id, parcel_id, fruit_id, variety_id);
 
--- INSTRUÇÃO FINAL: EXECUTE TODO O BLOCO ACIMA PARA ESTABILIDADE TOTAL
--- ================================================================
+-- 4. MIGRAÇÃO GLOBAL PARA UUID (ESTABILIDADE TOTAL SYNC)
+-- Este bloco garante que TODAS as tabelas operacionais usem UUID para chaves estrangeiras.
+DO $$ 
+BEGIN
+    -- Quality Audits: employee_id
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quality_audits' AND column_name='employee_id' AND data_type='bigint') THEN
+        ALTER TABLE quality_audits DROP COLUMN employee_id CASCADE;
+        ALTER TABLE quality_audits ADD COLUMN employee_id UUID REFERENCES employees(id);
+    END IF;
 
--- 4. CONFIGURAÇÃO INICIAL DINÂMICA (Exemplo para o tenant atual)
--- Isso garante que o App de Campo já comece com valores reais
+    -- Production Scans: employee_id
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='production_scans' AND column_name='employee_id' AND data_type='bigint') THEN
+        ALTER TABLE production_scans DROP COLUMN employee_id CASCADE;
+        ALTER TABLE production_scans ADD COLUMN employee_id UUID REFERENCES employees(id);
+    END IF;
+
+    -- Daily Summaries: employee_id
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='daily_summaries' AND column_name='employee_id' AND data_type='bigint') THEN
+        ALTER TABLE daily_summaries DROP COLUMN employee_id CASCADE;
+        ALTER TABLE daily_summaries ADD COLUMN employee_id UUID REFERENCES employees(id);
+    END IF;
+
+    -- Bulk Sales: parcel_id & variety_id (UUID)
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bulk_sales' AND column_name='parcel_id' AND data_type='bigint') THEN
+        ALTER TABLE bulk_sales DROP COLUMN parcel_id CASCADE;
+        ALTER TABLE bulk_sales ADD COLUMN parcel_id UUID REFERENCES parcels(id);
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bulk_sales' AND column_name='variety_id' AND data_type='bigint') THEN
+        ALTER TABLE bulk_sales DROP COLUMN variety_id CASCADE;
+        ALTER TABLE bulk_sales ADD COLUMN variety_id UUID REFERENCES varieties(id);
+    END IF;
+END $$;
+
+-- 5. CONFIGURAÇÃO INICIAL DINÂMICA
 UPDATE deployments SET farm_code = '4', value_per_carrao = 2.00 WHERE farm_code IS NULL;
 UPDATE tenants SET farm_code = '4', value_per_carrao = 2.00 WHERE farm_code IS NULL;
 
--- 5. ÍNDICES DE PERFORMANCE ADICIONAIS
+-- 6. ÍNDICES DE PERFORMANCE ADICIONAIS
 CREATE INDEX IF NOT EXISTS idx_fruits_tenant_active ON fruits(tenant_id, active);
 CREATE INDEX IF NOT EXISTS idx_varieties_tenant_active ON varieties(tenant_id, active);
+CREATE INDEX IF NOT EXISTS idx_qa_employee ON quality_audits(employee_id);
+CREATE INDEX IF NOT EXISTS idx_ps_employee ON production_scans(employee_id);

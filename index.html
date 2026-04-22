@@ -1909,14 +1909,14 @@ function exportHarvestOrderPDF(sid) {
   doc.setFontSize(11); doc.setFont('helvetica', 'bold');
   doc.text('Equipe de Colhedores Registrados', 14, 85);
   
-  const emps = _massEmployees.filter(e => e.session_id === sid).map((e, i) => [i + 1, e.employee_name, BRL(e.value_received)]);
+  const emps = _massEmployees.filter(e => e.session_id === sid).map((e, i) => [i + 1, e.employee_name]);
   doc.autoTable({
     startY: 90,
-    head: [['#', 'Colaborador', 'Remuneração Estimada']],
+    head: [['#', 'Colaborador']],
     body: emps,
     theme: 'grid',
     headStyles: { fillColor: [245, 158, 11] },
-    styles: { fontSize: 9 }
+    styles: { fontSize: 10 }
   });
 
   const finalY = doc.lastAutoTable.finalY + 25;
