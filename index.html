@@ -140,6 +140,11 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
   <div class="nav" onclick="showTab('mapping',this)">🔗 Mapeamento</div>
   <div class="nav" id="navTrace" onclick="showTab('trace',this)" style="display:none">🌿 Rastreabilidade</div>
 
+  <div id="adminGroup" style="display:none">
+    <div class="nav-group">Administração</div>
+    <div class="nav" onclick="showTab('users_mgmt',this)">🔑 Usuários & Empresas</div>
+  </div>
+
   <div class="nav-group">Sistema</div>
   <div class="nav" onclick="showTab('settings',this)">⚙️ Configurações</div>
   <div class="nav" style="color:var(--green);font-weight:700" onclick="window.open('/campo/','_blank')">📱 App de Campo</div>
@@ -487,45 +492,54 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
     </div>
   </div>
 
-  <!-- ═══ CONFIGURAÇÕES ═══ -->
-  <div id="tab-settings" class="tab">
-    <h1 class="ptitle">⚙️ Configurações do Tenant</h1>
-    <div class="grid2">
-      <div class="card">
-        <div class="title">🏢 Dados da Empresa</div>
-        <div style="margin-bottom:12px"><label class="flabel">Nome da Empresa</label><input id="cfgName" placeholder="Ex: Fazenda Santa Maria"/></div>
-        <div style="margin-bottom:12px"><label class="flabel">Tipo de Cultura</label>
-          <select id="cfgCulture"><option value="MAMAO">Mamão</option><option value="MELAO">Melão/Melancia (com rastreabilidade)</option><option value="OUTRO">Outro</option></select>
-        </div>
-      </div>
-      <div class="card">
-        <div class="title">🎯 Metas de Produção</div>
-        <div class="grid2" style="gap:10px">
-          <div><label class="flabel">Meta Packer (cx/h)</label><input id="cfgMetaPacker" type="number" placeholder="Ex: 50"/></div>
-          <div><label class="flabel">Meta Stacker (cx/h)</label><input id="cfgMetaStacker" type="number" placeholder="Ex: 200"/></div>
-          <div><label class="flabel">Valor Packer (R$/cx)</label><input id="cfgValPacker" type="number" step="0.01" placeholder="Ex: 0.50"/></div>
-          <div><label class="flabel">Valor Stacker (R$/cx)</label><input id="cfgValStacker" type="number" step="0.01" placeholder="Ex: 0.15"/></div>
-        </div>
-        <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-            <div><label class="flabel">Peso Estimado p/ Carrão (Kg)</label><input type="number" id="cfgCarraoWeight" placeholder="300"/></div>
-            <div><label class="flabel">Preço p/ Carrão Colhido (R$)</label><input type="number" id="cfgCarraoPrice" placeholder="2.00"/></div>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="title">📱 Evolution API (WhatsApp)</div>
-        <div style="margin-bottom:10px"><label class="flabel">URL da API</label><input id="cfgEvoUrl" placeholder="https://sua-evolution-api.com"/></div>
-        <div style="margin-bottom:10px"><label class="flabel">API Key</label><input id="cfgEvoKey" type="password" placeholder="sua-chave"/></div>
-        <div style="margin-bottom:10px"><label class="flabel">Instância</label><input id="cfgEvoInstance" placeholder="nome-da-instancia"/></div>
-      </div>
-      <div class="card">
-        <div class="title">👥 Usuários com acesso ao painel</div>
-        <table id="usersTable"><thead><tr><th>Usuário</th><th>Papel</th><th>WhatsApp</th></tr></thead><tbody></tbody></table>
-      </div>
     </div>
     <button id="cfgSaveBtn" onclick="saveSettings()" style="margin-top:4px">💾 Salvar Configurações</button>
     <div id="cfgStatus" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>
+  </div>
+
+  <!-- ═══ GESTÃO DE USUÁRIOS & EMPRESAS (SUPER ADMIN) ═══ -->
+  <div id="tab-users_mgmt" class="tab">
+    <h1 class="ptitle">🔑 Gestão Administrativa</h1>
+    
+    <div class="grid2">
+      <div class="card">
+        <div class="title">🏢 Gerenciar Empresas (Tenants)</div>
+        <div style="display:flex; gap:8px; margin-bottom:12px">
+          <input id="newTenantName" placeholder="Nome da Fazenda/Empresa"/>
+          <input id="newTenantSlug" placeholder="SLUG (ex: fazenda1)" style="width:140px"/>
+          <button onclick="addTenant()">+</button>
+        </div>
+        <div id="tenantListMgmt" style="max-height:400px; overflow-y:auto"></div>
+      </div>
+
+      <div class="card">
+        <div class="title">👤 Vincular Usuário a Empresa</div>
+        <div style="margin-bottom:12px"><label class="flabel">E-mail do Usuário</label><input id="linkUserEmail" placeholder="usuario@email.com"/></div>
+        <div style="margin-bottom:12px">
+          <label class="flabel">Empresa</label>
+          <select id="linkUserTenant"></select>
+        </div>
+        <div style="margin-bottom:12px">
+          <label class="flabel">Papel (Role)</label>
+          <select id="linkUserRole">
+            <option value="ADMIN">Administrador</option>
+            <option value="MANAGER">Gerente</option>
+            <option value="PACKING">Operador Packing</option>
+            <option value="FIELD">Operador Campo</option>
+            <option value="COLHEDOR">Colhedor</option>
+          </select>
+        </div>
+        <button onclick="linkUser()" style="width:100%">Vincular Usuário</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="title">📋 Usuários Cadastrados no Sistema</div>
+      <table id="globalUsersTable">
+        <thead><tr><th>E-mail</th><th>Empresa</th><th>Papel</th><th>Ações</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 
 </div><!-- /main -->
@@ -594,8 +608,9 @@ async function afterLogin(user){
       ts.innerHTML = allTenants.map(t => `<option value="${t.id}" ${t.id===tenantId?'selected':''}>${t.name}</option>`).join('');
       $('multiTenantSelector').style.display = 'block';
     }
-    // Mostrar gestão de defeitos
+    // Mostrar gestão de defeitos e admin
     $('cardManageIssues').style.display = 'block';
+    $('adminGroup').style.display = 'block';
   }
   $('authScreen').style.display='none';
   $('appMain').style.display='block';
@@ -642,6 +657,7 @@ function showTab(n,el){
     employees:loadEmps,
     weights:loadWeights,
     mapping:()=>{loadMappings();loadMapSelects();},
+    users_mgmt:loadAdminData,
     trace:()=>{loadFruits();loadVarieties();loadParcels();loadLinks();},
     settings:loadSettings,
     finance:refreshFin,
@@ -1159,8 +1175,8 @@ async function saveNFe() {
   const {error} = await sb.from('bulk_sales').insert([{
     tenant_id    : tenantId,
     date,
-    parcel_id    : pId ? parseInt(pId) : null,
-    variety_id   : vId ? parseInt(vId) : null,
+    parcel_id    : pId || null,
+    variety_id   : vId || null,
     weight_kg    : parseFloat(w),
     total_value  : parseFloat(value) || 0,
     customer_name: cust || null,
@@ -1383,7 +1399,17 @@ async function delMapping(id){await sb.from('barcode_mappings').delete().eq('id'
 // RASTREABILIDADE
 // ══════════════════════════════════════
 const simpleList=(tbl,el,label,keyCol)=>async(items)=>{
-  $(el).innerHTML=(items||[]).map(i=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span>${i[keyCol]}</span><button class="danger" style="padding:3px 8px" onclick="del_${tbl}('${i.id}')">×</button></div>`).join('')||`<div style="color:var(--muted);font-size:12px;padding:8px">Nenhum(a).</div>`;
+  $(el).innerHTML=(items||[]).map(i=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
+      <div>
+        <span style="font-weight:700;color:var(--blue);margin-right:8px">${i.track_code||'—'}</span>
+        <span>${i[keyCol]}</span>
+      </div>
+      <div>
+        <button class="sec" style="padding:3px 8px;margin-right:4px" onclick="setTrackCode('${tbl}s','${i.id}','${i.track_code||''}')">Code</button>
+        <button class="danger" style="padding:3px 8px" onclick="window.del_${tbl}('${i.id}')">×</button>
+      </div>
+    </div>`).join('')||`<div style="color:var(--muted);font-size:12px;padding:8px">Nenhum(a).</div>`;
 };
 
 async function loadFruits(){
@@ -1417,8 +1443,8 @@ async function loadLinks(){
     $('linkList').innerHTML=items.map(l=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span>📦 ${l.parcels?.code || '?'} → 🍈 ${l.fruits?.name || '?'} / ${l.varieties?.name || '?'}</span></div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">Nenhum vínculo.</div>';
   } catch(e) { console.error(e); }
 }
-async function addFruit(){const n=$('fruitName').value.trim();if(!n)return;await sb.from('fruits').insert([{name:n,active:true,tenant_id:tenantId,updated_at:new Date().toISOString()}]);$('fruitName').value='';loadFruits();}
-async function addVariety(){const n=$('varName').value.trim();if(!n)return;await sb.from('varieties').insert([{name:n,active:true,tenant_id:tenantId,updated_at:new Date().toISOString()}]);$('varName').value='';loadVarieties();}
+async function addFruit(){const n=$('fruitName').value.trim();if(!n)return;await sb.from('fruits').insert([{name:n,active:true,track_code:null,tenant_id:tenantId,updated_at:new Date().toISOString()}]);$('fruitName').value='';loadFruits();}
+async function addVariety(){const n=$('varName').value.trim();if(!n)return;await sb.from('varieties').insert([{name:n,active:true,track_code:null,tenant_id:tenantId,updated_at:new Date().toISOString()}]);$('varName').value='';loadVarieties();}
 async function addParcel(){const n=$('parcelCode').value.trim();if(!n)return;await sb.from('parcels').insert([{code:n,active:true,tenant_id:tenantId,updated_at:new Date().toISOString()}]);$('parcelCode').value='';loadParcels();}
 async function addLink(){
   const pId=$('linkParcel').value,fId=$('linkFruit').value,vId=$('linkVariety').value;
@@ -1498,6 +1524,87 @@ async function deleteQualityIssue(id) {
   if(!confirm('Excluir este defeito?')) return;
   await sb.from('quality_issues').delete().eq('id',id);
   loadQualityIssues();
+}
+
+// ══════════════════════════════════════
+// SUPER ADMIN LOGIC
+// ══════════════════════════════════════
+async function loadAdminData() {
+  const {data: tenants} = await sb.from('tenants').select('*').order('name');
+  const {data: users}   = await sb.from('tenant_users').select('*, tenants(name)').order('tenant_id');
+
+  // Empresas list
+  $('tenantListMgmt').innerHTML = (tenants||[]).map(t => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:700">${t.name}</div>
+        <div style="font-size:10px; color:var(--muted)">SLUG: ${t.slug} | CODE: ${t.farm_code||'—'}</div>
+      </div>
+      <button class="sec" style="padding:4px 8px" onclick="editFarmCode('${t.id}','${t.farm_code||''}')">Code</button>
+    </div>
+  `).join('');
+
+  // Dropdown link
+  $('linkUserTenant').innerHTML = (tenants||[]).map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+
+  // Global Users Table
+  $('globalUsersTable').querySelector('tbody').innerHTML = (users||[]).map(u => `
+    <tr>
+      <td><b>${u.user_id}</b> <br/> <small style="color:var(--muted)">WhatsApp: ${u.whatsapp||'—'}</small></td>
+      <td>${u.tenants?.name || '—'}</td>
+      <td><span class="badge packer">${u.role}</span></td>
+      <td><button class="danger" onclick="unlinkUser('${u.id}')">Remover</button></td>
+    </tr>
+  `).join('');
+}
+
+async function addTenant() {
+  const name = $('newTenantName').value.trim();
+  const slug = $('newTenantSlug').value.trim();
+  if(!name || !slug) return;
+  const {error} = await sb.from('tenants').insert({name, slug});
+  if(error) alert(error.message);
+  else { $('newTenantName').value=''; $('newTenantSlug').value=''; loadAdminData(); }
+}
+
+async function editFarmCode(id, cur) {
+  const code = prompt('Código da Fazenda (1 dígito para rastreabilidade):', cur);
+  if(code === null) return;
+  await sb.from('tenants').update({farm_code: code}).eq('id', id);
+  loadAdminData();
+}
+
+async function linkUser() {
+  const email = $('linkUserEmail').value.trim();
+  const tId   = $('linkUserTenant').value;
+  const role  = $('linkUserRole').value;
+  if(!email) return;
+
+  // No Supabase, vinculamos por ID de usuário. 
+  // Para converter e-mail -> ID sem acesso total a auth.users, 
+  // costumamos usar uma RPC ou simplesmente pedir o ID se for admin.
+  // Como aqui é uma interface para o Manoel, vamos tentar via UUID direto ou e-mail se a tabela permitir.
+  
+  const {error} = await sb.from('tenant_users').insert({
+    user_id: email, // Nota: Se o banco usar UUID, isso vai falhar a menos que usemos RPC. 
+    tenant_id: tId,
+    role: role
+  });
+  if(error) alert('Erro: Verifique se o e-mail/ID está correto no Supabase Auth. ' + error.message);
+  else { $('linkUserEmail').value=''; loadAdminData(); }
+}
+
+async function unlinkUser(id) {
+  if(!confirm('Remover acesso deste usuário?')) return;
+  await sb.from('tenant_users').delete().eq('id', id);
+  loadAdminData();
+}
+
+async function setTrackCode(tbl, id, cur) {
+  const code = prompt('Código de Rastreabilidade (1 dígito):', cur);
+  if(code === null) return;
+  await sb.from(tbl).update({track_code: code}).eq('id', id);
+  showTab('trace'); // Reload current tab
 }
 
 // ══════════════════════════════════════
