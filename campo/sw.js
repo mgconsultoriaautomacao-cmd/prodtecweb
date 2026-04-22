@@ -1,31 +1,15 @@
-const CACHE_NAME = 'prodtech-campo-v3';
+const CACHE_NAME = 'prodtech-campo-v4';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
 ];
 
-// INSTALL: pré-cacheia os assets locais (sem skipWaiting para evitar loop)
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
-  );
-});
-
-// ACTIVATE: limpa caches antigos (sem clients.claim para evitar reload loop)
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
-  );
-});
-
 // FETCH: Network-first para navegação, cache-first para assets estáticos
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Supabase, googleapis, jsdelivr: sempre rede (nunca cacheia)
+  // Supabase, googleapis, jsdelivr: sempre rede
   if (url.hostname.includes('supabase.co') || url.hostname.includes('googleapis') || url.hostname.includes('jsdelivr')) {
     event.respondWith(fetch(event.request));
     return;

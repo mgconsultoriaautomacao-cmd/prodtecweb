@@ -543,7 +543,20 @@ let employees  = [];   // [{id, name, role}]
 let parcelas   = [];   // [{id, code}]
 let isOnline   = navigator.onLine;
 
-const qState = { empId: null, empName: '', issue: null, penalty: 1, parcelId: null, varietyId: null };
+const qState = { empId:null, empName:'', issue:null, parcelId:null, varietyId:null };
+
+function loadQualitySelects() {
+  const pSel = $('qParcela');
+  const vSel = $('qVariety');
+  if(pSel) {
+    pSel.innerHTML = '<option value="">— Parcela —</option>';
+    parcelas.forEach(p => pSel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`));
+  }
+  if(vSel) {
+    vSel.innerHTML = '<option value="">— Variedade —</option>';
+    varieties.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
+  }
+}
 const cState = { shift: 'MANHA', fruit: 'MELANCIA', parcelaId: null, qty: 1, workers: new Map() };
 
 // ═══════════════════════════════════════════

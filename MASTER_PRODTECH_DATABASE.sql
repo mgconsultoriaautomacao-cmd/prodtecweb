@@ -352,7 +352,36 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- ================================================================
+-- CORREÇÃO: UUID em bulk_sales e RPC de Vínculo
+-- ================================================================
+
+-- 1. CORRIGIR TIPOS DE COLUNA (BIGINT -> UUID)
+-- Isso permite o JOIN correto com as tabelas de parcels e varieties
+ALTER TABLE bulk_sales 
+  DROP COLUMN IF EXISTS parcel_id,
+  DROP COLUMN IF EXISTS variety_id;
+
+ALTER TABLE bulk_sales
+  ADD COLUMN parcel_id  UUID REFERENCES parcels(id),
+  ADD COLUMN variety_id UUID REFERENCES varieties(id);
+
+-- 2. RPC: Vincular Usuário por E-mail (Caso não tenha sido rodado)
+CREATE OR REPLACE FUNCTION link_user_by_email(target_email TEXT, target_tenant_id UUID, target_role TEXT)
+RETURNS VOID AS $$
+DECLARE
+    target_user_id UUID;
+BEGIN
+    SELECT id INTO target_user_id FROM auth.users WHERE email = target_email LIMIT 1;
+    IF target_user_id IS NULL THEN
+        RAISE EXCEPTION 'Usuário com e-mail % não encontrado.', target_email;
+    END IF;
+    INSERT INTO public.tenant_users (tenant_id, user_id, role)
+    VALUES (target_tenant_id, target_user_id, target_role)
+    ON CONFLICT (tenant_id, user_id) DO UPDATE SET role = target_role;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- INSTRUÇÃO FINAL
--- Após executar, adicione no web dashboard (Funcionários)
--- os colhedores de campo com Função = "COLHEDOR"
+-- Execute o bloco acima no SQL Editor para estabilizar os relatórios.
 -- ================================================================
