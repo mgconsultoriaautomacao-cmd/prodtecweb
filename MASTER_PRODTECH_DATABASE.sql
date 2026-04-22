@@ -471,18 +471,21 @@ BEGIN
 
     -- Field Carrao Sessions
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='field_carrao_sessions' AND column_name='parcel_id' AND data_type='bigint') THEN
-        ALTER TABLE field_carrao_sessions DROP COLUMN parcel_id;
+        ALTER TABLE field_carrao_sessions DROP COLUMN parcel_id CASCADE;
         ALTER TABLE field_carrao_sessions ADD COLUMN parcel_id UUID REFERENCES parcels(id);
     END IF;
-
-    -- Bulk Sales
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bulk_sales' AND column_name='parcel_id' AND data_type='bigint') THEN
-        ALTER TABLE bulk_sales DROP COLUMN parcel_id;
-        ALTER TABLE bulk_sales ADD COLUMN parcel_id UUID REFERENCES parcels(id);
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='field_carrao_sessions' AND column_name='variety_id' AND data_type='bigint') THEN
+        ALTER TABLE field_carrao_sessions DROP COLUMN variety_id CASCADE;
+        ALTER TABLE field_carrao_sessions ADD COLUMN variety_id UUID REFERENCES varieties(id);
     END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bulk_sales' AND column_name='variety_id' AND data_type='bigint') THEN
-        ALTER TABLE bulk_sales DROP COLUMN variety_id;
-        ALTER TABLE bulk_sales ADD COLUMN variety_id UUID REFERENCES varieties(id);
+
+    -- Field Carrao Employees
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='field_carrao_employees' AND column_name='employee_id' AND data_type='bigint') THEN
+        ALTER TABLE field_carrao_employees DROP COLUMN employee_id CASCADE;
+        ALTER TABLE field_carrao_employees ADD COLUMN employee_id UUID REFERENCES employees(id);
+        -- Restaurar PK após recriação da coluna
+        ALTER TABLE field_carrao_employees DROP CONSTRAINT IF EXISTS field_carrao_employees_pkey;
+        ALTER TABLE field_carrao_employees ADD PRIMARY KEY (session_id, employee_id);
     END IF;
 END $$;
 
