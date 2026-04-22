@@ -722,7 +722,7 @@ async function doLogin() {
 async function afterLogin(u) {
   user = u;
   const { data: tuList, error: tuErr } = await sb.from('tenant_users')
-    .select('tenant_id, tenants(name)')
+    .select('tenant_id, tenants(*)')
     .eq('user_id', u.id);
   
   if (tuErr) { console.error('Erro ao buscar tenant:', tuErr); }
@@ -732,20 +732,17 @@ async function afterLogin(u) {
   if (tuList.length === 1) {
     tu = tuList[0];
   } else {
-    // Múltiplos tenants — deixar o usuário escolher
     const names = tuList.map((t, i) => `${i+1}. ${t.tenants?.name || 'Empresa'}`).join('\n');
     const choice = prompt(`Você pertence a ${tuList.length} empresas.\nEscolha o número:\n\n${names}`);
     const idx = parseInt(choice) - 1;
-    if (isNaN(idx) || idx < 0 || idx >= tuList.length) {
-      tu = tuList[0];
-    } else {
-      tu = tuList[idx];
-    }
+    tu = (isNaN(idx) || idx < 0 || idx >= tuList.length) ? tuList[0] : tuList[idx];
   }
 
   tenantId   = tu.tenant_id;
   tenantName = tu.tenants?.name || 'Empresa';
-  window.farmCode = '4'; // Padrão até farm_code ser adicionado no banco
+  window.farmCode = tu.tenants?.farm_code || '4';
+  window.pricePerCarrao = parseFloat(tu.tenants?.value_per_carrao || 2.00);
+
   window.currentInspector = u.email.split('@')[0];
   $('homeTenant').textContent = tenantName;
   $('loggedAs').textContent   = u.email;
@@ -755,7 +752,7 @@ async function afterLogin(u) {
   await initQualityForm();
   initCarraoForm();
   loadPhParcelas();
-  loadQualitySelects(); // Popula os selects de parcela/variedade na qualidade
+  loadQualitySelects();
   await updateSyncBadge();
   showScreen('home');
   if ('serviceWorker' in navigator) {
@@ -775,7 +772,7 @@ async function loadEmployees() {
   const { data } = await sb.from('employees')
     .select('id, name, role')
     .eq('tenant_id', tenantId)
-    .eq('active', 1)
+    .eq('active', true)
     .order('name');
   employees = data || [];
 }
@@ -784,20 +781,30 @@ async function loadParcelas() {
   const { data } = await sb.from('parcels')
     .select('id, code')
     .eq('tenant_id', tenantId)
-    .eq('active', 1)
+    .eq('active', true)
     .order('code');
   parcelas = data || [];
   const sel = $('cParcela');
-  parcelas.forEach(p => {
-    sel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`);
-  });
+  if(sel) {
+    sel.innerHTML = '<option value="">— Parcela —</option>';
+    parcelas.forEach(p => sel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`));
+  }
 }
 
 let varieties = [];
 async function loadVarieties() {
   const { data } = await sb.from('varieties')
-    .select('id, name')
+    .select('id, name, track_code')
     .eq('tenant_id', tenantId)
+    .eq('active', true)
+    .order('name');
+  varieties = data || [];
+  const sel = $('cVariety');
+  if(sel) {
+    sel.innerHTML = '<option value="">— Variedade —</option>';
+    varieties.forEach(v => sel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
+  }
+}
     .eq('active', 1)
     .order('name');
   varieties = data || [];
