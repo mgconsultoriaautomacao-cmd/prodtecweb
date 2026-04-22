@@ -91,6 +91,7 @@ ALTER TABLE employees ADD COLUMN IF NOT EXISTS whatsapp   text;
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS photo_url  text;
 
 -- 4. FUNÇÃO AUXILIAR — pega o tenant_id do usuário logado
+-- Note: Esta função pode disparar RLS. Para tabelas críticas, use o user_id direto.
 CREATE OR REPLACE FUNCTION get_my_tenant_id()
 RETURNS uuid LANGUAGE sql STABLE AS $$
   SELECT tenant_id FROM tenant_users WHERE user_id = auth.uid() LIMIT 1;
@@ -111,10 +112,10 @@ DROP POLICY IF EXISTS tenant_self ON tenants;
 CREATE POLICY tenant_self ON tenants
   FOR ALL USING (id = get_my_tenant_id());
 
--- tenant_users: apenas do seu tenant
+-- tenant_users: usuário vê apenas seus próprios registros de vínculo
 DROP POLICY IF EXISTS tu_tenant ON tenant_users;
 CREATE POLICY tu_tenant ON tenant_users
-  FOR ALL USING (tenant_id = get_my_tenant_id());
+  FOR ALL USING (user_id = auth.uid());
 
 -- employees
 DROP POLICY IF EXISTS emp_tenant ON employees;
