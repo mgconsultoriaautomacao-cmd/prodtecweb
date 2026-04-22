@@ -1134,19 +1134,21 @@ async function loadFieldSessions(s, e, pFilter) {
     return;
   }
 
-  tbody.innerHTML = data.map(sess => `
+  tbody.innerHTML = data.map(sess => {
+    const isValidated = !!sess.ph_signature_base64;
+    return `
     <tr>
       <td>${new Date(sess.date).toLocaleDateString('pt-BR')}</td>
       <td><span class="badge ${sess.shift === 'MANHA' ? 'active' : 'packer'}">${sess.shift === 'MANHA' ? '🌅 Manhã' : '🌇 Tarde'}</span></td>
       <td><b>${sess.parcels?.code || '—'}</b><br><small>IDAR: ${sess.parcels?.p_code || '—'}</small></td>
-      <td>${sess.fruit_type === 'MELAO' ? '🍈 Melão' : '🍉 Melancia'}</td>
+      <td>${sess.fruit_type === 'MELAO' ? '🍈 Melão' : '🍉 Melancia'}<br><small style="color:var(--muted)">Lote: ${sess.julian_lot || '—'}</small></td>
       <td style="font-weight:700;color:var(--blue)">${sess.qty_carrocoes}</td>
-      <td>${sess.employee_count} func.</td>
+      <td>${sess.employee_count} func.<br><span class="badge ${isValidated?'active':'inactive'}" style="font-size:9px">${isValidated?'✓ VALIDADO':'⌛ PENDENTE'}</span></td>
       <td>
         <button class="sec" style="padding:4px 10px" onclick="exportHarvestOrderPDF('${sess.id}')">📄 PDF</button>
       </td>
     </tr>
-  `).join('');
+  `;}).join('');
 }
 
 // ══════════════════════════════════════
@@ -1519,7 +1521,7 @@ const simpleList=(tbl,el,label,keyCol)=>async(items)=>{
 
 async function loadFruits(){
   try {
-    const {data, error}=await sb.from('fruits').select('*').eq('tenant_id',tenantId).order('name');
+    const {data, error}=await sb.from('fruits').select('*').eq('tenant_id',tenantId).eq('active',true).order('name');
     if(error) throw error;
     simpleList('fruit','fruitList','Fruta','name')(data);
     const sel = $('linkFruit');
@@ -1528,7 +1530,7 @@ async function loadFruits(){
 }
 async function loadVarieties(){
   try {
-    const {data, error}=await sb.from('varieties').select('*').eq('tenant_id',tenantId).order('name');
+    const {data, error}=await sb.from('varieties').select('*').eq('tenant_id',tenantId).eq('active',true).order('name');
     if(error) throw error;
     simpleList('variety','varList','Variedade','name')(data);
     const sel = $('linkVariety');
@@ -1537,7 +1539,7 @@ async function loadVarieties(){
 }
 async function loadParcels() {
   try {
-    const { data, error } = await sb.from('parcels').select('*').eq('tenant_id', tenantId).order('code');
+    const { data, error } = await sb.from('parcels').select('*').eq('tenant_id', tenantId).eq('active',true).order('code');
     if (error) throw error;
     const items = data || [];
     $('parcelList').innerHTML = items.map(p => `
