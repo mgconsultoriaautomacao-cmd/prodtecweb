@@ -553,11 +553,11 @@ function loadQualitySelects() {
   const pSel = $('qParcela');
   const vSel = $('qVariety');
   if(pSel) {
-    pSel.innerHTML = '<option value="">— Parcela —</option>';
+    pSel.innerHTML = '<option value="">(Opcional) Selecione Parcela</option>';
     parcelas.forEach(p => pSel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`));
   }
   if(vSel) {
-    vSel.innerHTML = '<option value="">— Variedade —</option>';
+    vSel.innerHTML = '<option value="">(Opcional) Selecione Variedade</option>';
     varieties.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
   }
 }
@@ -964,17 +964,6 @@ function selectQEmp(id, name) {
 }
 
 // -- Submit Quality --
-function loadQualitySelects() {
-  const pSel = $('qParcela');
-  const vSel = $('qVariety');
-  if (!pSel || !vSel) return;
-  
-  pSel.innerHTML = '<option value="">(Opcional) Selecione Parcela</option>' + 
-    parcelas.map(p => `<option value="${p.id}">${p.code}</option>`).join('');
-    
-  vSel.innerHTML = '<option value="">(Opcional) Selecione Variedade</option>' + 
-    varieties.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
-}
 
 async function submitQuality() {
   if (!qState.issue)  { toast('Selecione o tipo de defeito', 'err'); return; }
@@ -982,19 +971,22 @@ async function submitQuality() {
   const btn = $('qSubmitBtn');
   btn.disabled = true; btn.textContent = '⏳ Salvando...';
 
+  // Busca o nome do defeito para compatibilidade com o dashboard (AppSheet style)
+  const defect = defectTypes.find(d => d.id === qState.issue);
+  const issueLabelText = defect ? defect.name : qState.issue;
+
   const payload = {
     tenant_id       : tenantId,
     ts              : new Date().toISOString(),
     employee_id     : qState.empId   || null,
     employee_name   : qState.empName || null,
-    issue_type      : qState.issue,
+    issue_type      : issueLabelText, // Envia o NOME para o dashboard
     penalty_boxes   : qPenalty,
     reason          : $('qReason').value.trim() || null,
     inspector_name  : null,
     signature_base64: null,
     parcel_id       : qState.parcelId  || null,
-    variety_id      : qState.varietyId || null,
-    synced          : true,
+    variety_id      : qState.varietyId || null
   };
 
   try {
@@ -1304,7 +1296,7 @@ function showOrdemColheita({ session, workers }) {
   const timeStr = now.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
 
   const workerRows = workers.map(w =>
-    `<tr><td>${w.employee_name}</td><td style="text-align:right">${BRL(w.value_received)}</td></tr>`
+    `<tr><td>${w.employee_name}</td><td style="text-align:right">Colhido</td></tr>`
   ).join('');
 
   // Rastreabilidade Juliano solicitado: Semana Parcela DiaJuliano
@@ -1350,10 +1342,9 @@ function showOrdemColheita({ session, workers }) {
       <div class="num">${julCode || '—'}</div>
     </div>
     <table>
-      <thead><tr><th>Funcionário</th><th style="text-align:right">Valor a Receber</th></tr></thead>
+      <thead><tr><th>Funcionário</th><th style="text-align:right">Status</th></tr></thead>
       <tbody>
         ${workerRows}
-        <tr class="total"><td><strong>TOTAL</strong></td><td style="text-align:right"><strong>${BRL(session.total_value)}</strong></td></tr>
       </tbody>
     </table>
     <div class="footer">
