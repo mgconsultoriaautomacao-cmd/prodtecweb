@@ -988,8 +988,7 @@ async function submitQuality() {
     signature_base64: null,
     parcel_id       : qState.parcelId  || null,
     variety_id      : qState.varietyId || null,
-    station_id      : 'campo',
-    synced          : true
+    station_id      : 'campo'
   };
 
   try {
@@ -999,6 +998,7 @@ async function submitQuality() {
     loadQHistory();
   } catch(e) {
     console.error('Erro detalhado no lançamento de qualidade:', e);
+    
     if (!isOnline) {
       await idbAdd({ type: 'quality', data: { ...payload, synced: false } });
       await updateSyncBadge();
@@ -1108,10 +1108,14 @@ async function loadQHistory() {
     .order('ts', { ascending: false })
     .limit(50);
   if (error || !data?.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>Nenhuma auditoria registrada</div>'; return; }
-  el.innerHTML = data.map(a => `
+  el.innerHTML = data.map(a => {
+    const emp = employees.find(e => e.barcode == a.employee_barcode);
+    const empName = emp ? emp.name : (a.employee_barcode || '—');
+    
+    return `
     <div class="hist-item red">
       <div class="hist-top">
-        <div class="hist-name">${a.employee_name || '—'}</div>
+        <div class="hist-name">${empName}</div>
         <div class="hist-time">${fmtTime(a.ts)}</div>
       </div>
       <div class="hist-meta">
@@ -1120,8 +1124,8 @@ async function loadQHistory() {
         ${a.inspector_name ? `<span class="pill pill-blue">👤 ${a.inspector_name}</span>` : ''}
       </div>
       ${a.reason ? `<div style="font-size:12px;color:var(--muted2);margin-top:6px">${a.reason}</div>` : ''}
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function issueLabel(id) {
