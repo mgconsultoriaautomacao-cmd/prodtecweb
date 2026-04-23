@@ -94,7 +94,17 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
 .box-item{display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.3);padding:9px 12px;border-radius:9px;border:1px solid rgba(59,130,246,.1)}
 /* STAGGER */
 @media(max-width:768px){.sidebar{transform:translateX(-240px)}.main{margin-left:0;padding:16px}.cgrid{grid-template-columns:1fr}.grid2,.grid3,.grid4{grid-template-columns:1fr}}
-</style>
+  .card-list{max-height:180px;overflow-y:auto;margin-top:10px;padding-right:4px;display:flex;flex-direction:column;gap:5px}
+  .card-list::-webkit-scrollbar{width:4px}
+  .card-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:4px}
+  .card-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(255,255,255,.03);border-radius:8px;font-size:13px;border:1px solid var(--border)}
+  .card-item:hover{border-color:rgba(59,130,246,.2);background:rgba(59,130,246,.05)}
+    .card-list{max-height:180px;overflow-y:auto;margin-top:10px;padding-right:4px;display:flex;flex-direction:column;gap:5px}
+  .card-list::-webkit-scrollbar{width:4px}
+  .card-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:4px}
+  .card-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(255,255,255,.03);border-radius:8px;font-size:13px;border:1px solid var(--border)}
+  .card-item:hover{border-color:rgba(59,130,246,.2);background:rgba(59,130,246,.05)}
+  </style>
 </head>
 <body>
 
@@ -145,7 +155,10 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
     <div class="nav" onclick="showTab('users_mgmt',this)">🔑 Usuários & Empresas</div>
   </div>
 
-  <div class="nav-group">Sistema</div>
+    <div class="nav-group">Integrações</div>
+    <div class="nav" onclick="showTab('integrations',this)">🔌 TOTVS & PariPassu</div>
+    
+    <div class="nav-group">Sistema</div>
   <div class="nav" onclick="showTab('settings',this)">⚙️ Configurações</div>
   <div class="nav" style="color:var(--green);font-weight:700" onclick="window.open('/campo/','_blank')">📱 App de Campo</div>
 
@@ -488,12 +501,12 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
       <div class="card">
         <div class="title">🍈 Frutas</div>
         <div style="display:flex;gap:8px;margin-bottom:10px"><input id="fruitName" placeholder="Nova fruta"/><button onclick="addFruit()" style="padding:9px 14px">+</button></div>
-        <div id="fruitList"></div>
+        <div id="fruitList" class="card-list"></div>
       </div>
       <div class="card">
         <div class="title">🌱 Variedades</div>
         <div style="display:flex;gap:8px;margin-bottom:10px"><input id="varName" placeholder="Nova variedade"/><button onclick="addVariety()" style="padding:9px 14px">+</button></div>
-        <div id="varList"></div>
+        <div id="varList" class="card-list"></div>
       </div>
       <div class="card">
         <div class="title">🚜 Parcelas</div>
@@ -502,22 +515,47 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
           <input id="parcelPCode" placeholder="Cód. P (IDAR)" style="width:100px"/>
           <button onclick="addParcel()" style="padding:9px 14px">+</button>
         </div>
-        <div id="parcelList"></div>
+        <div id="parcelList" class="card-list"></div>
       </div>
     </div>
     <div class="card">
       <div class="title">🔗 Vincular Parcela → Fruta → Variedade</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end">
         <div><label class="flabel">Parcela</label><select id="linkParcel"></select></div>
-        <div><label class="flabel">Fruta</label><select id="linkFruit"></select></div>
+        <div><label class="flabel">Fruta</label><select id="linkFruit" onchange="filterVarietiesByFruit(this.value)"></select></div>
         <div><label class="flabel">Variedade</label><select id="linkVariety"></select></div>
         <button onclick="addLink()">Vincular</button>
       </div>
-      <div id="linkList" style="margin-top:12px"></div>
+      <div id="linkList" class="card-list" style="margin-top:12px"></div>
     </div>
   </div>
 
   <!-- ═══ CONFIGURAÇÕES ═══ -->
+  <!-- ═══ INTEGRAÇÕES ═══ -->
+  <div id="tab-integrations" class="tab">
+    <h1 class="ptitle">🔌 Integrações Externas</h1>
+    <div class="grid2">
+      <div class="card">
+        <div class="title">📄 Importação TOTVS (Excel/XML)</div>
+        <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Importe relatórios do TOTVS para alimentar a rastreabilidade e balanço de massa.</p>
+        <div style="border:2px dashed var(--border);padding:30px;text-align:center;border-radius:14px;cursor:pointer">
+          <span style="font-size:24px">📤</span>
+          <div style="font-size:13px;margin-top:10px">Arraste seu relatório TOTVS ou clique para buscar</div>
+          <input type="file" id="totvsFile" style="display:none" onchange="importTotvs(this)"/>
+        </div>
+      </div>
+      <div class="card">
+        <div class="title">🍓 Conexão PariPassu</div>
+        <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Sincronize sua Pallet List da PariPassu para controle automático de rastreabilidade.</p>
+        <div class="field-group">
+          <label class="flabel">API Token PariPassu</label>
+          <input type="password" placeholder="Insira o token de acesso"/>
+        </div>
+        <button class="blue btn-full" style="margin-top:10px">🔗 Testar Conexão</button>
+      </div>
+    </div>
+  </div>
+
   <div id="tab-settings" class="tab">
     <h1 class="ptitle">⚙️ Configurações do Tenant</h1>
     <div class="grid2">
@@ -1581,53 +1619,86 @@ async function loadLinks(){
   try {
     const {data, error}=await sb.from('parcel_links').select('*,parcels(code),fruits(name),varieties(name)').eq('tenant_id',tenantId);
     if(error) throw error;
-    const items = data || [];
-    $('linkList').innerHTML=items.map(l=>`
+    _parcelLinks = data || []; // Persist global
+    $('linkList').innerHTML=_parcelLinks.map(l=>`
       <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
         <span>📦 ${l.parcels?.code || '?'} → 🍈 ${l.fruits?.name || '?'} / ${l.varieties?.name || '?'}</span>
         <button class="danger" style="padding:3px 8px" onclick="window.del_link('${l.id}')">×</button>
       </div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">Nenhum vínculo.</div>';
   } catch(e) { console.error(e); }
 }
+
 async function addFruit(){
   const n=$('fruitName').value.trim();if(!n)return;
-  const {error}=await sb.from('fruits').insert([{name:n,active:true,track_code:null,tenant_id:tenantId}]);
+  const {error}=await sb.from('fruits').insert([{name:n,active:true,tenant_id:tenantId}]);
   if(error) alert('Erro: ' + error.message);
   else { $('fruitName').value=''; loadFruits(); }
 }
 async function addVariety(){
-  const n=$('varName').value.trim();if(!n)return;
-  const {error}=await sb.from('varieties').insert([{name:n,active:true,track_code:null,tenant_id:tenantId}]);
+  const n=$('varName').value.trim();
+  const fId=$('linkFruit').value; // Optional: link to selected fruit
+  if(!n)return;
+  const {error}=await sb.from('varieties').insert([{name:n,active:true,tenant_id:tenantId, fruit_id: fId || null}]);
   if(error) alert('Erro: ' + error.message);
   else { $('varName').value=''; loadVarieties(); }
 }
 async function addParcel() {
-  const n = $('parcelCode').value.trim();
-  const p = $('parcelPCode').value.trim();
+  const n = $('parcelCode').value.trim(), p = $('parcelPCode').value.trim();
+  if (!n) return;
+  const {error}=await sb.from('parcels').insert([{ code: n, p_code: p, active: true, tenant_id: tenantId }]);
+  if(error) alert('Erro: ' + error.message);
+  else { $('parcelCode').value = ''; $('parcelPCode').value = ''; loadParcels(); }
+}
+async function addFruit(){
+  const n=$('fruitName').value.trim();if(!n)return;
+  const {error}=await sb.from('fruits').insert([{name:n,active:true,tenant_id:tenantId}]);
+  if(error) alert('Erro: ' + error.message);
+  else { $('fruitName').value=''; loadFruits(); }
+}
+async function addVariety(){
+  const n=$('varName').value.trim(), fId=$('linkFruit').value; 
+  if(!n)return;
+  const {error}=await sb.from('varieties').insert([{name:n,active:true,tenant_id:tenantId, fruit_id: fId || null}]);
+  if(error) alert('Erro: ' + error.message);
+  else { $('varName').value=''; loadVarieties(); }
+}
+async function addParcel() {
+  const n = $('parcelCode').value.trim(), p = $('parcelPCode').value.trim();
   if (!n) return;
   const {error}=await sb.from('parcels').insert([{ code: n, p_code: p, active: true, tenant_id: tenantId }]);
   if(error) alert('Erro: ' + error.message);
   else { $('parcelCode').value = ''; $('parcelPCode').value = ''; loadParcels(); }
 }
 window.edit_parcel = async(id, code, pCode) => {
-  const nCode = prompt('Novo Código da Parcela:', code);
-  const nPCode = prompt('Novo Código P (IDAR):', pCode);
+  const nCode = prompt('Novo Código da Parcela:', code), nPCode = prompt('Novo Código P (IDAR):', pCode);
   if(nCode !== null) {
     const {error} = await sb.from('parcels').update({code: nCode, p_code: nPCode}).eq('id', id);
     if(error) alert(error.message);
     else loadParcels();
   }
 };
+async function filterVarietiesByFruit(fId) {
+  const vSel = $('linkVariety');
+  vSel.innerHTML = '<option value="">(Opcional) Selecione Variedade</option>';
+  if(!fId) return;
+  const {data} = await sb.from('varieties').select('*').eq('tenant_id', tenantId).or(`fruit_id.is.null,fruit_id.eq.${fId}`);
+  if(data) vSel.innerHTML += data.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+}
 async function addLink(){
   const pId=$('linkParcel').value,fId=$('linkFruit').value,vId=$('linkVariety').value;
   if(!pId||!fId)return;
   await sb.from('parcel_links').upsert([{parcel_id:pId,fruit_id:fId,variety_id:vId,tenant_id:tenantId}],{onConflict:'tenant_id,parcel_id,fruit_id,variety_id'});
   loadLinks();
 }
+
+// Global variable for links
+let _parcelLinks = [];
 window.del_link=async(id)=>{ if(confirm('Excluir este vínculo?')){ await sb.from('parcel_links').delete().eq('id',id); loadLinks(); } };
 window.del_fruit=async(id)=>{await sb.from('fruits').delete().eq('id',id);loadFruits();};
 window.del_variety=async(id)=>{await sb.from('varieties').delete().eq('id',id);loadVarieties();};
 window.del_parcel=async(id)=>{await sb.from('parcels').delete().eq('id',id);loadParcels();};
+
+function importTotvs(input) { alert('Processando relatório TOTVS...'); }
 
 // ══════════════════════════════════════
 // QUALIDADE

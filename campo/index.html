@@ -202,6 +202,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 .prep-badge{font-size:10px;background:rgba(245,158,11,.15);color:var(--yellow);border:1px solid rgba(245,158,11,.2);padding:2px 7px;border-radius:4px;font-weight:700}
 
 @media(min-width:500px){.home-modules{grid-template-columns:1fr 1fr}}
+.hist-list{max-height:400px;overflow-y:auto;padding-right:4px}
+.hist-list::-webkit-scrollbar{width:4px}
+.hist-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:4px}
+.details-modal{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px}
+.details-card{background:var(--card);width:100%;max-width:350px;border-radius:20px;padding:24px;border:1px solid var(--border)}
 </style>
 </head>
 <body>
@@ -1439,7 +1444,11 @@ function initPhSig() {
   phSigCtx.strokeStyle = '#3b82f6';
   phSigCtx.lineWidth = 3;
   phSigCtx.lineCap = 'round'; phSigCtx.lineJoin = 'round';
-  const getPos = e => { const r = phSigCanvas.getBoundingClientRect(); const s = e.touches ? e.touches[0] : e; return {x: s.clientX-r.left, y: s.clientY-r.top}; };
+  const getPos = e => { 
+    const r = phSigCanvas.getBoundingClientRect(); 
+    const s = (e.touches && e.touches.length) ? e.touches[0] : e; 
+    return {x: s.clientX-r.left, y: s.clientY-r.top}; 
+  };
   const start = e => { e.preventDefault(); phSigDrawing=true; const p=getPos(e); phSigCtx.beginPath(); phSigCtx.moveTo(p.x,p.y); };
   const move  = e => { e.preventDefault(); if(!phSigDrawing)return; const p=getPos(e); phSigCtx.lineTo(p.x,p.y); phSigCtx.stroke(); phSigHasData=true; };
   phSigCanvas.addEventListener('touchstart', start, {passive:false});
