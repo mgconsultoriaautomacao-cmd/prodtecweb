@@ -543,11 +543,11 @@ const BRL = v => 'R$ ' + Number(v||0).toFixed(2).replace('.',',');
 // STATE
 // ═══════════════════════════════════════════
 let sb, user, tenantId, tenantName;
-let employees  = [];   // [{id, name, role}]
+let employees  = [];   // [{id, name, role, barcode}]
 let parcelas   = [];   // [{id, code}]
 let isOnline   = navigator.onLine;
 
-const qState = { empId:null, empName:'', issue:null, parcelId:null, varietyId:null };
+const qState = { empId: null, empBarcode: null, empName: '', issue: null, varietyId: null, parcelId: null };
 
 function loadQualitySelects() {
   const pSel = $('qParcela');
@@ -774,7 +774,7 @@ async function doLogout() {
 // ═══════════════════════════════════════════
 async function loadEmployees() {
   const { data } = await sb.from('employees')
-    .select('id, name, role')
+    .select('id, name, role, barcode')
     .eq('tenant_id', tenantId)
     .eq('active', true)
     .order('name');
@@ -937,7 +937,7 @@ function renderQEmpList(list) {
   const el = $('qEmpList');
   if (!list.length) { el.innerHTML = '<div class="empty">Nenhum embalador encontrado</div>'; return; }
   el.innerHTML = list.map(e => `
-    <div class="emp-item ${qState.empId == e.id ? 'on' : ''}" data-id="${e.id}" onclick="selectQEmp('${e.id}','${e.name.replace(/'/g,"\\'")}')">
+    <div class="emp-item ${qState.empId == e.id ? 'on' : ''}" data-id="${e.id}" onclick="selectQEmp('${e.id}','${e.name.replace(/'/g,"\\'")}', '${e.barcode}')">
       <div class="emp-avatar">${e.name[0].toUpperCase()}</div>
       <div>
         <div class="emp-name">${e.name}</div>
@@ -953,9 +953,10 @@ function filterQEmp() {
   renderQEmpList(employees.filter(e => ['PACKER','EMBALADOR'].includes(e.role) && e.name.toLowerCase().includes(q)));
 }
 
-function selectQEmp(id, name) {
-  qState.empId   = id;
-  qState.empName = name;
+function selectQEmp(id, name, barcode) {
+  qState.empId      = id;
+  qState.empName    = name;
+  qState.empBarcode = barcode;
   document.querySelectorAll('#qEmpList .emp-item').forEach(el => {
     const eid = el.dataset.id;
     el.classList.toggle('on', eid == id);
@@ -979,8 +980,7 @@ async function submitQuality() {
   const payload = {
     tenant_id       : tenantId,
     ts              : new Date().toISOString(),
-    employee_id     : qState.empId   || null,
-    employee_name   : qState.empName || null,
+    employee_barcode: qState.empBarcode || null,
     issue_type      : issueLabelText, // Envia o NOME para o dashboard
     penalty_boxes   : qPenalty,
     reason          : $('qReason').value.trim() || null,
@@ -988,6 +988,7 @@ async function submitQuality() {
     signature_base64: null,
     parcel_id       : qState.parcelId  || null,
     variety_id      : qState.varietyId || null,
+    station_id      : 'campo',
     synced          : true
   };
 
@@ -1024,6 +1025,7 @@ async function pushQuality(payload) {
 function resetQForm() {
   qState.issue     = null;
   qState.empId     = null;
+  qState.empBarcode = null;
   qState.empName   = '';
   qState.parcelId  = null;
   qState.varietyId = null;
