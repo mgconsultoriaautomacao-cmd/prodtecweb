@@ -505,7 +505,11 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
       </div>
       <div class="card">
         <div class="title">🌱 Variedades</div>
-        <div style="display:flex;gap:8px;margin-bottom:10px"><input id="varName" placeholder="Nova variedade"/><button onclick="addVariety()" style="padding:9px 14px">+</button></div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+          <input id="varName" placeholder="Nome da Variedade (Ex: Jadeal)"/>
+          <select id="varFruit"></select>
+          <button onclick="addVariety()" style="padding:9px 14px">Adicionar Variedade</button>
+        </div>
         <div id="varList" class="card-list"></div>
       </div>
       <div class="card">
@@ -1464,6 +1468,7 @@ async function loadEmps(){
   try {
     const {data, error}=await sb.from('employees').select('*').eq('tenant_id',tenantId).order('name');
     if(error) throw error;
+    _employees = data || []; // Persist global
     $('empTable').querySelector('tbody').innerHTML=(data||[]).map(e=>`
       <tr>
         <td><code style="background:rgba(255,255,255,.05);padding:2px 6px;border-radius:5px;font-size:12px">${e.barcode}</code></td>
@@ -1577,14 +1582,31 @@ async function loadFruits(){
     if(error) throw error;
     simpleList('fruit','fruitList','Fruta','name')(data);
     const sel = $('linkFruit');
-    if(sel) sel.innerHTML = '<option value="">Selecione...</option>' + (data||[]).map(f=>`<option value="${f.id}">${f.name}</option>`).join('');
+    const varFruitSel = $('varFruit');
+    const fruitOptions = '<option value="">Selecione Fruta...</option>' + (data||[]).map(f=>`<option value="${f.id}">${f.name}</option>`).join('');
+    if(sel) sel.innerHTML = fruitOptions;
+    if(varFruitSel) varFruitSel.innerHTML = fruitOptions;
   } catch(e) { console.error(e); }
 }
 async function loadVarieties(){
   try {
-    const {data, error}=await sb.from('varieties').select('*').eq('tenant_id',tenantId).eq('active',true).order('name');
+    const {data, error}=await sb.from('varieties').select('*, fruits(name)').eq('tenant_id',tenantId).eq('active',true).order('name');
     if(error) throw error;
-    simpleList('variety','varList','Variedade','name')(data);
+    
+    $('varList').innerHTML = (data||[]).map(v => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <div>
+          <span style="font-weight:700;color:var(--blue);margin-right:8px">${v.track_code||'—'}</span>
+          <span>${v.name}</span>
+          <span style="color:var(--muted);font-size:11px;margin-left:8px">${v.fruits?.name ? `(${v.fruits.name})` : '(Sem Fruta)'}</span>
+        </div>
+        <div>
+          <button class="sec" style="padding:3px 8px;margin-right:4px" onclick="setTrackCode('varieties','${v.id}','${v.track_code||''}')">Code</button>
+          <button class="danger" style="padding:3px 8px" onclick="window.del_variety('${v.id}')">×</button>
+        </div>
+      </div>
+    `).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">Nenhuma variedade.</div>';
+
     const sel = $('linkVariety');
     if(sel) sel.innerHTML = '<option value="">Selecione...</option>' + (data||[]).map(v=>`<option value="${v.id}">${v.name}</option>`).join('');
   } catch(e) { console.error(e); }
@@ -1636,7 +1658,7 @@ async function addFruit(){
 }
 async function addVariety(){
   const n=$('varName').value.trim();
-  const fId=$('linkFruit').value; // Optional: link to selected fruit
+  const fId=$('varFruit').value;
   if(!n)return;
   const {error}=await sb.from('varieties').insert([{name:n,active:true,tenant_id:tenantId, fruit_id: fId || null}]);
   if(error) alert('Erro: ' + error.message);
@@ -1649,26 +1671,8 @@ async function addParcel() {
   if(error) alert('Erro: ' + error.message);
   else { $('parcelCode').value = ''; $('parcelPCode').value = ''; loadParcels(); }
 }
-async function addFruit(){
-  const n=$('fruitName').value.trim();if(!n)return;
-  const {error}=await sb.from('fruits').insert([{name:n,active:true,tenant_id:tenantId}]);
-  if(error) alert('Erro: ' + error.message);
-  else { $('fruitName').value=''; loadFruits(); }
 }
-async function addVariety(){
-  const n=$('varName').value.trim(), fId=$('linkFruit').value; 
-  if(!n)return;
-  const {error}=await sb.from('varieties').insert([{name:n,active:true,tenant_id:tenantId, fruit_id: fId || null}]);
-  if(error) alert('Erro: ' + error.message);
-  else { $('varName').value=''; loadVarieties(); }
-}
-async function addParcel() {
-  const n = $('parcelCode').value.trim(), p = $('parcelPCode').value.trim();
-  if (!n) return;
-  const {error}=await sb.from('parcels').insert([{ code: n, p_code: p, active: true, tenant_id: tenantId }]);
-  if(error) alert('Erro: ' + error.message);
-  else { $('parcelCode').value = ''; $('parcelPCode').value = ''; loadParcels(); }
-}
+
 window.edit_parcel = async(id, code, pCode) => {
   const nCode = prompt('Novo Código da Parcela:', code), nPCode = prompt('Novo Código P (IDAR):', pCode);
   if(nCode !== null) {
@@ -1693,6 +1697,7 @@ async function addLink(){
 
 // Global variable for links
 let _parcelLinks = [];
+let _employees = []; 
 window.del_link=async(id)=>{ if(confirm('Excluir este vínculo?')){ await sb.from('parcel_links').delete().eq('id',id); loadLinks(); } };
 window.del_fruit=async(id)=>{await sb.from('fruits').delete().eq('id',id);loadFruits();};
 window.del_variety=async(id)=>{await sb.from('varieties').delete().eq('id',id);loadVarieties();};
@@ -1710,7 +1715,19 @@ async function refreshQuality() {
   if(!qaTable) return;
   
   const audits = data || [];
-  qaTable.innerHTML = audits.map(q => `<tr><td>${new Date(q.ts).toLocaleString('pt-BR')}</td><td>${q.employee_name||'--'}</td><td>${q.issue_type}</td><td>${q.penalty_boxes}</td><td>${q.inspector_name||'--'}</td></tr>`).join('') || '<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--muted)">Nenhum registro.</td></tr>';
+  qaTable.innerHTML = audits.map(q => {
+    // Busca o nome do funcionário pelo barcode
+    const emp = _employees.find(e => e.barcode == q.employee_barcode);
+    const empName = emp ? emp.name : (q.employee_barcode || '--');
+    
+    return `<tr>
+      <td>${new Date(q.ts).toLocaleString('pt-BR')}</td>
+      <td><b>${empName}</b></td>
+      <td>${q.issue_type}</td>
+      <td>${q.penalty_boxes}</td>
+      <td>${q.inspector_name||'--'}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--muted)">Nenhum registro.</td></tr>';
   
   // Build Distribution of Defects Chart
   const issues = {};
