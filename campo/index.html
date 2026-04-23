@@ -974,6 +974,7 @@ async function submitQuality() {
   // Busca o nome do defeito para compatibilidade com o dashboard (AppSheet style)
   const defect = defectTypes.find(d => d.id === qState.issue);
   const issueLabelText = defect ? defect.name : qState.issue;
+  const inspector = window.currentInspector || 'Sistema';
 
   const payload = {
     tenant_id       : tenantId,
@@ -983,10 +984,11 @@ async function submitQuality() {
     issue_type      : issueLabelText, // Envia o NOME para o dashboard
     penalty_boxes   : qPenalty,
     reason          : $('qReason').value.trim() || null,
-    inspector_name  : null,
+    inspector_name  : inspector,
     signature_base64: null,
     parcel_id       : qState.parcelId  || null,
-    variety_id      : qState.varietyId || null
+    variety_id      : qState.varietyId || null,
+    synced          : true
   };
 
   try {
@@ -995,13 +997,16 @@ async function submitQuality() {
     resetQForm();
     loadQHistory();
   } catch(e) {
+    console.error('Erro detalhado no lançamento de qualidade:', e);
     if (!isOnline) {
       await idbAdd({ type: 'quality', data: { ...payload, synced: false } });
       await updateSyncBadge();
-      toast('📥 Salvo offline — sincronizará quando online', 'ok');
+      toast('📥 Salvo offline', 'ok');
       resetQForm();
+      loadQHistory();
     } else {
-      toast('Erro ao salvar: ' + e.message, 'err');
+      const msg = e.message || 'Erro de esquema no banco';
+      toast('Falha (400): ' + msg, 'err');
     }
   } finally {
     btn.disabled = false; btn.textContent = '✅ Registrar Defeito';
@@ -1010,7 +1015,10 @@ async function submitQuality() {
 
 async function pushQuality(payload) {
   const { error } = await sb.from('quality_audits').insert(payload);
-  if (error) throw error;
+  if (error) {
+    console.error('Supabase Quality Insert Error:', error);
+    throw error;
+  }
 }
 
 function resetQForm() {
