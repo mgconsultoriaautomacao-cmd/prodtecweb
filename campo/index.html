@@ -252,6 +252,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       <div class="module-desc">Lance carrocões por turno e calcule o rateio entre colhedores</div>
       <div class="module-arrow">›</div>
     </div>
+    <div class="module-card" style="--grad:linear-gradient(90deg,var(--blue),var(--purple))" onclick="showScreen('carrao'); showCTab('ph')">
+      <span class="module-icon">🏢</span>
+      <div class="module-name">Validação Packing</div>
+      <div class="module-desc">Confirme a chegada dos carrões no Packing House</div>
+      <div class="module-arrow">›</div>
+    </div>
   </div>
 
   <div style="padding:0 16px">
@@ -384,15 +390,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 
     <div class="section"><div class="section-title">Fruta</div></div>
     <div style="padding:0 16px">
-      <div class="toggle-group cols2">
-        <div class="toggle-opt on" data-type="MELANCIA" onclick="setFruit('MELANCIA')">
-          <span class="icon">🍉</span>Melancia
-          <div class="price">R$ 3,00 / carrocão</div>
-        </div>
-        <div class="toggle-opt" data-type="MELAO" onclick="setFruit('MELAO')">
-          <span class="icon">🍈</span>Melão
-          <div class="price">R$ 4,00 / carrocão</div>
-        </div>
+      <div class="toggle-group cols2" id="cFruitList">
+        <div class="loading"><div class="spinner"></div>Carregando frutas...</div>
       </div>
     </div>
 
@@ -753,6 +752,7 @@ async function afterLogin(u) {
   await loadEmployees();
   await loadParcelas();
   await loadVarieties();
+  await loadFruits();
   await initQualityForm();
   initCarraoForm();
   loadPhParcelas();
@@ -793,6 +793,16 @@ async function loadParcelas() {
     sel.innerHTML = '<option value="">— Parcela —</option>';
     parcelas.forEach(p => sel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`));
   }
+}
+
+let fruits = [];
+async function loadFruits() {
+  const { data } = await sb.from('fruits')
+    .select('id, name, value_per_carrao')
+    .eq('tenant_id', tenantId)
+    .eq('active', true)
+    .order('name');
+  fruits = data || [];
 }
 
 let varieties = [];
@@ -1138,8 +1148,23 @@ function issueLabel(id) {
 // ═══════════════════════════════════════════
 function initCarraoForm() {
   $('cDate').value = today();
+  renderCFruitList();
   // Apenas COLHEDOR (colheitadores)
   renderCEmpList(employees.filter(e => e.role === 'COLHEDOR'));
+}
+
+function renderCFruitList() {
+  const el = $('cFruitList');
+  if (!el) return;
+  if (!fruits.length) { el.innerHTML = '<div class="empty">Nenhuma fruta encontrada</div>'; return; }
+  el.innerHTML = fruits.map((f, i) => `
+    <div class="toggle-opt ${i===0?'on':''}" data-id="${f.id}" onclick="setFruit('${f.id}')">
+      <span class="icon">${f.name.toLowerCase().includes('melancia')?'🍉':'🍈'}</span>
+      ${f.name}
+      <div class="price">R$ ${f.value_per_carrao || 0} / carrocão</div>
+    </div>
+  `).join('');
+  if (fruits.length > 0) setFruit(fruits[0].id);
 }
 
 function renderCEmpList(list) {
@@ -1198,11 +1223,16 @@ function setShift(shift) {
   );
 }
 
-function setFruit(fruit) {
-  cState.fruit = fruit;
-  document.querySelectorAll('[data-type="MELANCIA"],[data-type="MELAO"]').forEach(el =>
-    el.classList.toggle('on', el.dataset.type === fruit)
-  );
+function setFruit(id) {
+  const f = fruits.find(x => x.id == id);
+  if (!f) return;
+  cState.fruitId = id;
+  cState.fruitName = f.name;
+  window.pricePerCarrao = parseFloat(f.value_per_carrao || 0);
+
+  document.querySelectorAll('#cFruitList .toggle-opt').forEach(opt => {
+    opt.classList.toggle('on', opt.getAttribute('data-id') == id);
+  });
   updateCalcPreview();
 }
 
@@ -1257,7 +1287,7 @@ async function submitCarrao() {
     tenant_id         : tenantId,
     date              : date,
     shift             : cState.shift,
-    fruit_type        : cState.fruit,
+    fruit_type        : cState.fruitName,
     parcel_id         : parcelaId || null,
     variety_id        : $('cVariety').value || null,
     qty_carrocoes     : cQty,
@@ -1410,7 +1440,7 @@ async function loadPhPending() {
   $('phSignArea').style.display = 'none';
 
   let query = sb.from('field_carrao_sessions')
-    .select('*')
+    .select('*, field_carrao_employees(employees(name))')
     .eq('tenant_id', tenantId)
     .is('ph_signature_base64', null)
     .order('date', {ascending:false});
@@ -1424,15 +1454,21 @@ async function loadPhPending() {
   }
 
   phRecords = data;
-  el.innerHTML = data.map(r => `
-    <div class="hist-item" style="padding:10px;margin-bottom:6px;border-style:dashed">
-      <div style="display:flex;justify-content:space-between">
-        <span style="font-weight:700">${r.fruit_type} — ${r.qty_carrocoes} un</span>
-        <span style="font-size:11px;color:var(--muted)">${r.date}</span>
+  el.innerHTML = data.map(r => {
+    const workerNames = (r.field_carrao_employees || []).map(ce => ce.employees?.name).filter(Boolean).join(', ');
+    return `
+      <div class="hist-item" style="padding:10px;margin-bottom:6px;border-style:dashed">
+        <div style="display:flex;justify-content:space-between">
+          <span style="font-weight:700;color:var(--blue)">${r.fruit_type} — ${r.qty_carrocoes} un</span>
+          <span style="font-size:11px;color:var(--muted)">${r.date}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text);margin-top:4px;line-height:1.4">
+          <b>Colhedores:</b> ${workerNames || 'Nenhum'}
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Lote: ${r.julian_lot || '—'} | Por: ${r.registered_by}</div>
       </div>
-      <div style="font-size:11px;color:var(--muted2);margin-top:2px">Lote: ${r.julian_lot || '—'} | Reg: ${r.registered_by}</div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
   $('phSignArea').style.display = 'block';
 }
 
