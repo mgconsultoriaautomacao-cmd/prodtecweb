@@ -2289,7 +2289,7 @@ function handleExcelImport(e) {
 
 async function saveExpeditions() {
   if(!_tempExpeditions.length) return;
-  toast('Salvando no banco...', 'wait');
+  console.log('Salvando no banco...');
   const toInsert = _tempExpeditions.map(r => ({
     tenant_id: tenantId,
     issue_date: r.date ? new Date(r.date) : new Date(),
@@ -2300,9 +2300,9 @@ async function saveExpeditions() {
     quantity_kg: r.kg
   }));
   const { error } = await sb.from('expeditions').insert(toInsert);
-  if(error) { toast('Erro ao salvar: ' + error.message, 'err'); }
+  if(error) { alert('Erro ao salvar: ' + error.message); }
   else {
-    toast('Importação concluída!', 'ok');
+    alert('Importação concluída com sucesso!');
     $('previewContainer').style.display = 'none';
     $('btnSaveExpeditions').style.display = 'none';
     refreshMassBalance();
@@ -2310,7 +2310,7 @@ async function saveExpeditions() {
 }
 
 async function refreshMassBalance() {
-  toast('Calculando saldos...', 'wait');
+  console.log('Atualizando balanço...');
   
   // 1. Entradas (Produção)
   const { data: prod } = await sb.from('production_scans')
