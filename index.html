@@ -884,13 +884,10 @@ async function refreshDash(){
   $('kpiAtivos').textContent   = emps;
 
   // Global Stock Balance (Total Production - Total Expedition)
-  // Note: Here we use total history or current period? 
-  // User said "balanço sumiu", let's show the lifetime balance for now as it's a "Stock" KPI.
-  const totalIn = kg; // This is only for the filtered period... 
-  // For a true "Stock" we might need total history. 
-  // But let's stay consistent with the dashboard filter for now.
-  const totalOut = (exped||[]).reduce((a,x)=>a+(x.quantity_kg||0),0);
-  const saldoGlobal = kg - totalOut; 
+  const { data: allProd } = await sb.from('production_scans').select('weight_kg').eq('tenant_id', tenantId).eq('role', 'PACKER');
+  const totalIn = (allProd || []).reduce((a, x) => a + (x.weight_kg || 0), 0);
+  const totalOut = (exped || []).reduce((a, x) => a + (x.quantity_kg || 0), 0);
+  const saldoGlobal = totalIn - totalOut;
   $('kpiSaldoEstoque').textContent = Math.max(0, saldoGlobal).toLocaleString() + ' kg';
 
   // Cadencia (avg gap between scans for PACKER)
@@ -2271,9 +2268,15 @@ function handleExcelImport(e) {
       if(json[i] && (json[i].includes('NF') || json[i].includes('Emissão'))) { startRow = i; break; }
     }
 
+    const excelDateToJS = (serial) => {
+      if (serial instanceof Date) return serial;
+      if (typeof serial !== 'number') return serial;
+      return new Date(Math.round((serial - 25569) * 86400 * 1000));
+    };
+
     const rows = json.slice(startRow + 1);
     _tempExpeditions = rows.map(r => ({
-      date: r[0],
+      date: excelDateToJS(r[0]),
       invoice: r[1],
       customer: r[5],
       product: r[7], // Descrição do Produto TOTVS
@@ -2382,6 +2385,12 @@ document.querySelectorAll('.nav').forEach(n => {
     if(window.innerWidth <= 768) document.querySelector('.sidebar').classList.remove('open');
   });
 });
+
+function toast(msg, type='info') {
+  console.log(`[Toast ${type}]: ${msg}`);
+  if(type === 'err' || type === 'error') alert('ERRO: ' + msg);
+  else alert(msg);
+}
 
 initApp();
 </script>
