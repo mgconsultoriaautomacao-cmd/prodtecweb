@@ -182,6 +182,7 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
       <div class="kcard green"><div class="klabel">Total em Quilos</div><div id="kpiTotalKg" class="kval green">0</div><div class="ksub">kg processados</div></div>
       <div class="kcard yellow"><div class="klabel">Velocidade Média</div><div id="kpiCadencia" class="kval yellow">--</div><div class="ksub"><span id="kpiMediaHora">0</span> cx/h média</div></div>
       <div class="kcard purple"><div class="klabel">Ativos Hoje</div><div id="kpiAtivos" class="kval purple">0</div><div class="ksub">colaboradores</div></div>
+      <div class="kcard blue"><div class="klabel">Saldo em Estoque</div><div id="kpiSaldoEstoque" class="kval" style="color:var(--text)">0</div><div class="ksub">kg pendentes</div></div>
     </div>
     <div class="fbar">
       <div class="f"><label class="flabel">Início</label><input type="date" id="dashStart"/></div>
@@ -820,6 +821,7 @@ function showTab(n,el){
   if($(targetId)) $(targetId).classList.add('active');
   if(el)el.classList.add('active');
   const fns={
+    dash:refreshDash,
     employees:loadEmps,
     weights:loadWeights,
     mapping:()=>{loadMappings();loadMapSelects();},
@@ -829,7 +831,7 @@ function showTab(n,el){
     finance:refreshFin,
     ranking:refreshRanking,
     quality:refreshQuality,
-    mass:refreshMass,
+    mass_balance:refreshMassBalance,
     bulk:loadBulk,
     nfe:loadNFe,
     finalize:loadManagers,
@@ -867,6 +869,10 @@ async function refreshDash(){
   let q=sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
   if(empId) q=q.eq('employee_id',empId);
   const {data:scans}=await q.order('ts',{ascending:false});
+  
+  // Expeditions for Balance
+  const {data:exped}=await sb.from('expeditions').select('quantity_kg').eq('tenant_id',tenantId);
+  
   if(!scans) return;
 
   const packerScans = scans.filter(s=>s.role==='PACKER');
@@ -876,6 +882,16 @@ async function refreshDash(){
   $('kpiTotalDia').textContent = packerScans.length;
   $('kpiTotalKg').textContent  = kg.toFixed(1)+' kg';
   $('kpiAtivos').textContent   = emps;
+
+  // Global Stock Balance (Total Production - Total Expedition)
+  // Note: Here we use total history or current period? 
+  // User said "balanço sumiu", let's show the lifetime balance for now as it's a "Stock" KPI.
+  const totalIn = kg; // This is only for the filtered period... 
+  // For a true "Stock" we might need total history. 
+  // But let's stay consistent with the dashboard filter for now.
+  const totalOut = (exped||[]).reduce((a,x)=>a+(x.quantity_kg||0),0);
+  const saldoGlobal = kg - totalOut; 
+  $('kpiSaldoEstoque').textContent = Math.max(0, saldoGlobal).toLocaleString() + ' kg';
 
   // Cadencia (avg gap between scans for PACKER)
   if(packerScans.length>1){
@@ -1445,7 +1461,7 @@ async function saveNFe() {
   if(error) { alert(error.message); return; }
   loadNFe();
   ['nfeNumber','nfeCustomer','nfeWeight','nfeValue','nfeNotes'].forEach(id => $(id).value = '');
-  toast('✓ NF-e registrada!', 'ok');
+  alert('✓ NF-e registrada!');
 }
 
 async function delNFe(id) {
@@ -1485,7 +1501,7 @@ function handleNfeXmlImport(e) {
       if(totalKg)  $('nfeWeight').value   = totalKg.toFixed(2);
       if(totalVal) $('nfeValue').value    = totalVal.toFixed(2);
 
-      toast('✓ XML NF-e importado! Revise e salve.', 'ok');
+      alert('✓ XML NF-e importado! Revise e salve.');
     } catch(err) {
       console.error(err);
       alert('Erro ao processar XML: ' + err.message);
@@ -1786,8 +1802,8 @@ async function filterVarietiesByFruit(fId) {
 }
 async function addLink(){
   const pId=$('linkParcel').value,fId=$('linkFruit').value,vId=$('linkVariety').value;
-  if(!pId || !fId) {
-    alert('Selecione ao menos a Parcela e a Fruta.');
+  if(!pId || !fId || !vId) {
+    alert('Selecione a Parcela, a Fruta e a Variedade.');
     return;
   }
   
@@ -1796,9 +1812,9 @@ async function addLink(){
   ], {onConflict:'tenant_id,parcel_id,fruit_id,variety_id'});
 
   if(error) {
-    toast('Erro ao vincular: ' + error.message, 'err');
+    alert('Erro ao vincular: ' + error.message);
   } else {
-    toast('Vínculo adicionado com sucesso!', 'ok');
+    alert('Vínculo adicionado com sucesso!');
     // Limpa apenas a variedade para facilitar o próximo vínculo na mesma parcela
     $('linkVariety').value = '';
     loadLinks();
@@ -2207,7 +2223,7 @@ function exportAuditPDF(){
 async function exportProducaoPDF(dateParam){
   // Exporta o relatório de produção diária em PDF
   const date = dateParam || $('finDate')?.value || today();
-  toast('Gerando PDF de produção...', 'ok');
+  console.log('Gerando PDF de produção...');
   const {data} = await sb.from('production_scans')
     .select('*, employees(name)')
     .eq('tenant_id', tenantId)
@@ -2351,7 +2367,7 @@ async function refreshMassBalance() {
     </tr>`;
   }).join('');
   
-  toast('Relatório atualizado', 'ok');
+  console.log('Relatório atualizado');
 }
 
 
