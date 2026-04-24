@@ -8,6 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   :root{--bg:#030712;--card:#0f172a;--text:#f8fafc;--muted:#94a3b8;--border:rgba(255,255,255,.065);--blue:#3b82f6;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--accent:#6366f1;--purple:#8b5cf6;--r:14px}
@@ -158,6 +159,9 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
     <div class="nav-group">Integrações</div>
     <div class="nav" onclick="showTab('integrations',this)">🔌 TOTVS & PariPassu</div>
     
+    <div class="nav-group">Logística</div>
+    <div class="nav" onclick="showTab('mass_balance',this)">⚖️ Balanço de Massa</div>
+
     <div class="nav-group">Sistema</div>
   <div class="nav" onclick="showTab('settings',this)">⚙️ Configurações</div>
   <div class="nav" style="color:var(--green);font-weight:700" onclick="window.open('/campo/','_blank')">📱 App de Campo</div>
@@ -448,7 +452,48 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
     <div class="card">
       <div class="title">📋 Lista de Funcionários</div>
       <table id="empTable">
-        <thead><tr><th>Barcode</th><th>Nome</th><th>Função</th><th>WhatsApp</th><th>Status</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Barcode</th><th>Nome</th><th>Função</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ BALANÇO DE MASSA ═══ -->
+  <div id="tab-mass_balance" class="tab">
+    <h1 class="ptitle">⚖️ Balanço de Massa (Estoque vs Expedição)</h1>
+    
+    <div class="grid2">
+      <div class="card">
+        <div class="title">📥 Importar Relatório TOTVS</div>
+        <p style="font-size:12px; color:var(--muted); margin-bottom:15px">Selecione o relatório de faturamento para abater do estoque.</p>
+        <input type="file" id="excelInput" accept=".xlsx, .xls" onchange="handleExcelImport(event)" />
+        <div id="importStatus"></div>
+        <button id="btnSaveExpeditions" class="green" style="margin-top:15px; display:none" onclick="saveExpeditions()">🚀 Confirmar Importação</button>
+      </div>
+
+      <div class="card">
+        <div class="title">📊 Resumo do Arquivo</div>
+        <div id="importSummary" style="font-size:13px; color:var(--muted)">Aguardando upload...</div>
+      </div>
+    </div>
+
+    <div class="card" id="previewContainer" style="display:none">
+      <div class="title">👁️ Prévia das Saídas (Top 50)</div>
+      <div style="max-height:300px; overflow-y:auto">
+        <table id="previewTable">
+          <thead><tr><th>Data</th><th>NF</th><th>Cliente</th><th>Parcela</th><th>Kg</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="title">📈 Saldo por Parcela (Traceabilidade)</div>
+      <div class="fbar">
+        <button onclick="refreshMassBalance()">🔄 Atualizar Relatório</button>
+      </div>
+      <table id="balanceTable">
+        <thead><tr><th>Parcela</th><th>Entrada (Produção)</th><th>Saída (Faturamento)</th><th>Saldo Atual</th><th>Status</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -2176,6 +2221,108 @@ async function exportProducaoPDF(dateParam){
     theme:'striped', styles:{fontSize:9}, headStyles:{fillColor:[15,23,42]}
   });
   doc.save(`producao-${date}.pdf`);
+}
+
+
+// ═══ MÓDULO BALANÇO DE MASSA ═══
+let _tempExpeditions = [];
+
+function handleExcelImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    
+    let startRow = 0;
+    for(let i=0; i<Math.min(json.length, 20); i++){
+      if(json[i] && (json[i].includes('NF') || json[i].includes('Emissão'))) { startRow = i; break; }
+    }
+
+    const rows = json.slice(startRow + 1);
+    _tempExpeditions = rows.map(r => ({
+      date: r[0],
+      invoice: r[1],
+      customer: r[5],
+      parcel: r[8],
+      kg: parseFloat(r[12]) || 0
+    })).filter(r => r.invoice && r.parcel && r.kg > 0);
+
+    const sumKg = _tempExpeditions.reduce((a,b)=>a+b.kg, 0);
+    $('importSummary').innerHTML = `<b>${_tempExpeditions.length}</b> registros encontrados.<br>Volume Total: <b>${sumKg.toLocaleString()} kg</b>`;
+    
+    const tbody = $('previewTable').querySelector('tbody');
+    tbody.innerHTML = _tempExpeditions.slice(0,50).map(r => `<tr><td>${r.date || ''}</td><td>${r.invoice}</td><td>${r.customer || ''}</td><td>${r.parcel}</td><td>${r.kg.toFixed(1)}</td></tr>`).join('');
+    $('previewContainer').style.display = 'block';
+    $('btnSaveExpeditions').style.display = 'inline-flex';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function saveExpeditions() {
+  if(!_tempExpeditions.length) return;
+  toast('Salvando no banco...', 'wait');
+  const toInsert = _tempExpeditions.map(r => ({
+    tenant_id: tenantId,
+    issue_date: r.date ? new Date(r.date) : new Date(),
+    invoice_number: String(r.invoice),
+    customer_name: r.customer || 'N/A',
+    traceability_code: String(r.parcel),
+    quantity_kg: r.kg
+  }));
+  const { error } = await sb.from('expeditions').insert(toInsert);
+  if(error) { toast('Erro ao salvar: ' + error.message, 'err'); }
+  else {
+    toast('Importação concluída!', 'ok');
+    $('previewContainer').style.display = 'none';
+    $('btnSaveExpeditions').style.display = 'none';
+    refreshMassBalance();
+  }
+}
+
+async function refreshMassBalance() {
+  toast('Calculando saldos...', 'wait');
+  
+  // 1. Entradas (Produção)
+  const { data: prod } = await sb.from('production_scans')
+    .select('parcel_code, weight_kg')
+    .eq('tenant_id', tenantId);
+    
+  // 2. Saídas (Expedição TOTVS)
+  const { data: exped } = await sb.from('expeditions')
+    .select('traceability_code, quantity_kg')
+    .eq('tenant_id', tenantId);
+
+  const balanceMap = {};
+  (prod||[]).forEach(p => {
+    const code = p.parcel_code || 'S/P';
+    if(!balanceMap[code]) balanceMap[code] = { in: 0, out: 0 };
+    balanceMap[code].in += (p.weight_kg || 0);
+  });
+  
+  (exped||[]).forEach(e => {
+    const code = e.traceability_code || 'S/P';
+    if(!balanceMap[code]) balanceMap[code] = { in: 0, out: 0 };
+    balanceMap[code].out += (e.quantity_kg || 0);
+  });
+
+  const tbody = $('balanceTable').querySelector('tbody');
+  tbody.innerHTML = Object.entries(balanceMap).map(([code, val]) => {
+    const saldo = val.in - val.out;
+    const status = saldo < 100 ? '<span class="badge active">Finalizado</span>' : '<span class="badge packer">Em Estoque</span>';
+    return `<tr>
+      <td><b>${code}</b></td>
+      <td>${val.in.toLocaleString()} kg</td>
+      <td>${val.out.toLocaleString()} kg</td>
+      <td style="color:${saldo < 0 ? 'var(--red)' : 'var(--green)'}; font-weight:700">${saldo.toLocaleString()} kg</td>
+      <td>${status}</td>
+    </tr>`;
+  }).join('');
+  
+  toast('Relatório atualizado', 'ok');
 }
 
 initApp();
