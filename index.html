@@ -480,7 +480,7 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
       <div class="title">👁️ Prévia das Saídas (Top 50)</div>
       <div style="max-height:300px; overflow-y:auto">
         <table id="previewTable">
-          <thead><tr><th>Data</th><th>NF</th><th>Cliente</th><th>Parcela</th><th>Kg</th></tr></thead>
+          <thead><tr><th>Data</th><th>NF</th><th>Cliente</th><th>Produto/Descrição</th><th>Parcela</th><th>Kg</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -492,7 +492,7 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
         <button onclick="refreshMassBalance()">🔄 Atualizar Relatório</button>
       </div>
       <table id="balanceTable">
-        <thead><tr><th>Parcela</th><th>Entrada (Produção)</th><th>Saída (Faturamento)</th><th>Saldo Atual</th><th>Status</th></tr></thead>
+        <thead><tr><th>Parcela</th><th>Produto</th><th>Entrada (Produção)</th><th>Saída (Faturamento)</th><th>Saldo Atual</th><th>Status</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -2246,7 +2246,7 @@ function handleExcelImport(e) {
   const reader = new FileReader();
   reader.onload = function(e) {
     const data = new Uint8Array(e.target.result);
-    const workbook = XLSX.read(data, { type: 'array' });
+    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
     
@@ -2260,6 +2260,7 @@ function handleExcelImport(e) {
       date: r[0],
       invoice: r[1],
       customer: r[5],
+      product: r[7], // Descrição do Produto TOTVS
       parcel: r[8],
       kg: parseFloat(r[12]) || 0
     })).filter(r => r.invoice && r.parcel && r.kg > 0);
@@ -2268,7 +2269,18 @@ function handleExcelImport(e) {
     $('importSummary').innerHTML = `<b>${_tempExpeditions.length}</b> registros encontrados.<br>Volume Total: <b>${sumKg.toLocaleString()} kg</b>`;
     
     const tbody = $('previewTable').querySelector('tbody');
-    tbody.innerHTML = _tempExpeditions.slice(0,50).map(r => `<tr><td>${r.date || ''}</td><td>${r.invoice}</td><td>${r.customer || ''}</td><td>${r.parcel}</td><td>${r.kg.toFixed(1)}</td></tr>`).join('');
+    tbody.innerHTML = _tempExpeditions.slice(0,50).map(r => {
+      const displayDate = r.date instanceof Date ? r.date.toLocaleDateString('pt-BR') : r.date;
+      return `
+      <tr>
+        <td>${displayDate || ''}</td>
+        <td>${r.invoice}</td>
+        <td>${r.customer || ''}</td>
+        <td><small>${r.product || ''}</small></td>
+        <td>${r.parcel}</td>
+        <td>${r.kg.toFixed(1)}</td>
+      </tr>`;
+    }).join('');
     $('previewContainer').style.display = 'block';
     $('btnSaveExpeditions').style.display = 'inline-flex';
   };
@@ -2283,6 +2295,7 @@ async function saveExpeditions() {
     issue_date: r.date ? new Date(r.date) : new Date(),
     invoice_number: String(r.invoice),
     customer_name: r.customer || 'N/A',
+    product_description: r.product || '', // Novo campo de descrição
     traceability_code: String(r.parcel),
     quantity_kg: r.kg
   }));
@@ -2306,28 +2319,31 @@ async function refreshMassBalance() {
     
   // 2. Saídas (Expedição TOTVS)
   const { data: exped } = await sb.from('expeditions')
-    .select('traceability_code, quantity_kg')
+    .select('traceability_code, quantity_kg, product_description')
     .eq('tenant_id', tenantId);
 
   const balanceMap = {};
   (prod||[]).forEach(p => {
     const code = p.parcel_code || 'S/P';
-    if(!balanceMap[code]) balanceMap[code] = { in: 0, out: 0 };
+    if(!balanceMap[code]) balanceMap[code] = { in: 0, out: 0, products: new Set() };
     balanceMap[code].in += (p.weight_kg || 0);
   });
   
   (exped||[]).forEach(e => {
     const code = e.traceability_code || 'S/P';
-    if(!balanceMap[code]) balanceMap[code] = { in: 0, out: 0 };
+    if(!balanceMap[code]) balanceMap[code] = { in: 0, out: 0, products: new Set() };
     balanceMap[code].out += (e.quantity_kg || 0);
+    if(e.product_description) balanceMap[code].products.add(e.product_description);
   });
 
   const tbody = $('balanceTable').querySelector('tbody');
   tbody.innerHTML = Object.entries(balanceMap).map(([code, val]) => {
     const saldo = val.in - val.out;
     const status = saldo < 100 ? '<span class="badge active">Finalizado</span>' : '<span class="badge packer">Em Estoque</span>';
+    const prodList = Array.from(val.products).join(', ') || '—';
     return `<tr>
       <td><b>${code}</b></td>
+      <td><small style="color:var(--muted)">${prodList}</small></td>
       <td>${val.in.toLocaleString()} kg</td>
       <td>${val.out.toLocaleString()} kg</td>
       <td style="color:${saldo < 0 ? 'var(--red)' : 'var(--green)'}; font-weight:700">${saldo.toLocaleString()} kg</td>
