@@ -2265,7 +2265,10 @@ function handleExcelImport(e) {
     
     let startRow = 0;
     for(let i=0; i<Math.min(json.length, 20); i++){
-      if(json[i] && (json[i].includes('NF') || json[i].includes('Emissão'))) { startRow = i; break; }
+      if(json[i] && json[i].some && json[i].some(c => String(c).toUpperCase().includes('EMISSAO') || String(c).toUpperCase().includes('NOTA FISCAL'))) { 
+        startRow = i; 
+        break; 
+      }
     }
 
     const header = json[startRow] || [];
@@ -2274,13 +2277,13 @@ function handleExcelImport(e) {
       return idx !== -1 ? idx : def;
     };
 
-    const iDate   = getIdx(['Data','Emiss'], 0);
-    const iNF     = getIdx(['NF','Nota','Fatura'], 1);
-    const iTES    = getIdx(['TES'], 3);
-    const iCust   = getIdx(['Cliente','Nome'], 5);
-    const iProd   = getIdx(['Produto','Desc'], 7);
-    const iParcel = getIdx(['Parcela','Lote','Trace'], 8);
-    const iKg     = getIdx(['Kg','Peso','Qtde','Quantidade'], 12);
+    const iDate   = getIdx(['DATA','EMISS'], 0);
+    const iNF     = getIdx(['NF','NOTA FISCAL','FATURA'], 1);
+    const iTES    = getIdx(['TES'], 9);
+    const iCust   = getIdx(['RAZAO', 'RAZÃO', 'CLIENTE','NOME'], 5);
+    const iProd   = getIdx(['PRODUTO','DESCRI'], 7);
+    const iParcel = getIdx(['PARCELA','LOTE','TRACE'], 8);
+    const iKg     = getIdx(['QUANTIDADE', 'KG','PESO','QTDE'], 12);
 
     const excelDateToJS = (serial) => {
       if (serial instanceof Date) return serial;
@@ -2357,7 +2360,9 @@ async function saveExpeditions() {
     quantity_kg: r.kg
   }));
   const { error } = await sb.from('expeditions').insert(toInsert);
-  if(error) { alert('Erro ao salvar: ' + error.message); }
+  if(error) { 
+    alert('Erro ao salvar: ' + error.message); 
+  }
   else {
     alert('Importação concluída com sucesso!');
     $('previewContainer').style.display = 'none';
