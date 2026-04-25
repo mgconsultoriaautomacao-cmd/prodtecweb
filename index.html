@@ -2273,17 +2273,20 @@ function handleExcelImport(e) {
 
     const header = json[startRow] || [];
     const getIdx = (patterns, def) => {
-      const idx = header.findIndex(h => patterns.some(p => String(h||'').toUpperCase().includes(p.toUpperCase())));
-      return idx !== -1 ? idx : def;
+      for (const p of patterns) {
+        const idx = header.findIndex(h => String(h||'').toUpperCase().includes(p.toUpperCase()));
+        if (idx !== -1) return idx;
+      }
+      return def;
     };
 
     const iDate   = getIdx(['DATA','EMISS'], 0);
     const iNF     = getIdx(['NF','NOTA FISCAL','FATURA'], 1);
     const iTES    = getIdx(['TES'], 9);
-    const iCust   = getIdx(['RAZAO', 'RAZÃO', 'CLIENTE','NOME'], 5);
+    const iCust   = getIdx(['RAZAO', 'RAZÃO', 'NOME', 'CLIENTE'], 5);
     const iProd   = getIdx(['PRODUTO','DESCRI'], 7);
     const iParcel = getIdx(['PARCELA','LOTE','TRACE'], 8);
-    const iKg     = getIdx(['QUANTIDADE', 'KG','PESO','QTDE'], 12);
+    const iKg     = getIdx(['QUANTIDADE', 'KG', 'QTDE'], 12);
 
     const excelDateToJS = (serial) => {
       if (serial instanceof Date) return serial;
