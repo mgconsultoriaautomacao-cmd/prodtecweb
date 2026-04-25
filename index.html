@@ -481,7 +481,7 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
       <div class="title">👁️ Prévia das Saídas (Top 50)</div>
       <div style="max-height:300px; overflow-y:auto">
         <table id="previewTable">
-          <thead><tr><th>Data</th><th>NF</th><th>Cliente</th><th>Produto/Descrição</th><th>Parcela</th><th>Kg</th></tr></thead>
+          <thead><tr><th>Data</th><th>NF</th><th>TES</th><th>Cliente</th><th>Produto/Descrição</th><th>Parcela</th><th>Kg</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -2268,6 +2268,20 @@ function handleExcelImport(e) {
       if(json[i] && (json[i].includes('NF') || json[i].includes('Emissão'))) { startRow = i; break; }
     }
 
+    const header = json[startRow] || [];
+    const getIdx = (patterns, def) => {
+      const idx = header.findIndex(h => patterns.some(p => String(h||'').toUpperCase().includes(p.toUpperCase())));
+      return idx !== -1 ? idx : def;
+    };
+
+    const iDate   = getIdx(['Data','Emiss'], 0);
+    const iNF     = getIdx(['NF','Nota','Fatura'], 1);
+    const iTES    = getIdx(['TES'], 3);
+    const iCust   = getIdx(['Cliente','Nome'], 5);
+    const iProd   = getIdx(['Produto','Desc'], 7);
+    const iParcel = getIdx(['Parcela','Lote','Trace'], 8);
+    const iKg     = getIdx(['Kg','Peso','Qtde','Quantidade'], 12);
+
     const excelDateToJS = (serial) => {
       if (serial instanceof Date) return serial;
       if (typeof serial !== 'number') return serial;
@@ -2275,17 +2289,39 @@ function handleExcelImport(e) {
     };
 
     const rows = json.slice(startRow + 1);
-    _tempExpeditions = rows.map(r => ({
-      date: excelDateToJS(r[0]),
-      invoice: r[1],
-      customer: r[5],
-      product: r[7], // Descrição do Produto TOTVS
-      parcel: r[8],
-      kg: parseFloat(r[12]) || 0
-    })).filter(r => r.invoice && r.parcel && r.kg > 0);
+    let errorLog = [];
+    _tempExpeditions = rows.map((r, idx) => {
+      if (!r || r.length < 2) return null;
+      
+      const date = excelDateToJS(r[iDate]);
+      const invoice = r[iNF];
+      const parcel = r[iParcel];
+      const kg = parseFloat(String(r[iKg]||'').replace(',','.')) || 0;
+      
+      if (!invoice || !parcel || kg <= 0) {
+        if (invoice || parcel || kg > 0) { // Só loga se tiver algum dado mas faltar outro
+            errorLog.push(`Linha ${idx + startRow + 2}: NF(${invoice||'?'}), Parcela(${parcel||'?'}), Kg(${kg})`);
+        }
+        return null;
+      }
+
+      return {
+        date: date,
+        invoice: invoice,
+        tes: r[iTES] || '',
+        customer: r[iCust] || '',
+        product: r[iProd] || '',
+        parcel: String(parcel),
+        kg: kg
+      };
+    }).filter(r => r !== null);
+
+    if (errorLog.length > 0) {
+      alert(`⚠️ Atenção: ${errorLog.length} linhas ignoradas por dados incompletos:\n` + errorLog.slice(0,5).join('\n') + (errorLog.length > 5 ? '\n...' : ''));
+    }
 
     const sumKg = _tempExpeditions.reduce((a,b)=>a+b.kg, 0);
-    $('importSummary').innerHTML = `<b>${_tempExpeditions.length}</b> registros encontrados.<br>Volume Total: <b>${sumKg.toLocaleString()} kg</b>`;
+    $('importSummary').innerHTML = `<b>${_tempExpeditions.length}</b> registros válidos.<br>Volume Total: <b>${sumKg.toLocaleString()} kg</b>`;
     
     const tbody = $('previewTable').querySelector('tbody');
     tbody.innerHTML = _tempExpeditions.slice(0,50).map(r => {
@@ -2294,6 +2330,7 @@ function handleExcelImport(e) {
       <tr>
         <td>${displayDate || ''}</td>
         <td>${r.invoice}</td>
+        <td><span class="badge packer">${r.tes}</span></td>
         <td>${r.customer || ''}</td>
         <td><small>${r.product || ''}</small></td>
         <td>${r.parcel}</td>
@@ -2313,6 +2350,7 @@ async function saveExpeditions() {
     tenant_id: tenantId,
     issue_date: r.date ? new Date(r.date) : new Date(),
     invoice_number: String(r.invoice),
+    tes: String(r.tes || ''),
     customer_name: r.customer || 'N/A',
     product_description: r.product || '', // Novo campo de descrição
     traceability_code: String(r.parcel),
