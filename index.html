@@ -470,7 +470,7 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
     <h1 class="ptitle">👥 Funcionários</h1>
     <div class="card">
       <div class="title">➕ Novo Funcionário</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
         <div><label class="flabel">Barcode</label><input id="empBarcode"/></div>
         <div><label class="flabel">Nome</label><input id="empName"/></div>
         <div><label class="flabel">Função</label>
@@ -482,6 +482,7 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
           </select>
         </div>
         <div><label class="flabel">WhatsApp</label><input id="empWhatsapp" placeholder="5511999999999"/></div>
+        <div><label class="flabel">Foto</label><input id="empPhoto" placeholder="Link da imagem"/></div>
         <button onclick="addEmp()">Salvar</button>
       </div>
     </div>
@@ -1594,11 +1595,11 @@ async function loadEmps(){
 }
 
 async function addEmp(){
-  const b=$('empBarcode').value.trim(),n=$('empName').value.trim(),r=$('empRole').value,w=$('empWhatsapp').value.trim();
+  const b=$('empBarcode').value.trim(),n=$('empName').value.trim(),r=$('empRole').value,w=$('empWhatsapp').value.trim(),p=$('empPhoto').value.trim();
   if(!b||!n){alert('Preencha barcode e nome.');return;}
-  const {error}=await sb.from('employees').insert([{barcode:b,name:n,role:r,whatsapp:w||null,active:true,tenant_id:tenantId,updated_at:new Date().toISOString()}]);
+  const {error}=await sb.from('employees').insert([{barcode:b,name:n,role:r,whatsapp:w||null,photo_path:p||null,active:true,tenant_id:tenantId,updated_at:new Date().toISOString()}]);
   if(error){alert('Erro: '+error.message);return;}
-  ['empBarcode','empName','empWhatsapp'].forEach(id=>$(id).value='');
+  ['empBarcode','empName','empWhatsapp','empPhoto'].forEach(id=>$(id).value='');
   await loadEmps();await loadEmpSelectAll();
 }
 async function delEmp(id){if(!confirm('Excluir?'))return;await sb.from('employees').delete().eq('id',id);loadEmps();}
