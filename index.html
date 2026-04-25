@@ -159,7 +159,7 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
     <div class="nav" onclick="showTab('integrations',this)">🔌 TOTVS & PariPassu</div>
     
     <div class="nav-group">Logística</div>
-    <div class="nav" onclick="showTab('mass_balance',this)">⚖️ Balanço de Massa</div>
+    <div class="nav" onclick="showTab('mass',this)">⚖️ Balanço de Massa</div>
 
     <div class="nav-group">Sistema</div>
   <div class="nav" onclick="showTab('settings',this)">⚙️ Configurações</div>
@@ -232,6 +232,42 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
       <div class="title">📋 Cardex de Rastreabilidade (Entradas e Saídas / Movimentação)</div>
       <table id="massTable">
         <thead><tr><th>Data/Hora</th><th>Tipo</th><th>Parcela</th><th>Descrição/Destino</th><th>Entrada (kg)</th><th>Saída (kg)</th><th>Ações</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="title">📥 Importar Relatório TOTVS</div>
+        <p style="font-size:12px; color:var(--muted); margin-bottom:15px">Selecione o relatório de faturamento para abater do estoque.</p>
+        <input type="file" id="excelInput" accept=".xlsx, .xls" onchange="handleExcelImport(event)" />
+        <div id="importStatus"></div>
+        <button id="btnSaveExpeditions" class="green" style="margin-top:15px; display:none" onclick="saveExpeditions()">🚀 Confirmar Importação</button>
+      </div>
+
+      <div class="card">
+        <div class="title">📊 Resumo do Arquivo</div>
+        <div id="importSummary" style="font-size:13px; color:var(--muted)">Aguardando upload...</div>
+      </div>
+    </div>
+
+    <div class="card" id="previewContainer" style="display:none">
+      <div class="title">👁️ Prévia das Saídas (Top 50)</div>
+      <div style="max-height:300px; overflow-y:auto">
+        <table id="previewTable">
+          <thead><tr><th>Data</th><th>NF</th><th>TES</th><th>Cliente</th><th>Produto/Descrição</th><th>Parcela</th><th>Kg</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="title">📈 Saldo por Parcela (Traceabilidade)</div>
+      <div class="fbar">
+        <button onclick="refreshMassBalance()">🔄 Atualizar Relatório</button>
+      </div>
+      <table id="balanceTable">
+        <thead><tr><th>Parcela</th><th>Produto</th><th>Entrada (Produção)</th><th>Saída (Faturamento)</th><th>Saldo Atual</th><th>Status</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -459,46 +495,6 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
   </div>
 
   <!-- ═══ BALANÇO DE MASSA ═══ -->
-  <div id="tab-mass_balance" class="tab">
-    <h1 class="ptitle">⚖️ Balanço de Massa (Estoque vs Expedição)</h1>
-    
-    <div class="grid2">
-      <div class="card">
-        <div class="title">📥 Importar Relatório TOTVS</div>
-        <p style="font-size:12px; color:var(--muted); margin-bottom:15px">Selecione o relatório de faturamento para abater do estoque.</p>
-        <input type="file" id="excelInput" accept=".xlsx, .xls" onchange="handleExcelImport(event)" />
-        <div id="importStatus"></div>
-        <button id="btnSaveExpeditions" class="green" style="margin-top:15px; display:none" onclick="saveExpeditions()">🚀 Confirmar Importação</button>
-      </div>
-
-      <div class="card">
-        <div class="title">📊 Resumo do Arquivo</div>
-        <div id="importSummary" style="font-size:13px; color:var(--muted)">Aguardando upload...</div>
-      </div>
-    </div>
-
-    <div class="card" id="previewContainer" style="display:none">
-      <div class="title">👁️ Prévia das Saídas (Top 50)</div>
-      <div style="max-height:300px; overflow-y:auto">
-        <table id="previewTable">
-          <thead><tr><th>Data</th><th>NF</th><th>TES</th><th>Cliente</th><th>Produto/Descrição</th><th>Parcela</th><th>Kg</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="title">📈 Saldo por Parcela (Traceabilidade)</div>
-      <div class="fbar">
-        <button onclick="refreshMassBalance()">🔄 Atualizar Relatório</button>
-      </div>
-      <table id="balanceTable">
-        <thead><tr><th>Parcela</th><th>Produto</th><th>Entrada (Produção)</th><th>Saída (Faturamento)</th><th>Saldo Atual</th><th>Status</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
-
   <!-- ═══ PESOS ═══ -->
   <div id="tab-weights" class="tab">
     <h1 class="ptitle">📦 Pesos de Caixa</h1>
@@ -831,7 +827,7 @@ function showTab(n,el){
     finance:refreshFin,
     ranking:refreshRanking,
     quality:refreshQuality,
-    mass_balance:refreshMassBalance,
+    mass:refreshMass, mass_balance:refreshMassBalance,
     bulk:loadBulk,
     nfe:loadNFe,
     finalize:loadManagers,
@@ -1177,6 +1173,7 @@ async function refreshFin(){
 // BALANÇO DE MASSA
 // ══════════════════════════════════════
 async function refreshMass() {
+  refreshMassBalance();
   const s=$('massStart').value, e=$('massEnd').value, pFilter=$('massParcel').value;
   
   // 1. Colheita (Estimativa por Carrocões)
