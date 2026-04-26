@@ -223,9 +223,9 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
     </div>
     <div class="kgrid">
       <div class="kcard yellow"><div class="klabel">Colheita Estimada</div><div id="kpiMassHarvest" class="kval yellow">0 kg</div><div class="ksub">Baseado em carrocões</div></div>
-      <div class="kcard green"><div class="klabel">Produção Embalada</div><div id="kpiMassPacked" class="kval green">0 kg</div><div class="ksub">Peso real das caixas</div></div>
-      <div class="kcard purple"><div class="klabel">Vendas a Granel</div><div id="kpiMassBulk" class="kval purple">0 kg</div><div class="ksub">Lançamento manual</div></div>
-      <div class="kcard"><div class="klabel">Eficiência / Perda</div><div id="kpiMassEfficiency" class="kval">0%</div><div class="ksub" id="kpiMassLoss">Perda: 0 kg</div></div>
+      <div class="kcard blue" style="background:rgba(59,130,246,0.1);border-color:rgba(59,130,246,0.2);"><div class="klabel">Saídas (MI + EX)</div><div id="kpiMassExp" class="kval" style="color:#3b82f6;">0 kg</div><div class="ksub" id="kpiMassExpSub">MI: 0 | EX: 0</div></div>
+      <div class="kcard purple"><div class="klabel">Bonif. / Perdas</div><div id="kpiMassBulk" class="kval purple">0 kg</div><div class="ksub">Refugo e outras saídas</div></div>
+      <div class="kcard green"><div class="klabel">Estoque (Saldo)</div><div id="kpiMassStock" class="kval green">0 kg</div><div class="ksub" id="kpiMassStockSub">Saldo no Packinghouse</div></div>
     </div>
     <div class="card"><div class="title">📈 Comparativo de Fluxo (Tons)</div><div class="ch"><canvas id="chartMassBalance"></canvas></div></div>
     <div class="card">
@@ -1206,24 +1206,37 @@ async function refreshMass() {
   const totalBulkKg = (bulk||[]).filter(b=>!b.is_waste).reduce((a,b)=>a+Number(b.weight_kg),0);
   const packhouseWasteKg = (bulk||[]).filter(b=>b.is_waste).reduce((a,b)=>a+Number(b.weight_kg),0);
   
-  const totalOut = totalPackedKg + totalBulkKg + packhouseWasteKg;
-  const lossKg = estHarvestKg - totalOut - fieldWasteKg;
-  const efficiency = estHarvestKg > 0 ? (totalOut / estHarvestKg) * 100 : 100;
+  // 4. Expedições (TOTVS)
+  let qExp = sb.from('expeditions').select('*').eq('tenant_id',tenantId).gte('issue_date',s).lte('issue_date',e);
+  if(pFilter) {
+    const selP = $('massParcel').options[$('massParcel').selectedIndex].text;
+    qExp = qExp.eq('traceability_code', selP);
+  }
+  const {data:exp} = await qExp;
+  
+  const expMI = (exp||[]).filter(x => String(x.tes).includes('502')).reduce((a,b)=>a+Number(b.net_weight_kg||0),0);
+  const expEX = (exp||[]).filter(x => String(x.tes).includes('567')).reduce((a,b)=>a+Number(b.net_weight_kg||0),0);
+  const expBonif = (exp||[]).filter(x => !String(x.tes).includes('502') && !String(x.tes).includes('567')).reduce((a,b)=>a+Number(b.net_weight_kg||0),0);
+  
+  const totalOut = expMI + expEX + expBonif + totalBulkKg + packhouseWasteKg + fieldWasteKg;
+  const estoqueKg = estHarvestKg - totalOut;
 
   $('kpiMassHarvest').textContent = (estHarvestKg/1000).toFixed(2) + ' Ton';
-  $('kpiMassPacked').textContent  = (totalPackedKg/1000).toFixed(2) + ' Ton';
-  $('kpiMassBulk').textContent    = ((totalBulkKg + packhouseWasteKg)/1000).toFixed(2) + ' Ton';
-  $('kpiMassEfficiency').textContent = efficiency.toFixed(1) + '%';
-  $('kpiMassEfficiency').className = 'kval ' + (efficiency > 90 ? 'green' : (efficiency > 80 ? 'yellow' : 'red'));
-  $('kpiMassLoss').textContent = `Diferença: ${lossKg.toFixed(0)} kg`;
+  $('kpiMassExp').textContent = ((expMI + expEX)/1000).toFixed(2) + ' Ton';
+  $('kpiMassExpSub').textContent = `MI: ${(expMI/1000).toFixed(1)}t | EX: ${(expEX/1000).toFixed(1)}t`;
+  $('kpiMassBulk').textContent = ((expBonif + totalBulkKg + packhouseWasteKg)/1000).toFixed(2) + ' Ton';
+  $('kpiMassStock').textContent = (estoqueKg/1000).toFixed(2) + ' Ton';
+  
+  // Se o estoque for negativo, muda a cor para vermelho
+  $('kpiMassStock').className = 'kval ' + (estoqueKg >= 0 ? 'green' : 'red');
 
   mkChart('chartMassBalance', {
     type: 'bar',
     data: {
-      labels: ['Campo (Colheita)', 'Packing (Caixas)', 'Granel/Perda', 'Campo Waste', 'Diferença'],
+      labels: ['Colheita', 'MI (502)', 'Export. (567)', 'Bonif/Perdas', 'Estoque (Saldo)'],
       datasets: [{
-        data: [estHarvestKg/1000, totalPackedKg/1000, (totalBulkKg+packhouseWasteKg)/1000, fieldWasteKg/1000, lossKg/1000],
-        backgroundColor: ['#f59e0b', '#10b981', '#8b5cf6', '#64748b', '#ef4444']
+        data: [estHarvestKg/1000, expMI/1000, expEX/1000, (expBonif+totalBulkKg+packhouseWasteKg+fieldWasteKg)/1000, estoqueKg/1000],
+        backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', estoqueKg >= 0 ? '#22c55e' : '#ef4444']
       }]
     },
     options: { responsive:true, maintainAspectRatio:false, plugins: { legend: { display:false } } }
@@ -1236,8 +1249,19 @@ async function refreshMass() {
     events.push({ ts: h.date + 'T06:00:00', type: 'COLHEITA', parcel: h.parcels?.code || '—', desc: `${h.qty_carrocoes} carrocões ${lot}`, in: h.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300), out: 0, sessionId: h.id });
     if(h.waste_kg > 0) events.push({ ts: h.date + 'T06:01:00', type: 'WASTE (CAMPO)', parcel: h.parcels?.code || '—', desc: `Perda em campo`, in: 0, out: h.waste_kg });
   });
-  (packed||[]).forEach(p => events.push({ ts: p.ts, type: 'PACKING', parcel: p.parcel_code || '—', desc: p.weight_name || 'Caixa', in: 0, out: p.weight_kg || 0 }));
+  
+  // PACKING não movimenta o estoque real físico de kg
+  (packed||[]).forEach(p => events.push({ ts: p.ts, type: 'PACKING', parcel: p.parcel_code || '—', desc: `${p.weight_name||'Caixa'} (${p.weight_kg||0} kg embalado)`, in: 0, out: 0 }));
+  
   (bulk||[]).forEach(b => events.push({ ts: b.date + 'T18:00:00', type: b.is_waste ? 'WASTE (PACK)' : 'VENDA GRANEL', parcel: b.parcels?.code || '—', desc: `${b.customer_name || '—'} (NF: ${b.invoice_num || '—'})`, in: 0, out: Number(b.weight_kg) }));
+  
+  (exp||[]).forEach(x => {
+    let type = 'BONIFICAÇÃO/OUTRO';
+    if(String(x.tes).includes('502')) type = 'MERCADO INTERNO';
+    if(String(x.tes).includes('567')) type = 'EXPORTAÇÃO';
+    // Opcional: adicionar um pouco de variação no tempo para não ficarem todos iguais (ex: 17:00)
+    events.push({ ts: x.issue_date + 'T17:00:00', type: type, parcel: x.traceability_code || '—', desc: `NF: ${x.invoice_number} | ${x.customer_name}`, in: 0, out: Number(x.net_weight_kg||0) });
+  });
 
   events.sort((a,b) => new Date(a.ts) - new Date(b.ts));
   
