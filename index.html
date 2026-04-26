@@ -1802,9 +1802,9 @@ async function addLink(){
     return;
   }
   
-  const { error } = await sb.from('parcel_links').upsert([
+  const { error } = await sb.from('parcel_links').insert([
     {parcel_id:pId, fruit_id:fId, variety_id: vId || null, tenant_id:tenantId}
-  ], {onConflict:'tenant_id,parcel_id,fruit_id,variety_id'});
+  ]);
 
   if(error) {
     alert('Erro ao vincular: ' + error.message);
@@ -2300,11 +2300,21 @@ function handleExcelImport(e) {
       const date = excelDateToJS(r[iDate]);
       const invoice = r[iNF];
       const parcel = r[iParcel];
-      const kg = parseFloat(String(r[iKg]||'').replace(',','.')) || 0;
+      const productDesc = String(r[iProd] || '');
+      
+      // Tenta extrair peso da descrição (ex: "Samba 13kg" -> 13)
+      let weightPerUnit = 1; // Padrão se não achar
+      const weightMatch = productDesc.match(/(\d+(?:[.,]\d+)?)\s*kg/i);
+      if (weightMatch) {
+        weightPerUnit = parseFloat(weightMatch[1].replace(',', '.'));
+      }
+      
+      const qty = parseFloat(String(r[iKg]||'').replace(',','.')) || 0;
+      const kg = qty * weightPerUnit;
       
       if (!invoice || !parcel || kg <= 0) {
-        if (invoice || parcel || kg > 0) { // Só loga se tiver algum dado mas faltar outro
-            errorLog.push(`Linha ${idx + startRow + 2}: NF(${invoice||'?'}), Parcela(${parcel||'?'}), Kg(${kg})`);
+        if (invoice || parcel || qty > 0) { // Só loga se tiver algum dado mas faltar outro
+            errorLog.push(`Linha ${idx + startRow + 2}: NF(${invoice||'?'}), Parcela(${parcel||'?'}), Qtd(${qty}) x ${weightPerUnit}kg`);
         }
         return null;
       }
@@ -2314,7 +2324,7 @@ function handleExcelImport(e) {
         invoice: invoice,
         tes: r[iTES] || '',
         customer: r[iCust] || '',
-        product: r[iProd] || '',
+        product: productDesc,
         parcel: String(parcel),
         kg: kg
       };

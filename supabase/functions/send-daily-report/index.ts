@@ -103,8 +103,6 @@ Deno.serve(async (req) => {
         `📅 ${dateFormatted} | *${tenant.name}*`,
         ``,
         `✅ Caixas produzidas: *${d.boxes} cx*`,
-        `⚖️ Total pesado: *${d.kg.toFixed(1)} kg*`,
-        `🏆 Posição no ranking: *${medal}*`,
         ``,
         `_Sistema Prodtech — Obrigado pelo trabalho de hoje!_ 🌟`,
       ].join('\n');
@@ -152,7 +150,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
-  } catch (err) {
+  } catch (err: any) {
     return new Response(JSON.stringify({ ok: false, error: err.message }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
