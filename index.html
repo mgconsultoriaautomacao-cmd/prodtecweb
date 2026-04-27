@@ -891,11 +891,11 @@ async function refreshDash(){
 
   // Global Stock Balance (Total Harvest - Total Expedition)
   const { data: allHarvest } = await sb.from('field_carrao_sessions').select('qty_carrocoes').eq('tenant_id', tenantId);
-  const { data: allExped } = await sb.from('expeditions').select('net_weight_kg').eq('tenant_id', tenantId);
+  const { data: allExped } = await sb.from('expeditions').select('quantity_kg').eq('tenant_id', tenantId);
   
   const hWeight = tenantConfig.harvest_carrao_weight_kg || 300;
   const totalH = (allHarvest || []).reduce((a, x) => a + (x.qty_carrocoes * hWeight), 0);
-  const totalE = (allExped || []).reduce((a, x) => a + (x.net_weight_kg || 0), 0);
+  const totalE = (allExped || []).reduce((a, x) => a + (x.quantity_kg || 0), 0);
   const saldoGlobal = totalH - totalE;
   $('kpiSaldoEstoque').textContent = Math.max(0, saldoGlobal).toLocaleString('pt-BR') + ' kg';
 
@@ -1215,9 +1215,9 @@ async function refreshMass() {
   }
   const {data:exp} = await qExp;
   
-  const expMI = (exp||[]).filter(x => String(x.tes).includes('502')).reduce((a,b)=>a+Number(b.net_weight_kg||0),0);
-  const expEX = (exp||[]).filter(x => String(x.tes).includes('567')).reduce((a,b)=>a+Number(b.net_weight_kg||0),0);
-  const expBonif = (exp||[]).filter(x => !String(x.tes).includes('502') && !String(x.tes).includes('567')).reduce((a,b)=>a+Number(b.net_weight_kg||0),0);
+  const expMI = (exp||[]).filter(x => String(x.tes).includes('502')).reduce((a,b)=>a+Number(b.quantity_kg||0),0);
+  const expEX = (exp||[]).filter(x => String(x.tes).includes('567')).reduce((a,b)=>a+Number(b.quantity_kg||0),0);
+  const expBonif = (exp||[]).filter(x => !String(x.tes).includes('502') && !String(x.tes).includes('567')).reduce((a,b)=>a+Number(b.quantity_kg||0),0);
   
   const totalOut = expMI + expEX + expBonif + totalBulkKg + packhouseWasteKg + fieldWasteKg;
   const estoqueKg = estHarvestKg - totalOut;
