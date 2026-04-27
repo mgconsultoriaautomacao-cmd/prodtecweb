@@ -895,9 +895,9 @@ async function refreshDash(){
   
   const hWeight = tenantConfig.harvest_carrao_weight_kg || 300;
   const totalH = (allHarvest || []).reduce((a, x) => a + (x.qty_carrocoes * hWeight), 0);
-  const totalE = (allExped || []).reduce((a, x) => a + (x.quantity_kg || 0), 0);
   const saldoGlobal = totalH - totalE;
-  $('kpiSaldoEstoque').textContent = Math.max(0, saldoGlobal).toLocaleString('pt-BR') + ' kg';
+  $('kpiSaldoEstoque').textContent = saldoGlobal.toLocaleString('pt-BR') + ' kg';
+  $('kpiSaldoEstoque').className = 'kval ' + (saldoGlobal >= 0 ? 'green' : 'red');
 
   // Cadencia (avg gap between scans for PACKER)
   if(packerScans.length>1){
@@ -1209,17 +1209,21 @@ async function refreshMass() {
   
   // 4. Expedições (TOTVS)
   const {data:parcels} = await sb.from('parcels').select('id, code, p_code').eq('tenant_id', tenantId);
+  
+  // Função para "limpar" o código da parcela para comparação robusta
+  const cleanCode = (c) => String(c||'').toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
+
   const pMap = {};
   (parcels||[]).forEach(p => { 
-    if(p.code) pMap[p.code.toUpperCase().trim()] = p;
-    if(p.p_code) pMap[p.p_code.toUpperCase().trim()] = p;
+    if(p.code) pMap[cleanCode(p.code)] = p;
+    if(p.p_code) pMap[cleanCode(p.p_code)] = p;
   });
 
   let qExp = sb.from('expeditions').select('*').eq('tenant_id',tenantId).gte('issue_date',s).lte('issue_date',e);
   if(pFilter) {
     const selP = (parcels||[]).find(p => p.id === pFilter);
     if(selP) {
-      // Filtra por código ou código P (IDAR)
+      // Filtra por código ou código P (IDAR) de forma resiliente
       qExp = qExp.or(`traceability_code.eq."${selP.code}",traceability_code.eq."${selP.p_code}"`);
     }
   }
@@ -1303,7 +1307,7 @@ async function refreshMass() {
     if(String(x.tes).includes('567')) type = 'EXPORTAÇÃO';
     
     // Tenta encontrar a parcela real para mostrar detalhes de auditoria
-    const pInfo = pMap[String(x.traceability_code||'').toUpperCase().trim()];
+    const pInfo = pMap[cleanCode(x.traceability_code)];
     const displayParcel = pInfo ? `<b>${pInfo.code}</b>${pInfo.p_code ? `<br><small>${pInfo.p_code}</small>` : ''}` : `<b>${x.traceability_code || '—'}</b>`;
 
     events.push({ 
