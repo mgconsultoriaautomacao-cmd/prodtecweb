@@ -2432,22 +2432,31 @@ function handleExcelImport(e) {
 async function saveExpeditions() {
   if(!_tempExpeditions.length) return;
   console.log('Salvando no banco...');
-  const toInsert = _tempExpeditions.map(r => ({
-    tenant_id: tenantId,
-    issue_date: r.date ? new Date(r.date) : new Date(),
-    invoice_number: String(r.invoice),
-    tes: String(r.tes || ''),
-    customer_name: r.customer || 'N/A',
-    product_description: r.product || '', // Novo campo de descrição
-    traceability_code: String(r.parcel),
-    quantity_kg: r.kg
-  }));
+  const toInsert = _tempExpeditions.map(r => {
+    // Validação de segurança para Auditoria
+    const validDate = (r.date && !isNaN(new Date(r.date).getTime())) ? new Date(r.date).toISOString() : new Date().toISOString();
+    
+    return {
+      tenant_id: tenantId,
+      issue_date: validDate,
+      invoice_number: String(r.invoice || 'S/N'),
+      tes: String(r.tes || '').trim(),
+      customer_name: String(r.customer || 'N/A'),
+      product_description: String(r.product || ''),
+      traceability_code: String(r.parcel || 'S/P'),
+      quantity_kg: parseFloat(r.kg) || 0
+    };
+  });
+
+  console.log('Dados para inserção:', toInsert);
   const { error } = await sb.from('expeditions').insert(toInsert);
+  
   if(error) { 
-    alert('Erro ao salvar: ' + error.message); 
+    console.error('Erro detalhado Supabase:', error);
+    alert(`❌ Erro ao salvar: ${error.message}\n\nDetalhes: ${error.details || 'Verifique o console (F12)'}\n\nDica: Certifique-se de que rodou o SQL de criação da coluna 'tes' e recarregou o cache.`); 
   }
   else {
-    alert('Importação concluída com sucesso!');
+    alert('✅ Importação concluída com sucesso!');
     $('previewContainer').style.display = 'none';
     $('btnSaveExpeditions').style.display = 'none';
     refreshMass();
