@@ -2340,9 +2340,21 @@ async function exportProducaoPDF(dateParam){
 // ═══ MÓDULO BALANÇO DE MASSA ═══
 let _tempExpeditions = [];
 
-function handleExcelImport(e) {
+async function handleExcelImport(e) {
   const file = e.target.files[0];
   if (!file) return;
+
+  console.log('Iniciando importação e identificando parcelas...');
+  
+  // 1. Carregar parcelas do banco para identificação instantânea
+  const { data: parcels } = await sb.from('parcels').select('id, code, p_code').eq('tenant_id', tenantId);
+  const cleanCode = (c) => String(c||'').toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
+  const pMap = {};
+  (parcels||[]).forEach(p => {
+    if(p.code) pMap[cleanCode(p.code)] = p;
+    if(p.p_code) pMap[cleanCode(p.p_code)] = p;
+  });
+
   const reader = new FileReader();
   reader.onload = function(e) {
     const data = new Uint8Array(e.target.result);
@@ -2377,7 +2389,17 @@ function handleExcelImport(e) {
 
     const excelDateToJS = (serial) => {
       if (serial instanceof Date) return serial;
-      if (typeof serial !== 'number') return serial;
+      if (typeof serial === 'string') {
+        const d = serial.trim();
+        // Caso DD/MM/YYYY
+        if (d.includes('/')) {
+          const [day, month, year] = d.split('/');
+          return new Date(year, month - 1, day);
+        }
+        // Caso YYYY-MM-DD
+        if (d.includes('-')) return new Date(d);
+      }
+      if (typeof serial !== 'number') return new Date();
       return new Date(Math.round((serial - 25569) * 86400 * 1000));
     };
 
@@ -2407,13 +2429,16 @@ function handleExcelImport(e) {
         return null;
       }
 
+      const pInfo = pMap[cleanCode(parcel)];
+      
       return {
         date: date,
         invoice: invoice,
         tes: r[iTES] || '',
         customer: r[iCust] || '',
         product: productDesc,
-        parcel: String(parcel),
+        parcel: parcel,
+        parcelLabel: pInfo ? `✅ ${pInfo.code}` : `❓ ${parcel}`, // Label para o preview
         qty: qty,
         kg: kg
       };
@@ -2435,16 +2460,15 @@ function handleExcelImport(e) {
     
     const tbody = $('previewTable').querySelector('tbody');
     tbody.innerHTML = _tempExpeditions.slice(0,50).map(r => {
-      const displayDate = r.date instanceof Date ? r.date.toLocaleDateString('pt-BR') : r.date;
+      const displayDate = r.date instanceof Date && !isNaN(r.date) ? r.date.toLocaleDateString('pt-BR') : 'Data Inválida';
       return `
       <tr>
-        <td>${displayDate || ''}</td>
+        <td>${displayDate}</td>
         <td>${r.invoice}</td>
         <td><span class="badge packer">${r.tes}</span></td>
         <td>${r.customer || ''}</td>
         <td><small>${r.product || ''}</small></td>
-        <td>${r.parcel}</td>
-        <td><b>${r.qty} cx</b><br/><small style="color:var(--muted)">x ${ (r.kg/r.qty).toFixed(1) }kg</small></td>
+        <td>${r.parcelLabel}</td>
         <td>${r.kg.toFixed(1)}</td>
       </tr>`;
     }).join('');
