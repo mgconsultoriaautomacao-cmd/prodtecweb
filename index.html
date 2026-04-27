@@ -2354,6 +2354,10 @@ async function handleExcelImport(e) {
     if(p.code) pMap[cleanCode(p.code)] = p;
     if(p.p_code) pMap[cleanCode(p.p_code)] = p;
   });
+  
+  console.log('--- DIAGNÓSTICO DE PARCELAS ---');
+  console.log('Parcelas carregadas:', parcels?.length || 0);
+  console.log('Map de busca (Clean Codes):', Object.keys(pMap));
 
   const reader = new FileReader();
   reader.onload = function(e) {
@@ -2384,8 +2388,10 @@ async function handleExcelImport(e) {
     const iTES    = getIdx(['TES'], 9);
     const iCust   = getIdx(['RAZAO', 'RAZÃO', 'NOME', 'CLIENTE'], 5);
     const iProd   = getIdx(['DESCRI', 'PRODUTO'], 7);
-    const iParcel = getIdx(['PARCELA','LOTE','TRACE'], 8);
+    const iParcel = getIdx(['PARCELA','LOTE','TRACE','RASTREA'], 8);
     const iKg     = getIdx(['QUANTIDADE', 'KG', 'QTDE'], 12);
+    
+    console.log('Mapeamento de colunas:', { iDate, iNF, iTES, iParcel, iKg });
 
     const excelDateToJS = (serial) => {
       if (serial instanceof Date) return serial;
@@ -2429,7 +2435,12 @@ async function handleExcelImport(e) {
         return null;
       }
 
-      const pInfo = pMap[cleanCode(parcel)];
+      const cleanedExcelParcel = cleanCode(parcel);
+      const pInfo = pMap[cleanedExcelParcel];
+      
+      if(!pInfo) {
+        console.warn(`Não encontrei a parcela para o código Excel: "${parcel}" (limpo: "${cleanedExcelParcel}")`);
+      }
       
       return {
         date: date,
