@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     // 1. Buscar configurações do tenant (Evolution API)
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, evo_api_url, evo_api_key, evo_instance')
+      .select('name, evo_api_url, evo_api_key, evo_instance, wa_template_employee, wa_template_manager')
       .eq('id', tenant_id)
       .single();
 
@@ -98,32 +98,50 @@ Deno.serve(async (req) => {
       if (!wa) continue;
       const pos = sorted.findIndex(([n]) => n === name) + 1;
       const medal = pos <= 3 ? medals[pos - 1] : `#${pos}`;
-      const msg = [
-        `📦 *Produção do dia — ${name}*`,
-        `📅 ${dateFormatted} | *${tenant.name}*`,
+      
+      let msg = tenant.wa_template_employee || [
+        `📦 *Produção do dia — {nome}*`,
+        `📅 {data} | *{empresa}*`,
         ``,
-        `✅ Caixas produzidas: *${d.boxes} cx*`,
+        `✅ Caixas produzidas: *{caixas} cx*`,
         ``,
         `_Sistema Prodtech — Obrigado pelo trabalho de hoje!_ 🌟`,
       ].join('\n');
+
+      msg = msg.replace(/{nome}/g, name)
+               .replace(/{data}/g, dateFormatted)
+               .replace(/{empresa}/g, tenant.name)
+               .replace(/{caixas}/g, String(d.boxes))
+               .replace(/{peso}/g, d.kg.toFixed(1))
+               .replace(/{ranking}/g, medal);
+
       await sendWhatsApp(wa, msg);
     }
 
     // ── 7. Enviar relatório completo para gestores ──
-    const managerMsg = [
-      `📊 *Relatório de Produção — ${tenant.name}*`,
-      `📅 ${dateFormatted}`,
+    const detalhes = sorted.map(([name, d], i) => {
+      const medal = i < 3 ? medals[i] : `  ${i+1}.`;
+      return `${medal} *${name}* — ${d.boxes} cx | ${d.kg.toFixed(1)} kg`;
+    }).join('\n');
+
+    let managerMsg = tenant.wa_template_manager || [
+      `📊 *Relatório de Produção — {empresa}*`,
+      `📅 {data}`,
       `━━━━━━━━━━━━━━━━━━━━━`,
-      ...sorted.map(([name, d], i) => {
-        const medal = i < 3 ? medals[i] : `  ${i+1}.`;
-        return `${medal} *${name}* — ${d.boxes} cx | ${d.kg.toFixed(1)} kg`;
-      }),
+      `{detalhes}`,
       `━━━━━━━━━━━━━━━━━━━━━`,
-      `📦 *Total: ${totalBoxes} caixas | ${totalKg.toFixed(1)} kg*`,
-      `👥 ${sorted.length} colaboradores`,
+      `📦 *Total: {total_caixas} caixas | {total_peso} kg*`,
+      `👥 {total_colaboradores} colaboradores`,
       ``,
       `_Relatório gerado automaticamente pelo sistema Prodtech_`,
     ].join('\n');
+
+    managerMsg = managerMsg.replace(/{empresa}/g, tenant.name)
+                           .replace(/{data}/g, dateFormatted)
+                           .replace(/{detalhes}/g, detalhes)
+                           .replace(/{total_caixas}/g, String(totalBoxes))
+                           .replace(/{total_peso}/g, totalKg.toFixed(1))
+                           .replace(/{total_colaboradores}/g, String(sorted.length));
 
     for (const manager of (managers || [])) {
       if (manager.whatsapp) await sendWhatsApp(manager.whatsapp, managerMsg);

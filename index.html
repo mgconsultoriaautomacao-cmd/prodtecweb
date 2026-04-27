@@ -222,12 +222,16 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
       <button class="sec" onclick="exportAuditPDF()">📜 Relatório Auditoria</button>
     </div>
     <div class="kgrid">
-      <div class="kcard yellow"><div class="klabel">Colheita Estimada</div><div id="kpiMassHarvest" class="kval yellow">0 kg</div><div class="ksub">Baseado em carrocões</div></div>
-      <div class="kcard blue" style="background:rgba(59,130,246,0.1);border-color:rgba(59,130,246,0.2);"><div class="klabel">Saídas (MI + EX)</div><div id="kpiMassExp" class="kval" style="color:#3b82f6;">0 kg</div><div class="ksub" id="kpiMassExpSub">MI: 0 | EX: 0</div></div>
-      <div class="kcard purple"><div class="klabel">Bonif. / Perdas</div><div id="kpiMassBulk" class="kval purple">0 kg</div><div class="ksub">Refugo e outras saídas</div></div>
-      <div class="kcard green"><div class="klabel">Estoque (Saldo)</div><div id="kpiMassStock" class="kval green">0 kg</div><div class="ksub" id="kpiMassStockSub">Saldo no Packinghouse</div></div>
+      <div class="kcard yellow"><div class="klabel">🚜 Colheita Total</div><div id="kpiMassHarvest" class="kval yellow">0 kg</div><div class="ksub">Baseado em carrocões</div></div>
+      <div class="kcard blue" style="background:rgba(59,130,246,0.1);border-color:rgba(59,130,246,0.2);"><div class="klabel">🚚 Saídas Faturadas</div><div id="kpiMassExp" class="kval" style="color:#3b82f6;">0 kg</div><div class="ksub" id="kpiMassExpSub">MI: 0 | EX: 0</div></div>
+      <div class="kcard purple"><div class="klabel">♻️ Bonif. / Refugo</div><div id="kpiMassBulk" class="kval purple">0 kg</div><div class="ksub">Bonificações e perdas</div></div>
+      <div class="kcard green"><div class="klabel">⚖️ Saldo Estoque</div><div id="kpiMassStock" class="kval green">0 kg</div><div class="ksub" id="kpiMassStockSub">Kg em inventário</div></div>
     </div>
-    <div class="card"><div class="title">📈 Comparativo de Fluxo (Tons)</div><div class="ch"><canvas id="chartMassBalance"></canvas></div></div>
+    
+    <div class="grid2">
+      <div class="card"><div class="title">📈 Entradas vs Saídas (Tons)</div><div class="ch"><canvas id="chartMassBalance"></canvas></div></div>
+      <div class="card"><div class="title">📊 Distribuição de Saídas</div><div class="ch"><canvas id="chartMassDistribution"></canvas></div></div>
+    </div>
     <div class="card">
       <div class="title">📋 Cardex de Rastreabilidade (Entradas e Saídas / Movimentação)</div>
       <table id="massTable">
@@ -637,6 +641,20 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
         <div style="margin-bottom:10px"><label class="flabel">API Key</label><input id="cfgEvoKey" type="password" placeholder="sua-chave"/></div>
         <div style="margin-bottom:10px"><label class="flabel">Instância</label><input id="cfgEvoInstance" placeholder="nome-da-instancia"/></div>
       </div>
+      <div class="card" style="grid-column: span 2">
+        <div class="title">💬 Templates de Mensagem (WhatsApp)</div>
+        <p style="font-size:12px; color:var(--muted); margin-bottom:15px">Use {nome}, {data}, {caixas}, {peso}, {ranking} para personalizar as mensagens.</p>
+        <div class="grid2" style="gap:20px">
+          <div>
+            <label class="flabel">Mensagem para Funcionário</label>
+            <textarea id="cfgWaTemplateEmp" rows="6" style="width:100%; border-radius:10px; padding:10px; background:var(--bg); border:1px solid var(--border); color:var(--text); font-family:inherit"></textarea>
+          </div>
+          <div>
+            <label class="flabel">Mensagem para Gestor</label>
+            <textarea id="cfgWaTemplateMgr" rows="6" style="width:100%; border-radius:10px; padding:10px; background:var(--bg); border:1px solid var(--border); color:var(--text); font-family:inherit"></textarea>
+          </div>
+        </div>
+      </div>
       <div class="card">
         <div class="title">👥 Usuários com acesso ao painel</div>
         <table id="usersTable"><thead><tr><th>Usuário</th><th>Papel</th><th>WhatsApp</th></tr></thead><tbody></tbody></table>
@@ -880,12 +898,15 @@ async function refreshDash(){
   $('kpiTotalKg').textContent  = kg.toFixed(1)+' kg';
   $('kpiAtivos').textContent   = emps;
 
-  // Global Stock Balance (Total Production - Total Expedition)
-  const { data: allProd } = await sb.from('production_scans').select('weight_kg').eq('tenant_id', tenantId).eq('role', 'PACKER');
-  const totalIn = (allProd || []).reduce((a, x) => a + (x.weight_kg || 0), 0);
-  const totalOut = (exped || []).reduce((a, x) => a + (x.quantity_kg || 0), 0);
-  const saldoGlobal = totalIn - totalOut;
-  $('kpiSaldoEstoque').textContent = Math.max(0, saldoGlobal).toLocaleString() + ' kg';
+  // Global Stock Balance (Total Harvest - Total Expedition)
+  const { data: allHarvest } = await sb.from('field_carrao_sessions').select('qty_carrocoes').eq('tenant_id', tenantId);
+  const { data: allExped } = await sb.from('expeditions').select('net_weight_kg').eq('tenant_id', tenantId);
+  
+  const hWeight = tenantConfig.harvest_carrao_weight_kg || 300;
+  const totalH = (allHarvest || []).reduce((a, x) => a + (x.qty_carrocoes * hWeight), 0);
+  const totalE = (allExped || []).reduce((a, x) => a + (x.net_weight_kg || 0), 0);
+  const saldoGlobal = totalH - totalE;
+  $('kpiSaldoEstoque').textContent = Math.max(0, saldoGlobal).toLocaleString('pt-BR') + ' kg';
 
   // Cadencia (avg gap between scans for PACKER)
   if(packerScans.length>1){
@@ -1233,13 +1254,44 @@ async function refreshMass() {
   mkChart('chartMassBalance', {
     type: 'bar',
     data: {
-      labels: ['Colheita', 'MI (502)', 'Export. (567)', 'Bonif/Perdas', 'Estoque (Saldo)'],
+      labels: ['Campo (Colheita)', 'Packinghouse (Saídas)'],
       datasets: [{
-        data: [estHarvestKg/1000, expMI/1000, expEX/1000, (expBonif+totalBulkKg+packhouseWasteKg+fieldWasteKg)/1000, estoqueKg/1000],
-        backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', estoqueKg >= 0 ? '#22c55e' : '#ef4444']
+        label: 'Tons',
+        data: [estHarvestKg/1000, totalOut/1000],
+        backgroundColor: ['#f59e0b', '#3b82f6'],
+        borderRadius: 8
       }]
     },
-    options: { responsive:true, maintainAspectRatio:false, plugins: { legend: { display:false } } }
+    options: { 
+      responsive:true, 
+      maintainAspectRatio:false, 
+      plugins: { 
+        legend: { display:false },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.raw.toFixed(2)} Ton` } }
+      },
+      scales: { y: { beginAtZero: true, ticks: { callback: (v) => v + 't' } } }
+    }
+  });
+
+  mkChart('chartMassDistribution', {
+    type: 'doughnut',
+    data: {
+      labels: ['Mercado Interno', 'Exportação', 'Bonif/Granel', 'Perdas'],
+      datasets: [{
+        data: [expMI/1000, expEX/1000, (expBonif+totalBulkKg)/1000, (packhouseWasteKg+fieldWasteKg)/1000],
+        backgroundColor: ['#3b82f6', '#10b981', '#8b5cf6', '#ef4444'],
+        borderWidth: 0,
+        hoverOffset: 15
+      }]
+    },
+    options: { 
+      responsive:true, 
+      maintainAspectRatio:false, 
+      cutout: '65%',
+      plugins: { 
+        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } }
+      }
+    }
   });
 
   // 4. Build Cardex Ledger
@@ -2026,6 +2078,8 @@ async function loadSettings(){
   $('cfgEvoInstance').value=data.evo_instance||'';
   $('cfgCarraoWeight').value=data.harvest_carrao_weight_kg||'300';
   $('cfgCarraoPrice').value=data.value_per_carrao||'2.00';
+  $('cfgWaTemplateEmp').value=data.wa_template_employee||'📦 *Produção do dia — {nome}*\n📅 {data} | *Empresa*\n\n✅ Caixas produzidas: *{caixas} cx*\n⚖️ Total pesado: *{peso} kg*\n🏆 Posição no ranking: *{ranking}*\n\n_Sistema Prodtech — Obrigado pelo trabalho de hoje!_ 🌟';
+  $('cfgWaTemplateMgr').value=data.wa_template_manager||'📊 *Relatório Diário de Produção*\n📅 {data}\n\n{detalhes}\n\n🚀 *Total Geral: {total_caixas} cx | {total_peso} kg*';
 
   const {data:users}=await sb.from('tenant_users').select('role,whatsapp').eq('tenant_id',tenantId);
   $('usersTable').querySelector('tbody').innerHTML=(users||[]).map(u=>`<tr><td><span class="badge packer">${u.role}</span></td><td>${u.whatsapp||'—'}</td></tr>`).join('');
@@ -2046,7 +2100,9 @@ async function saveSettings(){
     evo_api_key:$('cfgEvoKey').value.trim()||null,
     evo_instance:$('cfgEvoInstance').value.trim()||null,
     harvest_carrao_weight_kg:parseFloat($('cfgCarraoWeight').value)||300,
-    value_per_carrao:parseFloat($('cfgCarraoPrice').value)||2.0
+    value_per_carrao:parseFloat($('cfgCarraoPrice').value)||2.0,
+    wa_template_employee:$('cfgWaTemplateEmp').value.trim()||null,
+    wa_template_manager:$('cfgWaTemplateMgr').value.trim()||null
   };
 
   const {error}=await sb.from('tenants').update(payload).eq('id',tenantId);
@@ -2350,6 +2406,7 @@ function handleExcelImport(e) {
         customer: r[iCust] || '',
         product: productDesc,
         parcel: String(parcel),
+        qty: qty,
         kg: kg
       };
     }).filter(r => r !== null);
@@ -2359,7 +2416,14 @@ function handleExcelImport(e) {
     }
 
     const sumKg = _tempExpeditions.reduce((a,b)=>a+b.kg, 0);
-    $('importSummary').innerHTML = `<b>${_tempExpeditions.length}</b> registros válidos.<br>Volume Total: <b>${sumKg.toLocaleString()} kg</b>`;
+    const sumQty = _tempExpeditions.reduce((a,b)=>a+b.qty, 0);
+    $('importSummary').innerHTML = `
+      <div style="display:flex; gap:20px; background:rgba(16,185,129,0.1); padding:15px; border-radius:12px; border:1px solid rgba(16,185,129,0.2)">
+        <div><div style="font-size:11px; text-transform:uppercase; color:var(--muted)">Registros</div><div style="font-size:18px; font-weight:800; color:var(--green)">${_tempExpeditions.length}</div></div>
+        <div><div style="font-size:11px; text-transform:uppercase; color:var(--muted)">Qtd Total (Cx)</div><div style="font-size:18px; font-weight:800; color:var(--green)">${sumQty.toLocaleString()} cx</div></div>
+        <div><div style="font-size:11px; text-transform:uppercase; color:var(--muted)">Peso Total (Kg)</div><div style="font-size:18px; font-weight:800; color:var(--green)">${sumKg.toLocaleString('pt-BR', {minimumFractionDigits:1})} kg</div></div>
+      </div>
+    `;
     
     const tbody = $('previewTable').querySelector('tbody');
     tbody.innerHTML = _tempExpeditions.slice(0,50).map(r => {
@@ -2372,6 +2436,7 @@ function handleExcelImport(e) {
         <td>${r.customer || ''}</td>
         <td><small>${r.product || ''}</small></td>
         <td>${r.parcel}</td>
+        <td><b>${r.qty} cx</b><br/><small style="color:var(--muted)">x ${ (r.kg/r.qty).toFixed(1) }kg</small></td>
         <td>${r.kg.toFixed(1)}</td>
       </tr>`;
     }).join('');
