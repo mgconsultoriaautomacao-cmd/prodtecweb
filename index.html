@@ -2346,18 +2346,32 @@ async function handleExcelImport(e) {
 
   console.log('Iniciando importação e identificando parcelas...');
   
-  // 1. Carregar parcelas do banco para identificação instantânea
+  // 1. Carregar parcelas e sessões de colheita para busca reversa por Lote Juliano
   const { data: parcels } = await sb.from('parcels').select('id, code, p_code').eq('tenant_id', tenantId);
+  const { data: sessions } = await sb.from('field_carrao_sessions').select('julian_lot, parcel_id').eq('tenant_id', tenantId);
+  
   const cleanCode = (c) => String(c||'').toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
+
+  // Mapa por Código e Código P
   const pMap = {};
   (parcels||[]).forEach(p => {
     if(p.code) pMap[cleanCode(p.code)] = p;
     if(p.p_code) pMap[cleanCode(p.p_code)] = p;
   });
+
+  // Mapa por Lote Juliano (Rastreamento Reverso)
+  const lotMap = {};
+  (sessions||[]).forEach(s => {
+    if(s.julian_lot) {
+      const p = (parcels||[]).find(px => px.id === s.parcel_id);
+      if(p) lotMap[cleanCode(s.julian_lot)] = p;
+    }
+  });
   
-  console.log('--- DIAGNÓSTICO DE PARCELAS ---');
-  console.log('Parcelas carregadas:', parcels?.length || 0);
-  console.log('Map de busca (Clean Codes):', Object.keys(pMap));
+  console.log('--- DIAGNÓSTICO DE RASTREABILIDADE ---');
+  console.log('Parcelas:', parcels?.length || 0);
+  console.log('Lotes Julianos Identificados:', Object.keys(lotMap).length);
+  console.log('Exemplos de Lotes no sistema:', Object.keys(lotMap).slice(0,5));
 
   const reader = new FileReader();
   reader.onload = function(e) {
@@ -2436,10 +2450,10 @@ async function handleExcelImport(e) {
       }
 
       const cleanedExcelParcel = cleanCode(parcel);
-      const pInfo = pMap[cleanedExcelParcel];
+      const pInfo = pMap[cleanedExcelParcel] || lotMap[cleanedExcelParcel];
       
       if(!pInfo) {
-        console.warn(`Não encontrei a parcela para o código Excel: "${parcel}" (limpo: "${cleanedExcelParcel}")`);
+        console.warn(`Não encontrei a parcela nem o lote para: "${parcel}" (limpo: "${cleanedExcelParcel}")`);
       }
       
       return {
