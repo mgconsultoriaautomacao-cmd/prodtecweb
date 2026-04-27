@@ -1323,8 +1323,13 @@ async function refreshMass() {
     const pInfo = pMap[cleanCode(x.traceability_code)] || lotMap[cleanCode(x.traceability_code)];
     const displayParcel = pInfo ? `<b>${pInfo.code}</b>${pInfo.p_code ? `<br><small>${pInfo.p_code}</small>` : ''}` : `<b>${x.traceability_code || '—'}</b>`;
 
+    // Tratamento robusto de data para evitar "Invalid Date"
+    let dStr = x.issue_date;
+    if(dStr && dStr.includes('T')) dStr = dStr.split('T')[0]; // Pega apenas a parte YYYY-MM-DD
+    const finalTs = dStr + 'T17:00:00';
+
     events.push({ 
-      ts: x.issue_date + 'T17:00:00', 
+      ts: finalTs, 
       type: type, 
       parcel: displayParcel, 
       desc: `NF: ${x.invoice_number} | ${x.customer_name}`, 
@@ -1333,7 +1338,12 @@ async function refreshMass() {
     });
   });
 
-  events.sort((a,b) => new Date(a.ts) - new Date(b.ts));
+  // Ordenação cronológica rigorosa
+  events.sort((a,b) => {
+    const da = new Date(a.ts).getTime();
+    const db = new Date(b.ts).getTime();
+    return (da || 0) - (db || 0);
+  });
   
   let running = 0;
   $('massTable').querySelector('tbody').innerHTML = events.map(ev => {
