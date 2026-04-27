@@ -1209,6 +1209,7 @@ async function refreshMass() {
   
   // 4. Expedições (TOTVS)
   const {data:parcels} = await sb.from('parcels').select('id, code, p_code').eq('tenant_id', tenantId);
+  const {data:sessions} = await sb.from('field_carrao_sessions').select('julian_lot, parcel_id').eq('tenant_id', tenantId);
   
   // Função para "limpar" o código da parcela para comparação robusta
   const cleanCode = (c) => String(c||'').toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
@@ -1219,12 +1220,24 @@ async function refreshMass() {
     if(p.p_code) pMap[cleanCode(p.p_code)] = p;
   });
 
+  // Mapa de Lotes para Parcelas
+  const lotMap = {};
+  (sessions||[]).forEach(s => {
+    if(s.julian_lot) {
+      const p = (parcels||[]).find(px => px.id === s.parcel_id);
+      if(p) lotMap[cleanCode(s.julian_lot)] = p;
+    }
+  });
+
   let qExp = sb.from('expeditions').select('*').eq('tenant_id',tenantId).gte('issue_date',s).lte('issue_date',e);
   if(pFilter) {
     const selP = (parcels||[]).find(p => p.id === pFilter);
     if(selP) {
-      // Filtra por código ou código P (IDAR) de forma resiliente
-      qExp = qExp.or(`traceability_code.eq."${selP.code}",traceability_code.eq."${selP.p_code}"`);
+      // Busca todos os lotes vinculados a esta parcela para o filtro OR
+      const pLots = (sessions||[]).filter(s => s.parcel_id === pFilter && s.julian_lot).map(s => s.julian_lot);
+      let filterStr = `traceability_code.eq."${selP.code}",traceability_code.eq."${selP.p_code}"`;
+      pLots.forEach(lot => { filterStr += `,traceability_code.eq."${lot}"`; });
+      qExp = qExp.or(filterStr);
     }
   }
   const {data:exp} = await qExp;
@@ -1306,8 +1319,8 @@ async function refreshMass() {
     if(String(x.tes).includes('502')) type = 'MERCADO INTERNO';
     if(String(x.tes).includes('567')) type = 'EXPORTAÇÃO';
     
-    // Tenta encontrar a parcela real para mostrar detalhes de auditoria
-    const pInfo = pMap[cleanCode(x.traceability_code)];
+    // Tenta encontrar a parcela real para mostrar detalhes de auditoria (por Código ou por Lote Juliano)
+    const pInfo = pMap[cleanCode(x.traceability_code)] || lotMap[cleanCode(x.traceability_code)];
     const displayParcel = pInfo ? `<b>${pInfo.code}</b>${pInfo.p_code ? `<br><small>${pInfo.p_code}</small>` : ''}` : `<b>${x.traceability_code || '—'}</b>`;
 
     events.push({ 
