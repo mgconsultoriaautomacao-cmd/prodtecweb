@@ -235,7 +235,7 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
     <div class="card">
       <div class="title">📋 Cardex de Rastreabilidade (Entradas e Saídas / Movimentação)</div>
       <table id="massTable">
-        <thead><tr><th>Data/Hora</th><th>Tipo</th><th>Parcela</th><th>Descrição/Destino</th><th>Entrada (kg)</th><th>Saída (kg)</th><th>Saldo (kg)</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Data/Hora</th><th>Tipo</th><th>Lote/Parcela</th><th>Descrição/Destino</th><th>Entrada (kg)</th><th>Saída (kg)</th><th>Saldo (kg)</th><th>Ações</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -1278,8 +1278,8 @@ async function refreshMass() {
   const events = [];
   (harvest||[]).forEach(h => {
     const lot = h.julian_lot ? `<br><small style="color:var(--orange)">Lote: ${h.julian_lot}</small>` : '';
-    events.push({ ts: h.date + 'T06:00:00', type: 'COLHEITA', parcel: h.parcels?.code || '—', desc: `${h.qty_carrocoes} carrocões ${lot}`, in: h.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300), out: 0, sessionId: h.id });
-    if(h.waste_kg > 0) events.push({ ts: h.date + 'T06:01:00', type: 'DESCARTE (CAMPO)', parcel: h.parcels?.code || '—', desc: `Perda em campo`, in: 0, out: h.waste_kg });
+    events.push({ ts: h.date + 'T06:00:00', type: 'COLHEITA', parcel: h.parcels?.code || '—', lot: h.julian_lot, desc: `${h.qty_carrocoes} carrocões`, in: h.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300), out: 0, sessionId: h.id });
+    if(h.waste_kg > 0) events.push({ ts: h.date + 'T06:01:00', type: 'DESCARTE (CAMPO)', parcel: h.parcels?.code || '—', lot: h.julian_lot, desc: `Perda em campo`, in: 0, out: h.waste_kg });
   });
   
   (bulk||[]).forEach(b => {
@@ -1305,7 +1305,10 @@ async function refreshMass() {
       <tr style="${ev.type.includes('DESCARTE') ? 'opacity:0.7; font-style:italic' : ''}">
         <td style="font-size:11px;color:var(--muted)">${new Date(ev.ts).toLocaleString('pt-BR')}</td>
         <td><span class="badge ${ev.in>0?'green':'blue'}" style="font-size:9px">${ev.type}</span></td>
-        <td><b>${ev.parcel}</b></td>
+        <td>
+          <b>${ev.parcel}</b>
+          ${ev.lot ? `<br><small style="color:var(--orange)">Lote: ${ev.lot}</small>` : ''}
+        </td>
         <td>${ev.desc}</td>
         <td style="color:var(--green)">${ev.in ? ev.in.toLocaleString() : '—'}</td>
         <td style="color:var(--red)">${ev.out ? ev.out.toLocaleString() : '—'}</td>
