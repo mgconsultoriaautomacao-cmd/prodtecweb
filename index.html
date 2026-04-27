@@ -222,10 +222,10 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
       <button class="sec" onclick="exportAuditPDF()">📜 Relatório Auditoria</button>
     </div>
     <div class="kgrid">
-      <div class="kcard yellow"><div class="klabel">🚜 Colheita Total</div><div id="kpiMassHarvest" class="kval yellow">0 kg</div><div class="ksub">Baseado em carrocões</div></div>
-      <div class="kcard blue" style="background:rgba(59,130,246,0.1);border-color:rgba(59,130,246,0.2);"><div class="klabel">🚚 Saídas Faturadas</div><div id="kpiMassExp" class="kval" style="color:#3b82f6;">0 kg</div><div class="ksub" id="kpiMassExpSub">MI: 0 | EX: 0</div></div>
-      <div class="kcard purple"><div class="klabel">♻️ Bonif. / Refugo</div><div id="kpiMassBulk" class="kval purple">0 kg</div><div class="ksub">Bonificações e perdas</div></div>
-      <div class="kcard green"><div class="klabel">⚖️ Saldo Estoque</div><div id="kpiMassStock" class="kval green">0 kg</div><div class="ksub" id="kpiMassStockSub">Kg em inventário</div></div>
+      <div class="kcard yellow"><div class="klabel">🚜 Total Colhido</div><div id="kpiMassHarvest" class="kval yellow">0 kg</div><div class="ksub">Entrada total (Campo)</div></div>
+      <div class="kcard blue" style="background:rgba(59,130,246,0.1); border-color:rgba(59,130,246,0.2);"><div class="klabel">🚚 Saídas (Faturamento)</div><div id="kpiMassExp" class="kval" style="color:#3b82f6;">0 kg</div><div class="ksub" id="kpiMassExpSub">NF-e (Mercado Interno/Export)</div></div>
+      <div class="kcard purple"><div class="klabel">♻️ Outras Saídas</div><div id="kpiMassBulk" class="kval purple">0 kg</div><div class="ksub">Bonif. / Granel / Descarte</div></div>
+      <div class="kcard green"><div class="klabel">⚖️ Estoque Físico Atual</div><div id="kpiMassStock" class="kval green">0 kg</div><div class="ksub">Disponível no barracão</div></div>
     </div>
     
     <div class="grid2">
@@ -259,7 +259,7 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
       <div class="title">👁️ Prévia das Saídas (Top 50)</div>
       <div style="max-height:300px; overflow-y:auto">
         <table id="previewTable">
-          <thead><tr><th>Data</th><th>NF</th><th>TES</th><th>Cliente</th><th>Produto/Descrição</th><th>Parcela</th><th>Kg</th></tr></thead>
+          <thead><tr><th>Data</th><th>NF</th><th>TES</th><th>Cliente</th><th>Produto/Descrição</th><th>Parcela</th><th>Saída (kg)</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -1208,10 +1208,20 @@ async function refreshMass() {
   const packhouseWasteKg = (bulk||[]).filter(b=>b.is_waste).reduce((a,b)=>a+Number(b.weight_kg),0);
   
   // 4. Expedições (TOTVS)
+  const {data:parcels} = await sb.from('parcels').select('id, code, p_code').eq('tenant_id', tenantId);
+  const pMap = {};
+  (parcels||[]).forEach(p => { 
+    if(p.code) pMap[p.code.toUpperCase().trim()] = p;
+    if(p.p_code) pMap[p.p_code.toUpperCase().trim()] = p;
+  });
+
   let qExp = sb.from('expeditions').select('*').eq('tenant_id',tenantId).gte('issue_date',s).lte('issue_date',e);
   if(pFilter) {
-    const selP = $('massParcel').options[$('massParcel').selectedIndex].text;
-    qExp = qExp.eq('traceability_code', selP);
+    const selP = (parcels||[]).find(p => p.id === pFilter);
+    if(selP) {
+      // Filtra por código ou código P (IDAR)
+      qExp = qExp.or(`traceability_code.eq."${selP.code}",traceability_code.eq."${selP.p_code}"`);
+    }
   }
   const {data:exp} = await qExp;
   
@@ -1291,8 +1301,19 @@ async function refreshMass() {
     let type = 'BONIFICAÇÃO/OUTRO';
     if(String(x.tes).includes('502')) type = 'MERCADO INTERNO';
     if(String(x.tes).includes('567')) type = 'EXPORTAÇÃO';
-    // Opcional: adicionar um pouco de variação no tempo para não ficarem todos iguais (ex: 17:00)
-    events.push({ ts: x.issue_date + 'T17:00:00', type: type, parcel: x.traceability_code || '—', desc: `NF: ${x.invoice_number} | ${x.customer_name}`, in: 0, out: Number(x.net_weight_kg||0) });
+    
+    // Tenta encontrar a parcela real para mostrar detalhes de auditoria
+    const pInfo = pMap[String(x.traceability_code||'').toUpperCase().trim()];
+    const displayParcel = pInfo ? `<b>${pInfo.code}</b>${pInfo.p_code ? `<br><small>${pInfo.p_code}</small>` : ''}` : `<b>${x.traceability_code || '—'}</b>`;
+
+    events.push({ 
+      ts: x.issue_date + 'T17:00:00', 
+      type: type, 
+      parcel: displayParcel, 
+      desc: `NF: ${x.invoice_number} | ${x.customer_name}`, 
+      in: 0, 
+      out: Number(x.quantity_kg||0) 
+    });
   });
 
   events.sort((a,b) => new Date(a.ts) - new Date(b.ts));
@@ -1306,7 +1327,7 @@ async function refreshMass() {
         <td style="font-size:11px;color:var(--muted)">${new Date(ev.ts).toLocaleString('pt-BR')}</td>
         <td><span class="badge ${ev.in>0?'green':'blue'}" style="font-size:9px">${ev.type}</span></td>
         <td>
-          <b>${ev.parcel}</b>
+          ${ev.parcel}
           ${ev.lot ? `<br><small style="color:var(--orange)">Lote: ${ev.lot}</small>` : ''}
         </td>
         <td>${ev.desc}</td>
