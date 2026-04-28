@@ -102,14 +102,22 @@ Deno.serve(async (req: Request) => {
       weightData[wKey].kg += s.weight_kg || 0;
     });
 
-    // Processar Lançamentos Manuais
+    // Processar Lançamentos Manuais (Campo/Carrocões)
     bulk.forEach((b: any) => {
       const pKey = b.parcel_code || 'N/A';
       if (!parcelData[pKey]) parcelData[pKey] = { boxes: 0, kg: 0, carrocoes: 0 };
       
       const kg = Number(b.weight_kg) || 0;
       parcelData[pKey].kg += kg;
-      if (!b.is_waste) parcelData[pKey].carrocoes += 1; 
+      
+      // Busca o peso do carrocão para esta fruta para calcular a quantidade
+      const fruitName = b.fruit_name || b.variety_name?.split(' ')[0] || 'N/A';
+      const pesoPadrao = fruitHarvestWeights[fruitName] || 300;
+      
+      if (!b.is_waste) {
+        // Soma a quantidade proporcional de carrocões baseada no peso lançado
+        parcelData[pKey].carrocoes += (kg / pesoPadrao);
+      }
 
       const vKey = b.variety_name || 'N/A';
       if (!varietyData[vKey]) varietyData[vKey] = { boxes: 0, kg: 0 };
@@ -243,24 +251,22 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── 7. Enviar relatório completo para supervisores e gerentes ──
-    const totalBoxes = scans?.length || 0;
-    const totalKgScans = scans?.reduce((sum: number, x: any) => sum + (x.weight_kg || 0), 0) || 0;
-    const totalKgBulk = bulk?.reduce((sum: number, x: any) => sum + (Number(x.weight_kg) || 0), 0) || 0;
+    const totalKgScans = scans.reduce((sum: number, x: any) => sum + (x.weight_kg || 0), 0) || 0;
+    const totalKgBulk = bulk.reduce((sum: number, x: any) => sum + (Number(x.weight_kg) || 0), 0) || 0;
     const totalKgTotal = totalKgScans + totalKgBulk;
     
     const totalToneladas = (totalKgTotal / 1000).toFixed(2);
     
-    // Para o resumo geral, estimativa de carrocões totais
-    const mainFruitDay = Object.entries(varietyData).sort((a, b) => b[1].boxes - a[1].boxes)[0]?.[0] || 'N/A';
-    const pesoMedioCarrocao = fruitHarvestWeights[mainFruitDay.split(' ')[0]] || 300;
-    const totalCarrocoes = Math.round(totalKgTotal / pesoMedioCarrocao);
+    // Para o resumo geral, somamos todos os carrocões calculados por parcela
+    const totalCarrocoes = Math.round(Object.values(parcelData).reduce((sum, p) => sum + p.carrocoes, 0));
 
     // Detalhes por Parcela
     const detalhesParcelas = Object.entries(parcelData)
       .map(([p, d]) => {
-        const pFruit = scans?.find((s: any) => s.parcel_code === p)?.fruit_name || bulk?.find((b:any) => b.parcel_code === p)?.fruit_name || '';
+        const pFruit = scans.find((s: any) => s.parcel_code === p)?.fruit_name || bulk.find((b:any) => b.parcel_code === p)?.fruit_name || '';
         const pWeight = fruitHarvestWeights[pFruit] || 300;
-        return `📍 *Parcela ${p}*: ${d.boxes > 0 ? d.boxes + ' cx | ' : ''}${(d.kg/1000).toFixed(2)} ton (~${Math.round(d.kg/pWeight)} carr)`;
+        const nCarrocoes = Math.round(d.carrocoes);
+        return `📍 *Parcela ${p}*: ${d.boxes > 0 ? d.boxes + ' cx | ' : ''}${(d.kg/1000).toFixed(2)} ton (~${nCarrocoes} carr)`;
       })
       .join('\n');
 
