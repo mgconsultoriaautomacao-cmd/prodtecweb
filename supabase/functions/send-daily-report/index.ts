@@ -43,22 +43,31 @@ Deno.serve(async (req: Request) => {
     if (!tenant.evo_api_url) throw new Error('Evolution API não configurada para este tenant');
 
     // 2. Buscar scans do dia (Packing House)
-    const { data: scans } = await supabase
+    const { data: rawScans, error: errScans } = await supabase
       .from('production_scans')
       .select('*')
       .eq('tenant_id', tenant_id)
       .gte('ts', `${date}T00:00:00Z`)
       .lte('ts', `${date}T23:59:59Z`);
 
+    if (errScans) console.error('Erro ao buscar scans:', errScans);
+    const scans = rawScans || [];
+
     // 2.1 Buscar lançamentos manuais / colheita (Campo)
-    const { data: bulk } = await supabase
+    const { data: rawBulk, error: errBulk } = await supabase
       .from('bulk_sales')
       .select('*')
       .eq('tenant_id', tenant_id)
       .eq('date', date);
 
-    if ((!scans || scans.length === 0) && (!bulk || bulk.length === 0)) {
-       throw new Error('Nenhum registro encontrado para esta data');
+    if (errBulk) console.error('Erro ao buscar bulk:', errBulk);
+    const bulk = rawBulk || [];
+
+    if (scans.length === 0 && bulk.length === 0) {
+       console.log('Nenhum registro encontrado para:', date);
+       return new Response(JSON.stringify({ ok: false, error: 'Nenhum registro encontrado para esta data' }), {
+         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+       });
     }
 
     // 3. Agregar dados para os relatórios
@@ -67,8 +76,8 @@ Deno.serve(async (req: Request) => {
     const varietyData: Record<string, { boxes: number; kg: number }> = {};
     const weightData: Record<string, { boxes: number; kg: number }> = {};
 
-    // Processar Scans (Packing House)
-    scans?.forEach((s: any) => {
+    // Processar Scans
+    scans.forEach((s: any) => {
       if (!empData[s.employee_name]) empData[s.employee_name] = { boxes: 0, kg: 0, role: s.role };
       empData[s.employee_name].boxes++;
       empData[s.employee_name].kg += s.weight_kg || 0;
@@ -82,22 +91,21 @@ Deno.serve(async (req: Request) => {
       if (!varietyData[vKey]) varietyData[vKey] = { boxes: 0, kg: 0 };
       varietyData[vKey].boxes++;
       varietyData[vKey].kg += s.weight_kg || 0;
+
+      const wKey = s.weight_name || 'N/A';
+      if (!weightData[wKey]) weightData[wKey] = { boxes: 0, kg: 0 };
+      weightData[wKey].boxes++;
+      weightData[wKey].kg += s.weight_kg || 0;
     });
 
-    // Processar Lançamentos Manuais (Campo/Carrocões)
-    bulk?.forEach((b: any) => {
+    // Processar Lançamentos Manuais
+    bulk.forEach((b: any) => {
       const pKey = b.parcel_code || 'N/A';
       if (!parcelData[pKey]) parcelData[pKey] = { boxes: 0, kg: 0, carrocoes: 0 };
       
       const kg = Number(b.weight_kg) || 0;
       parcelData[pKey].kg += kg;
-      
-      // Se não for "Waste" (refugo), conta como produção de carrocão
-      if (!b.is_waste) {
-        // Estima carrocões se não tiver o número exato, ou assume 1 por lançamento se for o caso
-        // Aqui podemos ajustar se você quiser que cada lançamento seja 1 carrocão
-        parcelData[pKey].carrocoes += 1; 
-      }
+      if (!b.is_waste) parcelData[pKey].carrocoes += 1; 
 
       const vKey = b.variety_name || 'N/A';
       if (!varietyData[vKey]) varietyData[vKey] = { boxes: 0, kg: 0 };
