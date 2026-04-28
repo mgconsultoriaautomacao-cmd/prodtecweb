@@ -88,8 +88,19 @@ Deno.serve(async (req: Request) => {
       .from('employees')
       .select('name, whatsapp, role, active')
       .eq('tenant_id', tenant_id)
-      .eq('active', true) // APENAS ATIVOS
+      .eq('active', true)
       .not('whatsapp', 'is', null);
+
+    // 4.1 Buscar pesos de carrocão configurados por fruta
+    const { data: fruitConfigs } = await supabase
+      .from('fruits')
+      .select('name, harvest_weight')
+      .eq('tenant_id', tenant_id);
+
+    const fruitHarvestWeights: Record<string, number> = {};
+    fruitConfigs?.forEach((f: any) => {
+      fruitHarvestWeights[f.name] = Number(f.harvest_weight) || 300;
+    });
 
     const empWhatsapp: Record<string, string> = {};
     const supervisorNumbers = new Set<string>();
@@ -140,10 +151,15 @@ Deno.serve(async (req: Request) => {
       return res.ok;
     }
 
-    // ── 6. Enviar para cada funcionário ──
+    // ── 6. Enviar para cada colaborador (Packers/Stackers) ──
     for (const [name, d] of sorted) {
       const wa = empWhatsapp[name];
       if (!wa) continue;
+      
+      const role = String(d.role).toUpperCase();
+      // Se for do campo, pula para o relatório específico do campo depois
+      if (role === 'HARVESTER' || role === 'COLHEDOR' || role === 'CAMPO') continue;
+
       const pos = sorted.findIndex(([n]) => n === name) + 1;
       const medal = pos <= 3 ? medals[pos - 1] : `#${pos}`;
       
@@ -166,13 +182,49 @@ Deno.serve(async (req: Request) => {
       await sendWhatsApp(wa, msg);
     }
 
+    // ── 6.1 Enviar relatório específico para o pessoal do CAMPO ──
+    for (const [name, d] of sorted) {
+      const wa = empWhatsapp[name];
+      if (!wa) continue;
+      
+      const role = String(d.role).toUpperCase();
+      if (role === 'HARVESTER' || role === 'COLHEDOR' || role === 'CAMPO') {
+        // Busca a fruta que este colaborador mais colheu no dia para usar o peso certo
+        const mainFruit = scans.find((s: any) => s.employee_name === name)?.fruit_name || 'N/A';
+        const pesoCarrocao = fruitHarvestWeights[mainFruit] || 300;
+        const carrocoes = Math.round(d.kg / pesoCarrocao) || 1;
+        
+        const msgCampo = [
+          `🚜 *Relatório de Colheita — ${name}*`,
+          `📅 ${dateFormatted} | *${tenant.name}*`,
+          `━━━━━━━━━━━━━━━━━━━━━`,
+          `✅ Total Colhido: *${d.kg.toFixed(0)} kg*`,
+          `🚛 Est. Carrocões: *~${carrocoes} un* (Base: ${pesoCarrocao}kg)`,
+          `📦 Equiv. Caixas: *${d.boxes} cx*`,
+          `━━━━━━━━━━━━━━━━━━━━━`,
+          `_Bom trabalho no campo hoje!_ 🌱`,
+        ].join('\n');
+
+        await sendWhatsApp(wa, msgCampo);
+      }
+    }
+
     // ── 7. Enviar relatório completo para supervisores e gerentes ──
     const totalCaixas = scans.length;
     const totalToneladas = (totalKg / 1000).toFixed(2);
+    
+    // Para o resumo geral, usamos o peso do carrocão da fruta mais produzida no dia
+    const mainFruitDay = Object.entries(varietyData).sort((a, b) => b[1].boxes - a[1].boxes)[0]?.[0] || 'N/A';
+    const pesoMedioCarrocao = fruitHarvestWeights[mainFruitDay.split(' ')[0]] || 300;
+    const totalCarrocoes = Math.round(totalKg / pesoMedioCarrocao);
 
-    // Detalhes por Parcela
+    // Detalhes por Parcela (usa o peso da fruta daquela parcela se possível)
     const detalhesParcelas = Object.entries(parcelData)
-      .map(([p, d]) => `📍 *Parcela ${p}*: ${d.boxes} cx (${(d.kg/1000).toFixed(2)} ton)`)
+      .map(([p, d]) => {
+        const pFruit = scans.find((s: any) => s.parcel_code === p)?.fruit_name || '';
+        const pWeight = fruitHarvestWeights[pFruit] || 300;
+        return `📍 *Parcela ${p}*: ${d.boxes} cx | ${(d.kg/1000).toFixed(2)} ton (~${Math.round(d.kg/pWeight)} carr)`;
+      })
       .join('\n');
 
     // Detalhes por Variedade
@@ -189,20 +241,18 @@ Deno.serve(async (req: Request) => {
       `📊 *RESUMO GERAL DE PRODUÇÃO*`,
       `📅 ${dateFormatted} | *${tenant.name}*`,
       `━━━━━━━━━━━━━━━━━━━━━`,
-      `📑 *POR PARCELA:*`,
+      `📑 *PRODUÇÃO POR PARCELA:*`,
       detalhesParcelas,
       ``,
-      `📑 *POR VARIEDADE:*`,
+      `📑 *PRODUÇÃO POR VARIEDADE:*`,
       detalhesVariedades,
       ``,
-      `📑 *POR TIPO DE CAIXA:*`,
-      detalhesPesos,
-      `━━━━━━━━━━━━━━━━━━━━━`,
-      `📈 *TOTAL DO DIA:*`,
+      `📈 *TOTAIS DO DIA:*`,
       `✅ Caixas: *${totalCaixas}*`,
       `⚖️ Peso: *${totalToneladas} Toneladas*`,
+      `🚛 Carrocões Est.: *~${totalCarrocoes}*`,
       `👥 Colaboradores: *${sorted.length}*`,
-      ``,
+      `━━━━━━━━━━━━━━━━━━━━━`,
       `_Relatório gerado pelo Sistema Prodtech_`,
     ].join('\n');
 
