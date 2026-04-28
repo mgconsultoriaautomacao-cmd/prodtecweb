@@ -103,6 +103,8 @@ Deno.serve(async (req: Request) => {
     });
 
     // Processar Lançamentos Manuais (Campo/Carrocões)
+    const varietyHarvestData: Record<string, { kg: number; carrocoes: number }> = {};
+    
     bulk.forEach((b: any) => {
       const pKey = b.parcel_code || 'N/A';
       if (!parcelData[pKey]) parcelData[pKey] = { boxes: 0, kg: 0, carrocoes: 0 };
@@ -113,10 +115,16 @@ Deno.serve(async (req: Request) => {
       // Busca o peso do carrocão para esta fruta para calcular a quantidade
       const fruitName = b.fruit_name || b.variety_name?.split(' ')[0] || 'N/A';
       const pesoPadrao = fruitHarvestWeights[fruitName] || 300;
+      const nCarr = kg / pesoPadrao;
       
       if (!b.is_waste) {
-        // Soma a quantidade proporcional de carrocões baseada no peso lançado
-        parcelData[pKey].carrocoes += (kg / pesoPadrao);
+        parcelData[pKey].carrocoes += nCarr;
+
+        // Agregar por Variedade (Campo)
+        const vKey = b.variety_name || 'N/A';
+        if (!varietyHarvestData[vKey]) varietyHarvestData[vKey] = { kg: 0, carrocoes: 0 };
+        varietyHarvestData[vKey].kg += kg;
+        varietyHarvestData[vKey].carrocoes += nCarr;
       }
 
       const vKey = b.variety_name || 'N/A';
@@ -280,14 +288,22 @@ Deno.serve(async (req: Request) => {
       .map(([w, d]) => `📦 *Caixa ${w}*: ${d.boxes} unidades`)
       .join('\n');
 
+    // Detalhes por Variedade (Campo - Carrocões)
+    const detalhesVariedadesCampo = Object.entries(varietyHarvestData)
+      .map(([v, d]) => `🚜 *${v}*: ${Math.round(d.carrocoes)} carr | ${(d.kg/1000).toFixed(2)} ton`)
+      .join('\n');
+
     let managerMsg = [
       `📊 *RESUMO GERAL DE PRODUÇÃO*`,
       `📅 ${dateFormatted} | *${tenant.name}*`,
       `━━━━━━━━━━━━━━━━━━━━━`,
-      `📑 *PRODUÇÃO POR PARCELA:*`,
+      `📍 *PRODUÇÃO POR PARCELA:*`,
       detalhesParcelas,
       ``,
-      `📑 *PRODUÇÃO POR VARIEDADE:*`,
+      `🚜 *COLHEITA POR VARIEDADE:*`,
+      detalhesVariedadesCampo || '_Nenhum lançamento de campo_',
+      ``,
+      `🍇 *EMBALAGEM POR VARIEDADE:*`,
       detalhesVariedades,
       ``,
       `📈 *TOTAIS DO DIA:*`,
