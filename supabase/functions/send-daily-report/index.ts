@@ -42,7 +42,7 @@ Deno.serve(async (req: Request) => {
     if (!tenant) throw new Error('Tenant não encontrado');
     if (!tenant.evo_api_url) throw new Error('Evolution API não configurada para este tenant');
 
-    // 2. Buscar scans do dia
+    // 2. Buscar scans do dia (Packing House)
     const { data: scans } = await supabase
       .from('production_scans')
       .select('*')
@@ -50,37 +50,58 @@ Deno.serve(async (req: Request) => {
       .gte('ts', `${date}T00:00:00Z`)
       .lte('ts', `${date}T23:59:59Z`);
 
-    if (!scans || scans.length === 0) throw new Error('Nenhum registro para esta data');
+    // 2.1 Buscar lançamentos manuais / colheita (Campo)
+    const { data: bulk } = await supabase
+      .from('bulk_sales')
+      .select('*')
+      .eq('tenant_id', tenant_id)
+      .eq('date', date);
+
+    if ((!scans || scans.length === 0) && (!bulk || bulk.length === 0)) {
+       throw new Error('Nenhum registro encontrado para esta data');
+    }
 
     // 3. Agregar dados para os relatórios
     const empData: Record<string, { boxes: number; kg: number; role: string }> = {};
-    const parcelData: Record<string, { boxes: number; kg: number }> = {};
+    const parcelData: Record<string, { boxes: number; kg: number; carrocoes: number }> = {};
     const varietyData: Record<string, { boxes: number; kg: number }> = {};
     const weightData: Record<string, { boxes: number; kg: number }> = {};
 
-    scans.forEach((s: any) => {
-      // Por funcionário
+    // Processar Scans (Packing House)
+    scans?.forEach((s: any) => {
       if (!empData[s.employee_name]) empData[s.employee_name] = { boxes: 0, kg: 0, role: s.role };
       empData[s.employee_name].boxes++;
       empData[s.employee_name].kg += s.weight_kg || 0;
 
-      // Por parcela
       const pKey = s.parcel_code || 'N/A';
-      if (!parcelData[pKey]) parcelData[pKey] = { boxes: 0, kg: 0 };
+      if (!parcelData[pKey]) parcelData[pKey] = { boxes: 0, kg: 0, carrocoes: 0 };
       parcelData[pKey].boxes++;
       parcelData[pKey].kg += s.weight_kg || 0;
 
-      // Por variedade
       const vKey = `${s.fruit_name || ''} ${s.variety_name || ''}`.trim() || 'N/A';
       if (!varietyData[vKey]) varietyData[vKey] = { boxes: 0, kg: 0 };
       varietyData[vKey].boxes++;
       varietyData[vKey].kg += s.weight_kg || 0;
+    });
 
-      // Por tipo de caixa (peso)
-      const wKey = s.weight_name || 'N/A';
-      if (!weightData[wKey]) weightData[wKey] = { boxes: 0, kg: 0 };
-      weightData[wKey].boxes++;
-      weightData[wKey].kg += s.weight_kg || 0;
+    // Processar Lançamentos Manuais (Campo/Carrocões)
+    bulk?.forEach((b: any) => {
+      const pKey = b.parcel_code || 'N/A';
+      if (!parcelData[pKey]) parcelData[pKey] = { boxes: 0, kg: 0, carrocoes: 0 };
+      
+      const kg = Number(b.weight_kg) || 0;
+      parcelData[pKey].kg += kg;
+      
+      // Se não for "Waste" (refugo), conta como produção de carrocão
+      if (!b.is_waste) {
+        // Estima carrocões se não tiver o número exato, ou assume 1 por lançamento se for o caso
+        // Aqui podemos ajustar se você quiser que cada lançamento seja 1 carrocão
+        parcelData[pKey].carrocoes += 1; 
+      }
+
+      const vKey = b.variety_name || 'N/A';
+      if (!varietyData[vKey]) varietyData[vKey] = { boxes: 0, kg: 0 };
+      varietyData[vKey].kg += kg;
     });
 
     // 4. Buscar funcionários ATIVOS que tenham whatsapp
@@ -210,20 +231,24 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── 7. Enviar relatório completo para supervisores e gerentes ──
-    const totalCaixas = scans.length;
-    const totalToneladas = (totalKg / 1000).toFixed(2);
+    const totalBoxes = scans?.length || 0;
+    const totalKgScans = scans?.reduce((sum: number, x: any) => sum + (x.weight_kg || 0), 0) || 0;
+    const totalKgBulk = bulk?.reduce((sum: number, x: any) => sum + (Number(x.weight_kg) || 0), 0) || 0;
+    const totalKgTotal = totalKgScans + totalKgBulk;
     
-    // Para o resumo geral, usamos o peso do carrocão da fruta mais produzida no dia
+    const totalToneladas = (totalKgTotal / 1000).toFixed(2);
+    
+    // Para o resumo geral, estimativa de carrocões totais
     const mainFruitDay = Object.entries(varietyData).sort((a, b) => b[1].boxes - a[1].boxes)[0]?.[0] || 'N/A';
     const pesoMedioCarrocao = fruitHarvestWeights[mainFruitDay.split(' ')[0]] || 300;
-    const totalCarrocoes = Math.round(totalKg / pesoMedioCarrocao);
+    const totalCarrocoes = Math.round(totalKgTotal / pesoMedioCarrocao);
 
-    // Detalhes por Parcela (usa o peso da fruta daquela parcela se possível)
+    // Detalhes por Parcela
     const detalhesParcelas = Object.entries(parcelData)
       .map(([p, d]) => {
-        const pFruit = scans.find((s: any) => s.parcel_code === p)?.fruit_name || '';
+        const pFruit = scans?.find((s: any) => s.parcel_code === p)?.fruit_name || bulk?.find((b:any) => b.parcel_code === p)?.fruit_name || '';
         const pWeight = fruitHarvestWeights[pFruit] || 300;
-        return `📍 *Parcela ${p}*: ${d.boxes} cx | ${(d.kg/1000).toFixed(2)} ton (~${Math.round(d.kg/pWeight)} carr)`;
+        return `📍 *Parcela ${p}*: ${d.boxes > 0 ? d.boxes + ' cx | ' : ''}${(d.kg/1000).toFixed(2)} ton (~${Math.round(d.kg/pWeight)} carr)`;
       })
       .join('\n');
 
@@ -248,7 +273,7 @@ Deno.serve(async (req: Request) => {
       detalhesVariedades,
       ``,
       `📈 *TOTAIS DO DIA:*`,
-      `✅ Caixas: *${totalCaixas}*`,
+      `✅ Caixas: *${totalBoxes}*`,
       `⚖️ Peso: *${totalToneladas} Toneladas*`,
       `🚛 Carrocões Est.: *~${totalCarrocoes}*`,
       `👥 Colaboradores: *${sorted.length}*`,
