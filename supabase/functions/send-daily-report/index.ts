@@ -52,12 +52,35 @@ Deno.serve(async (req: Request) => {
 
     if (!scans || scans.length === 0) throw new Error('Nenhum registro para esta data');
 
-    // 3. Agregar por funcionário
-    const empData: Record<string, { boxes: number; kg: number; role: string; whatsapp?: string }> = {};
-    scans.forEach((s: ProductionScan) => {
+    // 3. Agregar dados para os relatórios
+    const empData: Record<string, { boxes: number; kg: number; role: string }> = {};
+    const parcelData: Record<string, { boxes: number; kg: number }> = {};
+    const varietyData: Record<string, { boxes: number; kg: number }> = {};
+    const weightData: Record<string, { boxes: number; kg: number }> = {};
+
+    scans.forEach((s: any) => {
+      // Por funcionário
       if (!empData[s.employee_name]) empData[s.employee_name] = { boxes: 0, kg: 0, role: s.role };
       empData[s.employee_name].boxes++;
       empData[s.employee_name].kg += s.weight_kg || 0;
+
+      // Por parcela
+      const pKey = s.parcel_code || 'N/A';
+      if (!parcelData[pKey]) parcelData[pKey] = { boxes: 0, kg: 0 };
+      parcelData[pKey].boxes++;
+      parcelData[pKey].kg += s.weight_kg || 0;
+
+      // Por variedade
+      const vKey = `${s.fruit_name || ''} ${s.variety_name || ''}`.trim() || 'N/A';
+      if (!varietyData[vKey]) varietyData[vKey] = { boxes: 0, kg: 0 };
+      varietyData[vKey].boxes++;
+      varietyData[vKey].kg += s.weight_kg || 0;
+
+      // Por tipo de caixa (peso)
+      const wKey = s.weight_name || 'N/A';
+      if (!weightData[wKey]) weightData[wKey] = { boxes: 0, kg: 0 };
+      weightData[wKey].boxes++;
+      weightData[wKey].kg += s.weight_kg || 0;
     });
 
     // 4. Buscar funcionários ATIVOS que tenham whatsapp
@@ -144,29 +167,44 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── 7. Enviar relatório completo para supervisores e gerentes ──
-    const detalhes = sorted.map(([name, d], i) => {
-      const medal = i < 3 ? medals[i] : `  ${i+1}.`;
-      return `${medal} *${name}* — ${d.boxes} cx | ${d.kg.toFixed(1)} kg`;
-    }).join('\n');
+    const totalCaixas = scans.length;
+    const totalToneladas = (totalKg / 1000).toFixed(2);
 
-    let managerMsg = tenant.wa_template_manager || [
-      `📊 *Relatório de Produção — {empresa}*`,
-      `📅 {data}`,
+    // Detalhes por Parcela
+    const detalhesParcelas = Object.entries(parcelData)
+      .map(([p, d]) => `📍 *Parcela ${p}*: ${d.boxes} cx (${(d.kg/1000).toFixed(2)} ton)`)
+      .join('\n');
+
+    // Detalhes por Variedade
+    const detalhesVariedades = Object.entries(varietyData)
+      .map(([v, d]) => `🍇 *${v}*: ${d.boxes} cx`)
+      .join('\n');
+
+    // Detalhes por Tipo de Caixa
+    const detalhesPesos = Object.entries(weightData)
+      .map(([w, d]) => `📦 *Caixa ${w}*: ${d.boxes} unidades`)
+      .join('\n');
+
+    let managerMsg = [
+      `📊 *RESUMO GERAL DE PRODUÇÃO*`,
+      `📅 ${dateFormatted} | *${tenant.name}*`,
       `━━━━━━━━━━━━━━━━━━━━━`,
-      `{detalhes}`,
-      `━━━━━━━━━━━━━━━━━━━━━`,
-      `📦 *Total: {total_caixas} caixas | {total_peso} kg*`,
-      `👥 {total_colaboradores} colaboradores`,
+      `📑 *POR PARCELA:*`,
+      detalhesParcelas,
       ``,
-      `_Relatório gerado automaticamente pelo sistema Prodtech_`,
+      `📑 *POR VARIEDADE:*`,
+      detalhesVariedades,
+      ``,
+      `📑 *POR TIPO DE CAIXA:*`,
+      detalhesPesos,
+      `━━━━━━━━━━━━━━━━━━━━━`,
+      `📈 *TOTAL DO DIA:*`,
+      `✅ Caixas: *${totalCaixas}*`,
+      `⚖️ Peso: *${totalToneladas} Toneladas*`,
+      `👥 Colaboradores: *${sorted.length}*`,
+      ``,
+      `_Relatório gerado pelo Sistema Prodtech_`,
     ].join('\n');
-
-    managerMsg = managerMsg.replace(/{empresa}/g, tenant.name)
-                           .replace(/{data}/g, dateFormatted)
-                           .replace(/{detalhes}/g, detalhes)
-                           .replace(/{total_caixas}/g, String(totalBoxes))
-                           .replace(/{total_peso}/g, totalKg.toFixed(1))
-                           .replace(/{total_colaboradores}/g, String(sorted.length));
 
     // Adiciona o número principal do cadastro do tenant também, por segurança
     if (tenant.wa_manager_phone) supervisorNumbers.add(tenant.wa_manager_phone);
