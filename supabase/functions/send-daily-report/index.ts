@@ -290,28 +290,38 @@ Deno.serve(async (req: Request) => {
       .join('\n');
 
     // Detalhes por Variedade (Campo - Carrocões)
-    const detalhesVariedadesCampo = Object.entries(varietyHarvestData)
+    const detalhesVariedadesCampo = Object.entries(varietyHarvestData || {})
       .map(([v, d]) => `🚜 *${v}*: ${Math.round(d.carrocoes)} carr | ${(d.kg/1000).toFixed(2)} ton`)
       .join('\n');
+
+    // Detalhes por Variedade (Embalagem)
+    const detalhesVariedades = Object.entries(varietyData || {})
+      .map(([v, d]) => `🍇 *${v}*: ${d.boxes} cx`)
+      .join('\n');
+
+    const totalBoxesFinal = totalBoxes || 0;
+    const totalToneladasFinal = totalToneladas || "0.00";
+    const totalCarrocoesFinal = totalCarrocoes || 0;
+    const totalColaboradores = sorted ? sorted.length : 0;
 
     let managerMsg = [
       `📊 *RESUMO GERAL DE PRODUÇÃO*`,
       `📅 ${dateFormatted} | *${tenant.name}*`,
       `━━━━━━━━━━━━━━━━━━━━━`,
       `📍 *PRODUÇÃO POR PARCELA:*`,
-      detalhesParcelas,
+      detalhesParcelas || '_Nenhum registro por parcela_',
       ``,
       `🚜 *COLHEITA POR VARIEDADE:*`,
       detalhesVariedadesCampo || '_Nenhum lançamento de campo_',
       ``,
       `🍇 *EMBALAGEM POR VARIEDADE:*`,
-      detalhesVariedades,
+      detalhesVariedades || '_Nenhuma embalagem registrada_',
       ``,
       `📈 *TOTAIS DO DIA:*`,
-      `✅ Caixas: *${totalBoxes}*`,
-      `⚖️ Peso: *${totalToneladas} Toneladas*`,
-      `🚛 Carrocões Est.: *~${totalCarrocoes}*`,
-      `👥 Colaboradores: *${sorted.length}*`,
+      `✅ Caixas: *${totalBoxesFinal}*`,
+      `⚖️ Peso: *${totalToneladasFinal} Toneladas*`,
+      `🚛 Carrocões Est.: *~${totalCarrocoesFinal}*`,
+      `👥 Colaboradores: *${totalColaboradores}*`,
       `━━━━━━━━━━━━━━━━━━━━━`,
       `_Relatório gerado pelo Sistema Prodtech_`,
     ].join('\n');
