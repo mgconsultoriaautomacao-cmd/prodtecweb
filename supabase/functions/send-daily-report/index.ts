@@ -9,7 +9,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-Deno.serve(async (req) => {
+interface ProductionScan {
+  employee_name: string;
+  role: string;
+  weight_kg: number;
+}
+
+interface Employee {
+  name: string;
+  whatsapp: string | null;
+}
+
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
@@ -43,21 +54,35 @@ Deno.serve(async (req) => {
 
     // 3. Agregar por funcionário
     const empData: Record<string, { boxes: number; kg: number; role: string; whatsapp?: string }> = {};
-    scans.forEach(s => {
+    scans.forEach((s: ProductionScan) => {
       if (!empData[s.employee_name]) empData[s.employee_name] = { boxes: 0, kg: 0, role: s.role };
       empData[s.employee_name].boxes++;
       empData[s.employee_name].kg += s.weight_kg || 0;
     });
 
-    // 4. Buscar whatsapp dos funcionários
+    // 4. Buscar funcionários ATIVOS que tenham whatsapp
     const { data: employees } = await supabase
       .from('employees')
-      .select('name, whatsapp')
+      .select('name, whatsapp, role, active')
       .eq('tenant_id', tenant_id)
+      .eq('active', true) // APENAS ATIVOS
       .not('whatsapp', 'is', null);
 
     const empWhatsapp: Record<string, string> = {};
-    employees?.forEach(e => { if (e.whatsapp) empWhatsapp[e.name] = e.whatsapp; });
+    const supervisorNumbers = new Set<string>();
+
+    employees?.forEach((e: any) => {
+      if (e.whatsapp) {
+        // Mapeia whatsapp para o relatório individual
+        empWhatsapp[e.name] = e.whatsapp;
+        
+        // Se for supervisor ou gerente, adiciona à lista do relatório consolidado
+        const role = String(e.role).toUpperCase();
+        if (role === 'SUPERVISOR' || role === 'MANAGER' || role === 'ADMIN') {
+          supervisorNumbers.add(e.whatsapp);
+        }
+      }
+    });
 
     // 5. Buscar gestores
     const { data: managers } = await supabase
@@ -69,7 +94,7 @@ Deno.serve(async (req) => {
     const sorted = Object.entries(empData).sort((a, b) => b[1].boxes - a[1].boxes);
     const medals = ['🥇', '🥈', '🥉'];
     const totalBoxes = scans.length;
-    const totalKg = scans.reduce((s, x) => s + (x.weight_kg || 0), 0);
+    const totalKg = (scans as ProductionScan[]).reduce((sum: number, x: ProductionScan) => sum + (x.weight_kg || 0), 0);
     const dateFormatted = new Date(date + 'T12:00:00Z').toLocaleDateString('pt-BR');
 
     let sentCount = 0;
@@ -118,7 +143,7 @@ Deno.serve(async (req) => {
       await sendWhatsApp(wa, msg);
     }
 
-    // ── 7. Enviar relatório completo para gestores ──
+    // ── 7. Enviar relatório completo para supervisores e gerentes ──
     const detalhes = sorted.map(([name, d], i) => {
       const medal = i < 3 ? medals[i] : `  ${i+1}.`;
       return `${medal} *${name}* — ${d.boxes} cx | ${d.kg.toFixed(1)} kg`;
@@ -143,8 +168,12 @@ Deno.serve(async (req) => {
                            .replace(/{total_peso}/g, totalKg.toFixed(1))
                            .replace(/{total_colaboradores}/g, String(sorted.length));
 
-    for (const manager of (managers || [])) {
-      if (manager.whatsapp) await sendWhatsApp(manager.whatsapp, managerMsg);
+    // Adiciona o número principal do cadastro do tenant também, por segurança
+    if (tenant.wa_manager_phone) supervisorNumbers.add(tenant.wa_manager_phone);
+
+    console.log(`Relatório: Enviando consolidado para ${supervisorNumbers.size} supervisores/gerentes.`);
+    for (const num of supervisorNumbers) {
+      await sendWhatsApp(num, managerMsg);
     }
 
     // ── 8. Salvar resumo diário no banco (upsert) ──
