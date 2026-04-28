@@ -21,7 +21,9 @@ interface Employee {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders, status: 200 });
+  }
 
   try {
     const { tenant_id, date } = await req.json();
