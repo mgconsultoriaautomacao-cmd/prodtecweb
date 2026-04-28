@@ -105,32 +105,33 @@ Deno.serve(async (req: Request) => {
     // Processar Lançamentos Manuais (Campo/Carrocões)
     const varietyHarvestData: Record<string, { kg: number; carrocoes: number }> = {};
     
-    bulk.forEach((b: any) => {
-      const pKey = b.parcel_code || 'N/A';
-      if (!parcelData[pKey]) parcelData[pKey] = { boxes: 0, kg: 0, carrocoes: 0 };
-      
-      const kg = Number(b.weight_kg) || 0;
-      parcelData[pKey].kg += kg;
-      
-      // Busca o peso do carrocão para esta fruta para calcular a quantidade
-      const fruitName = b.fruit_name || b.variety_name?.split(' ')[0] || 'N/A';
-      const pesoPadrao = fruitHarvestWeights[fruitName] || 300;
-      const nCarr = kg / pesoPadrao;
-      
-      if (!b.is_waste) {
-        parcelData[pKey].carrocoes += nCarr;
+    if (bulk && Array.isArray(bulk)) {
+      bulk.forEach((b: any) => {
+        const pKey = b.parcel_code || 'N/A';
+        if (!parcelData[pKey]) parcelData[pKey] = { boxes: 0, kg: 0, carrocoes: 0 };
+        
+        const kg = Number(b.weight_kg) || 0;
+        parcelData[pKey].kg += kg;
+        
+        // Busca o peso do carrocão para esta fruta para calcular a quantidade
+        const varietyName = b.variety_name || 'OUTRA';
+        const fruitName = b.fruit_name || varietyName.split(' ')[0] || 'N/A';
+        const pesoPadrao = fruitHarvestWeights[fruitName] || 300;
+        const nCarr = kg / (pesoPadrao > 0 ? pesoPadrao : 300);
+        
+        if (!b.is_waste) {
+          parcelData[pKey].carrocoes += nCarr;
 
-        // Agregar por Variedade (Campo)
-        const vKey = b.variety_name || 'N/A';
-        if (!varietyHarvestData[vKey]) varietyHarvestData[vKey] = { kg: 0, carrocoes: 0 };
-        varietyHarvestData[vKey].kg += kg;
-        varietyHarvestData[vKey].carrocoes += nCarr;
-      }
+          // Agregar por Variedade (Campo)
+          if (!varietyHarvestData[varietyName]) varietyHarvestData[varietyName] = { kg: 0, carrocoes: 0 };
+          varietyHarvestData[varietyName].kg += kg;
+          varietyHarvestData[varietyName].carrocoes += nCarr;
+        }
 
-      const vKey = b.variety_name || 'N/A';
-      if (!varietyData[vKey]) varietyData[vKey] = { boxes: 0, kg: 0 };
-      varietyData[vKey].kg += kg;
-    });
+        if (!varietyData[varietyName]) varietyData[varietyName] = { boxes: 0, kg: 0 };
+        varietyData[varietyName].kg += kg;
+      });
+    }
 
     // 4. Buscar funcionários ATIVOS que tenham whatsapp
     const { data: employees } = await supabase
