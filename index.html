@@ -1061,56 +1061,75 @@ async function refreshFin(){
   if(!sb||!tenantId)return;
   const s=$('finStart').value,e=$('finEnd').value,role=$('finRole').value;
   
-  // Real-time calculation from production_scans
-  let q=sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
-  if(role) q=q.eq('role',role);
-  const {data:scans}=await q.order('ts',{ascending:false});
-  
-  if(!scans) return;
-
   const cfg=tenantConfig;
   const targetPerHour = parseFloat(cfg.target_per_hour_packer || 100);
   const highRate = 0.03;
   const lowRate = 0.02;
 
-  // Load Quality Audits for the same period to calculate deductions
+  // ── 1. Buscar scans de Packing House ──
+  let q=sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
+  if(role && role !== 'COLHEDOR') q=q.eq('role',role);
+  const {data:scans}=await q.order('ts',{ascending:false});
+
+  // ── 2. Buscar sessões de colheita (Campo) ──
+  // Apenas se não filtrou por papel específico de packing, ou filtrou por COLHEDOR
+  let harvestData = [];
+  if(!role || role === 'COLHEDOR') {
+    const {data:sessions} = await sb.from('field_carrao_sessions')
+      .select('*, field_carrao_employees(employee_id, employee_name, value_received)')
+      .eq('tenant_id', tenantId)
+      .gte('date', s)
+      .lte('date', e);
+    harvestData = sessions || [];
+  }
+
+  // ── 3. Buscar Penalidades de Qualidade ──
   const {data:audits} = await sb.from('quality_audits').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
   const penalties = {};
   (audits||[]).forEach(a => {
     const day = a.ts.split('T')[0];
-    const key = `${day}_${a.employee_barcode}`; // Using barcode for matching if possible, but let's check names
-    // Actually, dashboard uses name for scans. Let's try to resolve names for audits.
     const emp = _employees.find(e => e.barcode == a.employee_barcode);
     const name = emp ? emp.name : a.employee_barcode;
     const k = `${day}_${name}`;
     penalties[k] = (penalties[k]||0) + (a.penalty_boxes||0);
   });
 
-  // Group by date and employee
+  // ── 4. Agrupar scans Packing House por data+funcionário ──
   const grouped = {};
-  scans.forEach(x => {
+  (scans||[]).forEach(x => {
     const day = x.ts.split('T')[0];
     const key = `${day}_${x.employee_name}`;
     if(!grouped[key]) {
-      grouped[key] = { date: day, employee_name: x.employee_name, role: x.role, total_boxes: 0, total_kg: 0 };
+      grouped[key] = { date: day, employee_name: x.employee_name, role: x.role, total_boxes: 0, total_kg: 0, _is_harvest: false };
     }
     grouped[key].total_boxes++;
     grouped[key].total_kg += (x.weight_kg || 0);
   });
 
-  _finData = Object.values(grouped).sort((a,b) => b.date.localeCompare(a.date));
+  // ── 5. Agrupar sessões de campo por data+funcionário ──
+  const harvestGrouped = {};
+  harvestData.forEach(sess => {
+    (sess.field_carrao_employees || []).forEach(ce => {
+      const name = ce.employee_name;
+      const key = `${sess.date}_${name}`;
+      if(!harvestGrouped[key]) {
+        harvestGrouped[key] = { date: sess.date, employee_name: name, role: 'COLHEDOR', carrocoes: 0, total_kg: 0, total_value: 0, _is_harvest: true };
+      }
+      harvestGrouped[key].carrocoes += sess.qty_carrocoes / Math.max(sess.employee_count, 1);
+      harvestGrouped[key].total_kg += Number(sess.qty_carrocoes * (cfg.harvest_carrao_weight_kg || 300)) / Math.max(sess.employee_count, 1);
+      harvestGrouped[key].total_value += Number(ce.value_received) || 0;
+    });
+  });
 
-  let totalVal=0,totalBoxes=0,totalKg=0;
+  // ── 6. Calcular valores Packing House ──
+  _finData = Object.values(grouped).sort((a,b) => b.date.localeCompare(a.date));
   _finData.forEach(d=>{
     if(d.role === 'PACKER') {
       const penalty = penalties[`${d.date}_${d.employee_name}`] || 0;
       const produced = d.total_boxes || 0;
       const quality = produced > 0 ? (Math.max(0, produced - penalty) / produced) : 1;
-      
-      // Productivity (8h basis)
       const target = targetPerHour * 8;
       const productivity = produced / target;
-      
       const isHighPerf = (quality >= 0.75 && productivity >= 0.75);
       d._rate = isHighPerf ? highRate : lowRate;
       d._quality = quality;
@@ -1120,65 +1139,62 @@ async function refreshFin(){
       d._rate = parseFloat(cfg.value_per_box_stacker || 0.01);
       d._penalties = 0;
     }
-    
     const tv = (d.total_boxes || 0) * d._rate;
     d._total_value = tv;
-    totalVal += tv; totalBoxes += d.total_boxes || 0; totalKg += d.total_kg || 0;
   });
+
+  // ── 7. Calcular valores Campo (Colhedores) ──
+  const harvestRows = Object.values(harvestGrouped).sort((a,b) => b.date.localeCompare(a.date));
+  harvestRows.forEach(d => {
+    d._rate = 0; // Custo fixo por carrocão já calculado
+    d._total_value = d.total_value;
+    d._penalties = 0;
+    d.total_boxes = Math.round(d.carrocoes * 10) / 10; // carrocoes como "unidade"
+  });
+
+  // ── 8. Merge e totais ──
+  const allData = [..._finData, ...harvestRows];
+
+  let totalVal=0, totalBoxes=0, totalKg=0;
+  allData.forEach(d => {
+    totalVal += d._total_value || 0;
+    totalBoxes += d.total_boxes || 0;
+    totalKg += d.total_kg || 0;
+  });
+
   $('finKpiTotal').textContent=BRL(totalVal);
-  $('finKpiBoxes').textContent=totalBoxes;
+  $('finKpiBoxes').textContent=totalBoxes.toFixed(0);
   $('finKpiAvgBox').textContent=totalBoxes?BRL(totalVal/totalBoxes):'R$ 0,00';
   $('finKpiKg').textContent=totalKg.toFixed(1)+' kg';
 
-  // Toggle Sumarizado
-  const isSumMode = true; // Por padrão para payroll
+  // ── 9. Tabela sumarizada por funcionário ──
+  const empSum = {};
+  allData.forEach(d => {
+    if(!empSum[d.employee_name]) empSum[d.employee_name] = { employee_name: d.employee_name, role: d.role, boxes: 0, kg: 0, val: 0, is_harvest: d._is_harvest };
+    empSum[d.employee_name].boxes += d.total_boxes || 0;
+    empSum[d.employee_name].kg += d.total_kg || 0;
+    empSum[d.employee_name].val += d._total_value || 0;
+  });
 
-  if(isSumMode) {
-    const empSum = {};
-    _finData.forEach(d => {
-      if(!empSum[d.employee_name]) empSum[d.employee_name] = { employee_name: d.employee_name, role: d.role, boxes: 0, kg: 0, val: 0 };
-      empSum[d.employee_name].boxes += d.total_boxes;
-      empSum[d.employee_name].kg += d.total_kg;
-      empSum[d.employee_name].val += d._total_value;
-    });
-    $('finTable').querySelector('tbody').innerHTML = Object.values(empSum).sort((a,b)=>b.val-a.val).map(d=>`
-      <tr>
-        <td style="color:var(--muted)">SOMA PERÍODO</td><td><b>${d.employee_name}</b></td>
-        <td><span class="badge ${d.role.toLowerCase()}">${d.role}</span></td>
-        <td>${d.boxes} cx</td><td>${d.kg.toFixed(1)} kg</td>
-        <td>Variavel</td>
-        <td style="color:var(--green);font-weight:700">${BRL(d.val)}</td>
-      </tr>
-    `).join('');
-  } else {
-    $('finTable').querySelector('tbody').innerHTML=_finData.map(d=>`
-      <tr>
-        <td>${d.date}</td><td><b>${d.employee_name}</b></td>
-        <td><span class="badge ${(d.role||'').toLowerCase()}">${d.role}</span></td>
-        <td>${d.total_boxes} cx ${d._penalties > 0 ? `<small style="color:var(--red)">(-${d._penalties})</small>` : ''}</td>
-        <td>${(d.total_kg||0).toFixed(1)} kg</td>
-        <td>
-          <div style="font-size:11px; color:${d._rate >= highRate ? 'var(--green)' : 'var(--muted)'}">
-            ${BRL(d._rate)}
-            <br/><small>Q:${Math.round(d._quality*100)}% P:${Math.round(d._productivity*100)}%</small>
-          </div>
-        </td>
-        <td style="color:var(--green);font-weight:700">${BRL(d._total_value)}</td>
-      </tr>
-    `).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:28px">Nenhum resumo.</td></tr>';
-  }
+  $('finTable').querySelector('tbody').innerHTML = Object.values(empSum).sort((a,b)=>b.val-a.val).map(d=>`
+    <tr>
+      <td style="color:var(--muted)">SOMA PERÍODO</td><td><b>${d.employee_name}</b></td>
+      <td><span class="badge ${d.role.toLowerCase()}">${d.role}</span></td>
+      <td>${d.is_harvest ? Math.round(d.boxes*10)/10+' carr' : Math.round(d.boxes)+' cx'}</td>
+      <td>${d.kg.toFixed(1)} kg</td>
+      <td>${d.is_harvest ? '<span style="color:var(--orange)">Custo Campo</span>' : 'Variável'}</td>
+      <td style="color:var(--green);font-weight:700">${BRL(d.val)}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:28px">Nenhum dado.</td></tr>';
 
-  // Charts
-  const byHour={}; for(let i=6;i<=22;i++) byHour[i]=0;
-  _finData.forEach(d=>{/* hourly from summaries not available - show by date */});
+  // ── 10. Gráficos ──
   const byEmp={};
-  _finData.forEach(d=>{byEmp[d.employee_name]=(byEmp[d.employee_name]||0)+d._total_value;});
+  allData.forEach(d=>{byEmp[d.employee_name]=(byEmp[d.employee_name]||0)+d._total_value;});
   const sortedE=Object.entries(byEmp).sort((a,b)=>b[1]-a[1]).slice(0,8);
   mkChart('chartFinCollab',{type:'bar',data:{labels:sortedE.map(e=>e[0]),datasets:[{data:sortedE.map(e=>e[1]),backgroundColor:COLS.slice(0,sortedE.length),borderRadius:6,barThickness:24}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{beginAtZero:true,ticks:{color:'#64748b',callback:v=>BRL(v)},grid:{color:'rgba(255,255,255,.04)'}},y:{grid:{display:false},ticks:{color:'#f8fafc',font:{size:11}}}},plugins:{legend:{display:false},tooltip:{...TOPTS,callbacks:{label:c=>BRL(c.raw)}}}}});
 
-  // By date
   const byDate={};
-  _finData.forEach(d=>{byDate[d.date]=(byDate[d.date]||0)+d._total_value;});
+  allData.forEach(d=>{byDate[d.date]=(byDate[d.date]||0)+d._total_value;});
   const dates=Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0]));
   mkChart('chartFinHourly',{type:'line',data:{labels:dates.map(d=>d[0]),datasets:[{label:'Custo',data:dates.map(d=>d[1]),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.1)',borderWidth:2,fill:true,tension:.3,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,ticks:{color:'#64748b',callback:v=>BRL(v)},grid:{color:'rgba(255,255,255,.04)'}},x:{grid:{display:false},ticks:{color:'#64748b'}}},plugins:{legend:{display:false},tooltip:{...TOPTS,callbacks:{label:c=>BRL(c.raw)}}}}});
 }
