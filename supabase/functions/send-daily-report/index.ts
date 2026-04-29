@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Supabase Edge Function: send-daily-report
 // Dispara relatórios via Evolution API quando o responsável finaliza o dia
 // Deploy: supabase functions deploy send-daily-report
@@ -39,7 +40,7 @@ Deno.serve(async (req: Request) => {
     // 1. Buscar configurações do tenant (Evolution API)
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, evo_api_url, evo_api_key, evo_instance, wa_template_employee, wa_template_manager')
+      .select('name, evo_api_url, evo_api_key, evo_instance, wa_template_employee, wa_template_manager, wa_manager_phone')
       .eq('id', tenant_id)
       .single();
 
@@ -73,6 +74,17 @@ Deno.serve(async (req: Request) => {
          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
        });
     }
+
+    // 2.2 Buscar pesos de carrocão configurados por fruta (necessário antes do processamento de bulk)
+    const { data: fruitConfigs } = await supabase
+      .from('fruits')
+      .select('name, harvest_weight')
+      .eq('tenant_id', tenant_id);
+
+    const fruitHarvestWeights: Record<string, number> = {};
+    fruitConfigs?.forEach((f: any) => {
+      fruitHarvestWeights[f.name] = Number(f.harvest_weight) || 300;
+    });
 
     // 3. Agregar dados para os relatórios
     const empData: Record<string, { boxes: number; kg: number; role: string }> = {};
@@ -141,16 +153,6 @@ Deno.serve(async (req: Request) => {
       .eq('active', true)
       .not('whatsapp', 'is', null);
 
-    // 4.1 Buscar pesos de carrocão configurados por fruta
-    const { data: fruitConfigs } = await supabase
-      .from('fruits')
-      .select('name, harvest_weight')
-      .eq('tenant_id', tenant_id);
-
-    const fruitHarvestWeights: Record<string, number> = {};
-    fruitConfigs?.forEach((f: any) => {
-      fruitHarvestWeights[f.name] = Number(f.harvest_weight) || 300;
-    });
 
     const empWhatsapp: Record<string, string> = {};
     const supervisorNumbers = new Set<string>();
@@ -277,11 +279,6 @@ Deno.serve(async (req: Request) => {
         const nCarrocoes = Math.round(d.carrocoes);
         return `📍 *Parcela ${p}*: ${d.boxes > 0 ? d.boxes + ' cx | ' : ''}${(d.kg/1000).toFixed(2)} ton (~${nCarrocoes} carr)`;
       })
-      .join('\n');
-
-    // Detalhes por Variedade
-    const detalhesVariedades = Object.entries(varietyData)
-      .map(([v, d]) => `🍇 *${v}*: ${d.boxes} cx`)
       .join('\n');
 
     // Detalhes por Tipo de Caixa
