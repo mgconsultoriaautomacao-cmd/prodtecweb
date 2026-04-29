@@ -480,7 +480,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       </select>
       
       <div id="phList" style="margin-bottom:20px">
-        <div class="empty">Selecione uma parcela para ver pendências</div>
+        <div class="loading"><div class="spinner"></div>Buscando carrocões pendentes...</div>
       </div>
 
       <div id="phSignArea" style="display:none">
@@ -607,6 +607,7 @@ function showCTab(tab) {
   if (tab === 'hist') loadCHistory();
   if (tab === 'ph') {
     loadPhParcelas();
+    loadPhPending(); // Carrega automaticamente todos os pendentes
     setTimeout(initPhSig, 100);
   }
 }
@@ -1310,14 +1311,12 @@ async function submitCarrao() {
   try {
     const savedSession = await pushCarrao({ session, workers: workersArr });
     toast('✓ Carrões registrados!', 'ok');
-    showOrdemColheita({ session, workers: workersArr });
     resetCForm();
   } catch(e) {
     if (!isOnline) {
       await idbAdd({ type: 'carrao', data: { session: { ...session, synced: false }, workers: workersArr } });
       await updateSyncBadge();
       toast('📥 Salvo offline — sincronizará quando online', 'ok');
-      showOrdemColheita({ session, workers: workersArr });
       resetCForm();
     } else {
       toast('Erro: ' + e.message, 'err');
@@ -1436,7 +1435,7 @@ let phRecords = [];
 async function loadPhPending() {
   const el = $('phList');
   const pid = $('phParcela').value;
-  el.innerHTML = '<div class="loading"><div class="spinner"></div>Buscando carrões...</div>';
+  el.innerHTML = '<div class="loading"><div class="spinner"></div>Buscando carrocões...</div>';
   $('phSignArea').style.display = 'none';
 
   let query = sb.from('field_carrao_sessions')
@@ -1449,13 +1448,14 @@ async function loadPhPending() {
 
   const { data, error } = await query.limit(20);
   if (error || !data?.length) {
-    el.innerHTML = '<div class="empty">Nenhum carrocão pendente de validação nesta parcela</div>';
+    el.innerHTML = '<div class="empty">✅ Nenhum carrocão pendente de validação</div>';
     return;
   }
 
   phRecords = data;
   el.innerHTML = data.map(r => {
     const workerNames = (r.field_carrao_employees || []).map(ce => ce.employees?.name).filter(Boolean).join(', ');
+    const parcela = parcelas.find(p => p.id === r.parcel_id);
     return `
       <div class="hist-item" style="padding:10px;margin-bottom:6px;border-style:dashed">
         <div style="display:flex;justify-content:space-between">
@@ -1463,7 +1463,7 @@ async function loadPhPending() {
           <span style="font-size:11px;color:var(--muted)">${r.date}</span>
         </div>
         <div style="font-size:11px;color:var(--text);margin-top:4px;line-height:1.4">
-          <b>Colhedores:</b> ${workerNames || 'Nenhum'}
+          <b>Parcela:</b> ${parcela?.code || '—'} | <b>Colhedores:</b> ${workerNames || 'Nenhum'}
         </div>
         <div style="font-size:10px;color:var(--muted);margin-top:4px">Lote: ${r.julian_lot || '—'} | Por: ${r.registered_by}</div>
       </div>
