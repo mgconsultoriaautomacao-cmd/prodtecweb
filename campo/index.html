@@ -752,6 +752,7 @@ async function afterLogin(u) {
   $('loggedAs').textContent   = u.email;
   await loadEmployees();
   await loadParcelas();
+  await loadParcelLinks();
   await loadVarieties();
   await loadFruits();
   await initQualityForm();
@@ -793,6 +794,40 @@ async function loadParcelas() {
   if(sel) {
     sel.innerHTML = '<option value="">— Parcela —</option>';
     parcelas.forEach(p => sel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`));
+    sel.onchange = updateVarietyFilter;
+  }
+}
+
+let parcelLinks = [];
+async function loadParcelLinks() {
+  const { data } = await sb.from('parcel_links')
+    .select('parcel_id, variety_id')
+    .eq('tenant_id', tenantId);
+  parcelLinks = data || [];
+}
+
+function updateVarietyFilter() {
+  const pId = $('cParcela').value;
+  const vSel = $('cVariety');
+  if (!vSel) return;
+  
+  if (!pId) {
+    // Se não tiver parcela selecionada, mostra todas
+    vSel.innerHTML = '<option value="">— Variedade —</option>';
+    varieties.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
+    return;
+  }
+
+  // Filtra as variedades vinculadas a esta parcela
+  const validVIds = parcelLinks.filter(l => l.parcel_id == pId).map(l => l.variety_id);
+  const filtered = varieties.filter(v => validVIds.includes(v.id));
+
+  vSel.innerHTML = '<option value="">— Variedade —</option>';
+  if (filtered.length === 0) {
+    // Se não houver vínculos, mostra todas (fallback) para não travar
+    varieties.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
+  } else {
+    filtered.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
   }
 }
 
@@ -1490,14 +1525,32 @@ function initPhSig() {
     const s = (e.touches && e.touches.length) ? e.touches[0] : e; 
     return {x: s.clientX-r.left, y: s.clientY-r.top}; 
   };
-  const start = e => { e.preventDefault(); phSigDrawing=true; const p=getPos(e); phSigCtx.beginPath(); phSigCtx.moveTo(p.x,p.y); };
-  const move  = e => { e.preventDefault(); if(!phSigDrawing)return; const p=getPos(e); phSigCtx.lineTo(p.x,p.y); phSigCtx.stroke(); phSigHasData=true; };
+  const start = e => { 
+    if (e.target === phSigCanvas) e.preventDefault(); 
+    phSigDrawing=true; 
+    const p=getPos(e); 
+    phSigCtx.beginPath(); 
+    phSigCtx.moveTo(p.x,p.y); 
+  };
+  const move  = e => { 
+    if (phSigDrawing) {
+      if (e.target === phSigCanvas) e.preventDefault();
+      const p=getPos(e); 
+      phSigCtx.lineTo(p.x,p.y); 
+      phSigCtx.stroke(); 
+      phSigHasData=true; 
+    }
+  };
+  const stop = () => { phSigDrawing=false; phSigCtx.closePath(); };
+
   phSigCanvas.addEventListener('touchstart', start, {passive:false});
   phSigCanvas.addEventListener('touchmove',  move,  {passive:false});
-  phSigCanvas.addEventListener('touchend',   () => phSigDrawing=false);
+  phSigCanvas.addEventListener('touchend',   stop);
+  phSigCanvas.addEventListener('touchcancel', stop);
+
   phSigCanvas.addEventListener('mousedown',  start);
   phSigCanvas.addEventListener('mousemove',  move);
-  window.addEventListener('mouseup', () => phSigDrawing=false);
+  window.addEventListener('mouseup', stop);
 }
 function clearPhSig() { if(phSigCtx) { phSigCtx.clearRect(0,0,phSigCanvas.width,phSigCanvas.height); phSigHasData=false; } }
 
