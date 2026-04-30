@@ -1523,6 +1523,12 @@ async function loadFieldSessions(s, e, pFilter) {
 // ══════════════════════════════════════
 // VENDAS A GRANEL
 // ══════════════════════════════════════
+async function toggleBulkStatus(id, field, currentVal) {
+  const { error } = await sb.from('bulk_sales').update({ [field]: !currentVal }).eq('id', id);
+  if (error) { alert('Erro ao atualizar: ' + error.message); }
+  else { loadBulk(); }
+}
+
 async function loadBulk() {
   const {data} = await sb.from('bulk_sales').select('*, parcels(code)').eq('tenant_id',tenantId).order('date',{ascending:false});
   $('bulkTable').querySelector('tbody').innerHTML = (data||[]).map(b => `
@@ -1534,8 +1540,8 @@ async function loadBulk() {
       <td><span class="badge ${b.is_waste?'danger':'packer'}">${b.weight_kg} kg</span></td>
       <td>${b.is_waste ? '—' : BRL(b.total_value)}</td>
       <td>
-        <span class="badge ${b.is_paid ? 'active' : 'inactive'}" style="font-size:9px">${b.is_paid ? 'PAGO' : 'PEND. PG'}</span>
-        <span class="badge ${b.is_received ? 'active' : 'inactive'}" style="font-size:9px;margin-left:4px">${b.is_received ? 'REC' : 'PEND. REC'}</span>
+        <button class="badge ${b.is_paid ? 'active' : 'inactive'}" style="font-size:9px; border:none; cursor:pointer" onclick="toggleBulkStatus('${b.id}', 'is_paid', ${b.is_paid})">${b.is_paid ? 'PAGO' : 'PEND. PG'}</button>
+        <button class="badge ${b.is_received ? 'active' : 'inactive'}" style="font-size:9px; margin-left:4px; border:none; cursor:pointer" onclick="toggleBulkStatus('${b.id}', 'is_received', ${b.is_received})">${b.is_received ? 'REC' : 'PEND. REC'}</button>
       </td>
       <td><button class="danger" onclick="delBulk('${b.id}')">Excluir</button></td>
     </tr>
