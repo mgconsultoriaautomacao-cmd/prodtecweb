@@ -878,7 +878,6 @@ function showTab(n,el){
     quality:refreshQuality,
     mass:refreshMass, mass_balance:refreshMassBalance,
     bulk:loadBulk,
-    nfe:loadNFe,
     finalize:loadManagers,
     logs:()=>{}
   };
@@ -2203,7 +2202,10 @@ function exportHarvestOrderPDF(sid) {
   }
 
   if (s.ph_signature_base64) {
-    doc.addImage(s.ph_signature_base64, 'PNG', 110, finalY + 15, 35, 15);
+    try {
+      const sigData = s.ph_signature_base64.replace(/^data:image\/\w+;base64,/, '');
+      doc.addImage(sigData, 'PNG', 110, finalY + 15, 35, 15);
+    } catch(e) { console.warn('Assinatura inválida, ignorando.', e); }
     doc.setFontSize(8); doc.text(`Recebimento Packing: ${s.ph_inspector_name || '—'}`, 110, finalY + 35);
   } else {
     doc.text('________________________', 110, finalY + 25);
@@ -2594,9 +2596,12 @@ function exportHarvestOrderPDF(sessionId) {
 
   // Assinatura PH se existir
   if (sess.ph_signature_base64) {
-    doc.addImage(sess.ph_signature_base64, 'PNG', 130, finalY - 30, 50, 22);
-    doc.setFontSize(7);
-    doc.text(`Validado por: ${sess.ph_inspector_name || 'Inspetor'}`, 155, finalY - 4, { align: 'center' });
+    try {
+      const sigData = sess.ph_signature_base64.replace(/^data:image\/\w+;base64,/, '');
+      doc.addImage(sigData, 'PNG', 130, finalY - 30, 50, 22);
+      doc.setFontSize(7);
+      doc.text(`Validado por: ${sess.ph_inspector_name || 'Inspetor'}`, 155, finalY - 4, { align: 'center' });
+    } catch(e) { console.warn('Assinatura inválida, ignorando.', e); }
   }
 
   doc.save(`ordem-${sess.date}-${sess.parcels?.code || 'PH'}.pdf`);
