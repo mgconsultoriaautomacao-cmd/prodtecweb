@@ -637,14 +637,15 @@ const qState = { empId: null, empBarcode: null, empName: '', issue: null, variet
 
 function loadQualitySelects() {
   const pSel = $('qParcela');
-  const vSel = $('qVariety');
+  const pSel = $('qParcela');
+  const vSelQ = $('qVariety');
   if(pSel) {
     pSel.innerHTML = '<option value="">(Opcional) Selecione Parcela</option>';
     parcelas.forEach(p => pSel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`));
   }
-  if(vSel) {
-    vSel.innerHTML = '<option value="">(Opcional) Selecione Variedade</option>';
-    varieties.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
+  if(vSelQ) {
+    vSelQ.innerHTML = '<option value="">(Opcional) Selecione Variedade</option>';
+    varieties.forEach(v => vSelQ.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
   }
 }
 const cState = { shift: 'MANHA', fruit: 'MELANCIA', parcelaId: null, qty: 1, workers: new Map() };
