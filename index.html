@@ -2159,60 +2159,157 @@ function exportFinPDF(){
 
 function exportHarvestOrderPDF(sid) {
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
   const s = _massSessions.find(x => x.id === sid);
-  if (!s) { alert('Sessão não encontrada para exportação.'); return; }
+  if (!s) { alert('Sessão não encontrada.'); return; }
+  const emps = _massEmployees.filter(e => e.session_id === sid);
 
-  pdfHeader(doc, 'ORDEM DE COLHEITA', `Lote (Julian): ${s.julian_lot || '—'}`);
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const W = 210, mg = 10;
+  const dark = [15, 23, 42];
+  const mid  = [100, 116, 139];
+  const black = [0, 0, 0];
 
-  doc.setFontSize(11); doc.setFont('helvetica', 'bold');
-  doc.text('Dados Geográficos e Operacionais', 14, 45);
-  doc.setFontSize(10); doc.setFont('helvetica', 'normal');
-  doc.text(`Data: ${new Date(s.date).toLocaleDateString('pt-BR')} | Turno: ${s.shift}`, 14, 52);
-  doc.text(`Parcela/Gleba: ${s.parcels?.code || '—'} (Cód. P / IDAR: ${s.parcels?.p_code || '—'})`, 14, 58);
-  doc.text(`Cultura: ${s.fruit_type}`, 14, 64);
-  doc.text(`Quantidade Colhida: ${s.qty_carrocoes} Carrocão(ões)`, 14, 70);
+  // ── CABEÇALHO ───────────────────────────────────────────────────────────
+  // Borda geral
+  doc.setDrawColor(...dark);
+  doc.setLineWidth(0.5);
+  doc.rect(mg, 8, W - mg*2, 278);
 
-  doc.setFontSize(11); doc.setFont('helvetica', 'bold');
-  doc.text('Equipe de Colhedores Registrados', 14, 85);
-  
-  const emps = _massEmployees.filter(e => e.session_id === sid).map((e, i) => [i + 1, e.employee_name]);
-  doc.autoTable({
-    startY: 90,
-    head: [['#', 'Colaborador']],
-    body: emps,
-    theme: 'grid',
-    headStyles: { fillColor: [245, 158, 11] },
-    styles: { fontSize: 10 }
-  });
+  // Linha logo / título
+  doc.setFillColor(...dark);
+  doc.rect(mg, 8, W - mg*2, 18, 'F');
 
-  const finalY = doc.lastAutoTable.finalY + 25;
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(16); doc.setFont('helvetica', 'bold');
+  doc.text('Bom Jesus', mg + 4, 20);
+  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+  doc.text('AGRÍCOLA', mg + 4, 24);
+
+  // Caixa CONTROLE DE PRODUÇÃO (direita)
+  const cpX = W - mg - 48;
+  doc.setFillColor(240, 240, 240);
+  doc.rect(cpX, 8, 48, 18, 'F');
+  doc.setDrawColor(...dark); doc.setLineWidth(0.3);
+  doc.rect(cpX, 8, 48, 18);
+  doc.setTextColor(...dark);
+  doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+  doc.text('CONTROLE DE PRODUÇÃO', cpX + 24, 15, { align: 'center' });
+  doc.setFontSize(14);
+  doc.text(String(s.julian_lot || s.id?.toString().slice(-5) || '—'), cpX + 24, 23, { align: 'center' });
+
+  // Títulos centrais
+  doc.setTextColor(...dark);
   doc.setFontSize(10); doc.setFont('helvetica', 'bold');
-  doc.text('Controle de Rastreabilidade e Auditoria', 14, finalY);
-  doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
-  doc.text('Documento gerado para fins de conformidade com normas GlobalG.A.P. e SMETA.', 14, finalY + 7);
-  
-  // Signatures
-  if (s.digital_signature_base64) {
-    doc.addImage(s.digital_signature_base64, 'PNG', 14, finalY + 15, 35, 15);
-    doc.setFontSize(8); doc.text('Resp. Colheita (Digital)', 14, finalY + 35);
-  } else {
-    doc.text('________________________', 14, finalY + 25);
-    doc.setFontSize(8); doc.text('Responsável Colheita', 14, finalY + 30);
-  }
+  doc.text('ORDEM DE COLHEITA', 105, 15, { align: 'center' });
+  doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+  doc.text('CONTROLE DE CARRÇÃO / PACKING HOUSE', 105, 21, { align: 'center' });
 
+  // ── LINHA DIVISÓRIA ───────────────────────────────────────────────────
+  let y = 28;
+  const drawLine = (yy) => { doc.setDrawColor(...dark); doc.setLineWidth(0.3); doc.line(mg, yy, W - mg, yy); };
+  const drawVLine = (x, y1, y2) => { doc.setDrawColor(...dark); doc.setLineWidth(0.3); doc.line(x, y1, x, y2); };
+
+  // ── EMPRESA / Nº CARRÃO ──────────────────────────────────────────────
+  drawLine(y);
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  doc.text('EMPRESA:', mg + 2, y + 4);
+  doc.setFontSize(10); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
+  doc.text(tenantName.toUpperCase(), mg + 22, y + 4);
+
+  drawVLine(cpX, y, y + 12);
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  doc.text('Nº DO CARRÃO:', cpX + 2, y + 4);
+  doc.setFontSize(14); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
+  doc.text(String(s.qty_carrocoes || '—'), cpX + 24, y + 10, { align: 'center' });
+  y += 12;
+
+  // ── DATA / Nº UP ──────────────────────────────────────────────────────
+  drawLine(y);
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  doc.text('DATA DA COLHEITA REALIZADA:', mg + 2, y + 4);
+  doc.setFontSize(11); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
+  doc.text(new Date(s.date + 'T12:00:00').toLocaleDateString('pt-BR'), mg + 55, y + 4);
+
+  drawVLine(cpX, y, y + 12);
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  doc.text('Nº da UP:', cpX + 2, y + 4);
+  doc.setFontSize(10); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
+  doc.text(s.parcels?.p_code || '—', cpX + 24, y + 10, { align: 'center' });
+  y += 12;
+
+  // ── PARCELA ────────────────────────────────────────────────────────────
+  drawLine(y);
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  doc.text('PARCELA:', mg + 2, y + 4);
+  doc.setFontSize(14); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
+  doc.text(s.parcels?.code || '—', mg + 22, y + 10);
+  y += 12;
+
+  // ── VARIEDADE / CORTE / TRATORISTA / RESP. EMBALAGEM ──────────────────
+  drawLine(y);
+  const midX = mg + 45, midX2 = W/2, midX3 = W/2 + 40;
+  drawVLine(midX, y, y + 14);
+  drawVLine(midX2, y, y + 14);
+  drawVLine(midX3, y, y + 14);
+
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  doc.text('VARIEDADE:', mg + 2, y + 4);
+  doc.text('CORTE:', midX + 2, y + 4);
+  doc.text('TRATORISTA:', midX2 + 2, y + 4);
+  doc.text('RESP. PELA EMBALAGEM:', midX3 + 2, y + 4);
+
+  doc.setFontSize(11); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
+  doc.text(s.variety_name || '—', mg + 2, y + 11);
+  doc.text(s.shift === 'MANHA' ? '1º' : '2º', midX + 2, y + 11);
+  doc.text(s.tractor_driver || '—', midX2 + 2, y + 11);
+  // Assinatura PH na área de responsável embalagem (se existir)
   if (s.ph_signature_base64) {
     try {
-      const sigData = s.ph_signature_base64.replace(/^data:image\/\w+;base64,/, '');
-      doc.addImage(sigData, 'PNG', 110, finalY + 15, 35, 15);
-    } catch(e) { console.warn('Assinatura inválida, ignorando.', e); }
-    doc.setFontSize(8); doc.text(`Recebimento Packing: ${s.ph_inspector_name || '—'}`, 110, finalY + 35);
-  } else {
-    doc.text('________________________', 110, finalY + 25);
-    doc.setFontSize(8); doc.text('Recebimento Packing House', 110, finalY + 30);
+      const sig = s.ph_signature_base64.replace(/^data:image\/\w+;base64,/, '');
+      doc.addImage(sig, 'PNG', midX3 + 2, y + 2, 25, 10);
+    } catch(e) {}
   }
+  y += 14;
 
-  doc.save(`ordem-colheita-${s.julian_lot || s.id}.pdf`);
+  // ── RESPONSÁVEL COLHEITA ───────────────────────────────────────────────
+  drawLine(y);
+  const supervisor = emps[0]?.employee_name || '—';
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  doc.text('RESPONSÁVEL PELA COLHEITA:', mg + 2, y + 4);
+  doc.setFontSize(11); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
+  doc.text(supervisor, mg + 52, y + 4);
+  y += 10;
+
+  // ── LISTA DE COLHEDORES (tabela) ───────────────────────────────────────
+  drawLine(y);
+  doc.setFontSize(8); doc.setTextColor(...dark); doc.setFont('helvetica', 'bold');
+  doc.text('COLHEDORES PRESENTES NO TURNO', mg + 2, y + 6);
+  y += 8;
+
+  doc.autoTable({
+    startY: y,
+    margin: { left: mg + 1, right: mg + 1 },
+    head: [['#', 'Nome do Colhedor', 'Confirm.']],
+    body: emps.map((e, i) => [String(i + 1).padStart(2, '0'), e.employee_name, '✓']),
+    theme: 'grid',
+    headStyles: { fillColor: dark, textColor: [255,255,255], fontSize: 8, cellPadding: 2 },
+    styles: { fontSize: 9, cellPadding: 2.5 },
+    columnStyles: { 0: { cellWidth: 12, halign: 'center' }, 2: { cellWidth: 18, halign: 'center', textColor: [16,185,129], fontStyle: 'bold' } }
+  });
+
+  // ── CARIMBO ─────────────────────────────────────────────────────────────
+  const stampY = doc.lastAutoTable.finalY + 6;
+  drawLine(stampY);
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  doc.text('CARIMBO / LOTE JULIAN:', mg + 2, stampY + 5);
+  doc.setFontSize(22); doc.setTextColor(...dark); doc.setFont('helvetica', 'bold');
+  doc.text(s.julian_lot || String(s.id || '—'), 105, stampY + 12, { align: 'center' });
+
+  // ── RODAPÉ ──────────────────────────────────────────────────────────────
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')} | Sistema ProdTech`, 105, 284, { align: 'center' });
+
+  doc.save(`ordem-colheita-${s.date}-${s.parcels?.code || 'P'}.pdf`);
 }
 
 function exportAuditPDF(){
@@ -2513,99 +2610,7 @@ async function refreshMassBalance() {
   // Unificado com refreshMass()
 }
 // ── Funções de Exportação PDF ──
-function exportHarvestOrderPDF(sessionId) {
-  const sess = _massSessions.find(s => s.id === sessionId);
-  if (!sess) return alert('Sessão de colheita não encontrada no período selecionado.');
 
-  const sessionEmps = _massEmployees.filter(e => e.session_id === sessionId);
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  const primaryColor = [15, 23, 42];
-  const accentColor = [59, 130, 246];
-
-  // Design Premium do PDF
-  doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, 210, 45, 'F');
-  
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
-  doc.setFont('helvetica', 'bold');
-  doc.text('ORDEM DE COLHEITA', 105, 22, { align: 'center' });
-  
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`${tenantName} | Documento Oficial de Produção`, 105, 32, { align: 'center' });
-  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 105, 38, { align: 'center' });
-
-  // Bloco de Informações Principais
-  doc.setFillColor(248, 250, 252);
-  doc.roundedRect(14, 55, 182, 35, 3, 3, 'F');
-  
-  doc.setTextColor(100, 116, 139);
-  doc.setFontSize(8);
-  doc.text('DATA DA SESSÃO', 20, 65);
-  doc.text('TURNO', 70, 65);
-  doc.text('PARCELA', 120, 65);
-  doc.text('VARIEDADE', 160, 65);
-
-  doc.setTextColor(...primaryColor);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text(new Date(sess.date).toLocaleDateString('pt-BR'), 20, 72);
-  doc.text(sess.shift === 'MANHA' ? '🌅 MANHÃ' : '🌇 TARDE', 70, 72);
-  doc.text(sess.parcels?.code || '—', 120, 72);
-  doc.text(sess.variety_name || '—', 160, 72);
-
-  // Stats Highlights
-  doc.setTextColor(...accentColor);
-  doc.setFontSize(22);
-  doc.text(String(sess.qty_carrocoes), 20, 85);
-  doc.setFontSize(8);
-  doc.setTextColor(100, 116, 139);
-  doc.text('CARRÕES COLHIDOS', 42, 85);
-
-  doc.setTextColor(...primaryColor);
-  doc.setFontSize(16);
-  doc.text(sess.julian_lot || '—', 120, 85);
-  doc.setFontSize(8);
-  doc.setTextColor(100, 116, 139);
-  doc.text('LOTE JULIANO', 120, 78);
-
-  // Tabela de Colhedores
-  doc.autoTable({
-    startY: 100,
-    head: [['LISTA DE COLHEDORES', 'CONFIRMAÇÃO']],
-    body: sessionEmps.map(e => [e.employee_name, '✓ PRESENTE']),
-    theme: 'grid',
-    headStyles: { fillColor: primaryColor, fontSize: 9, cellPadding: 5 },
-    styles: { fontSize: 9, cellPadding: 4 },
-    columnStyles: { 1: { halign: 'right', fontStyle: 'bold', textColor: [16, 185, 129] } }
-  });
-
-  // Rodapé e Assinaturas
-  const finalY = Math.max(doc.lastAutoTable.finalY + 40, 200);
-  doc.setDrawColor(200, 200, 200);
-  doc.line(20, finalY, 90, finalY);
-  doc.line(120, finalY, 190, finalY);
-  
-  doc.setFontSize(8);
-  doc.setTextColor(100, 116, 139);
-  doc.text('RESPONSÁVEL PELA COLHEITA', 55, finalY + 6, { align: 'center' });
-  doc.text('RECEBIMENTO PACKING HOUSE', 155, finalY + 6, { align: 'center' });
-
-  // Assinatura PH se existir
-  if (sess.ph_signature_base64) {
-    try {
-      const sigData = sess.ph_signature_base64.replace(/^data:image\/\w+;base64,/, '');
-      doc.addImage(sigData, 'PNG', 130, finalY - 30, 50, 22);
-      doc.setFontSize(7);
-      doc.text(`Validado por: ${sess.ph_inspector_name || 'Inspetor'}`, 155, finalY - 4, { align: 'center' });
-    } catch(e) { console.warn('Assinatura inválida, ignorando.', e); }
-  }
-
-  doc.save(`ordem-${sess.date}-${sess.parcels?.code || 'PH'}.pdf`);
-}
 
 
 function toggleSidebar() {
