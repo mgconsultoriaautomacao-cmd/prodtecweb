@@ -37,7 +37,7 @@ Deno.serve(async (req: Request) => {
     step = 'fetch_tenant';
     const { data: tenant, error: tenantErr } = await supabase
       .from('tenants')
-      .select('name, evo_api_url, evo_api_key, evo_instance, wa_template_employee, wa_template_manager, wa_manager_phone')
+      .select('name, evo_api_url, evo_api_key, evo_instance, wa_template_employee, wa_template_manager')
       .eq('id', tenant_id)
       .single();
 
@@ -178,8 +178,7 @@ Deno.serve(async (req: Request) => {
       }
     });
 
-    // Adiciona número principal do tenant
-    if (tenant.wa_manager_phone) supervisorNumbers.add(tenant.wa_manager_phone);
+    // Nota: wa_manager_phone removido — managers são detectados via role em tenant_users (acima)
 
     // ── 8. Construir mensagens ──
     step = 'build_messages';
