@@ -258,6 +258,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       <div class="module-desc">Confirme a chegada dos carrões no Packing House</div>
       <div class="module-arrow">›</div>
     </div>
+    <div class="module-card" style="--grad:linear-gradient(90deg,var(--blue),var(--purple))" onclick="showScreen('bulk')">
+      <span class="module-icon">⚖️</span>
+      <div class="module-name">Venda a Granel</div>
+      <div class="module-desc">Lançamento de caixas por peso com assinatura do comprador</div>
+      <div class="module-arrow">›</div>
+    </div>
   </div>
 
   <div style="padding:0 16px">
@@ -272,6 +278,73 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 </div>
 
 <!-- ══════════════ QUALIDADE ══════════════ -->
+<!-- ══════════════ VENDA A GRANEL ══════════════ -->
+<div id="screenBulk" class="screen">
+  <div class="header">
+    <div class="back-btn" onclick="showScreen('home')">‹</div>
+    <div class="header-title">⚖️ Venda a Granel</div>
+    <div class="online-dot"></div>
+  </div>
+
+  <div class="section">
+    <div class="card">
+      <div class="form-field">
+        <label class="field-label">Cliente / Comprador</label>
+        <input id="bulkCustomer" placeholder="Nome do cliente">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-field">
+          <label class="field-label">Preço por Kg (R$)</label>
+          <input id="bulkPrice" type="number" step="0.01" value="1.50">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Lançar Peso (kg)</label>
+          <input id="bulkWeightInput" type="number" inputmode="decimal" placeholder="0.0" onkeydown="if(event.key==='Enter') addBulkWeight()">
+        </div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="addBulkWeight()">➕ Lançar Peso</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Pesos Lançados</div>
+    <div class="card" style="padding:10px">
+      <div id="bulkWeightsList" style="display:flex;flex-wrap:wrap;gap:6px;min-height:40px;padding:8px">
+        <div class="empty" style="padding:10px;width:100%">Nenhum peso lançado</div>
+      </div>
+      <div class="calc-card" style="margin-top:12px;margin-bottom:0">
+        <div class="calc-row">
+          <span class="calc-label">Total de Caixas</span>
+          <span id="bulkTotalBoxes" class="calc-val">0</span>
+        </div>
+        <div class="calc-row">
+          <span class="calc-label">Peso Total</span>
+          <span id="bulkTotalWeight" class="calc-val">0.0 kg</span>
+        </div>
+        <div class="calc-row">
+          <span class="calc-label">Valor Total</span>
+          <span id="bulkTotalValue" class="calc-total">R$ 0,00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Assinatura do Comprador</div>
+    <div class="card">
+      <div class="sig-wrap">
+        <canvas id="sigBulkCanvas" class="sig-canvas" width="800" height="240"></canvas>
+        <div class="sig-clear" onclick="clearSig('sigBulkCanvas')">🗑 Limpar</div>
+      </div>
+      <p class="sig-hint">O comprador deve assinar acima para confirmar o carregamento</p>
+    </div>
+  </div>
+
+  <div class="section" style="padding-top:10px">
+    <button class="btn btn-primary btn-full" id="btnSaveBulk" onclick="saveBulkSale()">✅ Finalizar e Salvar</button>
+  </div>
+</div>
+
 <div id="screenQuality" class="screen">
   <div class="header">
     <div class="back-btn" onclick="showScreen('home')">‹</div>
@@ -395,10 +468,24 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       </div>
     </div>
 
+    <div class="section"><div class="section-title">Variedade</div></div>
+    <div style="padding:0 16px">
+      <select id="cVariety">
+        <option value="">— Selecionar Variedade —</option>
+      </select>
+    </div>
+
     <div class="section"><div class="section-title">Parcela</div></div>
     <div style="padding:0 16px">
       <select id="cParcela">
         <option value="">— Selecionar Parcela —</option>
+      </select>
+    </div>
+
+    <div class="section"><div class="section-title">Tratorista</div></div>
+    <div style="padding:0 16px">
+      <select id="cTractor">
+        <option value="">— Selecionar Tratorista —</option>
       </select>
     </div>
 
@@ -579,13 +666,16 @@ function toast(msg, type='ok') {
 }
 
 function showScreen(name) {
-  const screens = { login:'screenLogin', home:'screenHome', quality:'screenQuality', carrao:'screenCarrao', closure:'screenClosure' };
+  const screens = { login:'screenLogin', home:'screenHome', quality:'screenQuality', carrao:'screenCarrao', closure:'screenClosure', bulk:'screenBulk' };
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active','behind'));
   const active = $(screens[name]);
   if (!active) return;
   active.classList.add('active');
   if (name === 'quality') loadQHistory();
-  if (name === 'carrao')  loadCHistory();
+  if (name === 'carrao') {
+    loadCHistory();
+    loadPhParcelas();
+  }
 }
 
 function showQTab(tab) {
@@ -607,7 +697,7 @@ function showCTab(tab) {
   if (tab === 'hist') loadCHistory();
   if (tab === 'ph') {
     loadPhParcelas();
-    loadPhPending(); // Carrega automaticamente todos os pendentes
+    loadPhPending();
     setTimeout(initPhSig, 100);
   }
 }
@@ -812,19 +902,16 @@ function updateVarietyFilter() {
   if (!vSel) return;
   
   if (!pId) {
-    // Se não tiver parcela selecionada, mostra todas
     vSel.innerHTML = '<option value="">— Variedade —</option>';
     varieties.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
     return;
   }
 
-  // Filtra as variedades vinculadas a esta parcela
   const validVIds = parcelLinks.filter(l => l.parcel_id == pId).map(l => l.variety_id);
   const filtered = varieties.filter(v => validVIds.includes(v.id));
 
   vSel.innerHTML = '<option value="">— Variedade —</option>';
   if (filtered.length === 0) {
-    // Se não houver vínculos, mostra todas (fallback) para não travar
     varieties.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
   } else {
     filtered.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
@@ -852,14 +939,14 @@ async function loadVarieties() {
   const sel = $('cVariety');
   if(sel) {
     sel.innerHTML = '<option value="">— Variedade —</option>';
-    varieties.forEach(v => sel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
+    varieties.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
   }
 }
 
 // ═══════════════════════════════════════════
 // ──── MÓDULO QUALIDADE ────
 // ═══════════════════════════════════════════
-let defectTypes = []; // Carregado do banco
+let defectTypes = [];
 
 async function initQualityForm() {
   await loadDefectTypes();
@@ -873,20 +960,14 @@ async function loadDefectTypes() {
     .eq('active', true)
     .order('name');
   
-  defectTypes = data || [
-    { id: uuid(), name: 'Podridão', icon: '🦠' },
-    { id: uuid(), name: 'Dano Mecânico', icon: '💥' },
-    { id: uuid(), name: 'Tamanho/Padrão', icon: '📏' },
-    { id: uuid(), name: 'Maturação', icon: '🌿' },
-    { id: uuid(), name: 'Resíduo/Mancha', icon: '🧪' },
-  ];
-  
+  defectTypes = data || [];
   renderDefectTypes();
   renderDefectManagement();
 }
 
 function renderDefectTypes() {
   const grid = $('issueGrid');
+  if(!grid) return;
   grid.innerHTML = defectTypes.slice(0, 6).map(d => `
     <div class="issue-opt" data-id="${d.id}" onclick="selectIssue('${d.id}')">
       <span class="icon">${d.icon}</span>
@@ -951,7 +1032,6 @@ async function removeDefectType(id) {
   }
 }
 
-// UUID simples
 function uuid() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
     var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -965,22 +1045,15 @@ function qPenaltyChange(d) {
   $('qPenaltyVal').textContent = qPenalty;
 }
 
-// Signature logic is handled in closure and PH tabs.
-
 function clearSig() {
   if (!sigCtx) return;
   sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
   sigHasData = false;
 }
 
-function getSigData() {
-  if (!sigHasData) return null;
-  return sigCanvas.toDataURL('image/png', 0.7);
-}
-
-// ── Quality Employee Selector ──
 function renderQEmpList(list) {
   const el = $('qEmpList');
+  if (!el) return;
   if (!list.length) { el.innerHTML = '<div class="empty">Nenhum embalador encontrado</div>'; return; }
   el.innerHTML = list.map(e => `
     <div class="emp-item ${qState.empId == e.id ? 'on' : ''}" data-id="${e.id}" onclick="selectQEmp('${e.id}','${e.name.replace(/'/g,"\\'")}', '${e.barcode}')">
@@ -1010,15 +1083,12 @@ function selectQEmp(id, name, barcode) {
   });
 }
 
-// -- Submit Quality --
-
 async function submitQuality() {
   if (!qState.issue)  { toast('Selecione o tipo de defeito', 'err'); return; }
 
   const btn = $('qSubmitBtn');
   btn.disabled = true; btn.textContent = '⏳ Salvando...';
 
-  // Busca o nome do defeito para compatibilidade com o dashboard (AppSheet style)
   const defect = defectTypes.find(d => d.id === qState.issue);
   const issueLabelText = defect ? defect.name : qState.issue;
   const inspector = window.currentInspector || 'Sistema';
@@ -1027,7 +1097,7 @@ async function submitQuality() {
     tenant_id       : tenantId,
     ts              : new Date().toISOString(),
     employee_barcode: qState.empBarcode || null,
-    issue_type      : issueLabelText, // Envia o NOME para o dashboard
+    issue_type      : issueLabelText,
     penalty_boxes   : qPenalty,
     reason          : $('qReason').value.trim() || null,
     inspector_name  : inspector,
@@ -1043,8 +1113,6 @@ async function submitQuality() {
     resetQForm();
     loadQHistory();
   } catch(e) {
-    console.error('Erro detalhado no lançamento de qualidade:', e);
-    
     if (!isOnline) {
       await idbAdd({ type: 'quality', data: { ...payload, synced: false } });
       await updateSyncBadge();
@@ -1052,8 +1120,7 @@ async function submitQuality() {
       resetQForm();
       loadQHistory();
     } else {
-      const msg = e.message || 'Erro de esquema no banco';
-      toast('Falha (400): ' + msg, 'err');
+      toast('Falha: ' + e.message, 'err');
     }
   } finally {
     btn.disabled = false; btn.textContent = '✅ Registrar Defeito';
@@ -1062,10 +1129,7 @@ async function submitQuality() {
 
 async function pushQuality(payload) {
   const { error } = await sb.from('quality_audits').insert(payload);
-  if (error) {
-    console.error('Supabase Quality Insert Error:', error);
-    throw error;
-  }
+  if (error) throw error;
 }
 
 function resetQForm() {
@@ -1120,7 +1184,6 @@ async function saveClosure() {
   const inspectorName = $('closureInspectorName').value.trim() || window.currentInspector || 'Inspetor';
   const sig = cSigCanvas.toDataURL('image/png', 0.7);
 
-  // Busca registros de qualidade do dia sem assinatura e atualiza
   try {
     const todayStr = today();
     const { data: recs } = await sb.from('quality_audits')
@@ -1138,7 +1201,6 @@ async function saveClosure() {
     }
     toast(`✓ Sessão finalizada! ${recs?.length||0} registro(s) assinado(s).`, 'ok');
   } catch(e) {
-    console.warn('Closure update error:', e);
     toast('✓ Sessão finalizada!', 'ok');
   }
   setTimeout(() => showScreen('home'), 1500);
@@ -1147,6 +1209,7 @@ async function saveClosure() {
 // ── Quality History ──
 async function loadQHistory() {
   const el = $('qHistList');
+  if(!el) return;
   el.innerHTML = '<div class="loading"><div class="spinner"></div>Carregando...</div>';
   const { data, error } = await sb.from('quality_audits')
     .select('*')
@@ -1185,8 +1248,12 @@ function issueLabel(id) {
 function initCarraoForm() {
   $('cDate').value = today();
   renderCFruitList();
-  // Apenas COLHEDOR (colheitadores)
   renderCEmpList(employees.filter(e => e.role === 'COLHEDOR'));
+  // Carrega tratoristas
+  const tSel = $('cTractor');
+  if(tSel) {
+    employees.filter(e => e.role === 'TRATORISTA').forEach(t => tSel.insertAdjacentHTML('beforeend', `<option value="${t.id}">${t.name}</option>`));
+  }
 }
 
 function renderCFruitList() {
@@ -1205,6 +1272,7 @@ function renderCFruitList() {
 
 function renderCEmpList(list) {
   const el = $('cEmpList');
+  if (!el) return;
   if (!list.length) { el.innerHTML = '<div class="empty">Nenhum funcionário encontrado</div>'; return; }
   el.innerHTML = list.map(e => `
     <div class="emp-item ${cState.workers.has(String(e.id))?'on':''}" data-id="${e.id}" onclick="toggleCWorker('${e.id}','${e.name.replace(/'/g,"\\'")}')">
@@ -1220,7 +1288,6 @@ function renderCEmpList(list) {
 
 function filterCEmp() {
   const q = $('cEmpSearch').value.toLowerCase();
-  // Apenas COLHEDOR (colheitadores)
   renderCEmpList(employees.filter(e => e.role === 'COLHEDOR' && e.name.toLowerCase().includes(q)));
 }
 
@@ -1553,6 +1620,109 @@ function initPhSig() {
   window.addEventListener('mouseup', stop);
 }
 function clearPhSig() { if(phSigCtx) { phSigCtx.clearRect(0,0,phSigCanvas.width,phSigCanvas.height); phSigHasData=false; } }
+
+// ═══════════════════════════════════════════
+// VENDA A GRANEL (AGRANEL)
+// ═══════════════════════════════════════════
+let bulkWeights = [];
+
+function addBulkWeight() {
+  const inp = $('bulkWeightInput');
+  const val = parseFloat(inp.value.replace(',', '.'));
+  if (!val || val <= 0) return;
+  
+  bulkWeights.push(val);
+  inp.value = '';
+  inp.focus();
+  renderBulkWeights();
+  updateBulkCalc();
+}
+
+function removeBulkWeight(idx) {
+  bulkWeights.splice(idx, 1);
+  renderBulkWeights();
+  updateBulkCalc();
+}
+
+function renderBulkWeights() {
+  const el = $('bulkWeightsList');
+  if (bulkWeights.length === 0) {
+    el.innerHTML = '<div class="empty" style="padding:10px;width:100%">Nenhum peso lançado</div>';
+    return;
+  }
+  el.innerHTML = bulkWeights.map((w, i) => `
+    <div style="background:var(--card2);border:1px solid var(--border2);padding:8px 12px;border-radius:10px;display:flex;align-items:center;gap:8px;font-weight:700">
+      ${w}kg <span onclick="removeBulkWeight(${i})" style="color:var(--red);font-size:16px">×</span>
+    </div>
+  `).join('');
+}
+
+function updateBulkCalc() {
+  const price = parseFloat($('bulkPrice').value) || 0;
+  const totalWeight = bulkWeights.reduce((a, b) => a + b, 0);
+  const totalValue = totalWeight * price;
+
+  $('bulkTotalBoxes').textContent = bulkWeights.length;
+  $('bulkTotalWeight').textContent = totalWeight.toFixed(1) + ' kg';
+  $('bulkTotalValue').textContent = BRL(totalValue);
+}
+
+async function saveBulkSale() {
+  const customer = $('bulkCustomer').value;
+  const price = parseFloat($('bulkPrice').value);
+  const totalWeight = bulkWeights.reduce((a, b) => a + b, 0);
+  const totalValue = totalWeight * price;
+
+  if (!customer) return toast('Informe o nome do cliente', 'err');
+  if (bulkWeights.length === 0) return toast('Lance ao menos um peso', 'err');
+  if (isCanvasEmpty('sigBulkCanvas')) return toast('O comprador deve assinar', 'err');
+
+  const btn = $('btnSaveBulk');
+  btn.disabled = true; btn.textContent = '⏳ Salvando...';
+
+  const sale = {
+    tenant_id: tenantId,
+    date: new Date().toISOString().split('T')[0],
+    customer_name: customer,
+    weight_kg: parseFloat(totalWeight.toFixed(2)),
+    total_value: parseFloat(totalValue.toFixed(2)),
+    is_waste: false,
+    is_paid: false,
+    is_received: false,
+    ts: new Date().toISOString(),
+    signature_base64: $('sigBulkCanvas').toDataURL('image/png')
+  };
+
+  try {
+    const { error } = await sb.from('bulk_sales').insert(sale);
+    if (error) throw error;
+
+    toast('✓ Venda a granel registrada!', 'ok');
+    resetBulkForm();
+    showScreen('home');
+  } catch (e) {
+    toast('Erro: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = '✅ Finalizar e Salvar';
+  }
+}
+
+function resetBulkForm() {
+  bulkWeights = [];
+  $('bulkCustomer').value = '';
+  $('bulkWeightInput').value = '';
+  renderBulkWeights();
+  updateBulkCalc();
+  clearSig('sigBulkCanvas');
+}
+
+function isCanvasEmpty(id) {
+  const canvas = $(id);
+  const blank = document.createElement('canvas');
+  blank.width = canvas.width;
+  blank.height = canvas.height;
+  return canvas.toDataURL() === blank.toDataURL();
+}
 
 async function savePhSignature() {
   if (!phSigHasData) { toast('Assine para confirmar', 'err'); return; }
