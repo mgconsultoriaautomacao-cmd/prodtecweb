@@ -1436,7 +1436,8 @@ async function loadFieldSessions(s, e, pFilter) {
     .eq('tenant_id', tenantId)
     .gte('date', s)
     .lte('date', e)
-    .order('date', {ascending: false});
+    .order('date', {ascending: false})
+    .order('created_at', {ascending: false}); // Garante que a hora da criação desempatar a data
   
   if(pFilter) q = q.eq('parcel_id', pFilter);
 
@@ -2169,15 +2170,10 @@ function exportHarvestOrderPDF(sid) {
   const mid  = [100, 116, 139];
   const black = [0, 0, 0];
 
-  // ── CABEÇALHO ───────────────────────────────────────────────────────────
-  // Borda geral
-  doc.setDrawColor(...dark);
-  doc.setLineWidth(0.5);
+  // Borda e Layout Baseado na Foto
+  doc.setDrawColor(...dark); doc.setLineWidth(0.5);
   doc.rect(mg, 8, W - mg*2, 278);
-
-  // Linha logo / título
-  doc.setFillColor(...dark);
-  doc.rect(mg, 8, W - mg*2, 18, 'F');
+  doc.setFillColor(...dark); doc.rect(mg, 8, W - mg*2, 18, 'F');
 
   doc.setTextColor(255,255,255);
   doc.setFontSize(16); doc.setFont('helvetica', 'bold');
@@ -2185,84 +2181,53 @@ function exportHarvestOrderPDF(sid) {
   doc.setFontSize(7); doc.setFont('helvetica', 'normal');
   doc.text('AGRÍCOLA', mg + 4, 24);
 
-  // Caixa CONTROLE DE PRODUÇÃO (direita)
   const cpX = W - mg - 48;
-  doc.setFillColor(240, 240, 240);
-  doc.rect(cpX, 8, 48, 18, 'F');
-  doc.setDrawColor(...dark); doc.setLineWidth(0.3);
-  doc.rect(cpX, 8, 48, 18);
-  doc.setTextColor(...dark);
-  doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+  doc.setFillColor(240, 240, 240); doc.rect(cpX, 8, 48, 18, 'F');
+  doc.setDrawColor(...dark); doc.setLineWidth(0.3); doc.rect(cpX, 8, 48, 18);
+  doc.setTextColor(...dark); doc.setFontSize(7); doc.setFont('helvetica', 'bold');
   doc.text('CONTROLE DE PRODUÇÃO', cpX + 24, 15, { align: 'center' });
-  doc.setFontSize(14);
-  doc.text(String(s.julian_lot || s.id?.toString().slice(-5) || '—'), cpX + 24, 23, { align: 'center' });
+  doc.setFontSize(14); doc.text(String(s.julian_lot || s.id?.toString().slice(-5) || '—'), cpX + 24, 23, { align: 'center' });
 
-  // Títulos centrais
-  doc.setTextColor(...dark);
-  doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...dark); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
   doc.text('ORDEM DE COLHEITA', 105, 15, { align: 'center' });
   doc.setFontSize(8); doc.setFont('helvetica', 'normal');
-  doc.text('CONTROLE DE CARRÇÃO / PACKING HOUSE', 105, 21, { align: 'center' });
+  doc.text('CONTROLE DE CARROÇÃO / PACKING HOUSE', 105, 21, { align: 'center' });
 
-  // ── LINHA DIVISÓRIA ───────────────────────────────────────────────────
   let y = 28;
   const drawLine = (yy) => { doc.setDrawColor(...dark); doc.setLineWidth(0.3); doc.line(mg, yy, W - mg, yy); };
   const drawVLine = (x, y1, y2) => { doc.setDrawColor(...dark); doc.setLineWidth(0.3); doc.line(x, y1, x, y2); };
 
-  // ── EMPRESA / Nº CARRÃO ──────────────────────────────────────────────
   drawLine(y);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
-  doc.text('EMPRESA:', mg + 2, y + 4);
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.text('EMPRESA:', mg + 2, y + 4);
   doc.setFontSize(10); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
   doc.text(tenantName.toUpperCase(), mg + 22, y + 4);
-
   drawVLine(cpX, y, y + 12);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
-  doc.text('Nº DO CARRÃO:', cpX + 2, y + 4);
-  doc.setFontSize(14); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
-  doc.text(String(s.qty_carrocoes || '—'), cpX + 24, y + 10, { align: 'center' });
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal'); doc.text('Nº DO CARRÃO:', cpX + 2, y + 4);
+  doc.setFontSize(14); doc.setTextColor(...black); doc.text(String(s.qty_carrocoes || '—'), cpX + 24, y + 10, { align: 'center' });
   y += 12;
 
-  // ── DATA / Nº UP ──────────────────────────────────────────────────────
   drawLine(y);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
-  doc.text('DATA DA COLHEITA REALIZADA:', mg + 2, y + 4);
-  doc.setFontSize(11); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
-  doc.text(new Date(s.date + 'T12:00:00').toLocaleDateString('pt-BR'), mg + 55, y + 4);
-
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.text('DATA DA COLHEITA REALIZADA:', mg + 2, y + 4);
+  doc.setFontSize(11); doc.setTextColor(...black); doc.text(new Date(s.date + 'T12:00:00').toLocaleDateString('pt-BR'), mg + 55, y + 4);
   drawVLine(cpX, y, y + 12);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
-  doc.text('Nº da UP:', cpX + 2, y + 4);
-  doc.setFontSize(10); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
-  doc.text(s.parcels?.p_code || '—', cpX + 24, y + 10, { align: 'center' });
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.text('Nº da UP:', cpX + 2, y + 4);
+  doc.setFontSize(10); doc.setTextColor(...black); doc.text(s.parcels?.p_code || '—', cpX + 24, y + 10, { align: 'center' });
   y += 12;
 
-  // ── PARCELA ────────────────────────────────────────────────────────────
   drawLine(y);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
-  doc.text('PARCELA:', mg + 2, y + 4);
-  doc.setFontSize(14); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
-  doc.text(s.parcels?.code || '—', mg + 22, y + 10);
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.text('PARCELA:', mg + 2, y + 4);
+  doc.setFontSize(14); doc.setTextColor(...black); doc.text(s.parcels?.code || '—', mg + 22, y + 10);
   y += 12;
 
-  // ── VARIEDADE / CORTE / TRATORISTA / RESP. EMBALAGEM ──────────────────
   drawLine(y);
   const midX = mg + 45, midX2 = W/2, midX3 = W/2 + 40;
-  drawVLine(midX, y, y + 14);
-  drawVLine(midX2, y, y + 14);
-  drawVLine(midX3, y, y + 14);
-
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
-  doc.text('VARIEDADE:', mg + 2, y + 4);
-  doc.text('CORTE:', midX + 2, y + 4);
-  doc.text('TRATORISTA:', midX2 + 2, y + 4);
-  doc.text('RESP. PELA EMBALAGEM:', midX3 + 2, y + 4);
-
+  drawVLine(midX, y, y + 14); drawVLine(midX2, y, y + 14); drawVLine(midX3, y, y + 14);
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.text('VARIEDADE:', mg + 2, y + 4);
+  doc.text('CORTE:', midX + 2, y + 4); doc.text('TRATORISTA:', midX2 + 2, y + 4); doc.text('RESP. PELA EMBALAGEM:', midX3 + 2, y + 4);
   doc.setFontSize(11); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
   doc.text(s.variety_name || '—', mg + 2, y + 11);
   doc.text(s.shift === 'MANHA' ? '1º' : '2º', midX + 2, y + 11);
   doc.text(s.tractor_driver || '—', midX2 + 2, y + 11);
-  // Assinatura PH na área de responsável embalagem (se existir)
   if (s.ph_signature_base64) {
     try {
       const sig = s.ph_signature_base64.replace(/^data:image\/\w+;base64,/, '');
@@ -2271,43 +2236,30 @@ function exportHarvestOrderPDF(sid) {
   }
   y += 14;
 
-  // ── RESPONSÁVEL COLHEITA ───────────────────────────────────────────────
   drawLine(y);
-  const supervisor = emps[0]?.employee_name || '—';
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
-  doc.text('RESPONSÁVEL PELA COLHEITA:', mg + 2, y + 4);
-  doc.setFontSize(11); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
-  doc.text(supervisor, mg + 52, y + 4);
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.text('RESPONSÁVEL PELA COLHEITA:', mg + 2, y + 4);
+  doc.setFontSize(11); doc.setTextColor(...black); doc.text(emps[0]?.employee_name || '—', mg + 52, y + 4);
   y += 10;
 
-  // ── LISTA DE COLHEDORES (tabela) ───────────────────────────────────────
   drawLine(y);
   doc.setFontSize(8); doc.setTextColor(...dark); doc.setFont('helvetica', 'bold');
   doc.text('COLHEDORES PRESENTES NO TURNO', mg + 2, y + 6);
   y += 8;
 
   doc.autoTable({
-    startY: y,
-    margin: { left: mg + 1, right: mg + 1 },
+    startY: y, margin: { left: mg + 1, right: mg + 1 },
     head: [['#', 'Nome do Colhedor', 'Confirm.']],
     body: emps.map((e, i) => [String(i + 1).padStart(2, '0'), e.employee_name, '✓']),
     theme: 'grid',
-    headStyles: { fillColor: dark, textColor: [255,255,255], fontSize: 8, cellPadding: 2 },
-    styles: { fontSize: 9, cellPadding: 2.5 },
-    columnStyles: { 0: { cellWidth: 12, halign: 'center' }, 2: { cellWidth: 18, halign: 'center', textColor: [16,185,129], fontStyle: 'bold' } }
+    headStyles: { fillColor: dark, fontSize: 8, cellPadding: 2 },
+    styles: { fontSize: 9, cellPadding: 2.5 }
   });
 
-  // ── CARIMBO ─────────────────────────────────────────────────────────────
   const stampY = doc.lastAutoTable.finalY + 6;
   drawLine(stampY);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
-  doc.text('CARIMBO / LOTE JULIAN:', mg + 2, stampY + 5);
-  doc.setFontSize(22); doc.setTextColor(...dark); doc.setFont('helvetica', 'bold');
-  doc.text(s.julian_lot || String(s.id || '—'), 105, stampY + 12, { align: 'center' });
-
-  // ── RODAPÉ ──────────────────────────────────────────────────────────────
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
-  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')} | Sistema ProdTech`, 105, 284, { align: 'center' });
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.text('CARIMBO / LOTE JULIAN:', mg + 2, stampY + 5);
+  doc.setFontSize(22); doc.setTextColor(...dark); doc.text(s.julian_lot || String(s.id || '—'), 105, stampY + 12, { align: 'center' });
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')} | Sistema ProdTech`, 105, 284, { align: 'center' });
 
   doc.save(`ordem-colheita-${s.date}-${s.parcels?.code || 'P'}.pdf`);
 }
@@ -2382,7 +2334,7 @@ async function exportProducaoPDF(dateParam){
     .eq('tenant_id', tenantId)
     .gte('ts', toISO(date))
     .lte('ts', toISO(date, '23:59:59'))
-    .order('ts');
+    .order('ts', {ascending: false});
   if(!data?.length) { alert('Nenhum dado de produção para esta data.'); return; }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
