@@ -604,15 +604,27 @@
     <div class="card">
       <div class="title">➕ Novo Romaneio / Lote</div>
       <form id="formRomaneio" onsubmit="event.preventDefault(); saveRomaneio();">
-        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:15px;align-items:end">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin-bottom:15px">
           <div><label class="flabel">Cliente / Destino</label><input id="romCliente" placeholder="Ex: Supermercado BH" required/></div>
-          <div><label class="flabel">Variedade</label><input id="romVariedade" placeholder="Ex: Melão Amarelo" required/></div>
-          <div><label class="flabel">Fazenda de Origem</label><input id="romFazenda" placeholder="Ex: Fazenda Copi" required/></div>
-          <div><label class="flabel">Lote / Julian</label><input id="romLote" placeholder="Ex: 4021001" required/></div>
-          <div><label class="flabel">Qtd. Pallets</label><input id="romPallets" type="number" value="1" required/></div>
-          <div><label class="flabel">Total Quilos (Líquido)</label><input id="romKg" type="number" step="0.01" placeholder="0.00" required/></div>
           <div><label class="flabel">Data Expedição</label><input id="romData" type="date" required/></div>
-          <button id="btnSaveRomaneio" type="submit" style="height:38px">Salvar Romaneio</button>
+          <div><label class="flabel">Fazenda de Origem</label><input id="romFazenda" placeholder="Ex: Fazenda Copi" required/></div>
+        </div>
+        
+        <div style="background:rgba(255,255,255,0.03); padding:15px; border-radius:10px; border:1px dashed var(--border); margin-bottom:15px">
+          <div style="font-size:12px; font-weight:700; margin-bottom:10px; color:var(--blue)">📦 ADICIONAR ITENS (PALLETS/VARIEDADES)</div>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
+            <div><label class="flabel">Variedade</label><input id="itemVariedade" placeholder="Ex: Melão Amarelo"/></div>
+            <div><label class="flabel">Lote/Julian</label><input id="itemLote" placeholder="Ex: 4021001"/></div>
+            <div><label class="flabel">Calibre</label><input id="itemCalibre" placeholder="Ex: 6" type="number"/></div>
+            <div><label class="flabel">Qtd. Pallets</label><input id="itemPallets" type="number" value="1"/></div>
+            <button type="button" onclick="addRomaneioItem()" style="padding:9px 12px; background:var(--blue-dim); color:var(--blue); border:1px solid var(--blue)">+</button>
+          </div>
+          <div id="romaneioItemsList" style="margin-top:10px; display:flex; flex-direction:column; gap:6px"></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;align-items:end">
+          <div><label class="flabel">Total Quilos (Líquido)</label><input id="romKg" type="number" step="0.01" placeholder="0.00" required/></div>
+          <button id="btnSaveRomaneio" type="submit" style="height:38px">Salvar Romaneio Completo</button>
         </div>
       </form>
     </div>
@@ -1475,21 +1487,23 @@ async function loadFieldSessions(s, e, pFilter) {
   tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Carregando sessões...</td></tr>';
 
   let q = sb.from('field_carrao_sessions')
-    .select('*, parcels(code, p_code)')
+    .select('*, parcels(code, p_code), varieties(name)')
     .eq('tenant_id', tenantId)
     .gte('date', s)
     .lte('date', e)
     .order('date', {ascending: false})
-    .order('created_at', {ascending: false}); // Garante que a hora da criação desempatar a data
+    .order('created_at', {ascending: false});
   
   if(pFilter) q = q.eq('parcel_id', pFilter);
 
   const {data, error} = await q;
   if(error) { console.error(error); return; }
 
-  _massSessions = data || []; // Persist for PDF export
+  _massSessions = (data || []).map(sess => ({
+    ...sess,
+    variety_name: sess.varieties?.name || '—'
+  }));
 
-  // Load related employees for PDF details
   const sessionIds = _massSessions.map(s => s.id);
   if (sessionIds.length > 0) {
     const { data: emps } = await sb.from('field_carrao_employees')
@@ -1507,12 +1521,20 @@ async function loadFieldSessions(s, e, pFilter) {
     const isValidated = !!sess.ph_signature_base64;
     return `
     <tr>
-      <td>${new Date(sess.date).toLocaleDateString('pt-BR')}</td>
+      <td>${new Date(sess.date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
       <td><span class="badge ${sess.shift === 'MANHA' ? 'active' : 'packer'}">${sess.shift === 'MANHA' ? '🌅 Manhã' : '🌇 Tarde'}</span></td>
       <td><b>${sess.parcels?.code || '—'}</b><br><small>IDAR: ${sess.parcels?.p_code || '—'}</small></td>
-      <td>${sess.fruit_type === 'MELAO' ? '🍈 Melão' : '🍉 Melancia'}<br><small style="color:var(--muted)">Lote: ${sess.julian_lot || '—'}</small></td>
+      <td>
+        ${sess.fruit_type === 'MELAO' ? '🍈 Melão' : '🍉 Melancia'}<br>
+        <small style="color:var(--blue)">${sess.variety_name}</small><br>
+        <small style="color:var(--muted)">Lote: ${sess.julian_lot || '—'}</small>
+      </td>
       <td style="font-weight:700;color:var(--blue)">${sess.qty_carrocoes}</td>
-      <td>${sess.employee_count} func.<br><span class="badge ${isValidated?'active':'inactive'}" style="font-size:9px">${isValidated?'✓ VALIDADO':'⌛ PENDENTE'}</span></td>
+      <td>
+        ${sess.employee_count} func.<br>
+        <small style="color:var(--muted)">Trator: ${sess.tractor_driver || '—'}</small><br>
+        <span class="badge ${isValidated?'active':'inactive'}" style="font-size:9px">${isValidated?'✓ VALIDADO':'⌛ PENDENTE'}</span>
+      </td>
       <td>
         <button class="sec" style="padding:4px 10px" onclick="exportHarvestOrderPDF('${sess.id}')">📄 PDF</button>
       </td>
@@ -2219,10 +2241,15 @@ function exportHarvestOrderPDF(sid) {
   const mid  = [100, 116, 139];
   const black = [0, 0, 0];
 
-  // Borda e Layout Baseado na Foto
-  doc.setDrawColor(...dark); doc.setLineWidth(0.5);
+  // ── CABEÇALHO ───────────────────────────────────────────────────────────
+  // Borda geral
+  doc.setDrawColor(...dark);
+  doc.setLineWidth(0.5);
   doc.rect(mg, 8, W - mg*2, 278);
-  doc.setFillColor(...dark); doc.rect(mg, 8, W - mg*2, 18, 'F');
+
+  // Linha logo / título
+  doc.setFillColor(...dark);
+  doc.rect(mg, 8, W - mg*2, 18, 'F');
 
   doc.setTextColor(255,255,255);
   doc.setFontSize(16); doc.setFont('helvetica', 'bold');
@@ -2230,53 +2257,84 @@ function exportHarvestOrderPDF(sid) {
   doc.setFontSize(7); doc.setFont('helvetica', 'normal');
   doc.text('AGRÍCOLA', mg + 4, 24);
 
+  // Caixa CONTROLE DE PRODUÇÃO (direita)
   const cpX = W - mg - 48;
-  doc.setFillColor(240, 240, 240); doc.rect(cpX, 8, 48, 18, 'F');
-  doc.setDrawColor(...dark); doc.setLineWidth(0.3); doc.rect(cpX, 8, 48, 18);
-  doc.setTextColor(...dark); doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+  doc.setFillColor(240, 240, 240);
+  doc.rect(cpX, 8, 48, 18, 'F');
+  doc.setDrawColor(...dark); doc.setLineWidth(0.3);
+  doc.rect(cpX, 8, 48, 18);
+  doc.setTextColor(...dark);
+  doc.setFontSize(7); doc.setFont('helvetica', 'bold');
   doc.text('CONTROLE DE PRODUÇÃO', cpX + 24, 15, { align: 'center' });
-  doc.setFontSize(14); doc.text(String(s.julian_lot || s.id?.toString().slice(-5) || '—'), cpX + 24, 23, { align: 'center' });
+  doc.setFontSize(14);
+  doc.text(String(s.julian_lot || s.id?.toString().slice(-5) || '—'), cpX + 24, 23, { align: 'center' });
 
-  doc.setTextColor(...dark); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+  // Títulos centrais
+  doc.setTextColor(...dark);
+  doc.setFontSize(10); doc.setFont('helvetica', 'bold');
   doc.text('ORDEM DE COLHEITA', 105, 15, { align: 'center' });
   doc.setFontSize(8); doc.setFont('helvetica', 'normal');
   doc.text('CONTROLE DE CARROÇÃO / PACKING HOUSE', 105, 21, { align: 'center' });
 
+  // ── LINHA DIVISÓRIA ───────────────────────────────────────────────────
   let y = 28;
   const drawLine = (yy) => { doc.setDrawColor(...dark); doc.setLineWidth(0.3); doc.line(mg, yy, W - mg, yy); };
   const drawVLine = (x, y1, y2) => { doc.setDrawColor(...dark); doc.setLineWidth(0.3); doc.line(x, y1, x, y2); };
 
+  // ── EMPRESA / Nº CARRÃO ──────────────────────────────────────────────
   drawLine(y);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.text('EMPRESA:', mg + 2, y + 4);
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  doc.text('EMPRESA:', mg + 2, y + 4);
   doc.setFontSize(10); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
   doc.text(tenantName.toUpperCase(), mg + 22, y + 4);
+
   drawVLine(cpX, y, y + 12);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal'); doc.text('Nº DO CARRÃO:', cpX + 2, y + 4);
-  doc.setFontSize(14); doc.setTextColor(...black); doc.text(String(s.qty_carrocoes || '—'), cpX + 24, y + 10, { align: 'center' });
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  doc.text('Nº DO CARRÃO:', cpX + 2, y + 4);
+  doc.setFontSize(14); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
+  doc.text(String(s.qty_carrocoes || '—'), cpX + 24, y + 10, { align: 'center' });
   y += 12;
 
+  // ── DATA / Nº UP ──────────────────────────────────────────────────────
   drawLine(y);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.text('DATA DA COLHEITA REALIZADA:', mg + 2, y + 4);
-  doc.setFontSize(11); doc.setTextColor(...black); doc.text(new Date(s.date + 'T12:00:00').toLocaleDateString('pt-BR'), mg + 55, y + 4);
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  doc.text('DATA DA COLHEITA REALIZADA:', mg + 2, y + 4);
+  doc.setFontSize(11); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
+  doc.text(new Date(s.date + 'T12:00:00').toLocaleDateString('pt-BR'), mg + 55, y + 4);
+
   drawVLine(cpX, y, y + 12);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.text('Nº da UP:', cpX + 2, y + 4);
-  doc.setFontSize(10); doc.setTextColor(...black); doc.text(s.parcels?.p_code || '—', cpX + 24, y + 10, { align: 'center' });
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  doc.text('Nº da UP:', cpX + 2, y + 4);
+  doc.setFontSize(10); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
+  doc.text(s.parcels?.p_code || '—', cpX + 24, y + 10, { align: 'center' });
   y += 12;
 
+  // ── PARCELA ────────────────────────────────────────────────────────────
   drawLine(y);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.text('PARCELA:', mg + 2, y + 4);
-  doc.setFontSize(14); doc.setTextColor(...black); doc.text(s.parcels?.code || '—', mg + 22, y + 10);
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  doc.text('PARCELA:', mg + 2, y + 4);
+  doc.setFontSize(14); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
+  doc.text(s.parcels?.code || '—', mg + 22, y + 10);
   y += 12;
 
+  // ── VARIEDADE / CORTE / TRATORISTA / RESP. EMBALAGEM ──────────────────
   drawLine(y);
   const midX = mg + 45, midX2 = W/2, midX3 = W/2 + 40;
-  drawVLine(midX, y, y + 14); drawVLine(midX2, y, y + 14); drawVLine(midX3, y, y + 14);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.text('VARIEDADE:', mg + 2, y + 4);
-  doc.text('CORTE:', midX + 2, y + 4); doc.text('TRATORISTA:', midX2 + 2, y + 4); doc.text('RESP. PELA EMBALAGEM:', midX3 + 2, y + 4);
+  drawVLine(midX, y, y + 14);
+  drawVLine(midX2, y, y + 14);
+  drawVLine(midX3, y, y + 14);
+
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  doc.text('VARIEDADE:', mg + 2, y + 4);
+  doc.text('CORTE:', midX + 2, y + 4);
+  doc.text('TRATORISTA:', midX2 + 2, y + 4);
+  doc.text('RESP. PELA EMBALAGEM:', midX3 + 2, y + 4);
+
   doc.setFontSize(11); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
   doc.text(s.variety_name || '—', mg + 2, y + 11);
   doc.text(s.shift === 'MANHA' ? '1º' : '2º', midX + 2, y + 11);
   doc.text(s.tractor_driver || '—', midX2 + 2, y + 11);
+  // Assinatura PH na área de responsável embalagem (se existir)
   if (s.ph_signature_base64) {
     try {
       const sig = s.ph_signature_base64.replace(/^data:image\/\w+;base64,/, '');
@@ -2285,30 +2343,43 @@ function exportHarvestOrderPDF(sid) {
   }
   y += 14;
 
+  // ── RESPONSÁVEL COLHEITA ───────────────────────────────────────────────
   drawLine(y);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.text('RESPONSÁVEL PELA COLHEITA:', mg + 2, y + 4);
-  doc.setFontSize(11); doc.setTextColor(...black); doc.text(emps[0]?.employee_name || '—', mg + 52, y + 4);
+  const supervisor = emps[0]?.employee_name || '—';
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  doc.text('RESPONSÁVEL PELA COLHEITA:', mg + 2, y + 4);
+  doc.setFontSize(11); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
+  doc.text(supervisor, mg + 52, y + 4);
   y += 10;
 
+  // ── LISTA DE COLHEDORES (tabela) ───────────────────────────────────────
   drawLine(y);
   doc.setFontSize(8); doc.setTextColor(...dark); doc.setFont('helvetica', 'bold');
   doc.text('COLHEDORES PRESENTES NO TURNO', mg + 2, y + 6);
   y += 8;
 
   doc.autoTable({
-    startY: y, margin: { left: mg + 1, right: mg + 1 },
+    startY: y,
+    margin: { left: mg + 1, right: mg + 1 },
     head: [['#', 'Nome do Colhedor', 'Confirm.']],
     body: emps.map((e, i) => [String(i + 1).padStart(2, '0'), e.employee_name, '✓']),
     theme: 'grid',
-    headStyles: { fillColor: dark, fontSize: 8, cellPadding: 2 },
-    styles: { fontSize: 9, cellPadding: 2.5 }
+    headStyles: { fillColor: dark, textColor: [255,255,255], fontSize: 8, cellPadding: 2 },
+    styles: { fontSize: 9, cellPadding: 2.5 },
+    columnStyles: { 0: { cellWidth: 12, halign: 'center' }, 2: { cellWidth: 18, halign: 'center', textColor: [16,185,129], fontStyle: 'bold' } }
   });
 
+  // ── CARIMBO ─────────────────────────────────────────────────────────────
   const stampY = doc.lastAutoTable.finalY + 6;
   drawLine(stampY);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.text('CARIMBO / LOTE JULIAN:', mg + 2, stampY + 5);
-  doc.setFontSize(22); doc.setTextColor(...dark); doc.text(s.julian_lot || String(s.id || '—'), 105, stampY + 12, { align: 'center' });
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')} | Sistema ProdTech`, 105, 284, { align: 'center' });
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  doc.text('CARIMBO / LOTE JULIAN:', mg + 2, stampY + 5);
+  doc.setFontSize(22); doc.setTextColor(...dark); doc.setFont('helvetica', 'bold');
+  doc.text(s.julian_lot || String(s.id || '—'), 105, stampY + 12, { align: 'center' });
+
+  // ── RODAPÉ ──────────────────────────────────────────────────────────────
+  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')} | Sistema ProdTech`, 105, 284, { align: 'center' });
 
   doc.save(`ordem-colheita-${s.date}-${s.parcels?.code || 'P'}.pdf`);
 }
@@ -2622,6 +2693,39 @@ function toggleSidebar() {
 // ══════════════════════════════════════
 // ROMANEIO - COPI FRUTAS
 // ══════════════════════════════════════
+let _romaneioItems = [];
+
+function addRomaneioItem() {
+  const v = $('itemVariedade').value;
+  const l = $('itemLote').value;
+  const c = $('itemCalibre').value;
+  const p = parseInt($('itemPallets').value);
+
+  if(!v || !l) { alert('Variedade e Lote são obrigatórios'); return; }
+  
+  _romaneioItems.push({ variedade: v, lote: l, calibre: c, pallets: p });
+  
+  $('itemVariedade').value = '';
+  $('itemLote').value = '';
+  $('itemCalibre').value = '';
+  $('itemPallets').value = '1';
+  
+  renderRomaneioItems();
+}
+
+function renderRomaneioItems() {
+  const el = $('romaneioItemsList');
+  el.innerHTML = _romaneioItems.map((it, idx) => `
+    <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap:10px; background:rgba(0,0,0,0.2); padding:8px 12px; border-radius:8px; align-items:center; font-size:13px">
+      <div><b>${it.variedade}</b></div>
+      <div style="color:var(--muted2)">Lote: ${it.lote}</div>
+      <div style="color:var(--blue)">Cal: ${it.calibre || '—'}</div>
+      <div>${it.pallets} Pallets</div>
+      <button type="button" onclick="_romaneioItems.splice(${idx},1); renderRomaneioItems();" style="background:none; border:none; color:var(--red); font-size:18px; cursor:pointer">×</button>
+    </div>
+  `).join('');
+}
+
 async function loadRomaneios() {
   const tbody = $('romaneioTable').querySelector('tbody');
   if(!tbody) return;
@@ -2644,7 +2748,7 @@ async function loadRomaneios() {
       <tr>
         <td>${new Date(r.data_expedicao + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
         <td><b>${r.cliente}</b></td>
-        <td>${r.variedade}</td>
+        <td>${r.variedade} ${r.calibre ? `<span style="color:var(--blue);font-weight:700"> (Cal. ${r.calibre})</span>` : ''}</td>
         <td>${r.quantidade_pallets}</td>
         <td>${r.total_quilos} kg</td>
         <td><span class="badge packer">${r.lote}</span></td>
@@ -2658,30 +2762,41 @@ async function loadRomaneios() {
 }
 
 async function saveRomaneio() {
+  if(_romaneioItems.length === 0) { alert('Adicione ao menos um item (pallet/variedade)'); return; }
+
   const btn = $('btnSaveRomaneio');
   btn.disabled = true;
   btn.innerText = 'Salvando...';
 
-  const doc = {
-    tenant_id: tenantId,
-    variedade: $('romVariedade').value,
-    quantidade_pallets: parseInt($('romPallets').value),
-    cliente: $('romCliente').value,
-    data_expedicao: $('romData').value,
-    total_quilos: parseFloat($('romKg').value),
-    lote: $('romLote').value,
-    fazenda: $('romFazenda').value
-  };
+  const cliente = $('romCliente').value;
+  const data_expedicao = $('romData').value;
+  const fazenda = $('romFazenda').value;
+  const total_kg = parseFloat($('romKg').value);
 
-  const { error } = await sb.from('romaneios').insert(doc);
+  // Divide o peso total proporcionalmente aos pallets (simplificação) ou deixa o peso total no primeiro item
+  const docs = _romaneioItems.map((it, idx) => ({
+    tenant_id: tenantId,
+    cliente,
+    data_expedicao,
+    fazenda,
+    variedade: it.variedade,
+    lote: it.lote,
+    calibre: it.calibre,
+    quantidade_pallets: it.pallets,
+    total_quilos: idx === 0 ? total_kg : 0 // Coloca o peso total no primeiro registro para não duplicar no financeiro
+  }));
+
+  const { error } = await sb.from('romaneios').insert(docs);
   btn.disabled = false;
-  btn.innerText = 'Salvar Romaneio';
+  btn.innerText = 'Salvar Romaneio Completo';
 
   if (error) {
     alert('Erro ao salvar no banco: ' + error.message);
   } else {
-    toast('✅ Romaneio cadastrado com sucesso!', 'success');
+    toast('✅ Romaneio com ' + _romaneioItems.length + ' itens salvo!', 'success');
     $('formRomaneio').reset();
+    _romaneioItems = [];
+    renderRomaneioItems();
     loadRomaneios();
   }
 }
