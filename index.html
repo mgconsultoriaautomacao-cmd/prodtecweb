@@ -10,6 +10,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
   <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   :root{--bg:#030712;--card:#0f172a;--text:#f8fafc;--muted:#94a3b8;--border:rgba(255,255,255,.065);--blue:#3b82f6;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--accent:#6366f1;--purple:#8b5cf6;--r:14px}
@@ -174,6 +175,7 @@
     
     <div class="nav-group">Logística</div>
     <div class="nav" onclick="showTab('mass',this)">⚖️ Balanço de Massa</div>
+    <div class="nav" onclick="showTab('romaneio',this)">📑 Romaneio</div>
 
     <div class="nav-group">Sistema</div>
   <div class="nav" onclick="showTab('settings',this)">⚙️ Configurações</div>
@@ -595,6 +597,46 @@
     </div>
   </div>
 
+  <!-- ═══ ROMANEIO ═══ -->
+  <div id="tab-romaneio" class="tab">
+    <h1 class="ptitle">📑 Romaneio e Expedição (Copi Frutas)</h1>
+    
+    <div class="card">
+      <div class="title">➕ Novo Romaneio / Lote</div>
+      <form id="formRomaneio" onsubmit="event.preventDefault(); saveRomaneio();">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:15px;align-items:end">
+          <div><label class="flabel">Cliente / Destino</label><input id="romCliente" placeholder="Ex: Supermercado BH" required/></div>
+          <div><label class="flabel">Variedade</label><input id="romVariedade" placeholder="Ex: Melão Amarelo" required/></div>
+          <div><label class="flabel">Fazenda de Origem</label><input id="romFazenda" placeholder="Ex: Fazenda Copi" required/></div>
+          <div><label class="flabel">Lote / Julian</label><input id="romLote" placeholder="Ex: 4021001" required/></div>
+          <div><label class="flabel">Qtd. Pallets</label><input id="romPallets" type="number" value="1" required/></div>
+          <div><label class="flabel">Total Quilos (Líquido)</label><input id="romKg" type="number" step="0.01" placeholder="0.00" required/></div>
+          <div><label class="flabel">Data Expedição</label><input id="romData" type="date" required/></div>
+          <button id="btnSaveRomaneio" type="submit" style="height:38px">Salvar Romaneio</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="title">📋 Romaneios Cadastrados</div>
+      <table id="romaneioTable">
+        <thead>
+          <tr>
+            <th>Expedição</th>
+            <th>Cliente</th>
+            <th>Variedade</th>
+            <th>Pallets</th>
+            <th>Peso Total</th>
+            <th>Lote</th>
+            <th>Fazenda</th>
+            <th style="text-align:right">Etiqueta</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
   <div id="tab-settings" class="tab">
     <h1 class="ptitle">⚙️ Configurações do Tenant</h1>
     <div class="grid2">
@@ -879,6 +921,7 @@ function showTab(n,el){
     mass:refreshMass, mass_balance:refreshMassBalance,
     bulk:loadBulk,
     finalize:loadManagers,
+    romaneio:loadRomaneios,
     logs:()=>{}
   };
   if(fns[n]) fns[n]();
@@ -2568,6 +2611,115 @@ async function refreshMassBalance() {
 function toggleSidebar() {
   const sb = document.querySelector('.sidebar');
   sb.classList.toggle('open');
+}
+
+// ══════════════════════════════════════
+// ROMANEIO - COPI FRUTAS
+// ══════════════════════════════════════
+async function loadRomaneios() {
+  const tbody = $('romaneioTable').querySelector('tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">Carregando...</td></tr>';
+
+  const { data, error } = await sb.from('romaneios')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .order('data_expedicao', { ascending: false });
+
+  if (error) {
+    console.error(error);
+    tbody.innerHTML = `<tr><td colspan="8" style="color:var(--red)">Erro ao carregar dados. Verifique se a tabela 'romaneios' existe no Supabase.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = data.length ? '' : '<tr><td colspan="8" style="text-align:center;color:var(--muted)">Nenhum romaneio cadastrado.</td></tr>';
+  data.forEach(r => {
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td>${new Date(r.data_expedicao + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
+        <td><b>${r.cliente}</b></td>
+        <td>${r.variedade}</td>
+        <td>${r.quantidade_pallets}</td>
+        <td>${r.total_quilos} kg</td>
+        <td><span class="badge packer">${r.lote}</span></td>
+        <td>${r.fazenda}</td>
+        <td style="text-align:right">
+          <button class="sec" onclick="printRomaneioLabel('${r.id}')" title="Gerar Etiqueta 35x60">🏷️ Etiqueta</button>
+        </td>
+      </tr>
+    `);
+  });
+}
+
+async function saveRomaneio() {
+  const btn = $('btnSaveRomaneio');
+  btn.disabled = true;
+  btn.innerText = 'Salvando...';
+
+  const doc = {
+    tenant_id: tenantId,
+    variedade: $('romVariedade').value,
+    quantidade_pallets: parseInt($('romPallets').value),
+    cliente: $('romCliente').value,
+    data_expedicao: $('romData').value,
+    total_quilos: parseFloat($('romKg').value),
+    lote: $('romLote').value,
+    fazenda: $('romFazenda').value
+  };
+
+  const { error } = await sb.from('romaneios').insert(doc);
+  btn.disabled = false;
+  btn.innerText = 'Salvar Romaneio';
+
+  if (error) {
+    alert('Erro ao salvar no banco: ' + error.message);
+  } else {
+    toast('✅ Romaneio cadastrado com sucesso!', 'success');
+    $('formRomaneio').reset();
+    loadRomaneios();
+  }
+}
+
+function printRomaneioLabel(id) {
+  const traceUrl = "https://copifrutas-trace.vercel.app/info?id=" + id;
+  const printWindow = window.open('', '_blank', 'width=500,height=400');
+  const html = `
+    <html>
+      <head>
+        <title>Etiqueta Romaneio 35x60</title>
+        <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+        <style>
+          @page { size: 60mm 35mm; margin: 0; }
+          body { font-family: sans-serif; margin: 0; padding: 3mm; width: 60mm; height: 35mm; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; overflow: hidden; }
+          .info { width: 34mm; font-size: 7.5pt; line-height: 1.3; color: #000; }
+          .info b { font-size: 9pt; display: block; border-bottom: 0.5pt solid #000; margin-bottom: 1.5mm; padding-bottom: 0.5mm; }
+          #qrcode { width: 22mm; height: 22mm; flex-shrink: 0; }
+          #qrcode img { width: 100%; height: 100%; }
+        </style>
+      </head>
+      <body>
+        <div class="info">
+          <b>COPI FRUTAS</b>
+          ID: #${id.toString().slice(-6).toUpperCase()}<br>
+          Fazenda: FAZENDA COPI<br>
+          Variedade: MELÃO AMARELO<br>
+          Data: ${new Date().toLocaleDateString('pt-BR')}
+        </div>
+        <div id="qrcode"></div>
+        <script>
+          new QRCode(document.getElementById("qrcode"), {
+            text: "${traceUrl}",
+            width: 100,
+            height: 100,
+            correctLevel: QRCode.CorrectLevel.H
+          });
+          setTimeout(() => { window.print(); window.close(); }, 800);
+        </script>
+      </body>
+    </html>
+  `;
+  printWindow.document.write(html);
+  printWindow.document.close();
 }
 
 // Fechar menu ao clicar em um item (Mobile)
