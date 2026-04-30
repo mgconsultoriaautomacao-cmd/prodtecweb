@@ -12,55 +12,23 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  :root{--bg:#030712;--card:#0f172a;--text:#f8fafc;--muted:#94a3b8;--border:rgba(255,255,255,.065);--blue:#3b82f6;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--accent:#6366f1;--purple:#8b5cf6;--r:14px}
-  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-  /* AUTH */
-  .auth-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000;background-image:radial-gradient(ellipse at 20% 50%,rgba(59,130,246,.08) 0%,transparent 60%)}
-  .auth-card{width:420px;padding:40px;background:var(--card);border-radius:22px;border:1px solid var(--border);box-shadow:0 24px 64px rgba(0,0,0,.5)}
-  .auth-logo{font-size:30px;font-weight:900;color:var(--blue);margin-bottom:4px;letter-spacing:-1px}
-  .auth-sub{font-size:11px;color:var(--muted);margin-bottom:28px;text-transform:uppercase;letter-spacing:.5px}
-  .auth-err{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2);padding:10px 14px;border-radius:9px;font-size:13px;margin-bottom:14px;display:none}
-  /* SIDEBAR */
-  .sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;background:linear-gradient(180deg,var(--card) 0%,#070c18 100%);border-right:1px solid var(--border);padding:20px 12px;display:flex;flex-direction:column;z-index:100;overflow-y:auto}
-  .brand{font-size:19px;font-weight:900;color:var(--blue);margin-bottom:2px;letter-spacing:-.5px}
-  .brand-sub{font-size:10px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
-  .tenant-badge{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);color:var(--blue);padding:6px 10px;border-radius:8px;font-size:11px;font-weight:600;margin-bottom:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .nav-group{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-weight:700;padding:0 4px;margin:12px 0 4px}
-  .nav{padding:10px 12px;border-radius:10px;cursor:pointer;color:var(--muted);margin-bottom:2px;transition:all .15s;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px}
-  .nav:hover{background:rgba(59,130,246,.08);color:var(--text)}
-  .nav.active{background:rgba(59,130,246,.15);color:var(--blue);font-weight:700}
-  .sf{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
-  .dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pd 2s infinite;display:inline-block;margin-right:5px}
-  @keyframes pd{0%,100%{opacity:1}50%{opacity:.3}}
-  /* MAIN */
-  .main{margin-left:240px;padding:28px 32px;max-width:1300px}
-  .ptitle{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:22px}
-  /* CARDS */
-  .card{background:var(--card);border-radius:var(--r);padding:20px;border:1px solid var(--border);margin-bottom:18px}
-  .card .title{font-weight:700;font-size:13.5px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
-  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-  /* KPI */
-  .kgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:18px}
-  .kcard{background:linear-gradient(135deg,var(--card),rgba(15,23,42,.9));border-radius:var(--r);padding:18px;border:1px solid var(--border);position:relative;overflow:hidden}
-  .kcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2.5px;background:linear-gradient(90deg,var(--blue),var(--accent))}
-  .kcard.green::before{background:linear-gradient(90deg,var(--green),#05966960)}
-  .kcard.yellow::before{background:linear-gradient(90deg,var(--yellow),#b4530060)}
-  .kcard.purple::before{background:linear-gradient(90deg,var(--purple),var(--accent))}
-  .klabel{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
-.kval{font-size:26px;font-weight:800;margin-top:5px;color:var(--blue)}
-.kval.green{color:var(--green)}.kval.yellow{color:var(--yellow)}.kval.purple{color:var(--purple)}
-.ksub{font-size:11px;color:var(--muted);margin-top:2px}
-/* TABS */
-.tab{display:none;animation:fs .2s ease}
-.tab.active{display:block}
-@keyframes fs{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-/* TABLE */
-table{width:100%;border-collapse:collapse}
-thead th{text-align:left;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;padding:10px 12px;border-bottom:1px solid var(--border);font-weight:600}
-tbody td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px}
-tbody tr:hover{background:rgba(59,130,246,.03)}
+  :root{--bg:#030712;--card:#0f172a;--text:#f8fafc;--muted:#94a3b8;--border:rgba(255,255,255,.065);--blue:#3b82f6;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--accent:#6366f1;--purple:#8b5cf6;--r:14px}  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;background-image: radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.05) 0px, transparent 50%), radial-gradient(at 50% 0%, rgba(139, 92, 246, 0.05) 0px, transparent 50%)}
+  
+  /* Glassmorphism & Premium Touches */
+  .card{background:rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius:var(--r); padding:20px; border:1px solid rgba(255,255,255,0.08); margin-bottom:18px; box-shadow: 0 4px 24px -2px rgba(0,0,0,0.2)}
+  .kcard{background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(8px); border-radius:var(--r); padding:18px; border:1px solid rgba(255,255,255,0.06); position:relative; overflow:hidden; transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)}
+  .kcard:hover{transform: translateY(-3px); border-color: rgba(59, 130, 246, 0.3)}
+  .kcard::after{content:''; position:absolute; top:0; right:0; width:60px; height:60px; background: radial-gradient(circle at top right, rgba(59,130,246,0.1), transparent 70%); pointer-events:none}
+  
+  .sidebar{background: rgba(3, 7, 18, 0.8); backdrop-filter: blur(20px); border-right: 1px solid rgba(255,255,255,0.05)}
+  .nav.active{background: linear-gradient(90deg, rgba(59, 130, 246, 0.2) 0%, transparent 100%); border-left: 3px solid var(--blue); color: var(--blue); border-radius: 0 8px 8px 0}
+  
+  /* Charts Tooltip Custom */
+  #chartTooltip { opacity: 0; position: absolute; background: rgba(15, 23, 42, 0.95); border: 1px solid var(--blue); color: #fff; padding: 10px; border-radius: 8px; pointer-events: none; transition: all 0.1s ease; z-index: 1000; font-size: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.4) }
+  
+  /* Table Stylized */
+  thead th{background: rgba(255,255,255,0.02); color:var(--muted); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; padding:12px}
+  tbody td{padding:14px 12px; border-bottom:1px solid rgba(255,255,255,0.03)}
 /* BADGES */
 .badge{padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;display:inline-block}
 .badge.packer{background:rgba(59,130,246,.12);color:var(--blue)}
@@ -140,7 +108,6 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
 
   <div class="nav-group">Operação</div>
   <div class="nav" onclick="showTab('finalize',this)">✅ Finalizar Dia</div>
-  <div class="nav" onclick="showTab('nfe',this)">📄 Vendas NF-e</div>
   <div class="nav" onclick="showTab('bulk',this)">🗑️ Refugo/Descarte</div>
   <div class="nav" onclick="showTab('logs',this)">📋 Logs de Produção</div>
   <div class="nav" onclick="showTab('quality',this)">🕵️ Qualidade</div>
@@ -367,7 +334,19 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
         <div><label class="flabel">Nota Fiscal</label><input id="bulkInvoice" placeholder="000..."/></div>
         <div><label class="flabel">Peso (Kg)</label><input type="number" id="bulkWeight" placeholder="0.00"/></div>
         <div><label class="flabel">Valor (R$)</label><input type="number" id="bulkValue" placeholder="0.00"/></div>
-        <button onclick="saveBulk()">Salvar</button>
+        <div><label class="flabel">Status Pagamento</label>
+          <select id="bulkPaid">
+            <option value="false">🔴 Pendente</option>
+            <option value="true">🟢 Pago</option>
+          </select>
+        </div>
+        <div><label class="flabel">Status Recebimento</label>
+          <select id="bulkReceived">
+            <option value="false">🔴 Pendente</option>
+            <option value="true">🟢 Recebido</option>
+          </select>
+        </div>
+        <button onclick="saveBulk()" style="background:var(--green)">Salvar</button>
       </div>
       <div style="margin-top:12px; display:flex; align-items:center; gap:8px">
         <input type="checkbox" id="bulkIsWaste" style="width:16px; height:16px">
@@ -376,43 +355,11 @@ button.green:hover{background:rgba(16,185,129,.25);box-shadow:none}
     </div>
     <div class="card">
       <div class="title">📋 Histórico de Vendas / Refugo</div>
-      <table id="bulkTable"><thead><tr><th>Data</th><th>Parcela</th><th>Cliente/Destino</th><th>NF</th><th>Peso</th><th>Valor</th><th>Ações</th></tr></thead><tbody></tbody></table>
+      <table id="bulkTable"><thead><tr><th>Data</th><th>Parcela</th><th>Cliente/Destino</th><th>NF</th><th>Peso</th><th>Valor</th><th>Financeiro</th><th>Ações</th></tr></thead><tbody></tbody></table>
     </div>
   </div>
 
-  <!-- ═══ VENDAS NF-e ═══ -->
-  <div id="tab-nfe" class="tab">
-    <h1 class="ptitle">📄 Vendas com Nota Fiscal (NF-e)</h1>
-    <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
-        <div class="title" style="margin-bottom:0">➕ Registrar Venda NF-e</div>
-        <div style="display:flex; gap:8px">
-          <input type="file" id="nfeXmlInput" accept=".xml" style="display:none" onchange="handleNfeXmlImport(event)">
-          <button class="sec" onclick="$('nfeXmlInput').click()" style="padding:6px 14px; font-size:12px">📂 Importar XML NF-e</button>
-        </div>
-      </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr; gap:10px; align-items:end; margin-bottom:10px">
-        <div><label class="flabel">Data</label><input type="date" id="nfeDate"/></div>
-        <div><label class="flabel">Número NF</label><input id="nfeNumber" placeholder="000001"/></div>
-        <div><label class="flabel">Parcela</label><select id="nfeParcel"></select></div>
-        <div><label class="flabel">Variedade</label><select id="nfeVariety"></select></div>
-        <div><label class="flabel">Cliente</label><input id="nfeCustomer" placeholder="Nome do comprador"/></div>
-      </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:10px; align-items:end">
-        <div><label class="flabel">Peso Total (Kg)</label><input type="number" id="nfeWeight" placeholder="0.00"/></div>
-        <div><label class="flabel">Valor Total (R$)</label><input type="number" id="nfeValue" placeholder="0.00"/></div>
-        <div><label class="flabel">Observação</label><input id="nfeNotes" placeholder="Opcional"/></div>
-        <button onclick="saveNFe()" style="background:var(--green)">💾 Salvar NF-e</button>
-      </div>
-    </div>
-    <div class="card">
-      <div class="title">📋 Histórico de Vendas com NF-e</div>
-      <table id="nfeTable">
-        <thead><tr><th>Data</th><th>Nº NF</th><th>Parcela</th><th>Variedade</th><th>Cliente</th><th>Peso</th><th>Valor</th><th>Ações</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
+
 
   <!-- ═══ LOGS ═══ -->
   <div id="tab-logs" class="tab">
@@ -721,7 +668,52 @@ let _massSessions = [];
 let _massEmployees = [];
 let _finData = [];
 
-function mkChart(id,cfg){ if(charts[id])charts[id].destroy(); charts[id]=new Chart(document.getElementById(id),cfg); return charts[id]; }
+function mkChart(id, cfg) {
+  if (charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id).getContext('2d');
+  
+  // Injeção de Gradientes Automáticos para barras
+  if (cfg.type === 'bar' && cfg.data.datasets[0]) {
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.8)');
+    gradient.addColorStop(1, 'rgba(59, 130, 246, 0.05)');
+    cfg.data.datasets[0].backgroundColor = gradient;
+    cfg.data.datasets[0].borderColor = '#3b82f6';
+    cfg.data.datasets[0].borderWidth = 1;
+    cfg.data.datasets[0].borderRadius = 8;
+    cfg.data.datasets[0].hoverBackgroundColor = '#60a5fa';
+  }
+
+  // Estilização global dos gráficos
+  const defaults = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 2000, easing: 'easeOutQuart' },
+    plugins: {
+      legend: { labels: { color: '#94a3b8', font: { size: 11, weight: '500' } } },
+      tooltip: {
+        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+        titleFont: { size: 13, weight: '700' },
+        bodyFont: { size: 12 },
+        padding: 12,
+        cornerRadius: 8,
+        displayColors: false,
+        borderWidth: 1,
+        borderColor: 'rgba(59, 130, 246, 0.2)'
+      }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b' } },
+      y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b' } }
+    }
+  };
+
+  const finalCfg = { ...cfg };
+  finalCfg.options = { ...defaults, ...cfg.options };
+  
+  charts[id] = new Chart(ctx, finalCfg);
+  return charts[id];
+}
 function $(id){return document.getElementById(id)}
 function today(){return new Date().toISOString().split('T')[0]}
 function toISO(d,t='00:00:00'){return d+'T'+t+'Z'}
@@ -1176,11 +1168,11 @@ async function refreshFin(){
     empSum[d.employee_name].val += d._total_value || 0;
   });
 
-  $('finTable').querySelector('tbody').innerHTML = Object.values(empSum).sort((a,b)=>b.val-a.val).map(d=>`
+  $('finTable').querySelector('tbody').innerHTML = Object.values(empSum).sort((a,b)=>b[1]?.val - a[0]?.val).map(d=>`
     <tr>
       <td style="color:var(--muted)">SOMA PERÍODO</td><td><b>${d.employee_name}</b></td>
       <td><span class="badge ${d.role.toLowerCase()}">${d.role}</span></td>
-      <td>${d.is_harvest ? Math.round(d.boxes*10)/10+' carr' : Math.round(d.boxes)+' cx'}</td>
+      <td>${d.is_harvest ? (d.boxes).toFixed(1) +' carr' : Math.round(d.boxes)+' cx'}</td>
       <td>${d.kg.toFixed(1)} kg</td>
       <td>${d.is_harvest ? '<span style="color:var(--orange)">Custo Campo</span>' : 'Variável'}</td>
       <td style="color:var(--green);font-weight:700">${BRL(d.val)}</td>
@@ -1452,9 +1444,13 @@ async function loadBulk() {
       <td>${b.invoice_num || '—'}</td>
       <td><span class="badge ${b.is_waste?'danger':'packer'}">${b.weight_kg} kg</span></td>
       <td>${b.is_waste ? '—' : BRL(b.total_value)}</td>
+      <td>
+        <span class="badge ${b.is_paid ? 'active' : 'inactive'}" style="font-size:9px">${b.is_paid ? 'PAGO' : 'PEND. PG'}</span>
+        <span class="badge ${b.is_received ? 'active' : 'inactive'}" style="font-size:9px;margin-left:4px">${b.is_received ? 'REC' : 'PEND. REC'}</span>
+      </td>
       <td><button class="danger" onclick="delBulk('${b.id}')">Excluir</button></td>
     </tr>
-  `).join('') || '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">Sem lançamentos.</td></tr>';
+  `).join('') || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">Sem lançamentos.</td></tr>';
   
   // Popula select de parcelas e variedades
   const {data:parcels} = await sb.from('parcels').select('id,code').eq('tenant_id',tenantId).eq('active',true);
@@ -1478,6 +1474,7 @@ async function loadBulk() {
 async function saveBulk() {
   const date=$('bulkDate').value, pId=$('bulkParcel').value, vId=$('bulkVariety').value, w=$('bulkWeight').value, v=$('bulkValue').value;
   const cust=$('bulkCustomer').value.trim(), inv=$('bulkInvoice').value.trim(), waste=$('bulkIsWaste').checked;
+  const isPaid=$('bulkPaid').value === 'true', isReceived=$('bulkReceived').value === 'true';
   
   if(!date || !w) return alert('Preencha pelo menos Data e Peso.');
   const {error} = await sb.from('bulk_sales').insert([{
@@ -1489,7 +1486,9 @@ async function saveBulk() {
     total_value: waste ? 0 : (parseFloat(v) || 0),
     customer_name: cust || null,
     invoice_num: inv || null,
-    is_waste: waste
+    is_waste: waste,
+    is_paid: isPaid,
+    is_received: isReceived
   }]);
   if(error) alert(error.message);
   else { 
@@ -1510,127 +1509,7 @@ function handleXmlImport(e) {
   handleNfeXmlImport(e);
 }
 
-// ══════════════════════════════════════
-// VENDAS NF-e
-// ══════════════════════════════════════
-async function loadNFe() {
-  // Usa a tabela bulk_sales com invoice_num preenchido como NF-e
-  const {data} = await sb.from('bulk_sales')
-    .select('*, parcels(code), varieties(name)')
-    .eq('tenant_id', tenantId)
-    .not('invoice_num', 'is', null)
-    .order('date', {ascending: false});
 
-  $('nfeTable').querySelector('tbody').innerHTML = (data||[]).map(b => `
-    <tr>
-      <td>${b.date}</td>
-      <td><strong>${b.invoice_num || '—'}</strong></td>
-      <td>${b.parcels?.code || '—'}</td>
-      <td>${b.varieties?.name || '—'}</td>
-      <td>${b.customer_name || '—'}</td>
-      <td>${b.weight_kg} kg</td>
-      <td style="color:var(--green);font-weight:700">${BRL(b.total_value)}</td>
-      <td><button class="danger" onclick="delNFe('${b.id}')">Excluir</button></td>
-    </tr>
-  `).join('') || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">Nenhuma NF-e registrada.</td></tr>';
-
-  // Popula selects de parcela e variedade no form NF-e
-  const {data:parcels}   = await sb.from('parcels').select('id,code').eq('tenant_id',tenantId).eq('active',true);
-  const {data:varieties} = await sb.from('varieties').select('id,name').eq('tenant_id',tenantId).eq('active',true);
-
-  const nfeP = $('nfeParcel');
-  if(nfeP) {
-    const cur = nfeP.value;
-    nfeP.innerHTML = '<option value="">— Selecionar —</option>' + (parcels||[]).map(p=>`<option value="${p.id}">${p.code}</option>`).join('');
-    nfeP.value = cur;
-  }
-  const nfeV = $('nfeVariety');
-  if(nfeV) {
-    const cur = nfeV.value;
-    nfeV.innerHTML = '<option value="">— Selecionar —</option>' + (varieties||[]).map(v=>`<option value="${v.id}">${v.name}</option>`).join('');
-    nfeV.value = cur;
-  }
-  // Data padrão
-  const nfeDate = $('nfeDate');
-  if(nfeDate && !nfeDate.value) nfeDate.value = today();
-}
-
-async function saveNFe() {
-  const date   = $('nfeDate').value;
-  const nfNum  = $('nfeNumber').value.trim();
-  const pId    = $('nfeParcel').value;
-  const vId    = $('nfeVariety').value;
-  const cust   = $('nfeCustomer').value.trim();
-  const w      = $('nfeWeight').value;
-  const value  = $('nfeValue').value;
-  const notes  = $('nfeNotes').value.trim();
-
-  if(!date || !nfNum || !w) { alert('Preencha Data, Número NF e Peso.'); return; }
-
-  const {error} = await sb.from('bulk_sales').insert([{
-    tenant_id    : tenantId,
-    date,
-    parcel_id    : pId || null,
-    variety_id   : vId || null,
-    weight_kg    : parseFloat(w),
-    total_value  : parseFloat(value) || 0,
-    customer_name: cust || null,
-    invoice_num  : nfNum,
-    is_waste     : false,
-    notes        : notes || null,
-  }]);
-  if(error) { alert(error.message); return; }
-  loadNFe();
-  ['nfeNumber','nfeCustomer','nfeWeight','nfeValue','nfeNotes'].forEach(id => $(id).value = '');
-  alert('✓ NF-e registrada!');
-}
-
-async function delNFe(id) {
-  if(!confirm('Excluir esta NF-e?')) return;
-  await sb.from('bulk_sales').delete().eq('id',id);
-  loadNFe();
-}
-
-function handleNfeXmlImport(e) {
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = async (ev) => {
-    try {
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(ev.target.result, 'text/xml');
-
-      const nNF  = xmlDoc.getElementsByTagName('nNF')[0]?.textContent;
-      const xNome = xmlDoc.getElementsByTagName('xNome')[0]?.textContent;
-      const dEmi  = xmlDoc.getElementsByTagName('dEmi')[0]?.textContent
-                 || xmlDoc.getElementsByTagName('dhEmi')[0]?.textContent?.split('T')[0];
-
-      let totalKg = 0, totalVal = 0;
-      const itens = xmlDoc.getElementsByTagName('det');
-      for(let i=0; i<itens.length; i++) {
-        const prod  = itens[i].getElementsByTagName('prod')[0];
-        const qCom  = parseFloat(prod?.getElementsByTagName('qCom')[0]?.textContent || 0);
-        const vProd = parseFloat(prod?.getElementsByTagName('vProd')[0]?.textContent || 0);
-        totalKg  += qCom;
-        totalVal += vProd;
-      }
-
-      // Preenche o formulário NF-e
-      if(dEmi)     $('nfeDate').value     = dEmi;
-      if(nNF)      $('nfeNumber').value   = nNF;
-      if(xNome)    $('nfeCustomer').value = xNome;
-      if(totalKg)  $('nfeWeight').value   = totalKg.toFixed(2);
-      if(totalVal) $('nfeValue').value    = totalVal.toFixed(2);
-
-      alert('✓ XML NF-e importado! Revise e salve.');
-    } catch(err) {
-      console.error(err);
-      alert('Erro ao processar XML: ' + err.message);
-    }
-  };
-  reader.readAsText(file);
-  e.target.value = '';
-}
 
 // ══════════════════════════════════════
 // FINALIZAR DIA
@@ -1992,17 +1871,21 @@ async function refreshQuality() {
   // Build Main Offenders (Penalties)
   const penalties = {};
   audits.forEach(q => {
-    if(!q.employee_name) return;
-    if(!penalties[q.employee_name]) penalties[q.employee_name] = 0;
-    penalties[q.employee_name] += (q.penalty_boxes || 0);
+    const emp = _employees.find(e => e.barcode == q.employee_barcode);
+    const name = emp ? emp.name : (q.employee_barcode || 'Desconhecido');
+    if(!penalties[name]) penalties[name] = 0;
+    penalties[name] += (q.penalty_boxes || 0);
   });
-  const sortedP = Object.entries(penalties).sort((a,b) => b[1] - a[1]).slice(0, 5);
-  $('qaPenaltyList').innerHTML = sortedP.map(([name, val]) => `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(239,68,68,0.05);border-radius:10px;margin-bottom:6px;border:1px solid rgba(239,68,68,0.1)">
-      <div style="font-weight:700;font-size:13px">${name}</div>
-      <div style="color:var(--red);font-weight:800">${val} <span style="font-size:10px;font-weight:400">cx desc.</span></div>
+  const sortedP = Object.entries(penalties).sort((a,b) => b[1] - a[1]).slice(0, 8);
+  $('qaPenaltyList').innerHTML = sortedP.map(([name, val], idx) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(239,68,68,0.03);border-radius:12px;margin-bottom:8px;border:1px solid rgba(239,68,68,0.08)">
+      <div style="display:flex; align-items:center; gap:10px">
+        <div style="width:24px; height:24px; border-radius:50%; background:rgba(239,68,68,0.1); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; color:var(--red)">${idx+1}</div>
+        <div style="font-weight:700;font-size:13px">${name}</div>
+      </div>
+      <div style="color:var(--red);font-weight:800; font-size:15px">${val} <span style="font-size:10px;font-weight:400">cx desc.</span></div>
     </div>
-  `).join('') || '<div class="empty" style="padding:10px;font-size:11px">Sem penalidades.</div>';
+  `).join('') || '<div class="empty" style="padding:10px;font-size:11px">Sem penalidades registradas.</div>';
 
   loadQualityIssues();
 }
@@ -2581,7 +2464,97 @@ async function saveExpeditions() {
 async function refreshMassBalance() {
   // Unificado com refreshMass()
 }
+// ── Funções de Exportação PDF ──
+function exportHarvestOrderPDF(sessionId) {
+  const sess = _massSessions.find(s => s.id === sessionId);
+  if (!sess) return alert('Sessão de colheita não encontrada no período selecionado.');
 
+  const sessionEmps = _massEmployees.filter(e => e.session_id === sessionId);
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  const primaryColor = [15, 23, 42];
+  const accentColor = [59, 130, 246];
+
+  // Design Premium do PDF
+  doc.setFillColor(...primaryColor);
+  doc.rect(0, 0, 210, 45, 'F');
+  
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(24);
+  doc.setFont('helvetica', 'bold');
+  doc.text('ORDEM DE COLHEITA', 105, 22, { align: 'center' });
+  
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${tenantName} | Documento Oficial de Produção`, 105, 32, { align: 'center' });
+  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 105, 38, { align: 'center' });
+
+  // Bloco de Informações Principais
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(14, 55, 182, 35, 3, 3, 'F');
+  
+  doc.setTextColor(100, 116, 139);
+  doc.setFontSize(8);
+  doc.text('DATA DA SESSÃO', 20, 65);
+  doc.text('TURNO', 70, 65);
+  doc.text('PARCELA', 120, 65);
+  doc.text('VARIEDADE', 160, 65);
+
+  doc.setTextColor(...primaryColor);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text(new Date(sess.date).toLocaleDateString('pt-BR'), 20, 72);
+  doc.text(sess.shift === 'MANHA' ? '🌅 MANHÃ' : '🌇 TARDE', 70, 72);
+  doc.text(sess.parcels?.code || '—', 120, 72);
+  doc.text(sess.variety_name || '—', 160, 72);
+
+  // Stats Highlights
+  doc.setTextColor(...accentColor);
+  doc.setFontSize(22);
+  doc.text(String(sess.qty_carrocoes), 20, 85);
+  doc.setFontSize(8);
+  doc.setTextColor(100, 116, 139);
+  doc.text('CARRÕES COLHIDOS', 42, 85);
+
+  doc.setTextColor(...primaryColor);
+  doc.setFontSize(16);
+  doc.text(sess.julian_lot || '—', 120, 85);
+  doc.setFontSize(8);
+  doc.setTextColor(100, 116, 139);
+  doc.text('LOTE JULIANO', 120, 78);
+
+  // Tabela de Colhedores
+  doc.autoTable({
+    startY: 100,
+    head: [['LISTA DE COLHEDORES', 'CONFIRMAÇÃO']],
+    body: sessionEmps.map(e => [e.employee_name, '✓ PRESENTE']),
+    theme: 'grid',
+    headStyles: { fillColor: primaryColor, fontSize: 9, cellPadding: 5 },
+    styles: { fontSize: 9, cellPadding: 4 },
+    columnStyles: { 1: { halign: 'right', fontStyle: 'bold', textColor: [16, 185, 129] } }
+  });
+
+  // Rodapé e Assinaturas
+  const finalY = Math.max(doc.lastAutoTable.finalY + 40, 200);
+  doc.setDrawColor(200, 200, 200);
+  doc.line(20, finalY, 90, finalY);
+  doc.line(120, finalY, 190, finalY);
+  
+  doc.setFontSize(8);
+  doc.setTextColor(100, 116, 139);
+  doc.text('RESPONSÁVEL PELA COLHEITA', 55, finalY + 6, { align: 'center' });
+  doc.text('RECEBIMENTO PACKING HOUSE', 155, finalY + 6, { align: 'center' });
+
+  // Assinatura PH se existir
+  if (sess.ph_signature_base64) {
+    doc.addImage(sess.ph_signature_base64, 'PNG', 130, finalY - 30, 50, 22);
+    doc.setFontSize(7);
+    doc.text(`Validado por: ${sess.ph_inspector_name || 'Inspetor'}`, 155, finalY - 4, { align: 'center' });
+  }
+
+  doc.save(`ordem-${sess.date}-${sess.parcels?.code || 'PH'}.pdf`);
+}
 
 
 function toggleSidebar() {
