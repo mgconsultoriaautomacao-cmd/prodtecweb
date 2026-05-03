@@ -292,6 +292,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
         <label class="field-label">Cliente / Comprador</label>
         <input id="bulkCustomer" placeholder="Nome do cliente">
       </div>
+      <div class="form-field">
+        <label class="field-label">Parcela (Opcional)</label>
+        <select id="bulkParcela">
+          <option value="">— Nenhuma Parcela —</option>
+        </select>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="form-field">
           <label class="field-label">Preço por Kg (R$)</label>
@@ -886,6 +892,11 @@ async function loadParcelas() {
     parcelas.forEach(p => sel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`));
     sel.onchange = updateVarietyFilter;
   }
+  const bSel = $('bulkParcela');
+  if(bSel) {
+    bSel.innerHTML = '<option value="">— Nenhuma Parcela —</option>';
+    parcelas.forEach(p => bSel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`));
+  }
 }
 
 let parcelLinks = [];
@@ -1411,11 +1422,21 @@ async function submitCarrao() {
   btn.disabled = true; btn.textContent = '⏳ Salvando...';
 
   try {
-    const savedSession = await pushCarrao({ session, workers: workersArr });
+    const savedList = await pushCarrao({ session, workers: workersArr });
+    showOrdemColheita(savedList);
     toast('✓ Carrões registrados!', 'ok');
     resetCForm();
   } catch(e) {
     if (!isOnline) {
+      const mockList = [];
+      for (let i = 0; i < cQty; i++) {
+        mockList.push({
+          session: { ...session, qty_carrocoes: 1, carrao_seq: 'OFFLINE' },
+          workers: workersArr
+        });
+      }
+      showOrdemColheita(mockList);
+
       await idbAdd({ type: 'carrao', data: { session: { ...session, synced: false }, workers: workersArr } });
       await updateSyncBadge();
       toast('📥 Salvo offline — sincronizará quando online', 'ok');
@@ -1429,74 +1450,77 @@ async function submitCarrao() {
 }
 
 // ── Ordem de Colheita PDF ──
-function showOrdemColheita({ session, workers }) {
-  const parcela = parcelas.find(p => p.id == session.parcel_id);
-  const variety = varieties.find(v => v.id == $('cVariety').value);
-  const parcelaCode = parcela?.code || '—';
-  const varietyName = variety?.name || '—';
-  const shiftLabel = session.shift === 'MANHA' ? 'Manhã' : 'Tarde';
-  const fruitIcon  = session.fruit_type === 'MELANCIA' ? '🍉 Melancia' : '🍈 Melão';
+function showOrdemColheita(list) {
+  if (!list || list.length === 0) return;
+
   const now = new Date();
   const dateStr = now.toLocaleDateString('pt-BR');
   const timeStr = now.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
 
-  const workerRows = workers.map(w =>
-    `<tr><td>${w.employee_name}</td><td style="text-align:right">Colhido</td></tr>`
-  ).join('');
+  let pagesHtml = '';
 
-  // Rastreabilidade Juliano solicitado: Semana Parcela DiaJuliano
-  const julCode = session.julian_lot || '—';
+  list.forEach((item, index) => {
+    const { session, workers } = item;
+    const parcela = parcelas.find(p => p.id == session.parcel_id);
+    const variety = varieties.find(v => v.id == session.variety_id);
+    const parcelaCode = parcela?.code || '—';
+    const varietyName = variety?.name || '—';
+    const shiftLabel = session.shift === 'MANHA' ? 'Manhã' : 'Tarde';
+    const fruitIcon  = session.fruit_type === 'MELANCIA' ? '🍉 Melancia' : '🍈 Melão';
+    const seqNum = session.carrao_seq || '—';
+
+    const workerRows = (workers || []).map(w =>
+      `<tr><td>${w.employee_name}</td><td style="text-align:right">Colhido</td></tr>`
+    ).join('');
+
+    const julCode = session.julian_lot || '—';
+    const pageBreak = index < list.length - 1 ? 'page-break-after: always;' : '';
+
+    pagesHtml += `
+      <div style="${pageBreak} padding:24px; font-family:Arial,sans-serif; color:#111;">
+        <div style="text-align:center;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:16px">
+          <h1 style="margin:0;font-size:22px">📋 Ordem de Colheita</h1>
+          <p style="margin:4px 0;font-size:12px;color:#555">${tenantName} — Emitida em ${dateStr} às ${timeStr}</p>
+        </div>
+        
+        <div style="text-align:center; margin-bottom: 16px;">
+          <div style="font-size:14px; font-weight:800; color:#555;">Nº DO CARROÇÃO</div>
+          <div style="font-size:36px; font-weight:900; color:#111;">${seqNum}</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+          <div style="background:#f5f5f5;border-radius:6px;padding:10px"><div style="font-size:10px;text-transform:uppercase;color:#777;font-weight:700;margin-bottom:4px">Fruta</div><div style="font-size:16px;font-weight:800">${fruitIcon}</div></div>
+          <div style="background:#f5f5f5;border-radius:6px;padding:10px"><div style="font-size:10px;text-transform:uppercase;color:#777;font-weight:700;margin-bottom:4px">Variedade</div><div style="font-size:16px;font-weight:800">${varietyName}</div></div>
+          <div style="background:#f5f5f5;border-radius:6px;padding:10px"><div style="font-size:10px;text-transform:uppercase;color:#777;font-weight:700;margin-bottom:4px">Parcela</div><div style="font-size:16px;font-weight:800">${parcelaCode}</div></div>
+          <div style="background:#f5f5f5;border-radius:6px;padding:10px"><div style="font-size:10px;text-transform:uppercase;color:#777;font-weight:700;margin-bottom:4px">Turno</div><div style="font-size:16px;font-weight:800">${shiftLabel}</div></div>
+          <div style="background:#f5f5f5;border-radius:6px;padding:10px"><div style="font-size:10px;text-transform:uppercase;color:#777;font-weight:700;margin-bottom:4px">Data</div><div style="font-size:16px;font-weight:800">${session.date.split('-').reverse().join('/')}</div></div>
+          <div style="background:#f5f5f5;border-radius:6px;padding:10px"><div style="font-size:10px;text-transform:uppercase;color:#777;font-weight:700;margin-bottom:4px">Qtd de Carrões</div><div style="font-size:16px;font-weight:800">1</div></div>
+        </div>
+        <div style="background:#111;color:#fff;text-align:center;padding:12px;border-radius:8px;margin:16px 0">
+          <div style="font-size:11px;color:#aaa;margin-bottom:4px">Código de Rastreabilidade Juliano</div>
+          <div style="font-size:28px;font-weight:900;letter-spacing:4px">${julCode}</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;margin-top:8px">
+          <thead><tr><th style="background:#111;color:#fff;padding:8px 10px;font-size:12px;text-align:left">Funcionário</th><th style="background:#111;color:#fff;padding:8px 10px;font-size:12px;text-align:right">Status</th></tr></thead>
+          <tbody>${workerRows}</tbody>
+        </table>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px;padding-top:16px;border-top:1px solid #ddd">
+          <div><div style="border-bottom:1px solid #111;height:50px;margin-top:24px"></div><div style="font-size:11px;color:#777;margin-top:6px;text-align:center">Assinatura: Colheita</div></div>
+          <div><div style="border-bottom:1px solid #111;height:50px;margin-top:24px"></div><div style="font-size:11px;color:#777;margin-top:6px;text-align:center">Assinatura: Packing House</div></div>
+        </div>
+      </div>
+    `;
+  });
 
   const html = `
     <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
     <title>Ordem de Colheita</title>
     <style>
-      body{font-family:Arial,sans-serif;margin:0;padding:24px;color:#111;font-size:14px}
-      .header{text-align:center;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:16px}
-      .header h1{margin:0;font-size:22px} .header p{margin:4px 0;font-size:12px;color:#555}
-      .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
-      .field{background:#f5f5f5;border-radius:6px;padding:10px}
-      .label{font-size:10px;text-transform:uppercase;color:#777;font-weight:700;margin-bottom:4px}
-      .val{font-size:16px;font-weight:800}
-      table{width:100%;border-collapse:collapse;margin-top:8px}
-      th{background:#111;color:#fff;padding:8px 10px;font-size:12px;text-align:left}
-      td{padding:8px 10px;border-bottom:1px solid #ddd;font-size:13px}
-      .total{background:#e8fce8;font-weight:800}
-      .code{background:#111;color:#fff;text-align:center;padding:12px;border-radius:8px;margin:16px 0}
-      .code .lbl{font-size:11px;color:#aaa;margin-bottom:4px}
-      .code .num{font-size:28px;font-weight:900;letter-spacing:4px}
-      .footer{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px;padding-top:16px;border-top:1px solid #ddd}
-      .sig-box{border-bottom:1px solid #111;height:50px;margin-top:24px}
-      .sig-label{font-size:11px;color:#777;margin-top:6px;text-align:center}
-      @media print{body{padding:12px} button{display:none!important}}
+      body{margin:0;padding:0;}
+      @media print{ button{display:none!important} }
     </style></head><body>
-    <div class="header">
-      <h1>📋 Ordem de Colheita</h1>
-      <p>${tenantName} — Emitida em ${dateStr} às ${timeStr}</p>
-    </div>
-    <div class="grid">
-      <div class="field"><div class="label">Fruta</div><div class="val">${fruitIcon}</div></div>
-      <div class="field"><div class="label">Variedade</div><div class="val">${varietyName}</div></div>
-      <div class="field"><div class="label">Parcela</div><div class="val">${parcelaCode}</div></div>
-      <div class="field"><div class="label">Turno</div><div class="val">${shiftLabel}</div></div>
-      <div class="field"><div class="label">Data</div><div class="val">${session.date}</div></div>
-      <div class="field"><div class="label">Qtd de Carrões</div><div class="val">${session.qty_carrocoes}</div></div>
-    </div>
-    <div class="code">
-      <div class="lbl">Código de Rastreabilidade Juliano</div>
-      <div class="num">${julCode || '—'}</div>
-    </div>
-    <table>
-      <thead><tr><th>Funcionário</th><th style="text-align:right">Status</th></tr></thead>
-      <tbody>
-        ${workerRows}
-      </tbody>
-    </table>
-    <div class="footer">
-      <div><div class="sig-box"></div><div class="sig-label">Assinatura: Colheita</div></div>
-      <div><div class="sig-box"></div><div class="sig-label">Assinatura: Packing House</div></div>
-    </div>
-    <div style="text-align:center;margin-top:16px">
+    ${pagesHtml}
+    <div style="text-align:center;margin-top:16px;margin-bottom:32px;">
       <button onclick="window.print()" style="padding:12px 32px;background:#111;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨 Imprimir / Salvar PDF</button>
     </div>
     </body></html>
@@ -1508,11 +1532,45 @@ function showOrdemColheita({ session, workers }) {
 }
 
 async function pushCarrao({ session, workers }) {
-  const { data: sess, error: e1 } = await sb.from('field_carrao_sessions').insert(session).select('id').single();
+  const { data: seqData } = await sb.from('field_carrao_sessions')
+    .select('carrao_seq')
+    .eq('tenant_id', session.tenant_id)
+    .order('carrao_seq', { ascending: false })
+    .limit(1);
+
+  let nextSeq = (seqData && seqData.length > 0 && seqData[0].carrao_seq) ? seqData[0].carrao_seq + 1 : 1;
+
+  const qty = session.qty_carrocoes;
+  const sessionsToInsert = [];
+  
+  for (let i = 0; i < qty; i++) {
+    sessionsToInsert.push({
+      ...session,
+      qty_carrocoes: 1, 
+      total_value: session.price_per_carrao, 
+      value_per_employee: session.price_per_carrao / session.employee_count,
+      carrao_seq: nextSeq + i
+    });
+  }
+
+  const { data: sessList, error: e1 } = await sb.from('field_carrao_sessions').insert(sessionsToInsert).select('*');
   if (e1) throw e1;
-  const rows = workers.map(w => ({ ...w, session_id: sess.id }));
-  const { error: e2 } = await sb.from('field_carrao_employees').insert(rows);
+
+  const empRows = [];
+  for (const sess of sessList) {
+    workers.forEach(w => {
+      empRows.push({
+        ...w,
+        session_id: sess.id,
+        value_received: session.price_per_carrao / session.employee_count
+      });
+    });
+  }
+
+  const { error: e2 } = await sb.from('field_carrao_employees').insert(empRows);
   if (e2) throw e2;
+  
+  return sessList.map(sess => ({ session: sess, workers: empRows.filter(r => r.session_id === sess.id) }));
 }
 
 function resetCForm() {
@@ -1680,10 +1738,12 @@ async function saveBulkSale() {
   const btn = $('btnSaveBulk');
   btn.disabled = true; btn.textContent = '⏳ Salvando...';
 
+  const parcelId = $('bulkParcela')?.value;
   const sale = {
     tenant_id: tenantId,
     date: new Date().toISOString().split('T')[0],
     customer_name: customer,
+    parcel_id: parcelId ? parseInt(parcelId) : null,
     weight_kg: parseFloat(totalWeight.toFixed(2)),
     total_value: parseFloat(totalValue.toFixed(2)),
     is_waste: false,
@@ -1711,6 +1771,7 @@ function resetBulkForm() {
   bulkWeights = [];
   $('bulkCustomer').value = '';
   $('bulkWeightInput').value = '';
+  if ($('bulkParcela')) $('bulkParcela').value = '';
   renderBulkWeights();
   updateBulkCalc();
   clearSig('sigBulkCanvas');
@@ -1767,7 +1828,7 @@ async function loadCHistory() {
         <div class="hist-top">
           <div>
             <div class="hist-name">${fruitIcon} ${s.qty_carrocoes} carrocão(ões) — ${shiftLabel}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.date}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.date} ${s.carrao_seq ? `(Seq: ${s.carrao_seq})` : ''}</div>
           </div>
           <div class="hist-time" style="text-align:right">
             <div style="font-size:17px;font-weight:900;color:var(--green)">${BRL(s.total_value)}</div>
@@ -1779,6 +1840,9 @@ async function loadCHistory() {
           <span class="pill pill-gray" style="font-size:10px">${emps || '—'}</span>
         </div>
         ${s.registered_by ? `<div style="font-size:11px;color:var(--muted);margin-top:6px">Registrado por: ${s.registered_by}</div>` : ''}
+        <div style="margin-top:8px;text-align:right">
+          <button class="btn btn-primary" style="padding:6px 12px;font-size:11px" onclick='showOrdemColheita([{session: ${JSON.stringify(s).replace(/'/g, "&#39;")}, workers: ${JSON.stringify(s.field_carrao_employees || []).replace(/'/g, "&#39;")}}])'>🖨 Imprimir</button>
+        </div>
       </div>
     `;
   }).join('');
