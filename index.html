@@ -1025,7 +1025,7 @@ async function refreshDash(){
   buildWeightDetail(packerScans);
 
   // Per parcela + Campo
-  const {data:sessions} = await sb.from('field_carrao_sessions').select('*').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
+  const {data:sessions} = await sb.from('field_carrao_sessions').select('*, varieties(name)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
   buildParcelStats(scans, sessions);
 
   // New field and varieties charts
@@ -1062,7 +1062,7 @@ function buildFieldManagementCharts(sessions, expeditions) {
   // 2. Variedades Colhidas (kg)
   const harvestVarMap = {};
   sessions.forEach(s => {
-    const v = s.variety_name || 'Desconhecida';
+    const v = (s.varieties && s.varieties.name) || s.variety_name || 'Desconhecida';
     harvestVarMap[v] = (harvestVarMap[v] || 0) + (s.qty_carrocoes * hWeight);
   });
   const varKeys = Object.keys(harvestVarMap).sort((a,b)=>harvestVarMap[b]-harvestVarMap[a]).slice(0,5);
@@ -1720,7 +1720,8 @@ async function saveBulk() {
   const isPaid=$('bulkPaid').value === 'true', isReceived=$('bulkReceived').value === 'true';
   
   if(!date || !w) return alert('Preencha pelo menos Data e Peso.');
-  const {error} = await sb.from('bulk_sales').insert([{
+  
+  const payload = {
     tenant_id: tenantId,
     date,
     parcel_id: pId || null,
@@ -1729,16 +1730,22 @@ async function saveBulk() {
     total_value: waste ? 0 : (parseFloat(v) || 0),
     customer_name: cust || null,
     invoice_num: inv || null,
-    is_waste: waste,
-    is_paid: isPaid,
-    is_received: isReceived
-  }]);
-  if(error) alert(error.message);
-  else { 
-    loadBulk(); 
-    ['bulkWeight', 'bulkValue', 'bulkCustomer', 'bulkInvoice'].forEach(id => $(id).value = '');
-    $('bulkIsWaste').checked = false;
+    is_waste: waste
+  };
+
+  const {error} = await sb.from('bulk_sales').insert([{...payload, is_paid: isPaid, is_received: isReceived}]);
+  
+  if(error) {
+    const {error: err2} = await sb.from('bulk_sales').insert([payload]);
+    if(err2) {
+      alert('Erro: ' + err2.message);
+      return;
+    }
   }
+
+  loadBulk(); 
+  ['bulkWeight', 'bulkValue', 'bulkCustomer', 'bulkInvoice'].forEach(id => $(id).value = '');
+  $('bulkIsWaste').checked = false;
 }
 
 async function delBulk(id) {
