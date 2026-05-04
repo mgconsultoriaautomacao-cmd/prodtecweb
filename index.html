@@ -221,6 +221,13 @@
       <div class="card"><div class="title">📊 Comparativo Período Atual vs Anterior</div><div class="ch"><canvas id="chartComparison"></canvas></div></div>
     </div>
     <div class="card"><div class="title">🏆 Ranking Detalhado</div><div id="collabDetailList" class="rgrid" style="margin-top:12px"></div></div>
+    
+    <h2 class="ptitle" style="margin-top:20px; border-top:1px solid var(--border); padding-top:20px">🚜 Gestão de Campo e Variedades</h2>
+    <div class="cgrid" style="grid-template-columns: 1fr 1fr 1fr">
+      <div class="card"><div class="title">🚜 Produtividade (Carroções)</div><div class="ch"><canvas id="chartFieldProd"></canvas></div></div>
+      <div class="card"><div class="title">🍉 Variedades Colhidas (kg)</div><div class="ch"><canvas id="chartVarietiesHarvest"></canvas></div></div>
+      <div class="card"><div class="title">⚖️ Colhido vs Expedido por Variedade</div><div class="ch"><canvas id="chartHarvestVsPacked"></canvas></div></div>
+    </div>
     <div id="parcelStatsCard" class="card" style="display:none">
       <div class="title">🚜 Produção por Parcela / Variedade</div>
       <div id="parcelStatsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:10px"></div>
@@ -296,7 +303,7 @@
               <th>Fruta</th>
               <th>Qtd Carrocões</th>
               <th>Colhedores</th>
-              <th>Ações</th>
+              <th>Relatório</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -311,7 +318,7 @@
     <div class="fbar">
       <div class="f"><label class="flabel">Início</label><input type="date" id="rankStart"/></div>
       <div class="f"><label class="flabel">Fim</label><input type="date" id="rankEnd"/></div>
-      <div class="f"><label class="flabel">Função</label><select id="rankRole"><option value="">Todos</option><option value="PACKER">Embalador</option><option value="STACKER">Empilhador</option></select></div>
+      <div class="f"><label class="flabel">Função</label><select id="rankRole"><option value="">Todos</option><option value="EMBALADOR">Embalador</option><option value="EMPILHADOR">Empilhador</option><option value="COLHEDOR">Colhedor</option><option value="TRATORISTA">Tratorista</option><option value="SUPERVISOR">Supervisor</option></select></div>
       <div class="f"><label class="flabel">Colaborador</label><select id="rankEmp"><option value="">Todos</option></select></div>
       <button onclick="refreshRanking()">🔍 Filtrar</button>
       <button class="sec" onclick="exportRankPDF()">📄 PDF</button>
@@ -326,7 +333,7 @@
     <div class="fbar">
       <div class="f"><label class="flabel">Início</label><input type="date" id="finStart"/></div>
       <div class="f"><label class="flabel">Fim</label><input type="date" id="finEnd"/></div>
-      <div class="f"><label class="flabel">Função</label><select id="finRole"><option value="">Todos</option><option value="PACKER">Embalador</option><option value="STACKER">Empilhador</option></select></div>
+      <div class="f"><label class="flabel">Função</label><select id="finRole"><option value="">Todos</option><option value="EMBALADOR">Embalador</option><option value="EMPILHADOR">Empilhador</option><option value="COLHEDOR">Colhedor</option><option value="TRATORISTA">Tratorista</option><option value="SUPERVISOR">Supervisor</option></select></div>
       <button onclick="refreshFin()">Gerar</button>
       <button class="sec" onclick="exportFinPDF()">📄 PDF Folha</button>
     </div>
@@ -403,7 +410,7 @@
     </div>
     <div class="card">
       <div class="title">📋 Histórico de Vendas / Refugo</div>
-      <table id="bulkTable"><thead><tr><th>Data</th><th>Parcela</th><th>Cliente/Destino</th><th>NF</th><th>Peso</th><th>Valor</th><th>Financeiro</th><th>Ações</th></tr></thead><tbody></tbody></table>
+      <table id="bulkTable"><thead><tr><th>Data</th><th>Parcela</th><th>Cliente/Destino</th><th>NF</th><th>Peso</th><th>Valor</th><th>Financeiro</th><th>Status</th></tr></thead><tbody></tbody></table>
     </div>
   </div>
 
@@ -466,11 +473,11 @@
         <div><label class="flabel">Nome</label><input id="empName"/></div>
         <div><label class="flabel">Função</label>
           <select id="empRole">
-            <option value="PACKER">Embalador</option>
-            <option value="STACKER">Empilhador</option>
-            <option value="MANAGER">Supervisor / Gerente</option>
-            <option value="COLHEDOR">Colhedor (Campo)</option>
+            <option value="EMBALADOR">Embalador(a)</option>
+            <option value="EMPILHADOR">Empilhador(a)</option>
+            <option value="COLHEDOR">Colhedor(a)</option>
             <option value="TRATORISTA">Tratorista</option>
+            <option value="SUPERVISOR">Supervisor(a)</option>
           </select>
         </div>
         <div><label class="flabel">WhatsApp</label><input id="empWhatsapp" placeholder="5511999999999"/></div>
@@ -554,7 +561,7 @@
         <div class="title">🚜 Parcelas</div>
         <div style="display:flex;gap:8px;margin-bottom:10px">
           <input id="parcelCode" placeholder="Código (ex: P1)" style="flex:1"/>
-          <input id="parcelPCode" placeholder="Cód. P (IDAR)" style="width:100px"/>
+          <input id="parcelPCode" placeholder="Cód. UP" style="width:100px"/>
           <button onclick="addParcel()" style="padding:9px 14px">+</button>
         </div>
         <div id="parcelList" class="card-list"></div>
@@ -613,11 +620,17 @@
         
         <div style="background:rgba(255,255,255,0.03); padding:15px; border-radius:10px; border:1px dashed var(--border); margin-bottom:15px">
           <div style="font-size:12px; font-weight:700; margin-bottom:10px; color:var(--blue)">📦 ADICIONAR ITENS (PALLETS/VARIEDADES)</div>
-          <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:10px;align-items:end;margin-bottom:10px;">
             <div><label class="flabel">Variedade</label><input id="itemVariedade" placeholder="Ex: Melão Amarelo"/></div>
             <div><label class="flabel">Lote/Julian</label><input id="itemLote" placeholder="Ex: 4021001"/></div>
             <div><label class="flabel">Calibre</label><input id="itemCalibre" placeholder="Ex: 6" type="number"/></div>
             <div><label class="flabel">Qtd. Pallets</label><input id="itemPallets" type="number" value="1"/></div>
+            <div style="width: 34px;"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr auto;gap:10px;align-items:end">
+            <div><label class="flabel">Tipo de Caixa</label><input id="itemTipoCaixa" placeholder="Ex: SAMBA"/></div>
+            <div><label class="flabel">Peso (kg)</label><input id="itemPesoCaixa" type="number" step="0.1" placeholder="Ex: 13"/></div>
+            <div><label class="flabel">Caixas / Pallet</label><input id="itemCaixasPallet" type="number" placeholder="Ex: 64"/></div>
             <button type="button" onclick="addRomaneioItem()" style="padding:9px 12px; background:var(--blue-dim); color:var(--blue); border:1px solid var(--blue)">+</button>
           </div>
           <div id="romaneioItemsList" style="margin-top:10px; display:flex; flex-direction:column; gap:6px"></div>
@@ -1014,6 +1027,79 @@ async function refreshDash(){
   // Per parcela + Campo
   const {data:sessions} = await sb.from('field_carrao_sessions').select('*').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
   buildParcelStats(scans, sessions);
+
+  // New field and varieties charts
+  const {data:expeditions}=await sb.from('expeditions').select('*').eq('tenant_id',tenantId).gte('created_at',toISO(s)).lte('created_at',toISO(e,'23:59:59'));
+  buildFieldManagementCharts(sessions, expeditions);
+}
+
+let _chartFieldProd, _chartVarietiesHarvest, _chartHarvestVsPacked;
+function buildFieldManagementCharts(sessions, expeditions) {
+  sessions = sessions || [];
+  expeditions = expeditions || [];
+  const hWeight = tenantConfig.harvest_carrao_weight_kg || 300;
+
+  // 1. Field Productivity (Carroções por data)
+  const prodByDate = {};
+  sessions.forEach(s => {
+    const d = s.date;
+    prodByDate[d] = (prodByDate[d] || 0) + (s.qty_carrocoes || 0);
+  });
+  const dates = Object.keys(prodByDate).sort();
+  const prodData = dates.map(d => prodByDate[d]);
+
+  if(_chartFieldProd) _chartFieldProd.destroy();
+  const ctxProd = document.getElementById('chartFieldProd').getContext('2d');
+  _chartFieldProd = new Chart(ctxProd, {
+    type: 'bar',
+    data: {
+      labels: dates.map(d => new Date(d+'T12:00:00').toLocaleDateString('pt-BR')),
+      datasets: [{ label: 'Carroções', data: prodData, backgroundColor: '#10b981' }]
+    },
+    options: { maintainAspectRatio: false }
+  });
+
+  // 2. Variedades Colhidas (kg)
+  const harvestVarMap = {};
+  sessions.forEach(s => {
+    const v = s.variety_name || 'Desconhecida';
+    harvestVarMap[v] = (harvestVarMap[v] || 0) + (s.qty_carrocoes * hWeight);
+  });
+  const varKeys = Object.keys(harvestVarMap).sort((a,b)=>harvestVarMap[b]-harvestVarMap[a]).slice(0,5);
+  const varData = varKeys.map(k => harvestVarMap[k]);
+
+  if(_chartVarietiesHarvest) _chartVarietiesHarvest.destroy();
+  const ctxVar = document.getElementById('chartVarietiesHarvest').getContext('2d');
+  _chartVarietiesHarvest = new Chart(ctxVar, {
+    type: 'pie',
+    data: {
+      labels: varKeys,
+      datasets: [{ data: varData, backgroundColor: ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6'] }]
+    },
+    options: { maintainAspectRatio: false }
+  });
+
+  // 3. Colhido vs Expedido por Variedade
+  const expVarMap = {};
+  expeditions.forEach(e => {
+    const v = e.variety_name || 'Desconhecida';
+    expVarMap[v] = (expVarMap[v] || 0) + (Number(e.quantity_kg) || 0);
+  });
+  const allVarKeys = Array.from(new Set([...Object.keys(harvestVarMap), ...Object.keys(expVarMap)]));
+  
+  if(_chartHarvestVsPacked) _chartHarvestVsPacked.destroy();
+  const ctxVs = document.getElementById('chartHarvestVsPacked').getContext('2d');
+  _chartHarvestVsPacked = new Chart(ctxVs, {
+    type: 'bar',
+    data: {
+      labels: allVarKeys.slice(0,5),
+      datasets: [
+        { label: 'Colhido (kg)', data: allVarKeys.slice(0,5).map(k=>harvestVarMap[k]||0), backgroundColor: '#10b981' },
+        { label: 'Expedido (kg)', data: allVarKeys.slice(0,5).map(k=>expVarMap[k]||0), backgroundColor: '#3b82f6' }
+      ]
+    },
+    options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+  });
 }
 
 async function buildParcelStats(scans, sessions){
@@ -1128,23 +1214,62 @@ let _rankScans=[];
 async function refreshRanking(){
   if(!sb||!tenantId)return;
   const s=$('rankStart').value,e=$('rankEnd').value,empId=$('rankEmp').value,role=$('rankRole').value;
+  
+  const eb={};
+
+  // 1. Production Scans (Packing House)
   let q=sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
   if(empId) q=q.eq('employee_id',empId);
-  if(role)  q=q.eq('role',role);
+  if(role && role !== 'COLHEDOR' && role !== 'TRATORISTA') q=q.eq('role',role);
+  
   const {data:scans}=await q.order('ts',{ascending:false});
   _rankScans=scans||[];
 
-  const eb={};
-  _rankScans.forEach(x=>{if(!eb[x.employee_name])eb[x.employee_name]={boxes:0,kg:0,role:x.role};eb[x.employee_name].boxes++;eb[x.employee_name].kg+=(x.weight_kg||0);});
+  _rankScans.forEach(x=>{
+    if(!eb[x.employee_name]) eb[x.employee_name]={boxes:0,kg:0,role:x.role};
+    eb[x.employee_name].boxes++;
+    eb[x.employee_name].kg+=(x.weight_kg||0);
+  });
+
+  // 2. Field Harvest (Campo)
+  if(!role || role === 'COLHEDOR' || role === 'TRATORISTA') {
+    const {data:sessions} = await sb.from('field_carrao_sessions')
+      .select('*, field_carrao_employees(employee_id, employee_name, value_received)')
+      .eq('tenant_id', tenantId)
+      .gte('date', s)
+      .lte('date', e);
+    
+    (sessions || []).forEach(sess => {
+      (sess.field_carrao_employees || []).forEach(ce => {
+        if(empId && ce.employee_id !== empId) return;
+        const name = ce.employee_name;
+        if(!eb[name]) eb[name]={boxes:0,kg:0,role:'COLHEDOR'};
+        // Tratando carroções como "boxes" para o ranking e convertendo para kg
+        eb[name].boxes += (sess.qty_carrocoes / Math.max(sess.employee_count, 1));
+        eb[name].kg += (sess.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300)) / Math.max(sess.employee_count, 1);
+      });
+    });
+  }
+
   const sorted=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes).slice(0,10);
   
   if(sorted.length === 0) {
     if(charts['chartRankCollab']) charts['chartRankCollab'].destroy();
+    $('rankGrid').innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center;grid-column:1/-1">Nenhum dado encontrado para o ranking.</div>';
     return;
   }
 
-  mkChart('chartRankCollab',{type:'bar',data:{labels:sorted.map(e=>e[0]),datasets:[{data:sorted.map(e=>e[1]),backgroundColor:COLS.slice(0,sorted.length),borderRadius:7,barThickness:28}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b'}},y:{grid:{display:false},ticks:{color:'#f8fafc',font:{weight:'600',size:12}}}},plugins:{legend:{display:false},tooltip:TOPTS}}});
-  buildRankingGrid(_rankScans,'rankGrid');
+  mkChart('chartRankCollab',{type:'bar',data:{labels:sorted.map(e=>e[0]),datasets:[{data:sorted.map(e=>e[1].boxes),backgroundColor:COLS.slice(0,sorted.length),borderRadius:7,barThickness:28}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b'}},y:{grid:{display:false},ticks:{color:'#f8fafc',font:{weight:'600',size:12}}}},plugins:{legend:{display:false},tooltip:TOPTS}}});
+  
+  // Custom build ranking grid to support merged data format
+  $('rankGrid').innerHTML=sorted.map(([name,d],i)=>`
+    <div class="rcard">
+      <div class="ravatar">${name.charAt(0)}</div>
+      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div><div style="font-size:11px;color:var(--muted)">${d.kg.toFixed(1)} kg</div></div>
+      <div style="text-align:right"><div style="font-size:16px;font-weight:800;color:var(--green)">${d.boxes.toFixed(1)}</div><div style="font-size:10px;color:var(--muted)">cx/carr</div></div>
+      <div style="font-size:18px;width:26px;text-align:center">${i<3?MEDALS[i]:'#'+(i+1)}</div>
+    </div>
+  `).join('');
 }
 
 // ══════════════════════════════════════
@@ -1524,7 +1649,7 @@ async function loadFieldSessions(s, e, pFilter) {
     <tr>
       <td>${new Date(sess.date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
       <td><span class="badge ${sess.shift === 'MANHA' ? 'active' : 'packer'}">${sess.shift === 'MANHA' ? '🌅 Manhã' : '🌇 Tarde'}</span></td>
-      <td><b>${sess.parcels?.code || '—'}</b><br><small>IDAR: ${sess.parcels?.p_code || '—'}</small></td>
+      <td><b>${sess.parcels?.code || '—'}</b><br><small>UP: ${sess.parcels?.p_code || '—'}</small></td>
       <td>
         ${sess.fruit_type === 'MELAO' ? '🍈 Melão' : '🍉 Melancia'}<br>
         <small style="color:var(--blue)">${sess.variety_name}</small><br>
@@ -1850,7 +1975,7 @@ async function loadParcels() {
       <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
         <div>
           <span style="font-weight:700;color:var(--blue);margin-right:8px">${p.code}</span>
-          <span style="font-size:11px;color:var(--muted)">IDAR: ${p.p_code || '—'}</span>
+          <span style="font-size:11px;color:var(--muted)">UP: ${p.p_code || '—'}</span>
         </div>
         <div>
           <button class="sec" style="padding:3px 8px;margin-right:4px" onclick="window.edit_parcel('${p.id}','${p.code}','${p.p_code||''}')">✏️</button>
@@ -1904,7 +2029,7 @@ async function addParcel() {
 }
 
 window.edit_parcel = async(id, code, pCode) => {
-  const nCode = prompt('Novo Código da Parcela:', code), nPCode = prompt('Novo Código P (IDAR):', pCode);
+  const nCode = prompt('Novo Código da Parcela:', code), nPCode = prompt('Novo Código UP:', pCode);
   if(nCode !== null) {
     const {error} = await sb.from('parcels').update({code: nCode, p_code: nPCode}).eq('id', id);
     if(error) alert(error.message);
@@ -2059,7 +2184,7 @@ async function loadAdminData() {
   // Global Users Table
   $('globalUsersTable').querySelector('tbody').innerHTML = (users||[]).map(u => `
     <tr>
-      <td><b>${u.user_id}</b> <br/> <small style="color:var(--muted)">WhatsApp: ${u.whatsapp||'—'}</small></td>
+      <td><b>${u.user_id || u.email || '—'}</b> <br/> <small style="color:var(--muted)">WhatsApp: ${u.whatsapp||'—'}</small></td>
       <td>${u.tenants?.name || '—'}</td>
       <td><span class="badge packer">${u.role}</span></td>
       <td><button class="danger" onclick="unlinkUser('${u.id}')">Remover</button></td>
@@ -2237,150 +2362,153 @@ function exportHarvestOrderPDF(sid) {
   const emps = _massEmployees.filter(e => e.session_id === sid);
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const W = 210, mg = 10;
-  const dark = [15, 23, 42];
-  const mid  = [100, 116, 139];
-  const black = [0, 0, 0];
+  const mg = 10;
+  
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.3);
 
-  // ── CABEÇALHO ───────────────────────────────────────────────────────────
-  // Borda geral
-  doc.setDrawColor(...dark);
-  doc.setLineWidth(0.5);
-  doc.rect(mg, 8, W - mg*2, 278);
+  let y = 10;
+  const h1 = 20;
 
-  // Linha logo / título
-  doc.setFillColor(...dark);
-  doc.rect(mg, 8, W - mg*2, 18, 'F');
+  // ── CABEÇALHO SUPERIOR ──────────────────────────────────────────────────
+  doc.rect(mg, y, 190, h1);
+  doc.line(mg + 55, y, mg + 55, y + h1);
+  doc.line(mg + 125, y, mg + 125, y + h1);
 
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-  doc.text('Bom Jesus', mg + 4, 20);
-  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
-  doc.text('AGRÍCOLA', mg + 4, 24);
+  // Box 1: Elaborado / Avaliado
+  doc.setFontSize(6); doc.setFont('helvetica', 'bold');
+  doc.text('ELABORADO E EMITIDO POR: RC', mg + 2, y + 4);
+  doc.text('AVALIADO POR: JMLL', mg + 2, y + 8);
+  doc.text('APROVADO POR: JMLL', mg + 2, y + 12);
+  doc.text('FREQUÊNCIA: POR CARROÇÃO COLHIDO', mg + 2, y + 16);
+  doc.text('INDIVIDUAL', mg + 14, y + 19);
 
-  // Caixa CONTROLE DE PRODUÇÃO (direita)
-  const cpX = W - mg - 48;
-  doc.setFillColor(240, 240, 240);
-  doc.rect(cpX, 8, 48, 18, 'F');
-  doc.setDrawColor(...dark); doc.setLineWidth(0.3);
-  doc.rect(cpX, 8, 48, 18);
-  doc.setTextColor(...dark);
-  doc.setFontSize(7); doc.setFont('helvetica', 'bold');
-  doc.text('CONTROLE DE PRODUÇÃO', cpX + 24, 15, { align: 'center' });
-  doc.setFontSize(14);
-  doc.text(String(s.julian_lot || s.id?.toString().slice(-5) || '—'), cpX + 24, 23, { align: 'center' });
+  // Box 2: Logo Bom Jesus
+  doc.setFontSize(22); doc.setFont('helvetica', 'bold');
+  doc.text('Bom Jesus', mg + 62, y + 11);
+  doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+  doc.text('AGRÍCOLA', mg + 82, y + 16);
 
-  // Títulos centrais
-  doc.setTextColor(...dark);
+  // Box 3: Info Documento
+  doc.setFontSize(5); doc.setFont('helvetica', 'normal');
+  doc.text('DEPARTAMENTO: CAMPO', mg + 127, y + 4);
+  doc.text('NOME DO DOC: CONTROLE DE CARROÇÃO - PACKING HOUSE', mg + 127, y + 8);
+  doc.text('EMISSÃO: 01/06/2012 - U. REVISÃO: 05-05-2025 - MOD. E APROVAÇÃO: 02/05/2019', mg + 127, y + 12);
+  doc.text('PAG: 01 DE 01     COD: OC05     REVISÃO: ANUAL     VERSÃO: 12', mg + 127, y + 16);
+
+  y += h1;
+
+  // ── TÍTULO CENTRAL ──────────────────────────────────────────────────────
+  const h2 = 12;
+  doc.rect(mg, y, 190, h2);
   doc.setFontSize(10); doc.setFont('helvetica', 'bold');
-  doc.text('ORDEM DE COLHEITA', 105, 15, { align: 'center' });
-  doc.setFontSize(8); doc.setFont('helvetica', 'normal');
-  doc.text('CONTROLE DE CARROÇÃO / PACKING HOUSE', 105, 21, { align: 'center' });
+  doc.text('ORDEM DE COLHEITA', 105, y + 5, { align: 'center' });
+  doc.setFontSize(9);
+  doc.text('CONTROLE DE CARROÇÃO / PACKING HOUSE', 105, y + 10, { align: 'center' });
+  y += h2;
 
-  // ── LINHA DIVISÓRIA ───────────────────────────────────────────────────
-  let y = 28;
-  const drawLine = (yy) => { doc.setDrawColor(...dark); doc.setLineWidth(0.3); doc.line(mg, yy, W - mg, yy); };
-  const drawVLine = (x, y1, y2) => { doc.setDrawColor(...dark); doc.setLineWidth(0.3); doc.line(x, y1, x, y2); };
+  // ── LINHA: EMPRESA E CONTROLE DE PRODUÇÃO ───────────────────────────────
+  const h3 = 14;
+  doc.rect(mg, y, 190, h3);
+  doc.line(mg + 130, y, mg + 130, y + h3);
+  
+  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+  doc.text('EMPRESA:', mg + 2, y + 10);
+  doc.setFontSize(11); doc.setFont('helvetica', 'normal');
+  doc.text(tenantName.toUpperCase(), mg + 20, y + 9);
+  doc.line(mg + 18, y + 10, mg + 120, y + 10); // Linha sublinhada
 
-  // ── EMPRESA / Nº CARRÃO ──────────────────────────────────────────────
-  drawLine(y);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
-  doc.text('EMPRESA:', mg + 2, y + 4);
-  doc.setFontSize(10); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
-  doc.text(tenantName.toUpperCase(), mg + 22, y + 4);
+  doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+  doc.text('CONTROLE DE PRODUÇÃO', 165, y + 5, { align: 'center' });
+  doc.setFontSize(14);
+  doc.text(String(s.julian_lot || s.id?.toString().slice(-5) || '—'), 165, y + 11, { align: 'center' });
+  y += h3;
 
-  drawVLine(cpX, y, y + 12);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
-  doc.text('Nº DO CARRÃO:', cpX + 2, y + 4);
-  doc.setFontSize(14); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
-  doc.text(String(s.qty_carrocoes || '—'), cpX + 24, y + 10, { align: 'center' });
-  y += 12;
+  // ── LINHA: DATA E Nº DO CARROÇÃO ────────────────────────────────────────
+  const h4 = 14;
+  doc.rect(mg, y, 190, h4);
+  doc.line(mg + 130, y, mg + 130, y + h4);
+  
+  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+  doc.text('DATA DA COLHEITA\nREALIZADA:', mg + 2, y + 5);
+  doc.setFontSize(12);
+  
+  // Tratar a data para o formato escrito no traço
+  const dObj = new Date(s.date + 'T12:00:00');
+  const dia = ('0' + dObj.getDate()).slice(-2);
+  const mes = ('0' + (dObj.getMonth() + 1)).slice(-2);
+  const ano = dObj.getFullYear();
+  doc.text(`${dia}    /   ${mes}    /  ${ano}`, mg + 45, y + 10);
+  doc.line(mg + 35, y + 11, mg + 120, y + 11);
 
-  // ── DATA / Nº UP ──────────────────────────────────────────────────────
-  drawLine(y);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
-  doc.text('DATA DA COLHEITA REALIZADA:', mg + 2, y + 4);
-  doc.setFontSize(11); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
-  doc.text(new Date(s.date + 'T12:00:00').toLocaleDateString('pt-BR'), mg + 55, y + 4);
+  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+  doc.text('Nº DO CARROÇÃO', mg + 132, y + 4);
+  doc.setFontSize(14);
+  doc.text(String(s.qty_carrocoes || '—'), 165, y + 11, { align: 'center' });
+  doc.line(mg + 132, y + 12, mg + 188, y + 12);
+  y += h4;
 
-  drawVLine(cpX, y, y + 12);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
-  doc.text('Nº da UP:', cpX + 2, y + 4);
-  doc.setFontSize(10); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
-  doc.text(s.parcels?.p_code || '—', cpX + 24, y + 10, { align: 'center' });
-  y += 12;
-
-  // ── PARCELA ────────────────────────────────────────────────────────────
-  drawLine(y);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  // ── LINHA: PARCELA E Nº DA UP ───────────────────────────────────────────
+  const h5 = 14;
+  doc.rect(mg, y, 190, h5);
+  doc.line(mg + 130, y, mg + 130, y + h5);
+  
+  doc.setFontSize(7); doc.setFont('helvetica', 'bold');
   doc.text('PARCELA:', mg + 2, y + 4);
-  doc.setFontSize(14); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
-  doc.text(s.parcels?.code || '—', mg + 22, y + 10);
-  y += 12;
+  doc.setFontSize(14); doc.setFont('helvetica', 'normal');
+  doc.text(s.parcels?.code || '—', mg + 10, y + 11);
+  
+  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+  doc.text('Nº da UP:', mg + 132, y + 4);
+  doc.setFontSize(12);
+  doc.text(s.parcels?.p_code || '—', 165, y + 11, { align: 'center' });
+  doc.line(mg + 132, y + 12, mg + 188, y + 12);
+  y += h5;
 
-  // ── VARIEDADE / CORTE / TRATORISTA / RESP. EMBALAGEM ──────────────────
-  drawLine(y);
-  const midX = mg + 45, midX2 = W/2, midX3 = W/2 + 40;
-  drawVLine(midX, y, y + 14);
-  drawVLine(midX2, y, y + 14);
-  drawVLine(midX3, y, y + 14);
-
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
+  // ── LINHA: VARIEDADE, CORTE E TRATORISTA ────────────────────────────────
+  const h6 = 14;
+  doc.rect(mg, y, 190, h6);
+  doc.line(mg + 65, y, mg + 65, y + h6);
+  doc.line(mg + 130, y, mg + 130, y + h6);
+  
+  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
   doc.text('VARIEDADE:', mg + 2, y + 4);
-  doc.text('CORTE:', midX + 2, y + 4);
-  doc.text('TRATORISTA:', midX2 + 2, y + 4);
-  doc.text('RESP. PELA EMBALAGEM:', midX3 + 2, y + 4);
+  doc.setFontSize(12);
+  doc.text(s.variety_name || '—', mg + 5, y + 11);
 
-  doc.setFontSize(11); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
-  doc.text(s.variety_name || '—', mg + 2, y + 11);
-  doc.text(s.shift === 'MANHA' ? '1º' : '2º', midX + 2, y + 11);
-  doc.text(s.tractor_driver || '—', midX2 + 2, y + 11);
-  // Assinatura PH na área de responsável embalagem (se existir)
+  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+  doc.text('CORTE:', mg + 67, y + 4);
+  doc.setFontSize(12);
+  doc.text(s.shift === 'MANHA' ? '1º' : '2º', mg + 85, y + 11);
+
+  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+  doc.text('TRATORISTA:', mg + 132, y + 4);
+  doc.setFontSize(12);
+  doc.text(s.tractor_driver || '—', mg + 135, y + 11);
+  y += h6;
+
+  // ── LINHA: RESPONSÁVEL COLHEITA E RESPONSÁVEL EMBALAGEM ─────────────────
+  const h7 = 16;
+  doc.rect(mg, y, 190, h7);
+  doc.line(mg + 130, y, mg + 130, y + h7);
+
+  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+  doc.text('RESPONSÁVEL PELA COLHEITA', mg + 2, y + 4);
+  const supervisor = emps[0]?.employee_name || '—';
+  doc.setFontSize(12);
+  doc.text(supervisor, mg + 30, y + 13);
+
+  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+  doc.text('RESPONSÁVEL PELA EMBALAGEM', mg + 132, y + 4);
   if (s.ph_signature_base64) {
     try {
       const sig = s.ph_signature_base64.replace(/^data:image\/\w+;base64,/, '');
-      doc.addImage(sig, 'PNG', midX3 + 2, y + 2, 25, 10);
+      doc.addImage(sig, 'PNG', mg + 140, y + 5, 40, 10);
     } catch(e) {}
   }
-  y += 14;
 
-  // ── RESPONSÁVEL COLHEITA ───────────────────────────────────────────────
-  drawLine(y);
-  const supervisor = emps[0]?.employee_name || '—';
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
-  doc.text('RESPONSÁVEL PELA COLHEITA:', mg + 2, y + 4);
-  doc.setFontSize(11); doc.setTextColor(...black); doc.setFont('helvetica', 'bold');
-  doc.text(supervisor, mg + 52, y + 4);
-  y += 10;
-
-  // ── LISTA DE COLHEDORES (tabela) ───────────────────────────────────────
-  drawLine(y);
-  doc.setFontSize(8); doc.setTextColor(...dark); doc.setFont('helvetica', 'bold');
-  doc.text('COLHEDORES PRESENTES NO TURNO', mg + 2, y + 6);
-  y += 8;
-
-  doc.autoTable({
-    startY: y,
-    margin: { left: mg + 1, right: mg + 1 },
-    head: [['#', 'Nome do Colhedor', 'Confirm.']],
-    body: emps.map((e, i) => [String(i + 1).padStart(2, '0'), e.employee_name, '✓']),
-    theme: 'grid',
-    headStyles: { fillColor: dark, textColor: [255,255,255], fontSize: 8, cellPadding: 2 },
-    styles: { fontSize: 9, cellPadding: 2.5 },
-    columnStyles: { 0: { cellWidth: 12, halign: 'center' }, 2: { cellWidth: 18, halign: 'center', textColor: [16,185,129], fontStyle: 'bold' } }
-  });
-
-  // ── CARIMBO ─────────────────────────────────────────────────────────────
-  const stampY = doc.lastAutoTable.finalY + 6;
-  drawLine(stampY);
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
-  doc.text('CARIMBO / LOTE JULIAN:', mg + 2, stampY + 5);
-  doc.setFontSize(22); doc.setTextColor(...dark); doc.setFont('helvetica', 'bold');
-  doc.text(s.julian_lot || String(s.id || '—'), 105, stampY + 12, { align: 'center' });
-
-  // ── RODAPÉ ──────────────────────────────────────────────────────────────
-  doc.setFontSize(7); doc.setTextColor(...mid); doc.setFont('helvetica', 'normal');
-  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')} | Sistema ProdTech`, 105, 284, { align: 'center' });
+  // Se o documento precisar de múltiplas ordens na mesma página, y seria atualizado aqui
+  // y += h7 + 10;
 
   doc.save(`ordem-colheita-${s.date}-${s.parcels?.code || 'P'}.pdf`);
 }
@@ -2700,31 +2828,47 @@ function addRomaneioItem() {
   const v = $('itemVariedade').value;
   const l = $('itemLote').value;
   const c = $('itemCalibre').value;
-  const p = parseInt($('itemPallets').value);
+  const p = parseInt($('itemPallets').value) || 1;
+  const tc = $('itemTipoCaixa').value || '';
+  const pc = parseFloat($('itemPesoCaixa').value) || '';
+  const cp = parseInt($('itemCaixasPallet').value) || '';
 
   if(!v || !l) { alert('Variedade e Lote são obrigatórios'); return; }
   
-  _romaneioItems.push({ variedade: v, lote: l, calibre: c, pallets: p });
+  _romaneioItems.push({ variedade: v, lote: l, calibre: c, pallets: p, tipo_caixa: tc, peso_caixa: pc, caixas_pallet: cp });
   
   $('itemVariedade').value = '';
   $('itemLote').value = '';
   $('itemCalibre').value = '';
   $('itemPallets').value = '1';
+  $('itemTipoCaixa').value = '';
+  $('itemPesoCaixa').value = '';
+  $('itemCaixasPallet').value = '';
   
   renderRomaneioItems();
 }
 
 function renderRomaneioItems() {
   const el = $('romaneioItemsList');
-  el.innerHTML = _romaneioItems.map((it, idx) => `
+  el.innerHTML = _romaneioItems.map((it, idx) => {
+    let cxInfo = '';
+    if(it.tipo_caixa || it.peso_caixa || it.caixas_pallet) {
+      cxInfo = `<div style="grid-column: 1 / -1; font-size:11px; color:var(--muted); margin-top:4px">
+        ${it.tipo_caixa ? `Caixa: ${it.tipo_caixa} | ` : ''}
+        ${it.peso_caixa ? `Peso: ${it.peso_caixa}kg | ` : ''}
+        ${it.caixas_pallet ? `${it.caixas_pallet} cx/pallet` : ''}
+      </div>`;
+    }
+    return `
     <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap:10px; background:rgba(0,0,0,0.2); padding:8px 12px; border-radius:8px; align-items:center; font-size:13px">
       <div><b>${it.variedade}</b></div>
       <div style="color:var(--muted2)">Lote: ${it.lote}</div>
       <div style="color:var(--blue)">Cal: ${it.calibre || '—'}</div>
       <div>${it.pallets} Pallets</div>
       <button type="button" onclick="_romaneioItems.splice(${idx},1); renderRomaneioItems();" style="background:none; border:none; color:var(--red); font-size:18px; cursor:pointer">×</button>
+      ${cxInfo}
     </div>
-  `).join('');
+  `}).join('');
 }
 
 async function loadRomaneios() {
@@ -2755,7 +2899,7 @@ async function loadRomaneios() {
         <td><span class="badge packer">${r.lote}</span></td>
         <td>${r.fazenda}</td>
         <td style="text-align:right">
-          <button class="sec" onclick="printRomaneioLabel('${r.id}')" title="Gerar Etiqueta 35x60">🏷️ Etiqueta</button>
+          <button class="sec" onclick="printRomaneioLabel('${r.id}', \`${r.variedade}\`, \`${r.fazenda}\`, '${r.lote}', '${r.quantidade_pallets}', \`${r.tipo_caixa||''}\`, '${r.peso_caixa||''}', '${r.caixas_pallet||''}', '${r.data_expedicao}')" title="Gerar Etiqueta 35x60">🏷️ Etiqueta</button>
         </td>
       </tr>
     `);
@@ -2784,6 +2928,9 @@ async function saveRomaneio() {
     lote: it.lote,
     calibre: it.calibre,
     quantidade_pallets: it.pallets,
+    tipo_caixa: it.tipo_caixa,
+    peso_caixa: it.peso_caixa,
+    caixas_pallet: it.caixas_pallet,
     total_quilos: idx === 0 ? total_kg : 0 // Coloca o peso total no primeiro registro para não duplicar no financeiro
   }));
 
@@ -2802,19 +2949,65 @@ async function saveRomaneio() {
   }
 }
 
-function printRomaneioLabel(id) {
+function printRomaneioLabel(id, variedade, fazenda, lote, pallets, tipoCaixa, pesoCaixa, caixasPallet, dataExp) {
   var traceUrl = "https://copifrutas-trace.vercel.app/info?id=" + id;
   var printWindow = window.open('', '_blank', 'width=500,height=400');
+  
+  // Trata os valores da nova interface
+  var varName = variedade ? variedade.toUpperCase() : 'MELÃO AMARELO';
+  var caixaName = tipoCaixa ? 'CAIXA ' + tipoCaixa.toUpperCase() : 'CAIXA SAMBA';
+  var pesoStr = pesoCaixa ? pesoCaixa + 'kg' : '13kg';
+  var dataStr = dataExp ? new Date(dataExp + 'T12:00:00').toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
+  var origemStr = fazenda ? fazenda.toUpperCase() : 'FAZENDA COPI';
+  var loteStr = lote || id.toString().slice(-6).toUpperCase();
+  var trackCode = "ASXQY4F" + id.toString().slice(-4).toUpperCase();
+  
+  // Total de caixas = pallets * caixas por pallet
+  var totalCaixasStr = "";
+  if(pallets && caixasPallet) {
+    var total = parseInt(pallets) * parseInt(caixasPallet);
+    totalCaixasStr = "QTD TOTAL CAIXAS: " + total + " (" + pallets + " pallets x " + caixasPallet + ")<br>";
+  }
+
   var html = "<html><head><title>Etiqueta Romaneio 35x60</title>" +
              "<script src='https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js'><\/script>" +
-             "<style>@page { size: 60mm 35mm; margin: 0; } body { font-family: sans-serif; margin: 0; padding: 3mm; width: 60mm; height: 35mm; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; overflow: hidden; } .info { width: 34mm; font-size: 7.5pt; line-height: 1.3; color: #000; } .info b { font-size: 9pt; display: block; border-bottom: 0.5pt solid #000; margin-bottom: 1.5mm; padding-bottom: 0.5mm; } #qrcode { width: 22mm; height: 22mm; flex-shrink: 0; } #qrcode img { width: 100%; height: 100%; }</style>" +
-             "</head><body><div class='info'><b>COPI FRUTAS</b>" +
-             "ID: #" + id.toString().slice(-6).toUpperCase() + "<br>" +
-             "Fazenda: FAZENDA COPI<br>Variedade: MELÃO AMARELO<br>" +
-             "Data: " + new Date().toLocaleDateString('pt-BR') + "</div>" +
-             "<div id='qrcode'></div>" +
+             "<style>" +
+             "@page { size: 60mm 35mm; margin: 0; } " +
+             "body { font-family: 'Helvetica', 'Arial', sans-serif; margin: 0; padding: 2mm; width: 60mm; height: 35mm; box-sizing: border-box; display: flex; overflow: hidden; background: #fff; } " +
+             ".content { display: flex; flex-direction: column; width: 100%; height: 100%; } " +
+             ".header { text-align: center; font-size: 8.5pt; font-weight: bold; margin-bottom: 1.5mm; letter-spacing: 0.5px; } " +
+             ".sub-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1.5mm; } " +
+             ".caixa { font-size: 8pt; font-weight: bold; } " +
+             ".peso { font-size: 14pt; font-weight: bold; } " +
+             ".main-row { display: flex; justify-content: space-between; flex-grow: 1; } " +
+             ".info { font-size: 5pt; line-height: 1.35; flex-grow: 1; padding-right: 2mm; display: flex; flex-direction: column; justify-content: center; font-weight: bold; } " +
+             ".qr-container { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 15mm; } " +
+             "#qrcode { width: 14mm; height: 14mm; flex-shrink: 0; } " +
+             "#qrcode img { width: 100%; height: 100%; } " +
+             ".qr-text { font-size: 4pt; font-weight: bold; writing-mode: vertical-rl; transform: rotate(180deg); margin-left: 1mm; } " +
+             ".qr-row { display: flex; align-items: center; } " +
+             "</style>" +
+             "</head><body><div class='content'>" +
+             "<div class='header'>" + varName + "</div>" +
+             "<div class='sub-header'><div class='caixa'>" + caixaName + "</div><div class='peso'>" + pesoStr + "</div></div>" +
+             "<div class='main-row'>" +
+             "<div class='info'>" +
+             totalCaixasStr +
+             "PREVISÃO DE ENTREGA: " + dataStr + "<br>" +
+             "CÓDIGO DE RASTREAMENTO: " + trackCode + "<br>" +
+             "RASTREIE EM: CONECTA.PARIPASSU.COM.BR<br>" +
+             "ORIGEM: BRASIL<br>" +
+             "LOTE: " + loteStr + "<br>" +
+             "ZONA DE PRODUÇÃO: " + origemStr +
+             "</div>" +
+             "<div class='qr-row'>" +
+             "<div class='qr-container'><div id='qrcode'></div></div>" +
+             "<div class='qr-text'>BY PARIPASSU</div>" +
+             "</div>" +
+             "</div>" +
+             "</div>" +
              "<script>" +
-             "new QRCode(document.getElementById('qrcode'), { text: '" + traceUrl + "', width: 100, height: 100, correctLevel: QRCode.CorrectLevel.H });" +
+             "new QRCode(document.getElementById('qrcode'), { text: '" + traceUrl + "', width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M });" +
              "setTimeout(function(){ window.print(); window.close(); }, 800);" +
              "<\/script></body></html>";
   printWindow.document.write(html);

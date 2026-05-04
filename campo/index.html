@@ -910,22 +910,28 @@ async function loadParcelLinks() {
 function updateVarietyFilter() {
   const pId = $('cParcela').value;
   const vSel = $('cVariety');
+  
   if (!vSel) return;
   
   if (!pId) {
     vSel.innerHTML = '<option value="">— Variedade —</option>';
     varieties.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
+    renderCFruitList(fruits);
     return;
   }
 
   const validVIds = parcelLinks.filter(l => l.parcel_id == pId).map(l => l.variety_id);
-  const filtered = varieties.filter(v => validVIds.includes(v.id));
+  const filteredVars = varieties.filter(v => validVIds.includes(v.id));
+  const validFruitIds = [...new Set(filteredVars.map(v => v.fruit_id))];
+  const filteredFruits = fruits.filter(f => validFruitIds.includes(f.id));
 
   vSel.innerHTML = '<option value="">— Variedade —</option>';
-  if (filtered.length === 0) {
+  if (filteredVars.length === 0) {
     varieties.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
+    renderCFruitList(fruits);
   } else {
-    filtered.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
+    filteredVars.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
+    renderCFruitList(filteredFruits);
   }
 }
 
@@ -942,7 +948,7 @@ async function loadFruits() {
 let varieties = [];
 async function loadVarieties() {
   const { data } = await sb.from('varieties')
-    .select('id, name, track_code')
+    .select('id, name, track_code, fruit_id')
     .eq('tenant_id', tenantId)
     .eq('active', true)
     .order('name');
@@ -1267,18 +1273,19 @@ function initCarraoForm() {
   }
 }
 
-function renderCFruitList() {
+function renderCFruitList(list) {
+  list = list || fruits;
   const el = $('cFruitList');
   if (!el) return;
-  if (!fruits.length) { el.innerHTML = '<div class="empty">Nenhuma fruta encontrada</div>'; return; }
-  el.innerHTML = fruits.map((f, i) => `
+  if (!list.length) { el.innerHTML = '<div class="empty">Nenhuma fruta encontrada</div>'; return; }
+  el.innerHTML = list.map((f, i) => `
     <div class="toggle-opt ${i===0?'on':''}" data-id="${f.id}" onclick="setFruit('${f.id}')">
       <span class="icon">${f.name.toLowerCase().includes('melancia')?'🍉':'🍈'}</span>
       ${f.name}
       <div class="price">R$ ${f.value_per_carrao || 0} / carrocão</div>
     </div>
   `).join('');
-  if (fruits.length > 0) setFruit(fruits[0].id);
+  if (list.length > 0) setFruit(list[0].id);
 }
 
 function renderCEmpList(list) {
