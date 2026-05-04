@@ -1539,25 +1539,27 @@ function showOrdemColheita(list) {
 }
 
 async function pushCarrao({ session, workers }) {
-  const { data: seqData } = await sb.from('field_carrao_sessions')
+  const { data: seqData, error: seqErr } = await sb.from('field_carrao_sessions')
     .select('carrao_seq')
     .eq('tenant_id', session.tenant_id)
     .order('carrao_seq', { ascending: false })
     .limit(1);
 
   let nextSeq = (seqData && seqData.length > 0 && seqData[0].carrao_seq) ? seqData[0].carrao_seq + 1 : 1;
+  const hasSeq = !seqErr;
 
   const qty = session.qty_carrocoes;
   const sessionsToInsert = [];
   
   for (let i = 0; i < qty; i++) {
-    sessionsToInsert.push({
+    const sObj = {
       ...session,
       qty_carrocoes: 1, 
       total_value: session.price_per_carrao, 
-      value_per_employee: session.price_per_carrao / session.employee_count,
-      carrao_seq: nextSeq + i
-    });
+      value_per_employee: session.price_per_carrao / session.employee_count
+    };
+    if (hasSeq) sObj.carrao_seq = nextSeq + i;
+    sessionsToInsert.push(sObj);
   }
 
   const { data: sessList, error: e1 } = await sb.from('field_carrao_sessions').insert(sessionsToInsert).select('*');
