@@ -637,7 +637,7 @@
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;align-items:end">
-          <div><label class="flabel">Total Quilos (Líquido)</label><input id="romKg" type="number" step="0.01" placeholder="0.00" required/></div>
+          <div><label class="flabel">Total Quilos (Líquido)</label><input id="romKg" type="number" step="0.01" placeholder="Calculado automaticamente" readonly style="background:rgba(0,0,0,0.2); cursor:not-allowed"/></div>
           <button id="btnSaveRomaneio" type="submit" style="height:38px">Salvar Romaneio Completo</button>
         </div>
       </form>
@@ -2837,12 +2837,19 @@ function addRomaneioItem() {
   const c = $('itemCalibre').value;
   const p = parseInt($('itemPallets').value) || 1;
   const tc = $('itemTipoCaixa').value || '';
-  const pc = parseFloat($('itemPesoCaixa').value) || '';
-  const cp = parseInt($('itemCaixasPallet').value) || '';
+  const pc = parseFloat($('itemPesoCaixa').value) || 0;
+  const cp = parseInt($('itemCaixasPallet').value) || 0;
 
   if(!v || !l) { alert('Variedade e Lote são obrigatórios'); return; }
+  if(!pc || !cp) { alert('Peso da Caixa e Caixas/Pallet são obrigatórios para o cálculo automático.'); return; }
   
-  _romaneioItems.push({ variedade: v, lote: l, calibre: c, pallets: p, tipo_caixa: tc, peso_caixa: pc, caixas_pallet: cp });
+  const total_quilos = p * cp * pc;
+  
+  _romaneioItems.push({ 
+    variedade: v, lote: l, calibre: c, pallets: p, 
+    tipo_caixa: tc, peso_caixa: pc, caixas_pallet: cp,
+    total_quilos: total_quilos
+  });
   
   $('itemVariedade').value = '';
   $('itemLote').value = '';
@@ -2857,7 +2864,10 @@ function addRomaneioItem() {
 
 function renderRomaneioItems() {
   const el = $('romaneioItemsList');
+  let sumKg = 0;
+  
   el.innerHTML = _romaneioItems.map((it, idx) => {
+    sumKg += it.total_quilos || 0;
     let cxInfo = '';
     if(it.tipo_caixa || it.peso_caixa || it.caixas_pallet) {
       cxInfo = `<div style="grid-column: 1 / -1; font-size:11px; color:var(--muted); margin-top:4px">
@@ -2867,15 +2877,18 @@ function renderRomaneioItems() {
       </div>`;
     }
     return `
-    <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap:10px; background:rgba(0,0,0,0.2); padding:8px 12px; border-radius:8px; align-items:center; font-size:13px">
+    <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap:10px; background:rgba(0,0,0,0.2); padding:8px 12px; border-radius:8px; align-items:center; font-size:13px">
       <div><b>${it.variedade}</b></div>
       <div style="color:var(--muted2)">Lote: ${it.lote}</div>
       <div style="color:var(--blue)">Cal: ${it.calibre || '—'}</div>
       <div>${it.pallets} Pallets</div>
+      <div style="color:var(--green); font-weight:bold">${(it.total_quilos||0).toFixed(2)} kg</div>
       <button type="button" onclick="_romaneioItems.splice(${idx},1); renderRomaneioItems();" style="background:none; border:none; color:var(--red); font-size:18px; cursor:pointer">×</button>
       ${cxInfo}
     </div>
   `}).join('');
+  
+  $('romKg').value = sumKg.toFixed(2);
 }
 
 async function loadRomaneios() {
@@ -2923,10 +2936,8 @@ async function saveRomaneio() {
   const cliente = $('romCliente').value;
   const data_expedicao = $('romData').value;
   const fazenda = $('romFazenda').value;
-  const total_kg = parseFloat($('romKg').value);
 
-  // Divide o peso total proporcionalmente aos pallets (simplificação) ou deixa o peso total no primeiro item
-  const docs = _romaneioItems.map((it, idx) => ({
+  const docs = _romaneioItems.map((it) => ({
     tenant_id: tenantId,
     cliente,
     data_expedicao,
@@ -2938,7 +2949,7 @@ async function saveRomaneio() {
     tipo_caixa: it.tipo_caixa,
     peso_caixa: it.peso_caixa,
     caixas_pallet: it.caixas_pallet,
-    total_quilos: idx === 0 ? total_kg : 0 // Coloca o peso total no primeiro registro para não duplicar no financeiro
+    total_quilos: it.total_quilos
   }));
 
   const { error } = await sb.from('romaneios').insert(docs);
