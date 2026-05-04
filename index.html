@@ -1703,35 +1703,74 @@ async function loadFieldSessions(s, e, pFilter) {
 let _sigCtx = null;
 let _isDrawing = false;
 let _currentSignSessionId = null;
+let _sigEventsBound = false;
 
 function initSigCanvas() {
   const canvas = document.getElementById('sigCanvas');
   if(!_sigCtx) {
     _sigCtx = canvas.getContext('2d');
-    _sigCtx.lineWidth = 3;
-    _sigCtx.lineCap = 'round';
-    _sigCtx.strokeStyle = '#000';
+  }
+  
+  // Ensure styles are set
+  _sigCtx.lineWidth = 3;
+  _sigCtx.lineCap = 'round';
+  _sigCtx.lineJoin = 'round';
+  _sigCtx.strokeStyle = '#000';
+
+  if(!_sigEventsBound) {
+    _sigEventsBound = true;
     
     const getPos = (e) => {
       const rect = canvas.getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
-      return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+      let clientX, clientY;
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+      return { 
+        x: (clientX - rect.left) * (canvas.width / rect.width), 
+        y: (clientY - rect.top) * (canvas.height / rect.height) 
+      };
     };
 
-    const startDraw = (e) => { e.preventDefault(); _isDrawing = true; const pos = getPos(e); _sigCtx.beginPath(); _sigCtx.moveTo(pos.x, pos.y); };
-    const draw = (e) => { if(!_isDrawing) return; e.preventDefault(); const pos = getPos(e); _sigCtx.lineTo(pos.x, pos.y); _sigCtx.stroke(); };
-    const stopDraw = () => { _isDrawing = false; _sigCtx.closePath(); };
+    const startDraw = (e) => { 
+      e.preventDefault(); 
+      _isDrawing = true; 
+      const pos = getPos(e); 
+      _sigCtx.beginPath(); 
+      _sigCtx.moveTo(pos.x, pos.y); 
+    };
 
-    canvas.addEventListener('mousedown', startDraw);
-    canvas.addEventListener('mousemove', draw);
-    canvas.addEventListener('mouseup', stopDraw);
-    canvas.addEventListener('mouseout', stopDraw);
-    canvas.addEventListener('touchstart', startDraw, {passive:false});
-    canvas.addEventListener('touchmove', draw, {passive:false});
-    canvas.addEventListener('touchend', stopDraw);
+    const draw = (e) => { 
+      if(!_isDrawing) return; 
+      e.preventDefault(); 
+      const pos = getPos(e); 
+      _sigCtx.lineTo(pos.x, pos.y); 
+      _sigCtx.stroke(); 
+      _sigCtx.beginPath();
+      _sigCtx.moveTo(pos.x, pos.y);
+    };
+
+    const stopDraw = (e) => { 
+      if(e) e.preventDefault();
+      if(_isDrawing) {
+        _isDrawing = false; 
+        _sigCtx.closePath(); 
+      }
+    };
+
+    canvas.addEventListener('mousedown', startDraw, {passive: false});
+    canvas.addEventListener('mousemove', draw, {passive: false});
+    canvas.addEventListener('mouseup', stopDraw, {passive: false});
+    canvas.addEventListener('mouseout', stopDraw, {passive: false});
+    
+    canvas.addEventListener('touchstart', startDraw, {passive: false});
+    canvas.addEventListener('touchmove', draw, {passive: false});
+    canvas.addEventListener('touchend', stopDraw, {passive: false});
+    canvas.addEventListener('touchcancel', stopDraw, {passive: false});
   }
 }
 
