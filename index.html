@@ -144,6 +144,24 @@
   <div class="brand-sub">v3.0</div>
   <div id="tenantBadge" class="tenant-badge">...</div>
   <div id="multiTenantSelector" style="display:none; margin-bottom: 16px;">
+    <select id="multiTenantSelect" style="width:100%; border:1px solid rgba(255,255,255,.1); background:#1e293b; color:#fff"></select>
+  </div>
+
+  <!-- SIGNATURE MODAL -->
+  <div id="sigModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:#1e293b; padding:20px; border-radius:12px; width:400px; max-width:90%; border:1px solid var(--border);">
+      <h3 style="margin-top:0; color:#fff">✍️ Assinatura do Responsável</h3>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:15px">Esta ordem só pode ser impressa após a assinatura do responsável do Packing House.</p>
+      <div style="background:#fff; border-radius:8px; overflow:hidden; border:2px solid #ccc; margin-bottom:15px;">
+        <canvas id="sigCanvas" width="360" height="150" style="touch-action:none; display:block; width:100%; cursor:crosshair"></canvas>
+      </div>
+      <div style="display:flex; gap:10px; justify-content:flex-end">
+        <button class="sec" onclick="document.getElementById('sigModal').style.display='none'">Cancelar</button>
+        <button class="danger" onclick="clearSig()">Limpar</button>
+        <button onclick="saveSig()">Salvar Assinatura</button>
+      </div>
+    </div>
+  </div>
     <label class="flabel" style="color:var(--blue)">Trocar Empresa</label>
     <select id="tenantSelect" onchange="switchTenant(this.value)" style="font-size:11px; padding:6px; background:rgba(59,130,246,0.1); border-color:rgba(59,130,246,0.2)"></select>
   </div>
@@ -1670,10 +1688,94 @@ async function loadFieldSessions(s, e, pFilter) {
         <span class="badge ${isValidated?'active':'inactive'}" style="font-size:9px">${isValidated?'✓ VALIDADO':'⌛ PENDENTE'}</span>
       </td>
       <td>
-        <button class="sec" style="padding:4px 10px" onclick="exportHarvestOrderPDF('${sess.id}')">📄 PDF</button>
+        ${isValidated 
+          ? `<button class="sec" style="padding:4px 10px" onclick="exportHarvestOrderPDF('${sess.id}')">📄 Baixar PDF</button>`
+          : `<button class="sec" style="padding:4px 10px; border-color:var(--orange); color:var(--orange)" onclick="openSignModal('${sess.id}')">✍️ Assinar p/ Imprimir</button>`
+        }
       </td>
     </tr>
   `;}).join('');
+}
+
+// ══════════════════════════════════════
+// ASSINATURA DIGITAL (VALIDAÇÃO PACKING)
+// ══════════════════════════════════════
+let _sigCtx = null;
+let _isDrawing = false;
+let _currentSignSessionId = null;
+
+function initSigCanvas() {
+  const canvas = document.getElementById('sigCanvas');
+  if(!_sigCtx) {
+    _sigCtx = canvas.getContext('2d');
+    _sigCtx.lineWidth = 3;
+    _sigCtx.lineCap = 'round';
+    _sigCtx.strokeStyle = '#000';
+    
+    const getPos = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+    };
+
+    const startDraw = (e) => { e.preventDefault(); _isDrawing = true; const pos = getPos(e); _sigCtx.beginPath(); _sigCtx.moveTo(pos.x, pos.y); };
+    const draw = (e) => { if(!_isDrawing) return; e.preventDefault(); const pos = getPos(e); _sigCtx.lineTo(pos.x, pos.y); _sigCtx.stroke(); };
+    const stopDraw = () => { _isDrawing = false; _sigCtx.closePath(); };
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDraw);
+    canvas.addEventListener('mouseout', stopDraw);
+    canvas.addEventListener('touchstart', startDraw, {passive:false});
+    canvas.addEventListener('touchmove', draw, {passive:false});
+    canvas.addEventListener('touchend', stopDraw);
+  }
+}
+
+function clearSig() {
+  const canvas = document.getElementById('sigCanvas');
+  if(_sigCtx) _sigCtx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function openSignModal(sessionId) {
+  _currentSignSessionId = sessionId;
+  document.getElementById('sigModal').style.display = 'flex';
+  initSigCanvas();
+  clearSig();
+}
+
+async function saveSig() {
+  const canvas = document.getElementById('sigCanvas');
+  const blank = document.createElement('canvas');
+  blank.width = canvas.width;
+  blank.height = canvas.height;
+  if (canvas.toDataURL() === blank.toDataURL()) {
+    alert('Por favor, faça a assinatura antes de salvar.');
+    return;
+  }
+
+  const base64Sig = canvas.toDataURL('image/png');
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  try {
+    const { error } = await sb.from('field_carrao_sessions')
+      .update({ ph_signature_base64: base64Sig })
+      .eq('id', _currentSignSessionId);
+
+    if (error) throw error;
+    
+    document.getElementById('sigModal').style.display = 'none';
+    toast('Ordem validada com sucesso!', 'success');
+    loadMass(); 
+  } catch (err) {
+    alert('Erro ao salvar assinatura: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Salvar Assinatura';
+  }
 }
 
 // ══════════════════════════════════════
