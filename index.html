@@ -998,11 +998,11 @@ async function refreshDash(){
 
   // Global Stock Balance (Total Harvest - Total Expedition)
   const { data: allHarvest } = await sb.from('field_carrao_sessions').select('qty_carrocoes').eq('tenant_id', tenantId);
-  const { data: allExped } = await sb.from('expeditions').select('quantity_kg').eq('tenant_id', tenantId);
+  const { data: allExped } = await sb.from('romaneios').select('total_quilos').eq('tenant_id', tenantId);
   
   const hWeight = tenantConfig.harvest_carrao_weight_kg || 300;
   const totalH = (allHarvest || []).reduce((a, x) => a + (x.qty_carrocoes * hWeight), 0);
-  const totalE = (allExped || []).reduce((a, x) => a + (Number(x.quantity_kg) || 0), 0);
+  const totalE = (allExped || []).reduce((a, x) => a + (Number(x.total_quilos) || 0), 0);
   const saldoGlobal = totalH - totalE;
   $('kpiSaldoEstoque').textContent = saldoGlobal.toLocaleString('pt-BR') + ' kg';
   $('kpiSaldoEstoque').className = 'kval ' + (saldoGlobal >= 0 ? 'green' : 'red');
@@ -1028,9 +1028,9 @@ async function refreshDash(){
   const {data:sessions} = await sb.from('field_carrao_sessions').select('*, varieties(name)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
   buildParcelStats(scans, sessions);
 
-  // New field and varieties charts
-  const {data:expeditions}=await sb.from('expeditions').select('*').eq('tenant_id',tenantId).gte('created_at',toISO(s)).lte('created_at',toISO(e,'23:59:59'));
-  buildFieldManagementCharts(sessions, expeditions);
+  // New field and varieties charts - Use 'romaneios' for expeditions now
+  const {data:romaneios}=await sb.from('romaneios').select('*').eq('tenant_id',tenantId).gte('data_expedicao',s).lte('data_expedicao',e);
+  buildFieldManagementCharts(sessions, romaneios);
 }
 
 let _chartFieldProd, _chartVarietiesHarvest, _chartHarvestVsPacked;
@@ -1062,7 +1062,15 @@ function buildFieldManagementCharts(sessions, expeditions) {
   // 2. Variedades Colhidas (kg)
   const harvestVarMap = {};
   sessions.forEach(s => {
-    const v = (s.varieties && s.varieties.name) || s.variety_name || 'Desconhecida';
+    // Tenta pegar o nome pelo join ou por um campo de nome direto ou usa o mapa global de variedades
+    let v = 'Desconhecida';
+    if(s.varieties && s.varieties.name) v = s.varieties.name;
+    else if(s.variety_name) v = s.variety_name;
+    else if(s.variety_id && typeof _varieties !== 'undefined') {
+      const found = _varieties.find(varObj => varObj.id === s.variety_id);
+      if(found) v = found.name;
+    }
+    
     harvestVarMap[v] = (harvestVarMap[v] || 0) + (s.qty_carrocoes * hWeight);
   });
   const varKeys = Object.keys(harvestVarMap).sort((a,b)=>harvestVarMap[b]-harvestVarMap[a]).slice(0,5);
@@ -1082,8 +1090,8 @@ function buildFieldManagementCharts(sessions, expeditions) {
   // 3. Colhido vs Expedido por Variedade
   const expVarMap = {};
   expeditions.forEach(e => {
-    const v = e.variety_name || 'Desconhecida';
-    expVarMap[v] = (expVarMap[v] || 0) + (Number(e.quantity_kg) || 0);
+    const v = e.variedade || e.variety_name || 'Desconhecida';
+    expVarMap[v] = (expVarMap[v] || 0) + (Number(e.total_quilos) || Number(e.quantity_kg) || 0);
   });
   const allVarKeys = Array.from(new Set([...Object.keys(harvestVarMap), ...Object.keys(expVarMap)]));
   
@@ -1838,8 +1846,9 @@ async function loadEmps(){
         <td>${e.whatsapp||'<span style="color:var(--muted)">—</span>'}</td>
         <td><span class="badge ${e.active?'active':'inactive'}">${e.active?'Ativo':'Inativo'}</span></td>
         <td>
-          <button class="danger" style="padding:4px 9px" onclick="delEmp('${e.id}')">Excluir</button>
+          <button class="sec" style="padding:4px 9px" onclick="editEmp('${e.id}', '${e.name}', '${e.role}', '${e.whatsapp||''}', '${e.barcode}')">✏️ Editar</button>
           <button class="sec" style="padding:4px 9px;margin-left:4px" onclick="toggleEmpActive('${e.id}',${e.active})">${e.active?'Desativar':'Ativar'}</button>
+          <button class="danger" style="padding:4px 9px;margin-left:4px" onclick="delEmp('${e.id}')">Excluir</button>
         </td>
       </tr>
     `).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:28px">Nenhum funcionário encontrado para esta empresa.</td></tr>';
@@ -1859,6 +1868,32 @@ async function addEmp(){
 }
 async function delEmp(id){if(!confirm('Excluir?'))return;await sb.from('employees').delete().eq('id',id);loadEmps();}
 async function toggleEmpActive(id,cur){await sb.from('employees').update({active:!cur}).eq('id',id);loadEmps();}
+
+async function editEmp(id, name, role, whatsapp, barcode) {
+  const nName = prompt('Editar Nome:', name);
+  if(nName === null) return;
+  const nRole = prompt('Editar Função (EMBALADOR, EMPILHADOR, COLHEDOR, TRATORISTA, SUPERVISOR):', role);
+  if(nRole === null) return;
+  const nWhatsApp = prompt('Editar WhatsApp:', whatsapp);
+  if(nWhatsApp === null) return;
+  const nBarcode = prompt('Editar Barcode:', barcode);
+  if(nBarcode === null) return;
+
+  const { error } = await sb.from('employees').update({
+    name: nName,
+    role: nRole.toUpperCase(),
+    whatsapp: nWhatsApp || null,
+    barcode: nBarcode,
+    updated_at: new Date().toISOString()
+  }).eq('id', id);
+
+  if(error) alert('Erro ao atualizar: ' + error.message);
+  else {
+    toast('Funcionário atualizado!', 'success');
+    loadEmps();
+    loadEmpSelectAll();
+  }
+}
 
 // ══════════════════════════════════════
 // PESOS
