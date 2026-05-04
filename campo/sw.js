@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prodtech-campo-v7';
+const CACHE_NAME = 'prodtech-campo-v8';
 const ASSETS = [
   './',
   './index.html',
