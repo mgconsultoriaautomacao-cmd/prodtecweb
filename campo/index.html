@@ -481,6 +481,16 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       </select>
     </div>
 
+    <div class="section"><div class="section-title">Corte</div></div>
+    <div style="padding:0 16px">
+      <select id="cCorte">
+        <option value="1">1º Corte</option>
+        <option value="2">2º Corte</option>
+        <option value="3">3º Corte</option>
+        <option value="4">4º Corte</option>
+      </select>
+    </div>
+
     <div class="section"><div class="section-title">Fruta</div></div>
     <div style="padding:0 16px">
       <div class="toggle-group cols2" id="cFruitList">
@@ -646,7 +656,7 @@ function loadQualitySelects() {
     varieties.forEach(v => vSelQ.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
   }
 }
-const cState = { shift: 'MANHA', fruit: 'MELANCIA', parcelaId: null, qty: 1, workers: new Map() };
+const cState = { shift: 'MANHA', fruit: 'MELANCIA', parcelaId: null, qty: 1, workers: new Map(), corte: 1 };
 
 // ═══════════════════════════════════════════
 // UTILS
@@ -1416,6 +1426,7 @@ async function submitCarrao() {
     tenant_id         : tenantId,
     date              : date,
     shift             : cState.shift,
+    corte             : parseInt($('cCorte').value) || 1,
     fruit_type        : cState.fruitName,
     parcel_id         : parcelaId || null,
     variety_id        : $('cVariety').value || null,
@@ -1651,7 +1662,6 @@ async function loadPhPending() {
       <div class="hist-item" style="padding:10px;margin-bottom:6px;border-style:dashed">
         <div style="display:flex;justify-content:space-between">
           <span style="font-weight:700;color:var(--blue)">${r.fruit_type} — ${r.qty_carrocoes} un</span>
-          <span style="font-size:11px;color:var(--muted)">${r.date}</span>
         </div>
         <div style="font-size:11px;color:var(--text);margin-top:4px;line-height:1.4">
           <b>Parcela:</b> ${parcela?.code || '—'} | <b>Colhedores:</b> ${workerNames || 'Nenhum'}
@@ -1661,6 +1671,7 @@ async function loadPhPending() {
     `;
   }).join('');
   $('phSignArea').style.display = 'block';
+  setTimeout(initPhSig, 100);
 }
 
 let phSigCtx, phSigCanvas, phSigHasData = false, phSigDrawing = false;
@@ -1670,43 +1681,22 @@ function initPhSig() {
   phSigCtx = phSigCanvas.getContext('2d');
   const dpr = window.devicePixelRatio || 1;
   const rect = phSigCanvas.getBoundingClientRect();
+  if (rect.width === 0) return;
   phSigCanvas.width = rect.width * dpr;
   phSigCanvas.height = rect.height * dpr;
   phSigCtx.scale(dpr, dpr);
   phSigCtx.strokeStyle = '#3b82f6';
   phSigCtx.lineWidth = 3;
   phSigCtx.lineCap = 'round'; phSigCtx.lineJoin = 'round';
-  const getPos = e => { 
-    const r = phSigCanvas.getBoundingClientRect(); 
-    const s = (e.touches && e.touches.length) ? e.touches[0] : e; 
-    return {x: s.clientX-r.left, y: s.clientY-r.top}; 
-  };
-  const start = e => { 
-    if (e.target === phSigCanvas) e.preventDefault(); 
-    phSigDrawing=true; 
-    const p=getPos(e); 
-    phSigCtx.beginPath(); 
-    phSigCtx.moveTo(p.x,p.y); 
-  };
-  const move  = e => { 
-    if (phSigDrawing) {
-      if (e.target === phSigCanvas) e.preventDefault();
-      const p=getPos(e); 
-      phSigCtx.lineTo(p.x,p.y); 
-      phSigCtx.stroke(); 
-      phSigHasData=true; 
-    }
-  };
-  const stop = () => { phSigDrawing=false; phSigCtx.closePath(); };
-
+  const getPos = e => { const r = phSigCanvas.getBoundingClientRect(); const s = e.touches ? e.touches[0] : e; return {x: s.clientX-r.left, y: s.clientY-r.top}; };
+  const start = e => { if(e.target===phSigCanvas) e.preventDefault(); phSigDrawing=true; const p=getPos(e); phSigCtx.beginPath(); phSigCtx.moveTo(p.x,p.y); };
+  const move  = e => { if(e.target===phSigCanvas) e.preventDefault(); if(!phSigDrawing)return; const p=getPos(e); phSigCtx.lineTo(p.x,p.y); phSigCtx.stroke(); phSigHasData=true; };
   phSigCanvas.addEventListener('touchstart', start, {passive:false});
   phSigCanvas.addEventListener('touchmove',  move,  {passive:false});
-  phSigCanvas.addEventListener('touchend',   stop);
-  phSigCanvas.addEventListener('touchcancel', stop);
-
+  phSigCanvas.addEventListener('touchend',   () => phSigDrawing=false);
   phSigCanvas.addEventListener('mousedown',  start);
   phSigCanvas.addEventListener('mousemove',  move);
-  window.addEventListener('mouseup', stop);
+  window.addEventListener('mouseup', () => phSigDrawing=false);
 }
 let bulkSigCtx, bulkSigCanvas, bulkSigHasData = false, bulkSigDrawing = false;
 function initBulkSig() {
