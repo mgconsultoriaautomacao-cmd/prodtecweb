@@ -2718,6 +2718,10 @@ function exportHarvestOrderPDF(sid) {
 
   doc.setFontSize(7); doc.setFont('helvetica', 'normal');
   doc.text('RESPONSÁVEL PELA EMBALAGEM', mg + 132, y + 4);
+  if (s.ph_inspector_name) {
+    doc.setFontSize(10);
+    doc.text(s.ph_inspector_name, mg + 135, y + 14);
+  }
   if (s.ph_signature_base64) {
     try {
       const sig = s.ph_signature_base64.replace(/^data:image\/\w+;base64,/, '');

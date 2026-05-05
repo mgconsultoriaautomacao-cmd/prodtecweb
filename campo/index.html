@@ -1674,7 +1674,7 @@ async function loadPhPending() {
   setTimeout(initPhSig, 100);
 }
 
-let phSigCtx, phSigCanvas, phSigHasData = false, phSigDrawing = false;
+let phSigCtx, phSigCanvas, phSigHasData = false, phSigDrawing = false, phSigInitialized = false;
 function initPhSig() {
   phSigCanvas = $('phSigCanvas');
   if (!phSigCanvas) return;
@@ -1682,23 +1682,51 @@ function initPhSig() {
   const dpr = window.devicePixelRatio || 1;
   const rect = phSigCanvas.getBoundingClientRect();
   if (rect.width === 0) return;
+  
   phSigCanvas.width = rect.width * dpr;
   phSigCanvas.height = rect.height * dpr;
   phSigCtx.scale(dpr, dpr);
   phSigCtx.strokeStyle = '#3b82f6';
   phSigCtx.lineWidth = 3;
   phSigCtx.lineCap = 'round'; phSigCtx.lineJoin = 'round';
-  const getPos = e => { const r = phSigCanvas.getBoundingClientRect(); const s = e.touches ? e.touches[0] : e; return {x: s.clientX-r.left, y: s.clientY-r.top}; };
-  const start = e => { if(e.target===phSigCanvas) e.preventDefault(); phSigDrawing=true; const p=getPos(e); phSigCtx.beginPath(); phSigCtx.moveTo(p.x,p.y); };
-  const move  = e => { if(e.target===phSigCanvas) e.preventDefault(); if(!phSigDrawing)return; const p=getPos(e); phSigCtx.lineTo(p.x,p.y); phSigCtx.stroke(); phSigHasData=true; };
+
+  if (phSigInitialized) return;
+  phSigInitialized = true;
+
+  const getPos = e => { 
+    const r = phSigCanvas.getBoundingClientRect(); 
+    const s = e.touches ? e.touches[0] : e; 
+    return {x: s.clientX - r.left, y: s.clientY - r.top}; 
+  };
+  const start = e => { 
+    if (e.target === phSigCanvas) {
+      e.preventDefault();
+      phSigDrawing = true; 
+      const p = getPos(e); 
+      phSigCtx.beginPath(); 
+      phSigCtx.moveTo(p.x, p.y); 
+    }
+  };
+  const move = e => { 
+    if (!phSigDrawing) return;
+    if (e.target === phSigCanvas) e.preventDefault(); 
+    const p = getPos(e); 
+    phSigCtx.lineTo(p.x, p.y); 
+    phSigCtx.stroke(); 
+    phSigHasData = true; 
+  };
+  const end = () => { phSigDrawing = false; };
+
   phSigCanvas.addEventListener('touchstart', start, {passive:false});
   phSigCanvas.addEventListener('touchmove',  move,  {passive:false});
-  phSigCanvas.addEventListener('touchend',   () => phSigDrawing=false);
+  phSigCanvas.addEventListener('touchend',   end);
   phSigCanvas.addEventListener('mousedown',  start);
   phSigCanvas.addEventListener('mousemove',  move);
-  window.addEventListener('mouseup', () => phSigDrawing=false);
+  window.addEventListener('mouseup', end);
 }
-let bulkSigCtx, bulkSigCanvas, bulkSigHasData = false, bulkSigDrawing = false;
+function clearPhSig() { clearSig('phSigCanvas'); }
+
+let bulkSigCtx, bulkSigCanvas, bulkSigHasData = false, bulkSigDrawing = false, bulkSigInitialized = false;
 function initBulkSig() {
   bulkSigCanvas = $('sigBulkCanvas');
   if (!bulkSigCanvas) return;
@@ -1706,24 +1734,51 @@ function initBulkSig() {
   const dpr = window.devicePixelRatio || 1;
   const rect = bulkSigCanvas.getBoundingClientRect();
   if (rect.width === 0) return;
+  
   bulkSigCanvas.width = rect.width * dpr;
   bulkSigCanvas.height = rect.height * dpr;
   bulkSigCtx.scale(dpr, dpr);
   bulkSigCtx.strokeStyle = '#3b82f6';
   bulkSigCtx.lineWidth = 3;
   bulkSigCtx.lineCap = 'round'; bulkSigCtx.lineJoin = 'round';
-  const getPos = e => { const r = bulkSigCanvas.getBoundingClientRect(); const s = e.touches ? e.touches[0] : e; return {x: s.clientX-r.left, y: s.clientY-r.top}; };
-  const start = e => { if(e.target===bulkSigCanvas) e.preventDefault(); bulkSigDrawing=true; const p=getPos(e); bulkSigCtx.beginPath(); bulkSigCtx.moveTo(p.x,p.y); };
-  const move  = e => { if(e.target===bulkSigCanvas) e.preventDefault(); if(!bulkSigDrawing)return; const p=getPos(e); bulkSigCtx.lineTo(p.x,p.y); bulkSigCtx.stroke(); bulkSigHasData=true; };
+
+  if (bulkSigInitialized) return;
+  bulkSigInitialized = true;
+
+  const getPos = e => { 
+    const r = bulkSigCanvas.getBoundingClientRect(); 
+    const s = e.touches ? e.touches[0] : e; 
+    return {x: s.clientX - r.left, y: s.clientY - r.top}; 
+  };
+  const start = e => { 
+    if (e.target === bulkSigCanvas) {
+      e.preventDefault();
+      bulkSigDrawing = true; 
+      const p = getPos(e); 
+      bulkSigCtx.beginPath(); 
+      bulkSigCtx.moveTo(p.x, p.y); 
+    }
+  };
+  const move = e => { 
+    if (!bulkSigDrawing) return;
+    if (e.target === bulkSigCanvas) e.preventDefault(); 
+    const p = getPos(e); 
+    bulkSigCtx.lineTo(p.x, p.y); 
+    bulkSigCtx.stroke(); 
+    bulkSigHasData = true; 
+  };
+  const end = () => { bulkSigDrawing = false; };
+
   bulkSigCanvas.addEventListener('touchstart', start, {passive:false});
   bulkSigCanvas.addEventListener('touchmove',  move,  {passive:false});
-  bulkSigCanvas.addEventListener('touchend',   () => bulkSigDrawing=false);
+  bulkSigCanvas.addEventListener('touchend',   end);
   bulkSigCanvas.addEventListener('mousedown',  start);
   bulkSigCanvas.addEventListener('mousemove',  move);
-  window.addEventListener('mouseup', () => bulkSigDrawing=false);
+  window.addEventListener('mouseup', end);
 }
+function clearBulkSig() { clearSig('sigBulkCanvas'); }
 
-let qSigCtx, qSigCanvas, qSigHasData = false, qSigDrawing = false;
+let qSigCtx, qSigCanvas, qSigHasData = false, qSigDrawing = false, qSigInitialized = false;
 function initQualitySig() {
   qSigCanvas = $('closureSigCanvas');
   if (!qSigCanvas) return;
@@ -1731,22 +1786,49 @@ function initQualitySig() {
   const dpr = window.devicePixelRatio || 1;
   const rect = qSigCanvas.getBoundingClientRect();
   if (rect.width === 0) return;
+  
   qSigCanvas.width = rect.width * dpr;
   qSigCanvas.height = rect.height * dpr;
   qSigCtx.scale(dpr, dpr);
   qSigCtx.strokeStyle = '#10b981';
   qSigCtx.lineWidth = 3;
   qSigCtx.lineCap = 'round'; qSigCtx.lineJoin = 'round';
-  const getPos = e => { const r = qSigCanvas.getBoundingClientRect(); const s = e.touches ? e.touches[0] : e; return {x: s.clientX-r.left, y: s.clientY-r.top}; };
-  const start = e => { if(e.target===qSigCanvas) e.preventDefault(); qSigDrawing=true; const p=getPos(e); qSigCtx.beginPath(); qSigCtx.moveTo(p.x,p.y); };
-  const move  = e => { if(e.target===qSigCanvas) e.preventDefault(); if(!qSigDrawing)return; const p=getPos(e); qSigCtx.lineTo(p.x,p.y); qSigCtx.stroke(); qSigHasData=true; };
+
+  if (qSigInitialized) return;
+  qSigInitialized = true;
+
+  const getPos = e => { 
+    const r = qSigCanvas.getBoundingClientRect(); 
+    const s = e.touches ? e.touches[0] : e; 
+    return {x: s.clientX - r.left, y: s.clientY - r.top}; 
+  };
+  const start = e => { 
+    if (e.target === qSigCanvas) {
+      e.preventDefault();
+      qSigDrawing = true; 
+      const p = getPos(e); 
+      qSigCtx.beginPath(); 
+      qSigCtx.moveTo(p.x, p.y); 
+    }
+  };
+  const move = e => { 
+    if (!qSigDrawing) return;
+    if (e.target === qSigCanvas) e.preventDefault(); 
+    const p = getPos(e); 
+    qSigCtx.lineTo(p.x, p.y); 
+    qSigCtx.stroke(); 
+    qSigHasData = true; 
+  };
+  const end = () => { qSigDrawing = false; };
+
   qSigCanvas.addEventListener('touchstart', start, {passive:false});
   qSigCanvas.addEventListener('touchmove',  move,  {passive:false});
-  qSigCanvas.addEventListener('touchend',   () => qSigDrawing=false);
+  qSigCanvas.addEventListener('touchend',   end);
   qSigCanvas.addEventListener('mousedown',  start);
   qSigCanvas.addEventListener('mousemove',  move);
-  window.addEventListener('mouseup', () => qSigDrawing=false);
+  window.addEventListener('mouseup', end);
 }
+function clearClosureSig() { clearSig('closureSigCanvas'); }
 
 function clearSig(canvasId) {
   if (canvasId === 'sigBulkCanvas') { bulkSigCtx.clearRect(0,0,bulkSigCanvas.width,bulkSigCanvas.height); bulkSigHasData=false; }
