@@ -147,7 +147,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 
 /* ── SIGNATURE PAD ── */
 .sig-wrap{border:2px dashed var(--border2);border-radius:var(--r);overflow:hidden;background:rgba(0,0,0,.4);position:relative;touch-action:none}
-.sig-canvas{display:block;width:100%;height:160px;cursor:crosshair}
+.sig-canvas{display:block;width:100%;height:160px;cursor:crosshair;touch-action:none;background:#fff;border:1px solid var(--border2);border-radius:12px}
 .sig-clear{position:absolute;top:8px;right:8px;padding:6px 12px;border-radius:8px;background:rgba(0,0,0,.6);border:1px solid var(--border2);color:var(--muted2);font-size:12px;font-weight:600;cursor:pointer}
 .sig-hint{font-size:11px;color:var(--muted);margin-top:6px;text-align:center}
 
@@ -671,16 +671,9 @@ function showScreen(name) {
   if (!active) return;
   active.classList.add('active');
   if (name === 'quality') loadQHistory();
-  if (name === 'carrao') {
-    loadCHistory();
-    loadPhParcelas();
-  }
-  if (name === 'bulk' && window.bulkSig) {
-    setTimeout(() => window.bulkSig.init(), 100);
-  }
-  if (name === 'closure' && window.qualitySig) {
-    setTimeout(() => window.qualitySig.init(), 100);
-  }
+  if (name === 'bulk') setTimeout(initBulkSig, 100);
+  if (name === 'closure') setTimeout(initQualitySig, 100);
+
 
 }
 
@@ -856,14 +849,15 @@ async function afterLogin(u) {
   loadPhParcelas();
   loadQualitySelects();
   
-  // Inicializa todos os pads de assinatura
+  // Inicializa assinaturas
   setTimeout(() => {
-    window.bulkSig = new SignaturePad('sigBulkCanvas', { strokeStyle: '#3b82f6' });
-    window.qualitySig = new SignaturePad('closureSigCanvas', { strokeStyle: '#10b981' });
-    initPhSig(); // Packing House sig
+    initBulkSig();
+    initQualitySig();
+    initPhSig();
   }, 500);
 
   await updateSyncBadge();
+
 
   showScreen('home');
   if ('serviceWorker' in navigator) {
@@ -1206,9 +1200,10 @@ function initClosureSig() {
 }
 function clearClosureSig() { if(cSigCtx) { cSigCtx.clearRect(0,0,cSigCanvas.width,cSigCanvas.height); cSigHasData=false; } }
 async function saveClosure() {
-  if (!window.qualitySig || !window.qualitySig.hasData) { toast('Assine para confirmar', 'err'); return; }
+  if (!qSigHasData) { toast('Assine para confirmar', 'err'); return; }
   const inspectorName = $('closureInspectorName').value.trim() || window.currentInspector || 'Inspetor';
-  const sig = window.qualitySig.toDataURL();
+  const sig = $('closureSigCanvas').toDataURL('image/png');
+
 
 
   try {
@@ -1556,14 +1551,23 @@ function showOrdemColheita(list) {
 }
 
 async function pushCarrao({ session, workers }) {
-  const { data: seqData, error: seqErr } = await sb.from('field_carrao_sessions')
-    .select('carrao_seq')
-    .eq('tenant_id', session.tenant_id)
-    .order('carrao_seq', { ascending: false })
-    .limit(1);
+  // Busca o último seq para este tenant (independente da data, para ser sequencial global)
+  let nextSeq = 1;
+  try {
+    const { data: seqData } = await sb.from('field_carrao_sessions')
+      .select('carrao_seq')
+      .eq('tenant_id', session.tenant_id)
+      .not('carrao_seq', 'is', null)
+      .order('carrao_seq', { ascending: false })
+      .limit(1);
 
-  let nextSeq = (seqData && seqData.length > 0 && seqData[0].carrao_seq) ? seqData[0].carrao_seq + 1 : 1;
-  const hasSeq = !seqErr;
+    if (seqData && seqData.length > 0 && seqData[0].carrao_seq) {
+      nextSeq = parseInt(seqData[0].carrao_seq) + 1;
+    }
+  } catch(e) {
+    console.warn('Erro ao buscar carrao_seq (provavelmente coluna faltante):', e);
+  }
+
 
   const qty = session.qty_carrocoes;
   const sessionsToInsert = [];
@@ -1704,83 +1708,60 @@ function initPhSig() {
   phSigCanvas.addEventListener('mousemove',  move);
   window.addEventListener('mouseup', stop);
 }
-// Generic Signature Pad helper
-class SignaturePad {
-  constructor(canvasId, options = {}) {
-    this.canvasId = canvasId;
-    this.canvas = document.getElementById(canvasId);
-    if (!this.canvas) return;
-    this.ctx = this.canvas.getContext('2d');
-    this.options = { strokeStyle: '#000', lineWidth: 3, ...options };
-    this.drawing = false;
-    this.hasData = false;
-    this.eventsBound = false;
-    this.init();
-  }
-  init() {
-    this.canvas = document.getElementById(this.canvasId);
-    if (!this.canvas) return;
-    const dpr = window.devicePixelRatio || 1;
-    const rect = this.canvas.getBoundingClientRect();
-    if (rect.width === 0) return; 
+let bulkSigCtx, bulkSigCanvas, bulkSigHasData = false, bulkSigDrawing = false;
+function initBulkSig() {
+  bulkSigCanvas = $('sigBulkCanvas');
+  if (!bulkSigCanvas) return;
+  bulkSigCtx = bulkSigCanvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = bulkSigCanvas.getBoundingClientRect();
+  if (rect.width === 0) return;
+  bulkSigCanvas.width = rect.width * dpr;
+  bulkSigCanvas.height = rect.height * dpr;
+  bulkSigCtx.scale(dpr, dpr);
+  bulkSigCtx.strokeStyle = '#3b82f6';
+  bulkSigCtx.lineWidth = 3;
+  bulkSigCtx.lineCap = 'round'; bulkSigCtx.lineJoin = 'round';
+  const getPos = e => { const r = bulkSigCanvas.getBoundingClientRect(); const s = e.touches ? e.touches[0] : e; return {x: s.clientX-r.left, y: s.clientY-r.top}; };
+  const start = e => { if(e.target===bulkSigCanvas) e.preventDefault(); bulkSigDrawing=true; const p=getPos(e); bulkSigCtx.beginPath(); bulkSigCtx.moveTo(p.x,p.y); };
+  const move  = e => { if(e.target===bulkSigCanvas) e.preventDefault(); if(!bulkSigDrawing)return; const p=getPos(e); bulkSigCtx.lineTo(p.x,p.y); bulkSigCtx.stroke(); bulkSigHasData=true; };
+  bulkSigCanvas.addEventListener('touchstart', start, {passive:false});
+  bulkSigCanvas.addEventListener('touchmove',  move,  {passive:false});
+  bulkSigCanvas.addEventListener('touchend',   () => bulkSigDrawing=false);
+  bulkSigCanvas.addEventListener('mousedown',  start);
+  bulkSigCanvas.addEventListener('mousemove',  move);
+  window.addEventListener('mouseup', () => bulkSigDrawing=false);
+}
 
-    this.canvas.width = rect.width * dpr;
-    this.canvas.height = rect.height * dpr;
-    this.ctx = this.canvas.getContext('2d');
-    this.ctx.scale(dpr, dpr);
-    this.ctx.strokeStyle = this.options.strokeStyle;
-    this.ctx.lineWidth = this.options.lineWidth;
-    this.ctx.lineCap = 'round';
-    this.ctx.lineJoin = 'round';
-
-    if (this.eventsBound) return;
-    this.eventsBound = true;
-
-    const getPos = e => {
-      const r = this.canvas.getBoundingClientRect();
-      const s = (e.touches && e.touches.length) ? e.touches[0] : e;
-      return { x: s.clientX - r.left, y: s.clientY - r.top };
-    };
-    const start = e => {
-      if (e.target === this.canvas) e.preventDefault();
-      this.drawing = true;
-      const p = getPos(e);
-      this.ctx.beginPath();
-      this.ctx.moveTo(p.x, p.y);
-    };
-    const move = e => {
-      if (!this.drawing) return;
-      if (e.target === this.canvas) e.preventDefault();
-      const p = getPos(e);
-      this.ctx.lineTo(p.x, p.y);
-      this.ctx.stroke();
-      this.hasData = true;
-    };
-    const stop = () => { this.drawing = false; this.ctx.closePath(); };
-
-    this.canvas.addEventListener('touchstart', start, { passive: false });
-    this.canvas.addEventListener('touchmove', move, { passive: false });
-    this.canvas.addEventListener('touchend', stop);
-    this.canvas.addEventListener('mousedown', start);
-    this.canvas.addEventListener('mousemove', move);
-    window.addEventListener('mouseup', stop);
-  }
-  clear() {
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    this.hasData = false;
-  }
-  toDataURL() {
-    return this.canvas.toDataURL('image/png');
-  }
+let qSigCtx, qSigCanvas, qSigHasData = false, qSigDrawing = false;
+function initQualitySig() {
+  qSigCanvas = $('closureSigCanvas');
+  if (!qSigCanvas) return;
+  qSigCtx = qSigCanvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = qSigCanvas.getBoundingClientRect();
+  if (rect.width === 0) return;
+  qSigCanvas.width = rect.width * dpr;
+  qSigCanvas.height = rect.height * dpr;
+  qSigCtx.scale(dpr, dpr);
+  qSigCtx.strokeStyle = '#10b981';
+  qSigCtx.lineWidth = 3;
+  qSigCtx.lineCap = 'round'; qSigCtx.lineJoin = 'round';
+  const getPos = e => { const r = qSigCanvas.getBoundingClientRect(); const s = e.touches ? e.touches[0] : e; return {x: s.clientX-r.left, y: s.clientY-r.top}; };
+  const start = e => { if(e.target===qSigCanvas) e.preventDefault(); qSigDrawing=true; const p=getPos(e); qSigCtx.beginPath(); qSigCtx.moveTo(p.x,p.y); };
+  const move  = e => { if(e.target===qSigCanvas) e.preventDefault(); if(!qSigDrawing)return; const p=getPos(e); qSigCtx.lineTo(p.x,p.y); qSigCtx.stroke(); qSigHasData=true; };
+  qSigCanvas.addEventListener('touchstart', start, {passive:false});
+  qSigCanvas.addEventListener('touchmove',  move,  {passive:false});
+  qSigCanvas.addEventListener('touchend',   () => qSigDrawing=false);
+  qSigCanvas.addEventListener('mousedown',  start);
+  qSigCanvas.addEventListener('mousemove',  move);
+  window.addEventListener('mouseup', () => qSigDrawing=false);
 }
 
 function clearSig(canvasId) {
-  if (canvasId === 'sigBulkCanvas' && window.bulkSig) window.bulkSig.clear();
-  else if (canvasId === 'closureSigCanvas' && window.qualitySig) window.qualitySig.clear();
-  else {
-    const canvas = $(canvasId);
-    if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-  }
+  if (canvasId === 'sigBulkCanvas') { bulkSigCtx.clearRect(0,0,bulkSigCanvas.width,bulkSigCanvas.height); bulkSigHasData=false; }
+  else if (canvasId === 'closureSigCanvas') { qSigCtx.clearRect(0,0,qSigCanvas.width,qSigCanvas.height); qSigHasData=false; }
+  else if (canvasId === 'phSigCanvas') { phSigCtx.clearRect(0,0,phSigCanvas.width,phSigCanvas.height); phSigHasData=false; }
 }
 
 
@@ -1838,9 +1819,10 @@ async function saveBulkSale() {
 
   if (!customer) return toast('Informe o nome do cliente', 'err');
   if (bulkWeights.length === 0) return toast('Lance ao menos um peso', 'err');
-  
-  const sig = window.bulkSig && window.bulkSig.hasData ? window.bulkSig.toDataURL() : null;
-  if (!sig) return toast('O comprador deve assinar', 'err');
+  if (!bulkSigHasData) return toast('O comprador deve assinar', 'err');
+
+  const sig = $('sigBulkCanvas').toDataURL('image/png');
+
 
 
 
