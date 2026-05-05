@@ -2400,7 +2400,7 @@ async function loadAdminData() {
   // Global Users Table
   $('globalUsersTable').querySelector('tbody').innerHTML = (users||[]).map(u => `
     <tr>
-      <td><b>${u.email || u.user_id || '—'}</b> <br/> <small style="color:var(--muted)">WhatsApp: ${u.whatsapp||'—'}</small></td>
+      <td><b style="color:var(--accent)">${u.email || '—'}</b> <br/> <small style="color:var(--muted)">ID: ${u.user_id?.substring(0,8)}... | WhatsApp: ${u.whatsapp||'—'}</small></td>
       <td>${u.tenants?.name || '—'}</td>
       <td><span class="badge packer">${u.role}</span></td>
       <td><button class="danger" onclick="unlinkUser('${u.id}')">Remover</button></td>
@@ -2634,10 +2634,10 @@ function exportHarvestOrderPDF(sid) {
   doc.text(tenantName.toUpperCase(), mg + 20, y + 9);
   doc.line(mg + 18, y + 10, mg + 120, y + 10); // Linha sublinhada
 
-  doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-  doc.text('CONTROLE DE PRODUÇÃO', 165, y + 5, { align: 'center' });
+  doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+  doc.text('LOTE / RASTREABILIDADE', 165, y + 5, { align: 'center' });
   doc.setFontSize(14);
-  doc.text(String(s.carrao_seq || s.julian_lot || '—'), 165, y + 11, { align: 'center' });
+  doc.text(String(s.julian_lot || s.carrao_seq || '—'), 165, y + 11, { align: 'center' });
   y += h3;
 
 
@@ -2696,7 +2696,7 @@ function exportHarvestOrderPDF(sid) {
   doc.setFontSize(7); doc.setFont('helvetica', 'normal');
   doc.text('CORTE:', mg + 67, y + 4);
   doc.setFontSize(12);
-  doc.text(s.shift === 'MANHA' ? '1º' : '2º', mg + 85, y + 11);
+  doc.text(String(s.corte || (s.shift === 'MANHA' ? '1' : '2')) + 'º', mg + 85, y + 11);
 
   doc.setFontSize(7); doc.setFont('helvetica', 'normal');
   doc.text('TRATORISTA:', mg + 132, y + 4);
