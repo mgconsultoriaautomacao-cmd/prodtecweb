@@ -162,6 +162,31 @@
       </div>
     </div>
   </div>
+  
+  <!-- EMPLOYEE EDIT MODAL -->
+  <div id="empModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:#1e293b; padding:24px; border-radius:12px; width:450px; max-width:95%; border:1px solid var(--border);">
+      <h3 style="margin-top:0; color:#fff; margin-bottom:20px">✏️ Editar Funcionário</h3>
+      <input type="hidden" id="editEmpId">
+      <div style="margin-bottom:12px"><label class="flabel">Barcode</label><input id="editEmpBarcode"/></div>
+      <div style="margin-bottom:12px"><label class="flabel">Nome</label><input id="editEmpName"/></div>
+      <div style="margin-bottom:12px"><label class="flabel">Função</label>
+        <select id="editEmpRole">
+          <option value="EMBALADOR">Embalador(a)</option>
+          <option value="EMPILHADOR">Empilhador(a)</option>
+          <option value="COLHEDOR">Colhedor(a)</option>
+          <option value="TRATORISTA">Tratorista</option>
+          <option value="SUPERVISOR">Supervisor(a)</option>
+        </select>
+      </div>
+      <div style="margin-bottom:12px"><label class="flabel">WhatsApp</label><input id="editEmpWhatsapp" placeholder="55..."/></div>
+      <div style="margin-bottom:20px"><label class="flabel">Foto (URL)</label><input id="editEmpPhoto" placeholder="Link da imagem"/></div>
+      <div style="display:flex; gap:10px; justify-content:flex-end">
+        <button class="sec" onclick="document.getElementById('empModal').style.display='none'">Cancelar</button>
+        <button onclick="saveEmpEdit()">Salvar Alterações</button>
+      </div>
+    </div>
+  </div>
     <label class="flabel" style="color:var(--blue)">Trocar Empresa</label>
     <select id="tenantSelect" onchange="switchTenant(this.value)" style="font-size:11px; padding:6px; background:rgba(59,130,246,0.1); border-color:rgba(59,130,246,0.2)"></select>
   </div>
@@ -1987,7 +2012,7 @@ async function loadEmps(){
         <td>${e.whatsapp||'<span style="color:var(--muted)">—</span>'}</td>
         <td><span class="badge ${e.active?'active':'inactive'}">${e.active?'Ativo':'Inativo'}</span></td>
         <td>
-          <button class="sec" style="padding:4px 9px" onclick="editEmp('${e.id}', '${e.name}', '${e.role}', '${e.whatsapp||''}', '${e.barcode}')">✏️ Editar</button>
+          <button class="sec" style="padding:4px 9px" onclick="openEditEmpModal('${e.id}', '${e.name}', '${e.role}', '${e.whatsapp||''}', '${e.barcode}', '${e.photo_path||''}')">✏️ Editar</button>
           <button class="sec" style="padding:4px 9px;margin-left:4px" onclick="toggleEmpActive('${e.id}',${e.active})">${e.active?'Desativar':'Ativar'}</button>
           <button class="danger" style="padding:4px 9px;margin-left:4px" onclick="delEmp('${e.id}')">Excluir</button>
         </td>
@@ -2010,31 +2035,39 @@ async function addEmp(){
 async function delEmp(id){if(!confirm('Excluir?'))return;await sb.from('employees').delete().eq('id',id);loadEmps();}
 async function toggleEmpActive(id,cur){await sb.from('employees').update({active:!cur}).eq('id',id);loadEmps();}
 
-async function editEmp(id, name, role, whatsapp, barcode) {
-  const nName = prompt('Editar Nome:', name);
-  if(nName === null) return;
-  const nRole = prompt('Editar Função (EMBALADOR, EMPILHADOR, COLHEDOR, TRATORISTA, SUPERVISOR):', role);
-  if(nRole === null) return;
-  const nWhatsApp = prompt('Editar WhatsApp:', whatsapp);
-  if(nWhatsApp === null) return;
-  const nBarcode = prompt('Editar Barcode:', barcode);
-  if(nBarcode === null) return;
+async function openEditEmpModal(id, name, role, whatsapp, barcode, photo) {
+  $('editEmpId').value = id;
+  $('editEmpName').value = name;
+  $('editEmpRole').value = role;
+  $('editEmpWhatsapp').value = whatsapp;
+  $('editEmpBarcode').value = barcode;
+  $('editEmpPhoto').value = photo;
+  $('empModal').style.display = 'flex';
+}
+
+async function saveEmpEdit() {
+  const id = $('editEmpId').value;
+  const name = $('editEmpName').value.trim();
+  const role = $('editEmpRole').value;
+  const whatsapp = $('editEmpWhatsapp').value.trim();
+  const barcode = $('editEmpBarcode').value.trim();
+  const photo = $('editEmpPhoto').value.trim();
+
+  if(!name || !barcode) { alert('Nome e Barcode são obrigatórios.'); return; }
 
   const { error } = await sb.from('employees').update({
-    name: nName,
-    role: nRole.toUpperCase(),
-    whatsapp: nWhatsApp || null,
-    barcode: nBarcode,
-    updated_at: new Date().toISOString()
+    name, role, whatsapp: whatsapp || null, barcode, photo_path: photo || null, updated_at: new Date().toISOString()
   }).eq('id', id);
 
   if(error) alert('Erro ao atualizar: ' + error.message);
   else {
     toast('Funcionário atualizado!', 'success');
+    $('empModal').style.display = 'none';
     loadEmps();
     loadEmpSelectAll();
   }
 }
+
 
 // ══════════════════════════════════════
 // PESOS
@@ -2604,8 +2637,9 @@ function exportHarvestOrderPDF(sid) {
   doc.setFontSize(9); doc.setFont('helvetica', 'bold');
   doc.text('CONTROLE DE PRODUÇÃO', 165, y + 5, { align: 'center' });
   doc.setFontSize(14);
-  doc.text(String(s.julian_lot || s.id?.toString().slice(-5) || '—'), 165, y + 11, { align: 'center' });
+  doc.text(String(s.carrao_seq || s.julian_lot || '—'), 165, y + 11, { align: 'center' });
   y += h3;
+
 
   // ── LINHA: DATA E Nº DO CARROÇÃO ────────────────────────────────────────
   const h4 = 14;
@@ -2677,9 +2711,10 @@ function exportHarvestOrderPDF(sid) {
 
   doc.setFontSize(7); doc.setFont('helvetica', 'normal');
   doc.text('RESPONSÁVEL PELA COLHEITA', mg + 2, y + 4);
-  const supervisor = emps[0]?.employee_name || '—';
+  const supervisor = s.registered_by || '—';
   doc.setFontSize(12);
   doc.text(supervisor, mg + 30, y + 13);
+
 
   doc.setFontSize(7); doc.setFont('helvetica', 'normal');
   doc.text('RESPONSÁVEL PELA EMBALAGEM', mg + 132, y + 4);
@@ -2716,10 +2751,9 @@ function exportAuditPDF(){
   
   const stats = [
     ['Colheita Estimada (Campo)', $('kpiMassHarvest').textContent],
-    ['Produção Embalada (Real)', $('kpiMassPacked').textContent],
-    ['Vendas Granel / Refugo', $('kpiMassBulk').textContent],
-    ['Eficiência Global', $('kpiMassEfficiency').textContent],
-    ['Diferença / Perda', $('kpiMassLoss').textContent]
+    ['Saídas (Faturamento)', $('kpiMassExp').textContent],
+    ['Vendas Granel / Outros', $('kpiMassBulk').textContent],
+    ['Estoque Físico Atual', $('kpiMassStock').textContent]
   ];
   
   doc.autoTable({startY:55, head:[['Item','Valor']], body:stats, theme:'grid', headStyles:{fillColor:[59,130,246]}});

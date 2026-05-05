@@ -675,6 +675,13 @@ function showScreen(name) {
     loadCHistory();
     loadPhParcelas();
   }
+  if (name === 'bulk' && window.bulkSig) {
+    setTimeout(() => window.bulkSig.init(), 100);
+  }
+  if (name === 'closure' && window.qualitySig) {
+    setTimeout(() => window.qualitySig.init(), 100);
+  }
+
 }
 
 function showQTab(tab) {
@@ -848,7 +855,16 @@ async function afterLogin(u) {
   initCarraoForm();
   loadPhParcelas();
   loadQualitySelects();
+  
+  // Inicializa todos os pads de assinatura
+  setTimeout(() => {
+    window.bulkSig = new SignaturePad('sigBulkCanvas', { strokeStyle: '#3b82f6' });
+    window.qualitySig = new SignaturePad('closureSigCanvas', { strokeStyle: '#10b981' });
+    initPhSig(); // Packing House sig
+  }, 500);
+
   await updateSyncBadge();
+
   showScreen('home');
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(()=>{});
@@ -1190,9 +1206,10 @@ function initClosureSig() {
 }
 function clearClosureSig() { if(cSigCtx) { cSigCtx.clearRect(0,0,cSigCanvas.width,cSigCanvas.height); cSigHasData=false; } }
 async function saveClosure() {
-  if (!cSigHasData) { toast('Assine para confirmar', 'err'); return; }
+  if (!window.qualitySig || !window.qualitySig.hasData) { toast('Assine para confirmar', 'err'); return; }
   const inspectorName = $('closureInspectorName').value.trim() || window.currentInspector || 'Inspetor';
-  const sig = cSigCanvas.toDataURL('image/png', 0.7);
+  const sig = window.qualitySig.toDataURL();
+
 
   try {
     const todayStr = today();
@@ -1397,6 +1414,9 @@ async function submitCarrao() {
   
   const julianLot = `${F}${PPP}${V}${DDD}`;
 
+  const tractorId   = $('cTractor').value;
+  const tractor     = employees.find(e => e.id == tractorId);
+
   const session = {
     tenant_id         : tenantId,
     date              : date,
@@ -1404,6 +1424,7 @@ async function submitCarrao() {
     fruit_type        : cState.fruitName,
     parcel_id         : parcelaId || null,
     variety_id        : $('cVariety').value || null,
+    tractor_driver    : tractor ? tractor.name : null,
     qty_carrocoes     : cQty,
     price_per_carrao  : price,
     total_value       : parseFloat(total.toFixed(2)),
@@ -1413,6 +1434,7 @@ async function submitCarrao() {
     julian_lot        : julianLot,
     synced            : true,
   };
+
 
   const workersArr = Array.from(cState.workers.entries()).map(([id, name]) => ({
     employee_id: id, employee_name: name, value_received: parseFloat(perEmp.toFixed(2))
@@ -1516,8 +1538,9 @@ function showOrdemColheita(list) {
     <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
     <title>Ordem de Colheita</title>
     <style>
-      body{margin:0;padding:0;}
-      @media print{ button{display:none!important} }
+      body{margin:0;padding:0;font-family:sans-serif;}
+      .page{width:100%; max-width:800px; margin:20px auto; border:1px solid #ddd; padding:20px; box-sizing:border-box; background:#fff;}
+      @media print{ button{display:none!important}; .page{margin:0; border:none; padding:10px} }
     </style></head><body>
     ${pagesHtml}
     <div style="text-align:center;margin-top:16px;margin-bottom:32px;">
@@ -1525,6 +1548,7 @@ function showOrdemColheita(list) {
     </div>
     </body></html>
   `;
+
 
   const w = window.open('', '_blank', 'width=700,height=900');
   if (w) { w.document.write(html); w.document.close(); }
@@ -1549,10 +1573,11 @@ async function pushCarrao({ session, workers }) {
       ...session,
       qty_carrocoes: 1, 
       total_value: session.price_per_carrao, 
-      value_per_employee: session.price_per_carrao / session.employee_count
+      value_per_employee: session.price_per_carrao / session.employee_count,
+      carrao_seq: nextSeq + i
     };
-    if (hasSeq) sObj.carrao_seq = nextSeq + i;
     sessionsToInsert.push(sObj);
+
   }
 
   const { data: sessList, error: e1 } = await sb.from('field_carrao_sessions').insert(sessionsToInsert).select('*');
@@ -1679,7 +1704,85 @@ function initPhSig() {
   phSigCanvas.addEventListener('mousemove',  move);
   window.addEventListener('mouseup', stop);
 }
-function clearPhSig() { if(phSigCtx) { phSigCtx.clearRect(0,0,phSigCanvas.width,phSigCanvas.height); phSigHasData=false; } }
+// Generic Signature Pad helper
+class SignaturePad {
+  constructor(canvasId, options = {}) {
+    this.canvasId = canvasId;
+    this.canvas = document.getElementById(canvasId);
+    if (!this.canvas) return;
+    this.ctx = this.canvas.getContext('2d');
+    this.options = { strokeStyle: '#000', lineWidth: 3, ...options };
+    this.drawing = false;
+    this.hasData = false;
+    this.eventsBound = false;
+    this.init();
+  }
+  init() {
+    this.canvas = document.getElementById(this.canvasId);
+    if (!this.canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = this.canvas.getBoundingClientRect();
+    if (rect.width === 0) return; 
+
+    this.canvas.width = rect.width * dpr;
+    this.canvas.height = rect.height * dpr;
+    this.ctx = this.canvas.getContext('2d');
+    this.ctx.scale(dpr, dpr);
+    this.ctx.strokeStyle = this.options.strokeStyle;
+    this.ctx.lineWidth = this.options.lineWidth;
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+
+    if (this.eventsBound) return;
+    this.eventsBound = true;
+
+    const getPos = e => {
+      const r = this.canvas.getBoundingClientRect();
+      const s = (e.touches && e.touches.length) ? e.touches[0] : e;
+      return { x: s.clientX - r.left, y: s.clientY - r.top };
+    };
+    const start = e => {
+      if (e.target === this.canvas) e.preventDefault();
+      this.drawing = true;
+      const p = getPos(e);
+      this.ctx.beginPath();
+      this.ctx.moveTo(p.x, p.y);
+    };
+    const move = e => {
+      if (!this.drawing) return;
+      if (e.target === this.canvas) e.preventDefault();
+      const p = getPos(e);
+      this.ctx.lineTo(p.x, p.y);
+      this.ctx.stroke();
+      this.hasData = true;
+    };
+    const stop = () => { this.drawing = false; this.ctx.closePath(); };
+
+    this.canvas.addEventListener('touchstart', start, { passive: false });
+    this.canvas.addEventListener('touchmove', move, { passive: false });
+    this.canvas.addEventListener('touchend', stop);
+    this.canvas.addEventListener('mousedown', start);
+    this.canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', stop);
+  }
+  clear() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.hasData = false;
+  }
+  toDataURL() {
+    return this.canvas.toDataURL('image/png');
+  }
+}
+
+function clearSig(canvasId) {
+  if (canvasId === 'sigBulkCanvas' && window.bulkSig) window.bulkSig.clear();
+  else if (canvasId === 'closureSigCanvas' && window.qualitySig) window.qualitySig.clear();
+  else {
+    const canvas = $(canvasId);
+    if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
 
 // ═══════════════════════════════════════════
 // VENDA A GRANEL (AGRANEL)
@@ -1735,7 +1838,11 @@ async function saveBulkSale() {
 
   if (!customer) return toast('Informe o nome do cliente', 'err');
   if (bulkWeights.length === 0) return toast('Lance ao menos um peso', 'err');
-  if (isCanvasEmpty('sigBulkCanvas')) return toast('O comprador deve assinar', 'err');
+  
+  const sig = window.bulkSig && window.bulkSig.hasData ? window.bulkSig.toDataURL() : null;
+  if (!sig) return toast('O comprador deve assinar', 'err');
+
+
 
   const btn = $('btnSaveBulk');
   btn.disabled = true; btn.textContent = '⏳ Salvando...';
@@ -1752,7 +1859,7 @@ async function saveBulkSale() {
     is_paid: false,
     is_received: false,
     ts: new Date().toISOString(),
-    signature_base64: $('sigBulkCanvas').toDataURL('image/png')
+    signature_base64: window.bulkSig.toDataURL()
   };
 
   try {
