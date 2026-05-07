@@ -1962,25 +1962,36 @@ async function saveBulkSale() {
   };
 
   try {
-    const { error } = await sb.from('bulk_sales').insert(sale);
-    if (error) {
-      // Fallback: Tenta salvar sem o fruit_type caso a coluna não exista no banco
-      if (error.message.includes('fruit_type') || error.code === '42703') {
-        const fallbackSale = { ...sale };
-        delete fallbackSale.fruit_type;
-        const { error: err2 } = await sb.from('bulk_sales').insert(fallbackSale);
-        if (err2) throw err2;
-      } else {
-        throw error;
-      }
+    let payload = { ...sale };
+    let { error } = await sb.from('bulk_sales').insert(payload);
+    
+    // Fallback progressivo: remove campos opcionais que podem não existir no schema
+    if (error && (error.code === '42703' || String(error.message).includes('column') || String(error.code) === 'PGRST204')) {
+      console.warn('Fallback 1: removendo fruit_type', error.message);
+      delete payload.fruit_type;
+      const r2 = await sb.from('bulk_sales').insert(payload);
+      error = r2.error;
     }
+    if (error && (error.code === '42703' || String(error.message).includes('column') || String(error.code) === 'PGRST204')) {
+      console.warn('Fallback 2: removendo campos extras', error.message);
+      delete payload.is_waste; delete payload.is_paid; delete payload.is_received; delete payload.ts;
+      const r3 = await sb.from('bulk_sales').insert(payload);
+      error = r3.error;
+    }
+    if (error && (error.code === '42703' || String(error.message).includes('column') || String(error.code) === 'PGRST204')) {
+      console.warn('Fallback 3: payload mínimo', error.message);
+      payload = { tenant_id: tenantId, date: sale.date, weight_kg: sale.weight_kg, total_value: sale.total_value, customer_name: sale.customer_name, signature_base64: sale.signature_base64 };
+      const r4 = await sb.from('bulk_sales').insert(payload);
+      error = r4.error;
+    }
+    if (error) throw error;
 
     toast('✓ Venda a granel registrada!', 'ok');
     resetBulkForm();
     showScreen('home');
   } catch (e) {
     toast('Erro: ' + e.message, 'err');
-    console.error(e);
+    console.error('Bulk sale error:', e);
   } finally {
     btn.disabled = false; btn.textContent = '✅ Finalizar e Salvar';
   }
