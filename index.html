@@ -147,6 +147,26 @@
     <select id="multiTenantSelect" style="width:100%; border:1px solid rgba(255,255,255,.1); background:#1e293b; color:#fff"></select>
   </div>
 
+  <!-- ABSENCE MODAL -->
+  <div id="absenceModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center">
+    <div style="background:var(--card); width:100%; max-width:500px; border-radius:20px; padding:24px; border:1px solid var(--border)">
+      <h3 style="margin-bottom:16px">📅 Lançar Falta (Assiduidade)</h3>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+        <div><label class="flabel">Funcionário</label><select id="absenceEmp"></select></div>
+        <div><label class="flabel">Data</label><input type="date" id="absenceDate"/></div>
+      </div>
+      <div style="margin-bottom:20px"><label class="flabel">Motivo (Opcional)</label><input id="absenceReason" placeholder="Justificativa..."/></div>
+      <button class="blue btn-full" onclick="addAbsence()" style="margin-bottom:20px">➕ Registrar Falta</button>
+      
+      <div class="title" style="font-size:12px; border-top:1px solid var(--border); padding-top:16px; margin-top:16px">Faltas no período filtrado:</div>
+      <div id="absenceList" style="max-height:200px; overflow-y:auto; margin-bottom:20px"></div>
+      
+      <div style="display:flex; justify-content:flex-end">
+        <button class="sec" onclick="document.getElementById('absenceModal').style.display='none'">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- BULK EDIT MODAL -->
   <div id="bulkEditModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center">
     <div style="background:var(--card); width:100%; max-width:450px; border-radius:20px; padding:24px; border:1px solid var(--border)">
@@ -418,6 +438,7 @@
       <div class="f"><label class="flabel">Fim</label><input type="date" id="finEnd"/></div>
       <div class="f"><label class="flabel">Função</label><select id="finRole"><option value="">Todos</option><option value="EMBALADOR">Embalador</option><option value="EMPILHADOR">Empilhador</option><option value="COLHEDOR">Colhedor</option><option value="TRATORISTA">Tratorista</option><option value="SUPERVISOR">Supervisor</option></select></div>
       <button onclick="refreshFin()">Gerar</button>
+      <button class="sec" onclick="openAbsenceModal()">📅 Gestão de Faltas</button>
       <button class="sec" onclick="exportFinPDF()">📄 PDF Folha</button>
     </div>
     <div class="kgrid">
@@ -1476,6 +1497,13 @@ async function refreshFin(){
   $('finKpiAvgBox').textContent=totalBoxes?BRL(totalVal/totalBoxes):'R$ 0,00';
   $('finKpiKg').textContent=totalKg.toFixed(1)+' kg';
 
+  // ── 8.1 Buscar Faltas (Assiduidade) ──
+  const {data:abs} = await sb.from('employee_absences').select('*').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
+  const absenceMap = {};
+  (abs||[]).forEach(a => {
+    absenceMap[a.employee_barcode] = (absenceMap[a.employee_barcode]||0) + 1;
+  });
+
   // ── 9. Tabela sumarizada por funcionário ──
   const empSum = {};
   allData.forEach(d => {
@@ -1485,14 +1513,23 @@ async function refreshFin(){
     empSum[d.employee_name].val += d._total_value || 0;
   });
 
+  // Aplicar penalidade de assiduidade (15% por falta)
+  Object.values(empSum).forEach(d => {
+    const emp = _employees.find(e => e.name === d.employee_name);
+    const abCount = emp ? (absenceMap[emp.barcode] || 0) : 0;
+    d.absences = abCount;
+    d.penalty = d.val * (0.15 * abCount);
+    d.netVal = d.val - d.penalty;
+  });
+
   $('finTable').querySelector('tbody').innerHTML = Object.values(empSum).sort((a,b)=>b[1]?.val - a[0]?.val).map(d=>`
     <tr>
       <td style="color:var(--muted)">SOMA PERÍODO</td><td><b>${d.employee_name}</b></td>
       <td><span class="badge ${d.role.toLowerCase()}">${d.role}</span></td>
       <td>${d.is_harvest ? (d.boxes).toFixed(1) +' carr' : Math.round(d.boxes)+' cx'}</td>
       <td>${d.kg.toFixed(1)} kg</td>
-      <td>${d.is_harvest ? '<span style="color:var(--orange)">Custo Campo</span>' : 'Variável'}</td>
-      <td style="color:var(--green);font-weight:700">${BRL(d.val)}</td>
+      <td>${d.absences > 0 ? `<span style="color:var(--red)">${d.absences} falta(s) (-${(d.absences*15)}%)</span>` : '<span style="color:var(--muted)">100% Assid.</span>'}</td>
+      <td style="color:var(--green);font-weight:700">${BRL(d.netVal)}</td>
     </tr>
   `).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:28px">Nenhum dado.</td></tr>';
 
@@ -2326,6 +2363,55 @@ async function loadParcels() {
     const options = items.map(p => `<option value="${p.id}">${p.code} (${p.p_code || 'S/P'})</option>`).join('');
     [sel, massSel, bulkSel, nfeSel].forEach(s => { if(s) s.innerHTML = '<option value="">Selecione...</option>' + options; });
   } catch (e) { console.error(e); }
+}
+async function openAbsenceModal() {
+  const s = $('finStart').value;
+  const e = $('finEnd').value;
+  if(!s || !e) return alert('Selecione um intervalo de datas primeiro');
+  
+  const {data:abs} = await sb.from('employee_absences').select('*').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
+  const list = $('absenceList');
+  list.innerHTML = (abs||[]).map(a => {
+    const emp = _employees.find(e => e.barcode === a.employee_barcode);
+    return `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--border)">
+      <div><b>${emp?.name || '---'}</b><br><small style="color:var(--muted)">${a.date} - ${a.reason || 'S/M'}</small></div>
+      <button class="danger" onclick="deleteAbsence('${a.id}')" style="padding:5px 10px">×</button>
+    </div>`;
+  }).join('') || '<div style="padding:20px; text-align:center; color:var(--muted)">Nenhuma falta registrada no período.</div>';
+  
+  // Populate select
+  const sel = $('absenceEmp');
+  sel.innerHTML = '<option value="">-- Selecionar Funcionário --</option>' + _employees.map(e => `<option value="${e.barcode}">${e.name}</option>`).join('');
+  
+  $('absenceModal').style.display = 'flex';
+}
+
+async function addAbsence() {
+  const barcode = $('absenceEmp').value;
+  const date = $('absenceDate').value;
+  const reason = $('absenceReason').value;
+  
+  if(!barcode || !date) return alert('Selecione o funcionário e a data');
+  
+  const {error} = await sb.from('employee_absences').insert([{
+    tenant_id: tenantId,
+    employee_barcode: barcode,
+    date,
+    reason
+  }]);
+  
+  if(error) alert('Erro: ' + error.message);
+  else {
+    openAbsenceModal();
+    refreshFin();
+  }
+}
+
+async function deleteAbsence(id) {
+  if(!confirm('Excluir este registro de falta?')) return;
+  await sb.from('employee_absences').delete().eq('id',id);
+  openAbsenceModal();
+  refreshFin();
 }
 async function loadLinks(){
   try {

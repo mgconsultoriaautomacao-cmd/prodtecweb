@@ -1714,7 +1714,10 @@ function initPhSig() {
   phSigCtx.lineWidth = 3;
   phSigCtx.lineCap = 'round'; phSigCtx.lineJoin = 'round';
 
-  if (phSigInitialized) return;
+  if (phSigInitialized && phSigCanvas) return;
+  phSigCanvas = $('phSigCanvas');
+  if (!phSigCanvas) return;
+  phSigCtx = phSigCanvas.getContext('2d');
   phSigInitialized = true;
 
   const getPos = e => { 
@@ -1766,7 +1769,10 @@ function initBulkSig() {
   bulkSigCtx.lineWidth = 3;
   bulkSigCtx.lineCap = 'round'; bulkSigCtx.lineJoin = 'round';
 
-  if (bulkSigInitialized) return;
+  if (bulkSigInitialized && bulkSigCanvas) return;
+  bulkSigCanvas = $('sigBulkCanvas');
+  if (!bulkSigCanvas) return;
+  bulkSigCtx = bulkSigCanvas.getContext('2d');
   bulkSigInitialized = true;
 
   const getPos = e => { 
@@ -1818,7 +1824,10 @@ function initQualitySig() {
   qSigCtx.lineWidth = 3;
   qSigCtx.lineCap = 'round'; qSigCtx.lineJoin = 'round';
 
-  if (qSigInitialized) return;
+  if (qSigInitialized && qSigCanvas) return;
+  qSigCanvas = $('closureSigCanvas');
+  if (!qSigCanvas) return;
+  qSigCtx = qSigCanvas.getContext('2d');
   qSigInitialized = true;
 
   const getPos = e => { 
@@ -1917,7 +1926,9 @@ async function saveBulkSale() {
   if (bulkWeights.length === 0) return toast('Lance ao menos um peso', 'err');
   if (!bulkSigHasData) return toast('O comprador deve assinar', 'err');
 
-  const sig = $('sigBulkCanvas').toDataURL('image/png');
+  if (!bulkSigCanvas) bulkSigCanvas = $('sigBulkCanvas');
+  const sig = bulkSigCanvas ? bulkSigCanvas.toDataURL('image/png') : null;
+  if (!sig) return toast('Erro ao capturar assinatura', 'err');
 
 
 
@@ -1977,7 +1988,9 @@ async function savePhSignature() {
   const name = $('phInspectorName').value.trim();
   if (!name) { toast('Informe seu nome', 'err'); return; }
   
-  const sig = phSigCanvas.toDataURL('image/png', 0.7);
+  if (!phSigCanvas) phSigCanvas = $('phSigCanvas');
+  const sig = phSigCanvas ? phSigCanvas.toDataURL('image/png', 0.7) : null;
+  if (!sig) return toast('Erro ao capturar assinatura', 'err');
   const ids = phRecords.map(r => r.id);
   
   try {
