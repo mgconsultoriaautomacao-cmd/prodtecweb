@@ -26,6 +26,15 @@ ALTER TABLE bulk_sales
   ADD COLUMN IF NOT EXISTS signature_base64  TEXT,
   ADD COLUMN IF NOT EXISTS ts                TIMESTAMPTZ DEFAULT NOW();
 
--- 3. COMENTÁRIOS PARA DOCUMENTAÇÃO
-COMMENT ON COLUMN field_carrao_sessions.carrao_seq IS 'Número sequencial do carrocão para rastreabilidade';
-COMMENT ON COLUMN field_carrao_sessions.tractor_driver IS 'Nome do tratorista responsável pelo transporte';
+-- 4. TABELA DE FALTAS E ASSIDUIDADE (employee_absences)
+CREATE TABLE IF NOT EXISTS employee_absences (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tenant_id UUID REFERENCES tenants(id),
+  employee_barcode TEXT NOT NULL,
+  date DATE NOT NULL,
+  reason TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(tenant_id, employee_barcode, date)
+);
+
+COMMENT ON TABLE employee_absences IS 'Registro de faltas para cálculo de assiduidade e descontos em folha';
