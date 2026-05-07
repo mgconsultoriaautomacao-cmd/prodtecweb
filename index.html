@@ -2468,7 +2468,14 @@ async function addAbsence() {
     reason
   });
   
-  if(error) alert(error.message);
+  if(error) {
+    if(error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
+      const emp = _employees.find(e => e.barcode === barcode);
+      toast(`⚠️ ${emp?.name || 'Funcionário'} já tem falta em ${date}`, 'err');
+    } else {
+      alert(error.message);
+    }
+  }
   else {
     toast('✓ Falta registrada', 'ok');
     $('absenceDate').value = ''; // Limpa para facilitar o próximo lançamento
