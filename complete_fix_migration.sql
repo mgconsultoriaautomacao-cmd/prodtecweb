@@ -20,6 +20,7 @@ ALTER TABLE expeditions
 ALTER TABLE bulk_sales 
   ADD COLUMN IF NOT EXISTS customer_name     TEXT,
   ADD COLUMN IF NOT EXISTS invoice_num       TEXT,
+  ADD COLUMN IF NOT EXISTS fruit_type        TEXT,
   ADD COLUMN IF NOT EXISTS is_waste          BOOLEAN DEFAULT FALSE,
   ADD COLUMN IF NOT EXISTS is_paid           BOOLEAN DEFAULT FALSE,
   ADD COLUMN IF NOT EXISTS is_received       BOOLEAN DEFAULT FALSE,

@@ -504,6 +504,12 @@
       <div class="title">➕ Lançar Venda a Granel / Refugo</div>
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1.5fr 1fr 1fr 1fr auto; gap:10px; align-items:end">
         <div><label class="flabel">Data</label><input type="date" id="bulkDate"/></div>
+        <div><label class="flabel">Fruta</label>
+          <select id="bulkFruitSelect">
+            <option value="MELAO">🍈 Melão</option>
+            <option value="MELANCIA">🍉 Melancia</option>
+          </select>
+        </div>
         <div><label class="flabel">Parcela</label><select id="bulkParcel"></select></div>
         <div><label class="flabel">Variedade</label><select id="bulkVariety"></select></div>
         <div><label class="flabel">Cliente / Destino</label><input id="bulkCustomer" placeholder="Ex: CEASA / Descarte"/></div>
@@ -531,7 +537,7 @@
     </div>
     <div class="card">
       <div class="title">📋 Histórico de Vendas / Refugo</div>
-      <table id="bulkTable"><thead><tr><th>Data</th><th>Parcela</th><th>Cliente/Destino</th><th>NF</th><th>Peso</th><th>Valor</th><th>Financeiro</th><th>Status</th></tr></thead><tbody></tbody></table>
+      <table id="bulkTable"><thead><tr><th>Data</th><th>Parcela</th><th>Fruta</th><th>Cliente/Destino</th><th>NF</th><th>Peso</th><th>Valor</th><th>Financeiro</th><th>Status</th></tr></thead><tbody></tbody></table>
     </div>
   </div>
 
@@ -1994,6 +2000,7 @@ async function loadBulk() {
     <tr>
       <td>${b.date}</td>
       <td>${b.parcels?.code || '—'}</td>
+      <td>${b.fruit_type === 'MELANCIA' ? '🍉 Melancia' : '🍈 Melão'}</td>
       <td>${b.customer_name || '—'}</td>
       <td>${b.invoice_num || '—'}</td>
       <td><span class="badge ${b.is_waste?'danger':'packer'}">${b.weight_kg} kg</span></td>
@@ -2046,6 +2053,7 @@ async function saveBulk() {
     total_value: waste ? 0 : (parseFloat(v) || 0),
     customer_name: cust || null,
     invoice_num: inv || null,
+    fruit_type: $('bulkFruitSelect').value,
     is_waste: waste
   };
 
@@ -2547,7 +2555,6 @@ async function refreshQuality() {
       <td>${q.issue_type}</td>
       <td>${q.penalty_boxes}</td>
       <td>${q.inspector_name||'--'}</td>
-    </tr>`;
     </tr>`;
   }).join('') || '<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--muted)">Nenhum registro.</td></tr>';
   
