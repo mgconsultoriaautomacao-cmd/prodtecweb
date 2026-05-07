@@ -1,4 +1,4 @@
-<!-- Prodtech Web - v1.0.2 - Fix Dashboard KPIs -->
+<!-- Prodtech Web - v1.0.4 - Fix Absence & Charts -->
   <!DOCTYPE html>
   <html lang="pt-br">
   <head>
@@ -2408,6 +2408,12 @@ async function openAbsenceModal() {
   const e = $('finEnd').value;
   if(!s || !e) return alert('Selecione um intervalo de datas primeiro');
   
+  // Garantir que funcionários foram carregados para o select
+  if (!_employees || _employees.length === 0) {
+    const {data} = await sb.from('employees').select('*').eq('tenant_id',tenantId).order('name');
+    _employees = data || [];
+  }
+  
   const {data:abs} = await sb.from('employee_absences').select('*').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
   const list = $('absenceList');
   list.innerHTML = (abs||[]).map(a => {
@@ -2418,7 +2424,7 @@ async function openAbsenceModal() {
     </div>`;
   }).join('') || '<div style="padding:20px; text-align:center; color:var(--muted)">Nenhuma falta registrada no período.</div>';
   
-  // Populate select
+  // Popula o seletor com todos os funcionários ativos
   const sel = $('absenceEmp');
   sel.innerHTML = '<option value="">-- Selecionar Funcionário --</option>' + _employees.map(e => `<option value="${e.barcode}">${e.name}</option>`).join('');
   
@@ -2598,10 +2604,11 @@ function refreshSupervisorChart() {
   const pCode = $('supParcelSelect').value;
   const exp = window._currentExpData || [];
   
+  // Se não houver seleção, mostramos a distribuição total consolidada
   const filtered = pCode ? exp.filter(x => {
-    const cleanCode = (c) => String(c||'').toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
-    return x.product_description.includes(pCode) || x.traceability_code.includes(pCode);
-  }) : [];
+    const clean = (c) => String(c||'').toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
+    return clean(x.product_description).includes(clean(pCode)) || clean(x.traceability_code).includes(clean(pCode));
+  }) : exp;
 
   const stats = {};
   filtered.forEach(x => {
@@ -2610,24 +2617,50 @@ function refreshSupervisorChart() {
   });
 
   const labels = Object.keys(stats).sort((a,b) => Number(a)-Number(b));
-  const values = labels.map(l => stats[l] / 1000); // Tons
+  const rawValues = labels.map(l => stats[l] / 1000); // Em Toneladas
+  
+  // Lógica de Ponto Crítico e Estética Premium
+  const avg = rawValues.reduce((a,b) => a+b, 0) / (rawValues.length || 1);
+  const colors = rawValues.map(v => v < (avg * 0.85) ? '#ef4444' : '#10b981'); // Vermelho se estiver 15% abaixo da média
 
   mkChart('chartSupCaliber', {
     type: 'bar',
     data: {
-      labels: labels.map(l => l === 'N/A' ? 'Não Ident.' : 'TP ' + l),
+      labels: labels.map(l => l === 'N/A' ? 'Indet.' : 'TP ' + l),
       datasets: [{
-        label: 'Tons',
-        data: values,
-        backgroundColor: '#10b981',
-        borderRadius: 6
+        label: 'Toneladas',
+        data: rawValues,
+        backgroundColor: colors,
+        borderRadius: 8,
+        barThickness: 'flex'
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { callback: v => v + 't' } } }
+      plugins: { 
+        legend: { display: false },
+        tooltip: {
+          ...TOPTS,
+          callbacks: {
+            label: (c) => {
+              const status = c.raw < avg ? '🔴 Abaixo da média' : '🟢 Acima da média';
+              return `${c.raw.toFixed(2)}t - ${status}`;
+            }
+          }
+        }
+      },
+      scales: { 
+        y: { 
+          beginAtZero: true, 
+          ticks: { color: '#64748b', callback: v => v + 't' },
+          grid: { color: 'rgba(255,255,255,.05)' }
+        },
+        x: {
+          ticks: { color: '#f8fafc', font: { weight: 'bold' } },
+          grid: { display: false }
+        }
+      }
     }
   });
 }

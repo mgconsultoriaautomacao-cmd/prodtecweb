@@ -1963,13 +1963,24 @@ async function saveBulkSale() {
 
   try {
     const { error } = await sb.from('bulk_sales').insert(sale);
-    if (error) throw error;
+    if (error) {
+      // Fallback: Tenta salvar sem o fruit_type caso a coluna não exista no banco
+      if (error.message.includes('fruit_type') || error.code === '42703') {
+        const fallbackSale = { ...sale };
+        delete fallbackSale.fruit_type;
+        const { error: err2 } = await sb.from('bulk_sales').insert(fallbackSale);
+        if (err2) throw err2;
+      } else {
+        throw error;
+      }
+    }
 
     toast('✓ Venda a granel registrada!', 'ok');
     resetBulkForm();
     showScreen('home');
   } catch (e) {
     toast('Erro: ' + e.message, 'err');
+    console.error(e);
   } finally {
     btn.disabled = false; btn.textContent = '✅ Finalizar e Salvar';
   }
