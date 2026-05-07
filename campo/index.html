@@ -579,22 +579,42 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
         <div class="loading"><div class="spinner"></div>Buscando carrocões pendentes...</div>
       </div>
 
-      <div id="phSignArea" style="display:none">
-        <div class="section-title">Responsável Packing House</div>
-        <input id="phInspectorName" placeholder="Nome do encarregado" style="margin-bottom:16px">
-        
-        <div class="section-title">Assinatura</div>
-        <div class="sig-wrap">
-          <canvas id="phSigCanvas" class="sig-canvas" width="800" height="200"></canvas>
-          <button class="sig-clear" onclick="clearPhSig()">🗑 Limpar</button>
-        </div>
-        <div class="sig-hint" style="margin-bottom:20px">Sua assinatura valerá para todos os itens acima</div>
-        
-        <button class="btn btn-primary btn-full" onclick="savePhSignature()">✅ Confirmar Recebimento</button>
+      <div id="phSignArea" style="display:none; text-align:center; padding-top:10px">
+        <button class="btn btn-primary btn-full" onclick="showScreen('phSign')">✍️ Assinar e Finalizar Validação</button>
+        <div style="font-size:11px; color:var(--muted2); margin-top:10px">Total de carrocões pendentes carregados.</div>
       </div>
     </div>
   </div>
 
+</div>
+
+<!-- ══════════════ PACKING HOUSE SIGNATURE ══════════════ -->
+<div id="screenPhSign" class="screen">
+  <div class="header">
+    <div class="back-btn" onclick="showScreen('carrao')">‹</div>
+    <div class="header-title">✍️ Assinatura Packing House</div>
+  </div>
+
+  <div style="padding:24px 20px">
+    <div class="card" style="margin-bottom:20px;border-color:var(--blue)">
+      <div style="font-weight:800;font-size:18px;color:var(--blue);margin-bottom:8px">Validação de Chegada</div>
+      <div style="font-size:13px;color:var(--muted2);line-height:1.5">Sua assinatura confirmará o recebimento dos carrocões listados na tela anterior.</div>
+    </div>
+
+    <div class="section-title" style="margin-bottom:10px">Nome do Encarregado</div>
+    <div style="margin-bottom:20px">
+      <input id="phInspectorName" placeholder="Seu nome completo" autocomplete="name">
+    </div>
+
+    <div class="section-title">Assinatura Digital</div>
+    <div class="sig-wrap">
+      <canvas id="phSigCanvas" class="sig-canvas" width="800" height="240"></canvas>
+      <button class="sig-clear" onclick="clearPhSig()">🗑 Limpar</button>
+    </div>
+    <div class="sig-hint" style="margin-bottom:24px">Assine acima com o dedo ou caneta</div>
+
+    <button class="btn btn-primary btn-full" id="btnSavePhSig" onclick="savePhSignature()">✅ Confirmar Recebimento</button>
+  </div>
 </div>
 
 <!-- CLOSURE MODAL -->
@@ -675,14 +695,19 @@ function toast(msg, type='ok') {
 }
 
 function showScreen(name) {
-  const screens = { login:'screenLogin', home:'screenHome', quality:'screenQuality', carrao:'screenCarrao', closure:'screenClosure', bulk:'screenBulk' };
+  const screens = { 
+    login:'screenLogin', home:'screenHome', quality:'screenQuality', 
+    carrao:'screenCarrao', closure:'screenClosure', bulk:'screenBulk',
+    phSign:'screenPhSign'
+  };
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active','behind'));
   const active = $(screens[name]);
   if (!active) return;
   active.classList.add('active');
   if (name === 'quality') loadQHistory();
-  if (name === 'bulk') setTimeout(initBulkSig, 100);
-  if (name === 'closure') setTimeout(initQualitySig, 100);
+  if (name === 'bulk') setTimeout(initBulkSig, 300);
+  if (name === 'phSign') setTimeout(initPhSig, 300);
+  if (name === 'closure') setTimeout(initQualitySig, 300);
 
 
 }
@@ -707,7 +732,6 @@ function showCTab(tab) {
   if (tab === 'ph') {
     loadPhParcelas();
     loadPhPending();
-    setTimeout(initPhSig, 100);
   }
 }
 
@@ -1641,7 +1665,7 @@ async function loadPhPending() {
   $('phSignArea').style.display = 'none';
 
   let query = sb.from('field_carrao_sessions')
-    .select('*, field_carrao_employees(employees(name))')
+    .select('*, parcels(code), varieties(name)')
     .eq('tenant_id', tenantId)
     .is('ph_signature_base64', null)
     .order('date', {ascending:false});
@@ -1656,22 +1680,22 @@ async function loadPhPending() {
 
   phRecords = data;
   el.innerHTML = data.map(r => {
-    const workerNames = (r.field_carrao_employees || []).map(ce => ce.employees?.name).filter(Boolean).join(', ');
-    const parcela = parcelas.find(p => p.id === r.parcel_id);
+    const pCode = r.parcels?.code || '—';
+    const vName = r.varieties?.name || '—';
     return `
       <div class="hist-item" style="padding:10px;margin-bottom:6px;border-style:dashed">
         <div style="display:flex;justify-content:space-between">
-          <span style="font-weight:700;color:var(--blue)">${r.fruit_type} — ${r.qty_carrocoes} un</span>
+          <span style="font-weight:700;color:var(--blue)">${r.fruit_type} — ${vName}</span>
+          <span style="font-size:11px;color:var(--muted)">${r.qty_carrocoes} un</span>
         </div>
         <div style="font-size:11px;color:var(--text);margin-top:4px;line-height:1.4">
-          <b>Parcela:</b> ${parcela?.code || '—'} | <b>Colhedores:</b> ${workerNames || 'Nenhum'}
+          <b>Parcela:</b> ${pCode} | <b>Lote:</b> ${r.julian_lot || '—'}
         </div>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px">Lote: ${r.julian_lot || '—'} | Por: ${r.registered_by}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Responsável Colheita: ${r.registered_by || '—'}</div>
       </div>
     `;
   }).join('');
   $('phSignArea').style.display = 'block';
-  setTimeout(initPhSig, 100);
 }
 
 let phSigCtx, phSigCanvas, phSigHasData = false, phSigDrawing = false, phSigInitialized = false;
@@ -1913,7 +1937,7 @@ async function saveBulkSale() {
     is_paid: false,
     is_received: false,
     ts: new Date().toISOString(),
-    signature_base64: window.bulkSig.toDataURL()
+    signature_base64: sig
   };
 
   try {
@@ -1965,7 +1989,8 @@ async function savePhSignature() {
     toast(`✓ ${ids.length} carrocão(ões) validados!`, 'ok');
     clearPhSig();
     $('phInspectorName').value = '';
-    loadPhPending();
+    showScreen('carrao');
+    showCTab('ph');
   } catch(e) {
     toast('Erro ao salvar: ' + e.message, 'err');
   }
