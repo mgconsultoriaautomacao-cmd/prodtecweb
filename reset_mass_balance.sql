@@ -50,28 +50,28 @@ DROP POLICY IF EXISTS "tenant_absences_delete" ON employee_absences;
 CREATE POLICY "tenant_absences_select" ON employee_absences
   FOR SELECT USING (
     tenant_id IN (
-      SELECT tenant_id FROM user_tenants WHERE user_id = auth.uid()
+      SELECT tenant_id FROM tenant_users WHERE user_id = auth.uid()
     )
   );
 
 CREATE POLICY "tenant_absences_insert" ON employee_absences
   FOR INSERT WITH CHECK (
     tenant_id IN (
-      SELECT tenant_id FROM user_tenants WHERE user_id = auth.uid()
+      SELECT tenant_id FROM tenant_users WHERE user_id = auth.uid()
     )
   );
 
 CREATE POLICY "tenant_absences_update" ON employee_absences
   FOR UPDATE USING (
     tenant_id IN (
-      SELECT tenant_id FROM user_tenants WHERE user_id = auth.uid()
+      SELECT tenant_id FROM tenant_users WHERE user_id = auth.uid()
     )
   );
 
 CREATE POLICY "tenant_absences_delete" ON employee_absences
   FOR DELETE USING (
     tenant_id IN (
-      SELECT tenant_id FROM user_tenants WHERE user_id = auth.uid()
+      SELECT tenant_id FROM tenant_users WHERE user_id = auth.uid()
     )
   );
 

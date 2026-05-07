@@ -1513,17 +1513,7 @@ async function refreshFin(){
   // ── 8. Merge e totais ──
   const allData = [..._finData, ...harvestRows];
 
-  let totalVal=0, totalBoxes=0, totalKg=0;
-  allData.forEach(d => {
-    totalVal += d._total_value || 0;
-    totalBoxes += d.total_boxes || 0;
-    totalKg += d.total_kg || 0;
-  });
-
-  $('finKpiTotal').textContent=BRL(totalVal);
-  $('finKpiBoxes').textContent=totalBoxes.toFixed(0);
-  $('finKpiAvgBox').textContent=totalBoxes?BRL(totalVal/totalBoxes):'R$ 0,00';
-  $('finKpiKg').textContent=totalKg.toFixed(1)+' kg';
+  // (KPIs calculados após assiduidade abaixo)
 
   // ── 8.1 Buscar Faltas (Assiduidade) ──
   const {data:abs} = await sb.from('employee_absences').select('*').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
