@@ -5,6 +5,7 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Prodtech | Gestão Completa</title>
   <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="logo.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -329,6 +330,18 @@
       <div class="title">🚜 Produção por Parcela / Variedade</div>
       <div id="parcelStatsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:10px"></div>
     </div>
+
+    <!-- DASHBOARD SUPERVISOR (CALIBRES) -->
+    <div class="card">
+      <div class="title">🧪 Análise Agronômica (Calibres por Parcela)</div>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:15px">Acompanhe a evolução do tamanho dos frutos para ajuste de adubação.</p>
+      <div style="display:flex; gap:10px; margin-bottom:20px">
+        <select id="supParcelSelect" style="flex:1" onchange="refreshSupervisorChart()">
+          <option value="">Selecione a Parcela para Analisar</option>
+        </select>
+      </div>
+      <div class="ch tall"><canvas id="chartSupCaliber"></canvas></div>
+    </div>
   </div>
 
   <!-- ═══ BALANÇO DE MASSA ═══ -->
@@ -358,6 +371,7 @@
         <thead><tr><th>Data/Hora</th><th>Tipo</th><th>Lote/Parcela</th><th>Descrição/Destino</th><th>Entrada (kg)</th><th>Saída (kg)</th><th>Saldo (kg)</th><th>Ações</th></tr></thead>
         <tbody></tbody>
       </table>
+    </div>
     <div class="card">
       <div class="title">📊 Detalhamento de Saídas (Variedade / Calibre / Caixa)</div>
       <div style="overflow:auto; max-height:400px">
@@ -368,17 +382,6 @@
       </div>
     </div>
 
-    <!-- DASHBOARD SUPERVISOR (CALIBRES) -->
-    <div class="card">
-      <div class="title">🧪 Análise Agronômica (Calibres por Parcela)</div>
-      <p style="font-size:12px; color:var(--muted); margin-bottom:15px">Acompanhe a evolução do tamanho dos frutos para ajuste de adubação.</p>
-      <div style="display:flex; gap:10px; margin-bottom:20px">
-        <select id="supParcelSelect" style="flex:1" onchange="refreshSupervisorChart()">
-          <option value="">Selecione a Parcela para Analisar</option>
-        </select>
-      </div>
-      <div class="ch tall"><canvas id="chartSupCaliber"></canvas></div>
-    </div>
 
     <div class="grid2">
       <div class="card">
@@ -2545,48 +2548,10 @@ async function refreshQuality() {
       <td>${q.penalty_boxes}</td>
       <td>${q.inspector_name||'--'}</td>
     </tr>`;
+    </tr>`;
   }).join('') || '<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--muted)">Nenhum registro.</td></tr>';
   
-function refreshSupervisorChart() {
-  const pCode = $('supParcelSelect').value;
-  const exp = window._currentExpData || [];
-  
-  const filtered = pCode ? exp.filter(x => {
-    // Re-resolve pCode check
-    const cleanCode = (c) => String(c||'').toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
-    // This is a bit expensive inside filter but keeps it decoupled
-    // In a real app we'd pre-map this
-    return x.product_description.includes(pCode) || x.traceability_code.includes(pCode);
-  }) : [];
-
-  const stats = {};
-  filtered.forEach(x => {
-    const cal = x.caliber || 'N/A';
-    stats[cal] = (stats[cal]||0) + Number(x.quantity_kg || 0);
-  });
-
-  const labels = Object.keys(stats).sort((a,b) => Number(a)-Number(b));
-  const values = labels.map(l => stats[l] / 1000); // Tons
-
-  mkChart('chartSupCaliber', {
-    type: 'bar',
-    data: {
-      labels: labels.map(l => l === 'N/A' ? 'Não Ident.' : 'TP ' + l),
-      datasets: [{
-        label: 'Tons',
-        data: values,
-        backgroundColor: '#10b981',
-        borderRadius: 6
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { callback: v => v + 't' } } }
-    }
-  });
-}
+  const issues = {};
   audits.forEach(q => {
     const label = q.issue_type || 'OUTRO';
     issues[label] = (issues[label] || 0) + 1;
@@ -2618,6 +2583,44 @@ function refreshSupervisorChart() {
   `).join('') || '<div class="empty" style="padding:10px;font-size:11px">Sem penalidades registradas.</div>';
 
   loadQualityIssues();
+}
+
+function refreshSupervisorChart() {
+  const pCode = $('supParcelSelect').value;
+  const exp = window._currentExpData || [];
+  
+  const filtered = pCode ? exp.filter(x => {
+    const cleanCode = (c) => String(c||'').toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
+    return x.product_description.includes(pCode) || x.traceability_code.includes(pCode);
+  }) : [];
+
+  const stats = {};
+  filtered.forEach(x => {
+    const cal = x.caliber || 'N/A';
+    stats[cal] = (stats[cal]||0) + Number(x.quantity_kg || 0);
+  });
+
+  const labels = Object.keys(stats).sort((a,b) => Number(a)-Number(b));
+  const values = labels.map(l => stats[l] / 1000); // Tons
+
+  mkChart('chartSupCaliber', {
+    type: 'bar',
+    data: {
+      labels: labels.map(l => l === 'N/A' ? 'Não Ident.' : 'TP ' + l),
+      datasets: [{
+        label: 'Tons',
+        data: values,
+        backgroundColor: '#10b981',
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { callback: v => v + 't' } } }
+    }
+  });
 }
 
 async function loadQualityIssues() {
