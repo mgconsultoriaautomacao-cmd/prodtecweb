@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prodtech-campo-v8';
+const CACHE_NAME = 'prodtech-campo-v9';
 const ASSETS = [
   './',
   './index.html',
@@ -9,10 +9,9 @@ const ASSETS = [
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Supabase, googleapis, jsdelivr: sempre rede
+  // Supabase, googleapis, jsdelivr: NÃO interceptar — deixar o browser gerenciar
   if (url.hostname.includes('supabase.co') || url.hostname.includes('googleapis') || url.hostname.includes('jsdelivr')) {
-    event.respondWith(fetch(event.request));
-    return;
+    return; // Não chamar respondWith — request segue normalmente pelo browser
   }
 
   // Navegação: network-first com fallback para cache

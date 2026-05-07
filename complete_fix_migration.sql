@@ -39,3 +39,7 @@ CREATE TABLE IF NOT EXISTS employee_absences (
 );
 
 COMMENT ON TABLE employee_absences IS 'Registro de faltas para cálculo de assiduidade e descontos em folha';
+
+-- 5. COLUNA DE BÔNUS DE ASSIDUIDADE NA TABELA DE TENANTS
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS attendance_bonus NUMERIC DEFAULT 0;
+COMMENT ON COLUMN tenants.attendance_bonus IS 'Valor em R$ da bonificação para funcionários com 100% de presença no período';
