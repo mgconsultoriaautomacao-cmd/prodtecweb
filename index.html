@@ -4,6 +4,8 @@
   <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Prodtech | Gestão Completa</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="logo.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -364,6 +366,18 @@
           <tbody></tbody>
         </table>
       </div>
+    </div>
+
+    <!-- DASHBOARD SUPERVISOR (CALIBRES) -->
+    <div class="card">
+      <div class="title">🧪 Análise Agronômica (Calibres por Parcela)</div>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:15px">Acompanhe a evolução do tamanho dos frutos para ajuste de adubação.</p>
+      <div style="display:flex; gap:10px; margin-bottom:20px">
+        <select id="supParcelSelect" style="flex:1" onchange="refreshSupervisorChart()">
+          <option value="">Selecione a Parcela para Analisar</option>
+        </select>
+      </div>
+      <div class="ch tall"><canvas id="chartSupCaliber"></canvas></div>
     </div>
 
     <div class="grid2">
@@ -1687,12 +1701,26 @@ async function refreshMass() {
         <td><b>${b.pCode}</b></td>
         <td>${b.varName}</td>
         <td>${b.box}</td>
-        <td><span class="badge packer">TP ${b.cal}</span></td>
+        <td><span class="badge packer">${b.cal !== '—' ? 'TP ' + b.cal : '—'}</span></td>
         <td>${Math.round(b.qty)} cx</td>
         <td>${b.kg.toFixed(1)} kg</td>
       </tr>
     `).join('') || '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">Sem dados de faturamento para o período.</td></tr>';
   }
+
+  // Populate Supervisor Select
+  const supSel = $('supParcelSelect');
+  const uniqueParcels = [...new Set((exp||[]).map(x => {
+    const p = pMap[cleanCode(x.traceability_code)] || lotMap[cleanCode(x.traceability_code)];
+    return p ? p.code : null;
+  }).filter(Boolean))];
+  
+  const currentVal = supSel.value;
+  supSel.innerHTML = '<option value="">Selecione a Parcela para Analisar</option>' + uniqueParcels.map(p => `<option value="${p}">${p}</option>`).join('');
+  supSel.value = currentVal;
+
+  window._currentExpData = exp; // Para o gráfico do supervisor
+  refreshSupervisorChart();
 
   // 4. Build Cardex Ledger
   const events = [];
@@ -2519,8 +2547,46 @@ async function refreshQuality() {
     </tr>`;
   }).join('') || '<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--muted)">Nenhum registro.</td></tr>';
   
-  // Build Distribution of Defects Chart
-  const issues = {};
+function refreshSupervisorChart() {
+  const pCode = $('supParcelSelect').value;
+  const exp = window._currentExpData || [];
+  
+  const filtered = pCode ? exp.filter(x => {
+    // Re-resolve pCode check
+    const cleanCode = (c) => String(c||'').toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
+    // This is a bit expensive inside filter but keeps it decoupled
+    // In a real app we'd pre-map this
+    return x.product_description.includes(pCode) || x.traceability_code.includes(pCode);
+  }) : [];
+
+  const stats = {};
+  filtered.forEach(x => {
+    const cal = x.caliber || 'N/A';
+    stats[cal] = (stats[cal]||0) + Number(x.quantity_kg || 0);
+  });
+
+  const labels = Object.keys(stats).sort((a,b) => Number(a)-Number(b));
+  const values = labels.map(l => stats[l] / 1000); // Tons
+
+  mkChart('chartSupCaliber', {
+    type: 'bar',
+    data: {
+      labels: labels.map(l => l === 'N/A' ? 'Não Ident.' : 'TP ' + l),
+      datasets: [{
+        label: 'Tons',
+        data: values,
+        backgroundColor: '#10b981',
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { callback: v => v + 't' } } }
+    }
+  });
+}
   audits.forEach(q => {
     const label = q.issue_type || 'OUTRO';
     issues[label] = (issues[label] || 0) + 1;
@@ -3151,13 +3217,13 @@ async function handleExcelImport(e) {
         console.warn(`Não encontrei a parcela nem o lote para: "${parcel}" (limpo: "${cleanedExcelParcel}")`);
       }
       
-      const caliberMatch = productDesc.match(/TP\s*(\d+)/i);
+      const caliberMatch = productDesc.match(/TP\s*(\d+)/i) || productDesc.match(/(?:CALIBRE|TAM|TP)\s*(\d+)/i);
       const caliber = caliberMatch ? caliberMatch[1] : null;
 
-      const boxMatch = productDesc.match(/(SAMBA|PAPELAO|PLASTICA|MADERA|13kg|05kg|10kg)/i);
-      const boxType = boxMatch ? boxMatch[0] : null;
+      const boxMatch = productDesc.match(/((?:SAMBA|PAPELAO|PLASTICA|MADERA|WOODEN|CARTON)\s*(?:\d+(?:[.,]\d+)?\s*kg)?)/i) || productDesc.match(/(\d+(?:[.,]\d+)?\s*kg)/i);
+      const boxType = boxMatch ? boxMatch[0].trim().toUpperCase() : null;
 
-      const varietyMatch = productDesc.match(/(AMARELO|PELE\s*DE\s*SAPO|SAPO|CANTALOUPE|GALIA|DINO|MELANCIA)/i);
+      const varietyMatch = productDesc.match(/(AMARELO|PELE\s*DE\s*SAPO|SAPO|CANTALOUPE|GALIA|DINO|MELANCIA|MELAO|HALE|PANNONIA|ORANGE|AUTUMN)/i);
       const variety = varietyMatch ? varietyMatch[0].toUpperCase() : null;
       
       return {
