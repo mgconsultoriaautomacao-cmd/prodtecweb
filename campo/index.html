@@ -291,6 +291,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   <div class="section">
     <div class="card">
       <div class="form-field">
+        <label class="field-label">Fruta</label>
+        <select id="bulkFruit">
+          <option value="MELAO">🍈 Melão</option>
+          <option value="MELANCIA">🍉 Melancia</option>
+        </select>
+      </div>
+      <div class="form-field">
         <label class="field-label">Cliente / Comprador</label>
         <input id="bulkCustomer" placeholder="Nome do cliente">
       </div>
@@ -1943,6 +1950,7 @@ async function saveBulkSale() {
     tenant_id: tenantId,
     date: new Date().toISOString().split('T')[0],
     customer_name: customer,
+    fruit_type: $('bulkFruit').value,
     parcel_id: parcelId ? parseInt(parcelId) : null,
     weight_kg: parseFloat(totalWeight.toFixed(2)),
     total_value: parseFloat(totalValue.toFixed(2)),
