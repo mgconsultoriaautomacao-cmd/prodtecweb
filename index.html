@@ -16,7 +16,17 @@
   <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
   <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  :root{--bg:#030712;--card:#0f172a;--text:#f8fafc;--muted:#94a3b8;--border:rgba(255,255,255,.065);--blue:#3b82f6;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--accent:#6366f1;--purple:#8b5cf6;--r:14px}
+  :root{--bg:#030712;--card:#0f172a;--text:#f8fafc;--muted:#94a3b8;--border:rgba(255,255,255,.065);--blue:#3b82f6;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--accent:#6366f1;--purple:#8b5cf6;--r:14px; --pbi-blue:#118DFF; --pbi-blue-dim:rgba(17,141,255,0.1); }
+  /* PBI AESTHETICS */
+  .pbi-card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.2); padding: 20px; }
+  .avatar-ring { width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--border2); overflow: hidden; background: #1e293b; display: flex; align-items:center; justify-content:center; font-weight:800; color:#cbd5e1; font-size:14px; flex-shrink:0; }
+  .avatar-ring img { width:100%; height:100%; object-fit:cover; }
+  .badge-status { padding: 3px 8px; border-radius: 6px; font-size: 9px; font-weight: 800; text-transform: uppercase; display:inline-block; margin-top:2px; }
+  .status-good { background: rgba(16,185,129,0.15); color: #10b981; }
+  .status-warn { background: rgba(245,158,11,0.15); color: #f59e0b; }
+  .status-crit { background: rgba(239,68,68,0.15); color: #ef4444; }
+  .kcard.orange { background:rgba(249,115,22,0.1); border-color:rgba(249,115,22,0.2); }
+  .kval.orange { color:#f97316; }
   body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
   /* AUTH */
@@ -356,9 +366,9 @@
     </div>
     <div class="kgrid">
       <div class="kcard yellow"><div class="klabel">🚜 Total Colhido</div><div id="kpiMassHarvest" class="kval yellow">0 kg</div><div class="ksub">Entrada total (Campo)</div></div>
-      <div class="kcard blue" style="background:rgba(59,130,246,0.1); border-color:rgba(59,130,246,0.2);"><div class="klabel">🚚 Saídas (Faturamento)</div><div id="kpiMassExp" class="kval" style="color:#3b82f6;">0 kg</div><div class="ksub" id="kpiMassExpSub">NF-e (Mercado Interno/Export)</div></div>
-      <div class="kcard purple"><div class="klabel">♻️ Outras Saídas</div><div id="kpiMassBulk" class="kval purple">0 kg</div><div class="ksub">Bonif. / Granel / Descarte</div></div>
-      <div class="kcard green"><div class="klabel">⚖️ Estoque Físico Atual</div><div id="kpiMassStock" class="kval green">0 kg</div><div class="ksub">Disponível no barracão</div></div>
+      <div class="kcard blue"><div class="klabel">🚚 Saídas (Faturamento)</div><div id="kpiMassExp" class="kval blue">0 kg</div><div class="ksub">NF-e Mercado Interno/Export</div></div>
+      <div class="kcard orange"><div class="klabel">💰 Vendas Agranel</div><div id="massKpiBulkVal" class="kval orange">R$ 0,00</div><div class="ksub" id="massKpiBulkKg">0 kg vendidos</div></div>
+      <div class="kcard red"><div class="klabel">♻️ Refugo/Perda</div><div id="massKpiWaste" class="kval red">0 kg</div><div class="ksub">Campo + Packing House</div></div>
     </div>
     
     <div class="grid2">
@@ -459,10 +469,10 @@
       <button class="sec" onclick="exportFinPDF()">📄 PDF Folha</button>
     </div>
     <div class="kgrid">
-      <div class="kcard"><div class="klabel">Custo Total Estimado</div><div id="finKpiTotal" class="kval" style="color:var(--green)">R$ 0,00</div></div>
-      <div class="kcard"><div class="klabel">Total Caixas (Packing)</div><div id="finKpiBoxes" class="kval">0</div></div>
-      <div class="kcard"><div class="klabel">Total Carrocões (Campo)</div><div id="finKpiCarroes" class="kval yellow">0</div></div>
-      <div class="kcard green"><div class="klabel">Bonificações Assiduidade</div><div id="finKpiBonus" class="kval" style="color:var(--green)">R$ 0,00</div></div>
+      <div class="kcard"><div class="klabel">📉 Custo Total (Mão de Obra)</div><div id="finKpiTotal" class="kval" style="color:var(--red)">R$ 0,00</div><div class="ksub">Penalidades já descontadas</div></div>
+      <div class="kcard orange"><div class="klabel">💰 Vendas Agranel (Receita)</div><div id="finKpiBulkSales" class="kval orange">R$ 0,00</div><div class="ksub">Vendas diretas no período</div></div>
+      <div class="kcard"><div class="klabel">📦 Total Caixas (Packing)</div><div id="finKpiBoxes" class="kval">0</div><div class="ksub">Produção acumulada</div></div>
+      <div class="kcard green"><div class="klabel">⭐ Bônus Assiduidade</div><div id="finKpiBonus" class="kval" style="color:var(--green)">R$ 0,00</div><div class="ksub">Total prêmios pagos</div></div>
     </div>
     <div class="cgrid">
       <div class="card"><div class="title">📦 Produção Packing House (Caixas/dia)</div><div class="ch"><canvas id="chartFinPacking"></canvas></div></div>
@@ -1515,12 +1525,21 @@ async function refreshFin(){
 
   // (KPIs calculados após assiduidade abaixo)
 
-  // ── 8.1 Buscar Faltas (Assiduidade) ──
-  const {data:abs} = await sb.from('employee_absences').select('*').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
+  // ── 8.1 Buscar Faltas e Qualidade ──
+  const [absRes, qualRes, bulkRes] = await Promise.all([
+    sb.from('employee_absences').select('*').eq('tenant_id',tenantId).gte('date',s).lte('date',e),
+    sb.from('quality_audits').select('employee_barcode').eq('tenant_id',tenantId).gte('ts',s).lte('ts',e+'T23:59:59'),
+    sb.from('bulk_sales').select('total_value').eq('tenant_id',tenantId).gte('date',s).lte('date',e)
+  ]);
+  
   const absenceMap = {};
-  (abs||[]).forEach(a => {
-    absenceMap[a.employee_barcode] = (absenceMap[a.employee_barcode]||0) + 1;
-  });
+  (absRes.data||[]).forEach(a => { absenceMap[a.employee_barcode] = (absenceMap[a.employee_barcode]||0) + 1; });
+  
+  const qualityMap = {};
+  (qualRes.data||[]).forEach(q => { if(q.employee_barcode) qualityMap[q.employee_barcode] = (qualityMap[q.employee_barcode]||0) + 1; });
+  
+  const totalBulkSales = (bulkRes.data||[]).reduce((a,b) => a + Number(b.total_value||0), 0);
+  const elBulkFin = $('finKpiBulkSales'); if(elBulkFin) elBulkFin.textContent = BRL(totalBulkSales);
 
   // ── 9. Tabela sumarizada por funcionário ──
   const empSum = {};
@@ -1531,13 +1550,15 @@ async function refreshFin(){
     empSum[d.employee_name].val += d._total_value || 0;
   });
 
-  // Aplicar penalidade de assiduidade (15% por falta) e bônus de assiduidade
   const attendanceBonus = Number(tenantConfig.attendance_bonus || 0);
   let totalBonusAmount = 0;
   Object.values(empSum).forEach(d => {
     const emp = _employees.find(e => e.name === d.employee_name);
     const abCount = emp ? (absenceMap[emp.barcode] || 0) : 0;
+    const qCount = emp ? (qualityMap[emp.barcode] || 0) : 0;
     d.absences = abCount;
+    d.qualityIssues = qCount;
+    d.photo_path = emp?.photo_path;
     d.penalty = d.val * (0.15 * abCount);
     d.bonus = (abCount === 0 && attendanceBonus > 0) ? attendanceBonus : 0;
     d.netVal = d.val - d.penalty + d.bonus;
@@ -1553,17 +1574,45 @@ async function refreshFin(){
   const elCarroes = $('finKpiCarroes'); if(elCarroes) elCarroes.textContent = totalCarroes.toFixed(1) + ' carr';
   const elBonus = $('finKpiBonus'); if(elBonus) elBonus.textContent = BRL(totalBonusAmount);
 
-  $('finTable').querySelector('tbody').innerHTML = empSumArr.map(d => `
+  $('finTable').querySelector('tbody').innerHTML = empSumArr.map(d => {
+    const avgBoxesPerDay = d.boxes / Math.max(1, (new Date(e) - new Date(s)) / (1000*60*60*24));
+    const isUnderperforming = !d.is_harvest && avgBoxesPerDay < 150; // Exemplo: meta 150 cx/dia
+    const hasQualityIssues = d.qualityIssues > 0;
+    
+    let statusClass = 'status-good';
+    let statusLabel = 'Ótimo';
+    if (isUnderperforming || hasQualityIssues) {
+      statusClass = 'status-warn';
+      statusLabel = 'Atenção';
+    }
+    if (isUnderperforming && hasQualityIssues) {
+      statusClass = 'status-crit';
+      statusLabel = 'Crítico';
+    }
+
+    return `
     <tr>
-      <td style="color:var(--muted)">SOMA PERÍODO</td><td><b>${d.employee_name}</b></td>
+      <td style="color:var(--muted)">SOMA PERÍODO</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="avatar-ring">${d.photo_path ? `<img src="${d.photo_path}">` : d.employee_name[0]}</div>
+          <div>
+            <div style="font-weight:700">${d.employee_name}</div>
+            <div style="display:flex;gap:4px">
+              <div class="badge-status ${statusClass}">${statusLabel}</div>
+              ${d.qualityIssues > 0 ? `<div class="badge-status status-crit" style="font-size:8px">⚠ ${d.qualityIssues} Falhas</div>` : ''}
+            </div>
+          </div>
+        </div>
+      </td>
       <td><span class="badge ${d.role.toLowerCase()}">${d.role}</span></td>
-      <td>${d.is_harvest ? (d.boxes).toFixed(1) +' carr' : Math.round(d.boxes)+' cx'}</td>
+      <td style="font-weight:700">${d.is_harvest ? (d.boxes).toFixed(1) +' carr' : Math.round(d.boxes)+' cx'}</td>
       <td>${BRL(d.val / Math.max(d.boxes, 1))}</td>
       <td>${d.absences > 0 ? `<span style="color:var(--red)">${d.absences} falta(s) (-${(d.absences*15)}%)</span>` : '<span style="color:var(--green)">100% Assid. ✅</span>'}</td>
       <td style="color:var(--green);font-weight:700">${d.bonus > 0 ? BRL(d.bonus) : '<span style="color:var(--muted)">—</span>'}</td>
-      <td style="color:var(--green);font-weight:700;font-size:15px">${BRL(d.netVal)}</td>
+      <td style="color:var(--pbi-blue);font-weight:800;font-size:15px">${BRL(d.netVal)}</td>
     </tr>
-  `).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:28px">Nenhum dado.</td></tr>';
+  `}).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:28px">Nenhum dado.</td></tr>';
 
   // ── 10. Gráficos Separados por Setor ──
 
@@ -1615,7 +1664,12 @@ async function refreshMass() {
   if(pFilter) qB = qB.eq('parcel_id', pFilter);
   const {data:bulk} = await qB;
   const totalBulkKg = (bulk||[]).filter(b=>!b.is_waste).reduce((a,b)=>a+Number(b.weight_kg),0);
+  const totalBulkVal = (bulk||[]).filter(b=>!b.is_waste).reduce((a,b)=>a+Number(b.total_value||0),0);
   const packhouseWasteKg = (bulk||[]).filter(b=>b.is_waste).reduce((a,b)=>a+Number(b.weight_kg),0);
+
+  $('massKpiBulkKg').textContent = totalBulkKg.toFixed(1) + ' kg';
+  $('massKpiBulkVal').textContent = BRL(totalBulkVal);
+  $('massKpiWaste').textContent = (fieldWasteKg + packhouseWasteKg).toFixed(1) + ' kg';
   
   // 4. Expedições (TOTVS)
   const {data:parcels} = await sb.from('parcels').select('id, code, p_code').eq('tenant_id', tenantId);
