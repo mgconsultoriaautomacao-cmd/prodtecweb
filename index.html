@@ -245,10 +245,15 @@
         </select>
       </div>
       <div style="margin-bottom:12px"><label class="flabel">WhatsApp</label><input id="editEmpWhatsapp" placeholder="55..."/></div>
-      <div style="margin-bottom:20px"><label class="flabel">Foto (URL)</label><input id="editEmpPhoto" placeholder="Link da imagem"/></div>
+      <div style="margin-bottom:20px">
+        <label class="flabel">Foto do Colaborador</label>
+        <input type="file" id="editEmpPhotoFile" accept="image/*" style="display:none" onchange="$('editEmpPhotoBtn').textContent='✅ Nova Foto Selecionada'">
+        <button id="editEmpPhotoBtn" onclick="$('editEmpPhotoFile').click()" style="width:100%; padding:11px; background:rgba(59,130,246,0.1); color:var(--blue); border:1px dashed var(--blue); border-radius:10px; font-size:12px; font-weight:700">📷 TROCAR FOTO</button>
+        <input type="hidden" id="editEmpPhotoUrl">
+      </div>
       <div style="display:flex; gap:10px; justify-content:flex-end">
         <button class="sec" onclick="document.getElementById('empModal').style.display='none'">Cancelar</button>
-        <button onclick="saveEmpEdit()">Salvar Alterações</button>
+        <button onclick="saveEmpEdit()" style="background:var(--blue); font-weight:800">Salvar Alterações</button>
       </div>
     </div>
   </div>
@@ -622,8 +627,12 @@
           </select>
         </div>
         <div><label class="flabel">WhatsApp</label><input id="empWhatsapp" placeholder="5511999999999"/></div>
-        <div><label class="flabel">Foto</label><input id="empPhoto" placeholder="Link da imagem"/></div>
-        <button onclick="addEmp()">Salvar</button>
+        <div>
+          <label class="flabel">Foto do Colaborador</label>
+          <input type="file" id="empPhotoFile" accept="image/*" style="display:none" onchange="$('empPhotoBtn').textContent='✅ Foto Selecionada'">
+          <button id="empPhotoBtn" onclick="$('empPhotoFile').click()" style="width:100%; padding:11px; background:rgba(59,130,246,0.1); color:var(--blue); border:1px dashed var(--blue); border-radius:10px; font-size:12px; font-weight:700">📁 CARREGAR FOTO</button>
+        </div>
+        <button onclick="addEmp()" style="background:var(--blue); font-weight:800">Salvar</button>
       </div>
     </div>
     <div class="card">
@@ -2279,7 +2288,12 @@ async function loadEmps(){
     $('empTable').querySelector('tbody').innerHTML=(data||[]).map(e=>`
       <tr>
         <td><code style="background:rgba(255,255,255,.05);padding:2px 6px;border-radius:5px;font-size:12px">${e.barcode}</code></td>
-        <td><b>${e.name}</b></td>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="avatar-ring">${e.photo_path ? `<img src="${e.photo_path}">` : e.name[0]}</div>
+            <div style="font-weight:700">${e.name}</div>
+          </div>
+        </td>
         <td><span class="badge ${e.role.toLowerCase()}">${e.role}</span></td>
         <td>${e.whatsapp||'<span style="color:var(--muted)">—</span>'}</td>
         <td><span class="badge ${e.active?'active':'inactive'}">${e.active?'Ativo':'Inativo'}</span></td>
@@ -2296,16 +2310,46 @@ async function loadEmps(){
   }
 }
 
-async function addEmp(){
-  const b=$('empBarcode').value.trim(),n=$('empName').value.trim(),r=$('empRole').value,w=$('empWhatsapp').value.trim(),p=$('empPhoto').value.trim();
-  if(!b||!n){alert('Preencha barcode e nome.');return;}
-  const {error}=await sb.from('employees').insert([{barcode:b,name:n,role:r,whatsapp:w||null,photo_path:p||null,active:true,tenant_id:tenantId,updated_at:new Date().toISOString()}]);
-  if(error){alert('Erro: '+error.message);return;}
-  ['empBarcode','empName','empWhatsapp','empPhoto'].forEach(id=>$(id).value='');
-  await loadEmps();await loadEmpSelectAll();
+async function uploadFileToSupabase(fileInput) {
+  const file = fileInput.files[0];
+  if (!file) return null;
+  const ext = file.name.split('.').pop();
+  const path = `avatars/${tenantId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+  try {
+    const { data, error } = await sb.storage.from('public').upload(path, file);
+    if (error) throw error;
+    const { data: { publicUrl } } = sb.storage.from('public').getPublicUrl(path);
+    return publicUrl;
+  } catch (err) {
+    console.error('Erro no upload:', err);
+    alert('Erro ao carregar imagem: ' + err.message);
+    return null;
+  }
 }
-async function delEmp(id){if(!confirm('Excluir?'))return;await sb.from('employees').delete().eq('id',id);loadEmps();}
-async function toggleEmpActive(id,cur){await sb.from('employees').update({active:!cur}).eq('id',id);loadEmps();}
+
+async function addEmp(){
+  const b=$('empBarcode').value.trim(),n=$('empName').value.trim(),r=$('empRole').value,w=$('empWhatsapp').value.trim();
+  if(!b||!n){alert('Preencha barcode e nome.');return;}
+  
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  
+  try {
+    const photoUrl = await uploadFileToSupabase($('empPhotoFile'));
+    const {error}=await sb.from('employees').insert([{barcode:b,name:n,role:r,whatsapp:w||null,photo_path:photoUrl,active:true,tenant_id:tenantId,updated_at:new Date().toISOString()}]);
+    if(error) throw error;
+    
+    ['empBarcode','empName','empWhatsapp'].forEach(id=>$(id).value='');
+    $('empPhotoFile').value = '';
+    $('empPhotoBtn').textContent = '📁 CARREGAR FOTO';
+    await loadEmps();await loadEmpSelectAll();
+    toast('✓ Funcionário cadastrado!', 'ok');
+  } catch(err) {
+    alert('Erro: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Salvar';
+  }
+}
 
 async function openEditEmpModal(id, name, role, whatsapp, barcode, photo) {
   $('editEmpId').value = id;
@@ -2313,30 +2357,31 @@ async function openEditEmpModal(id, name, role, whatsapp, barcode, photo) {
   $('editEmpRole').value = role;
   $('editEmpWhatsapp').value = whatsapp;
   $('editEmpBarcode').value = barcode;
-  $('editEmpPhoto').value = photo;
+  $('editEmpPhotoUrl').value = photo;
+  $('editEmpPhotoBtn').textContent = photo ? '📷 ALTERAR FOTO' : '📁 CARREGAR FOTO';
   $('empModal').style.display = 'flex';
 }
 
 async function saveEmpEdit() {
-  const id = $('editEmpId').value;
-  const name = $('editEmpName').value.trim();
-  const role = $('editEmpRole').value;
-  const whatsapp = $('editEmpWhatsapp').value.trim();
-  const barcode = $('editEmpBarcode').value.trim();
-  const photo = $('editEmpPhoto').value.trim();
-
-  if(!name || !barcode) { alert('Nome e Barcode são obrigatórios.'); return; }
-
-  const { error } = await sb.from('employees').update({
-    name, role, whatsapp: whatsapp || null, barcode, photo_path: photo || null, updated_at: new Date().toISOString()
-  }).eq('id', id);
-
-  if(error) alert('Erro ao atualizar: ' + error.message);
-  else {
-    toast('Funcionário atualizado!', 'success');
-    $('empModal').style.display = 'none';
-    loadEmps();
-    loadEmpSelectAll();
+  const id=$('editEmpId').value, n=$('editEmpName').value.trim(), r=$('editEmpRole').value, w=$('editEmpWhatsapp').value.trim(), b=$('editEmpBarcode').value.trim();
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  
+  try {
+    let photoUrl = await uploadFileToSupabase($('editEmpPhotoFile'));
+    if(!photoUrl) photoUrl = $('editEmpPhotoUrl').value; // Mantém a antiga se não subiu nova
+    
+    const {error}=await sb.from('employees').update({name:n,role:r,whatsapp:w||null,barcode:b,photo_path:photoUrl,updated_at:new Date().toISOString()}).eq('id',id);
+    if(error) throw error;
+    
+    $('empModal').style.display='none';
+    $('editEmpPhotoFile').value = '';
+    await loadEmps();await loadEmpSelectAll();
+    toast('✓ Dados atualizados!', 'ok');
+  } catch(err) {
+    alert('Erro: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Salvar Alterações';
   }
 }
 
@@ -2643,9 +2688,14 @@ async function refreshQuality() {
     
     return `<tr>
       <td>${new Date(q.ts).toLocaleString('pt-BR')}</td>
-      <td><b>${empName}</b></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="avatar-ring">${emp?.photo_path ? `<img src="${emp.photo_path}">` : empName[0]}</div>
+          <b>${empName}</b>
+        </div>
+      </td>
       <td>${q.issue_type}</td>
-      <td>${q.penalty_boxes}</td>
+      <td style="font-weight:800;color:var(--red)">${q.penalty_boxes} cx</td>
       <td>${q.inspector_name||'--'}</td>
     </tr>`;
   }).join('') || '<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--muted)">Nenhum registro.</td></tr>';
