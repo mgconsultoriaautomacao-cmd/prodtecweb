@@ -28,6 +28,13 @@
   .kcard.orange { background:rgba(249,115,22,0.1); border-color:rgba(249,115,22,0.2); }
   .kval.orange { color:#f97316; }
   body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+  /* PBI GAUGES & DRAWER */
+  .drawer { position:fixed; right:0; top:0; bottom:0; width:min(450px, 90vw); background:var(--card); z-index:2000; transform:translateX(110%); transition:transform .4s cubic-bezier(.4,0,.2,1); box-shadow:-15px 0 50px rgba(0,0,0,.6); border-left:1px solid var(--border); overflow-y:auto; padding:calc(20px + var(--safe-top)) 24px; }
+  .drawer.active { transform:translateX(0); }
+  .pbi-gauge-bg { height:12px; width:100%; background:rgba(255,255,255,.05); border-radius:100px; overflow:hidden; position:relative; margin:10px 0; }
+  .pbi-gauge-fill { height:100%; border-radius:100px; transition:width 1s ease-out; background:linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%); }
+  .clickable-emp { cursor:pointer; text-decoration:underline; text-decoration-color:rgba(59,130,246,0.3); text-underline-offset:3px; transition:color .2s; }
+  .clickable-emp:hover { color:var(--blue); text-decoration-color:var(--blue); }
 
   /* AUTH */
   .auth-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000;background-image:radial-gradient(ellipse at 20% 50%,rgba(59,130,246,.08) 0%,transparent 60%)}
@@ -1575,6 +1582,7 @@ async function refreshFin(){
   });
 
   const empSumArr = Object.values(empSum).sort((a,b) => b.val - a.val);
+  window._lastEmpStats = empSum; // Guarda para o Drawer
   const totalBoxes = empSumArr.filter(d => !d.is_harvest).reduce((a,d) => a + d.boxes, 0);
   const totalCarroes = empSumArr.filter(d => d.is_harvest).reduce((a,d) => a + d.boxes, 0);
   
@@ -1606,7 +1614,7 @@ async function refreshFin(){
         <div style="display:flex;align-items:center;gap:10px">
           <div class="avatar-ring">${d.photo_path ? `<img src="${d.photo_path}">` : d.employee_name[0]}</div>
           <div>
-            <div style="font-weight:700">${d.employee_name}</div>
+            <div class="clickable-emp" style="font-weight:700" onclick="openEmpDrawer('${d.employee_name}')">${d.employee_name}</div>
             <div style="display:flex;gap:4px">
               <div class="badge-status ${statusClass}">${statusLabel}</div>
               ${d.qualityIssues > 0 ? `<div class="badge-status status-crit" style="font-size:8px">⚠ ${d.qualityIssues} Falhas</div>` : ''}
@@ -1714,6 +1722,7 @@ async function refreshMass() {
     }
   }
   const {data:exp} = await qExp;
+  window._currentExpData = exp || []; // Salva globalmente para o relatório agronômico
   
   const expMI = (exp||[]).filter(x => String(x.tes).includes('502')).reduce((a,b)=>a+Number(b.quantity_kg||0),0);
   const expEX = (exp||[]).filter(x => String(x.tes).includes('567')).reduce((a,b)=>a+Number(b.quantity_kg||0),0);
@@ -1730,6 +1739,8 @@ async function refreshMass() {
   
   // Se o estoque for negativo, muda a cor para vermelho
   $('kpiMassStock').className = 'kval ' + (estoqueKg >= 0 ? 'green' : 'red');
+  
+  refreshSupervisorChart();
 
   mkChart('chartMassBalance', {
     type: 'bar',
@@ -2121,7 +2132,43 @@ async function loadBulk() {
     bVar.innerHTML = '<option value="">— Selecionar —</option>' + (varieties||[]).map(v=>`<option value="${v.id}">${v.name}</option>`).join('');
     bVar.value = current;
   }
+async function openEmpDrawer(name) {
+  const d = document.getElementById('empDrawer');
+  const emp = _employees.find(e => e.name === name);
+  if(!emp) return;
+  
+  const stats = window._lastEmpStats ? window._lastEmpStats[name] : null;
+  
+  document.getElementById('drName').textContent = emp.name;
+  document.getElementById('drRole').textContent = emp.role;
+  document.getElementById('drAvatar').innerHTML = emp.photo_path ? `<img src="${emp.photo_path}">` : emp.name[0];
+  
+  if(stats) {
+    const prodTarget = emp.role === 'EMBALADOR' ? 150 : 300;
+    const prodScore = Math.min(100, Math.round((stats.boxes / prodTarget) * 100));
+    const qualScore = Math.max(0, 100 - (stats.qualityIssues * 20));
+    
+    document.getElementById('drProdVal').textContent = prodScore + '%';
+    document.getElementById('drProdFill').style.width = prodScore + '%';
+    
+    document.getElementById('drQualVal').textContent = qualScore + '%';
+    document.getElementById('drQualFill').style.width = qualScore + '%';
+    
+    document.getElementById('drTotals').innerHTML = `
+      <div class="pbi-card" style="margin-bottom:12px">
+        <div class="klabel">Produção Total</div>
+        <div class="kpi-value-pbi">${Math.round(stats.boxes)} <span style="font-size:12px">unidades</span></div>
+      </div>
+      <div class="pbi-card">
+        <div class="klabel">Qualidade</div>
+        <div class="kpi-value-pbi">${stats.qualityIssues} <span style="font-size:12px">falhas críticas</span></div>
+      </div>
+    `;
+  }
+  
+  d.classList.add('active');
 }
+window._lastEmpStats = {};
 
 async function saveBulk() {
   const date=$('bulkDate').value, pId=$('bulkParcel').value, vId=$('bulkVariety').value, w=$('bulkWeight').value, v=$('bulkValue').value;
@@ -3739,6 +3786,46 @@ function toast(msg, type='info') {
 }
 
 initApp();
-</script>
+</script><!-- DRAWER DE DESEMPENHO DO COLABORADOR -->
+<div id="empDrawer" class="drawer">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:32px">
+    <div>
+       <h2 id="drName" style="font-weight:900; letter-spacing:-1px; font-size:24px">Nome</h2>
+       <div id="drRole" class="badge packing" style="margin-top:4px">FUNÇÃO</div>
+    </div>
+    <button onclick="document.getElementById('empDrawer').classList.remove('active')" class="sec" style="padding:10px">✖</button>
+  </div>
+
+  <div style="text-align:center; margin-bottom:40px">
+    <div id="drAvatar" class="avatar-ring" style="width:140px; height:140px; margin:0 auto; font-size:48px; border-width:4px; box-shadow:0 10px 40px rgba(0,0,0,.4)"></div>
+  </div>
+
+  <div class="section"><div class="section-title">📊 KPIs de Desempenho (Power BI)</div></div>
+  
+  <div class="pbi-card" style="margin-bottom:20px">
+    <div style="display:flex; justify-content:space-between; align-items:end">
+      <div class="klabel">Produtividade vs Meta</div>
+      <div id="drProdVal" class="kpi-value-pbi" style="color:var(--green)">0%</div>
+    </div>
+    <div class="pbi-gauge-bg"><div id="drProdFill" class="pbi-gauge-fill" style="width:0%"></div></div>
+    <p style="font-size:10px; color:var(--muted)">Baseado na meta média de 150 cx/dia</p>
+  </div>
+
+  <div class="pbi-card" style="margin-bottom:20px">
+    <div style="display:flex; justify-content:space-between; align-items:end">
+      <div class="klabel">Índice de Qualidade</div>
+      <div id="drQualVal" class="kpi-value-pbi" style="color:var(--blue)">0%</div>
+    </div>
+    <div class="pbi-gauge-bg"><div id="drQualFill" class="pbi-gauge-fill" style="width:0%"></div></div>
+    <p style="font-size:10px; color:var(--muted)">Penalidade por falhas graves detectadas</p>
+  </div>
+
+  <div id="drTotals" style="display:grid; grid-template-columns:1fr 1fr; gap:12px"></div>
+
+  <div style="margin-top:32px">
+     <button class="blue btn-full" onclick="alert('Funcionalidade de Relatório Individual em breve!')">📄 Gerar Dossiê PDF</button>
+  </div>
+</div>
+
 </body>
 </html>
