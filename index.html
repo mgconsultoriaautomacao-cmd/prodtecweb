@@ -387,10 +387,19 @@
       <button class="sec" onclick="exportAuditPDF()">📜 Relatório Auditoria</button>
     </div>
     <div class="kgrid">
-      <div class="kcard yellow"><div class="klabel">🚜 Total Colhido</div><div id="kpiMassHarvest" class="kval yellow">0 kg</div><div class="ksub">Entrada total (Campo)</div></div>
-      <div class="kcard blue"><div class="klabel">🚚 Saídas (Faturamento)</div><div id="kpiMassExp" class="kval blue">0 kg</div><div class="ksub">NF-e Mercado Interno/Export</div></div>
-      <div class="kcard orange"><div class="klabel">💰 Vendas Agranel</div><div id="massKpiBulkVal" class="kval orange">R$ 0,00</div><div class="ksub" id="massKpiBulkKg">0 kg vendidos</div></div>
+      <div class="kcard yellow"><div class="klabel">🚜 Total Colhido</div><div id="kpiMassHarvest" class="kval yellow">0 Ton</div><div class="ksub">Entrada total (Campo)</div></div>
+      <div class="kcard blue">
+        <div class="klabel">🚚 Saídas (Faturamento)</div>
+        <div id="kpiMassExp" class="kval blue">0 Ton</div>
+        <div id="kpiMassExpSub" class="ksub">MI: 0t | EX: 0t</div>
+      </div>
+      <div class="kcard orange">
+        <div class="klabel">💰 Vendas Agranel</div>
+        <div id="kpiMassBulk" class="kval orange">0 Ton</div>
+        <div id="massKpiBulkVal" class="ksub">R$ 0,00</div>
+      </div>
       <div class="kcard red"><div class="klabel">♻️ Refugo/Perda</div><div id="massKpiWaste" class="kval red">0 kg</div><div class="ksub">Campo + Packing House</div></div>
+      <div class="kcard green"><div class="klabel">📦 Estoque Atual</div><div id="kpiMassStock" class="kval green">0 Ton</div><div class="ksub">Saldo disponível</div></div>
     </div>
     
     <div class="grid2">
@@ -1850,12 +1859,16 @@ async function refreshMass() {
 
   $('kpiMassHarvest').textContent = (estHarvestKg/1000).toFixed(2) + ' Ton';
   $('kpiMassExp').textContent = ((expMI + expEX)/1000).toFixed(2) + ' Ton';
-  $('kpiMassExpSub').textContent = `MI: ${(expMI/1000).toFixed(1)}t | EX: ${(expEX/1000).toFixed(1)}t`;
-  $('kpiMassBulk').textContent = ((expBonif + totalBulkKg + packhouseWasteKg)/1000).toFixed(2) + ' Ton';
-  $('kpiMassStock').textContent = (estoqueKg/1000).toFixed(2) + ' Ton';
+  if($('kpiMassExpSub')) $('kpiMassExpSub').textContent = `MI: ${(expMI/1000).toFixed(1)}t | EX: ${(expEX/1000).toFixed(1)}t`;
   
-  // Se o estoque for negativo, muda a cor para vermelho
-  $('kpiMassStock').className = 'kval ' + (estoqueKg >= 0 ? 'green' : 'red');
+  if($('kpiMassBulk')) $('kpiMassBulk').textContent = ((expBonif + totalBulkKg + packhouseWasteKg)/1000).toFixed(2) + ' Ton';
+  if($('massKpiBulkVal')) $('massKpiBulkVal').textContent = BRL(totalBulkVal);
+  if($('massKpiWaste')) $('massKpiWaste').textContent = (fieldWasteKg + packhouseWasteKg).toFixed(1) + ' kg';
+  
+  if($('kpiMassStock')) {
+    $('kpiMassStock').textContent = (estoqueKg/1000).toFixed(2) + ' Ton';
+    $('kpiMassStock').className = 'kval ' + (estoqueKg >= 0 ? 'green' : 'red');
+  }
   
   refreshSupervisorChart();
 
@@ -2256,7 +2269,7 @@ async function openEmpDrawer(name) {
   // Busca insensível a maiúsculas/minúsculas para evitar erros de digitação
   const emp = _employees.find(e => e.name.trim().toLowerCase() === name.trim().toLowerCase());
   if(!emp) {
-    console.error('Colaborador não encontrado:', name);
+    if(name.toUpperCase() !== 'DESCONHECIDO') console.error('Colaborador não encontrado:', name);
     return;
   }
   
