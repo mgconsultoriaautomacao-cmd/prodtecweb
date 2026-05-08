@@ -371,7 +371,8 @@
           <option value="">Selecione a Parcela para Analisar</option>
         </select>
       </div>
-      <div class="ch tall"><canvas id="chartSupCaliber"></canvas></div>
+      <div id="supParcelInfo"></div>
+      <div class="ch tall" style="margin-top:15px"><canvas id="chartSupCaliber"></canvas></div>
     </div>
   </div>
 
@@ -1306,43 +1307,48 @@ function buildFieldManagementCharts(sessions, expeditions) {
 
 async function buildParcelStats(scans, sessions){
   const grid = $('parcelStatsList');
+  if(!grid) return;
   const packerScans = scans.filter(s=>s.role==='PACKER');
   
-  // Agrupar Packing por Parcela
-  const packMap = {};
+  // Agrupar TUDO por Parcela
+  const parcelMap = {};
+  
+  // 1. Dados de Packing
   packerScans.forEach(s => {
     const p = s.parcel_code || 'S/ IDENT';
-    if(!packMap[p]) packMap[p] = { boxes:0, kg:0 };
-    packMap[p].boxes++;
-    packMap[p].kg += (s.weight_kg || 0);
+    if(!parcelMap[p]) parcelMap[p] = { boxes:0, kg:0, carrocoes:0, variety: s.variety_name || '—' };
+    parcelMap[p].boxes++;
+    parcelMap[p].kg += (s.weight_kg || 0);
   });
 
-  // Agrupar Campo por Parcela (precisamos do ID ou Code)
-  // Como sessions tem parcel_id, vamos tentar mapear se houver scans com parcel_id
-  const fieldMap = {};
+  // 2. Dados de Campo
   (sessions||[]).forEach(ss => {
-    const id = ss.parcel_id || 'unkn';
-    if(!fieldMap[id]) fieldMap[id] = { carrocoes:0, valorLabor:0 };
-    fieldMap[id].carrocoes += ss.qty_carrocoes;
-    fieldMap[id].valorLabor += Number(ss.total_value);
+    const p = ss.parcel_code || (ss.parcels?.code) || 'S/ IDENT';
+    if(!parcelMap[p]) parcelMap[p] = { boxes:0, kg:0, carrocoes:0, variety: ss.varieties?.name || ss.variety_name || '—' };
+    parcelMap[p].carrocoes += ss.qty_carrocoes;
   });
 
-  // Renderizar (Usando os códigos do packing como base principal)
-  grid.innerHTML = Object.entries(packMap).map(([code, d]) => {
-    // Busca carrões correspondentes se houver link de nome/id (simplificado aqui por código/nome)
-    // Para um dash robusto, o ideal seria carregar a tabela de parcelas
-    return `
-      <div class="rcard" style="padding:15px">
-        <div style="font-weight:800;font-size:15px;color:var(--blue);margin-bottom:10px">🚜 Parcela: ${code}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div><div class="klabel" style="font-size:10px">Produção Real</div><div style="font-weight:700">${(d.kg/1000).toFixed(2)} Ton</div><div style="font-size:11px;color:var(--muted)">${d.boxes} caixas</div></div>
-          <div style="text-align:right"><div class="klabel" style="font-size:10px">Status</div><span class="badge active">Em Processo</span></div>
+  grid.innerHTML = Object.entries(parcelMap).map(([code, d]) => `
+    <div class="pbi-card" style="margin:0; padding:16px; border-left:4px solid var(--blue)">
+      <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px">
+        <div style="font-weight:800; font-size:16px; color:var(--blue)">🚜 Parcela: ${code}</div>
+        <div class="badge-status status-good" style="font-size:10px">${d.variety}</div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+        <div class="pbi-card" style="background:rgba(255,255,255,0.03); padding:8px">
+          <div style="font-size:10px; color:var(--muted); text-transform:uppercase">Entrada (Campo)</div>
+          <div style="font-size:15px; font-weight:800">${d.carrocoes.toFixed(1)} <span style="font-size:10px">carr.</span></div>
+        </div>
+        <div class="pbi-card" style="background:rgba(255,255,255,0.03); padding:8px">
+          <div style="font-size:10px; color:var(--muted); text-transform:uppercase">Saída (Packing)</div>
+          <div style="font-size:15px; font-weight:800">${d.boxes} <span style="font-size:10px">cx</span></div>
         </div>
       </div>
-    `;
-  }).join('') || '<div class="empty">Sem dados por parcela.</div>';
-  
-  $('parcelStatsCard').style.display = 'block';
+      <div style="margin-top:10px; font-size:12px; color:var(--muted); text-align:right">
+        Total Processado: <b>${d.kg.toLocaleString('pt-BR')} kg</b>
+      </div>
+    </div>
+  `).join('') || '<div style="padding:20px; color:var(--muted)">Sem dados de parcelas no período.</div>';
 }
 
 function buildDashCharts(scans, packerScans, s, e){
@@ -1792,13 +1798,17 @@ async function refreshMass() {
     }
   }
   const {data:exp} = await qExp;
-  window._currentExpData = exp || []; // Salva globalmente para o relatório agronômico
+  window._currentExpData = exp || []; 
+  window._currentHarvestData = harvest || []; // Salva globalmente para o relatório agronômico
   
   const expMI = (exp||[]).filter(x => String(x.tes).includes('502')).reduce((a,b)=>a+Number(b.quantity_kg||0),0);
   const expEX = (exp||[]).filter(x => String(x.tes).includes('567')).reduce((a,b)=>a+Number(b.quantity_kg||0),0);
   const expBonif = (exp||[]).filter(x => !String(x.tes).includes('502') && !String(x.tes).includes('567')).reduce((a,b)=>a+Number(b.quantity_kg||0),0);
   
   const totalOut = expMI + expEX + expBonif + totalBulkKg + packhouseWasteKg + fieldWasteKg;
+  buildMassCharts(harvest, exp, bulk, packhouseWasteKg + fieldWasteKg);
+  refreshSupervisorChart(); // Atualiza o relatório agronômico automaticamente
+  
   const estoqueKg = estHarvestKg - totalOut;
 
   $('kpiMassHarvest').textContent = (estHarvestKg/1000).toFixed(2) + ' Ton';
@@ -2206,8 +2216,12 @@ async function loadBulk() {
 
 async function openEmpDrawer(name) {
   const d = document.getElementById('empDrawer');
-  const emp = _employees.find(e => e.name === name);
-  if(!emp) return;
+  // Busca insensível a maiúsculas/minúsculas para evitar erros de digitação
+  const emp = _employees.find(e => e.name.trim().toLowerCase() === name.trim().toLowerCase());
+  if(!emp) {
+    console.error('Colaborador não encontrado:', name);
+    return;
+  }
   
   const stats = window._lastEmpStats ? window._lastEmpStats[name] : null;
   
@@ -2886,25 +2900,55 @@ async function refreshQuality() {
 function refreshSupervisorChart() {
   const pCode = $('supParcelSelect').value;
   const exp = window._currentExpData || [];
+  const harvest = window._currentHarvestData || []; // Adicionado suporte a campo
   
-  // Se não houver seleção, mostramos a distribuição total consolidada
-  const filtered = pCode ? exp.filter(x => {
+  if (!pCode) {
+    if(charts['chartSupCaliber']) charts['chartSupCaliber'].destroy();
+    return;
+  }
+
+  // 1. Analisar Calibres (Expedição)
+  const filteredExp = exp.filter(x => {
     const clean = (c) => String(c||'').toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
     return clean(x.product_description).includes(clean(pCode)) || clean(x.traceability_code).includes(clean(pCode));
-  }) : exp;
+  });
+
+  // 2. Analisar Carroções (Campo)
+  const filteredHarvest = harvest.filter(x => {
+     const c = x.parcel_code || (x.parcels?.code) || '';
+     return c === pCode;
+  });
 
   const stats = {};
-  filtered.forEach(x => {
+  filteredExp.forEach(x => {
     const cal = x.caliber || 'N/A';
     stats[cal] = (stats[cal]||0) + Number(x.quantity_kg || 0);
   });
 
+  const totalCarrao = filteredHarvest.reduce((a,b) => a + b.qty_carrocoes, 0);
+  const totalKgExp = filteredExp.reduce((a,b) => a + Number(b.quantity_kg), 0);
+  
+  // Atualiza mini KPIs de apoio no gráfico
+  const elInfo = $('supParcelInfo');
+  if(elInfo) {
+    elInfo.innerHTML = `
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px">
+        <div class="pbi-card" style="padding:10px">
+          <div class="klabel">Entrada Campo</div>
+          <div style="font-size:18px; font-weight:800">${totalCarrao.toFixed(1)} <span style="font-size:10px">carr.</span></div>
+        </div>
+        <div class="pbi-card" style="padding:10px">
+          <div class="klabel">Saída Packing</div>
+          <div style="font-size:18px; font-weight:800">${(totalKgExp/1000).toFixed(1)} <span style="font-size:10px">Ton.</span></div>
+        </div>
+      </div>
+    `;
+  }
+
   const labels = Object.keys(stats).sort((a,b) => Number(a)-Number(b));
   const rawValues = labels.map(l => stats[l] / 1000); // Em Toneladas
-  
-  // Lógica de Ponto Crítico e Estética Premium
   const avg = rawValues.reduce((a,b) => a+b, 0) / (rawValues.length || 1);
-  const colors = rawValues.map(v => v < (avg * 0.85) ? '#ef4444' : '#10b981'); // Vermelho se estiver 15% abaixo da média
+  const colors = rawValues.map(v => v < (avg * 0.85) ? '#ef4444' : '#10b981'); 
 
   mkChart('chartSupCaliber', {
     type: 'bar',
