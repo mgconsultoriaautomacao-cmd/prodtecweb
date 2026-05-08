@@ -1192,7 +1192,17 @@ async function refreshDash(){
 
   // Destaque do Período
   const eb = {};
-  packerScans.forEach(x => { eb[x.employee_name] = (eb[x.employee_name] || 0) + 1; });
+  const empIdle = {};
+  packerScans.forEach(x => { 
+    eb[x.employee_name] = (eb[x.employee_name] || 0) + 1;
+  });
+  
+  // Popula stats globais com Idle Time
+  window._lastEmpStats = Object.fromEntries(Object.entries(eb).map(([name, count]) => {
+    const idle = calculateIdleTime(packerScans.filter(s => s.employee_name === name));
+    return [name, { employee_name: name, boxes: count, qualityIssues: 0, idleTime: idle }];
+  }));
+
   const top = Object.entries(eb).sort((a,b) => b[1] - a[1])[0];
   if(top) {
     const [name, boxes] = top;
@@ -1454,7 +1464,10 @@ async function refreshRanking(){
   }
 
   const sorted=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes).slice(0,10);
-  window._lastEmpStats = Object.fromEntries(Object.entries(eb).map(([name, d]) => [name, { employee_name: name, boxes: d.boxes, qualityIssues: 0 }]));
+  window._lastEmpStats = Object.fromEntries(Object.entries(eb).map(([name, d]) => {
+     const idle = calculateIdleTime(_rankScans.filter(s => s.employee_name === name));
+     return [name, { employee_name: name, boxes: d.boxes, qualityIssues: 0, idleTime: idle }];
+  }));
 
   if(sorted.length === 0) {
     if(charts['chartRankCollab']) charts['chartRankCollab'].destroy();
@@ -2208,12 +2221,42 @@ async function openEmpDrawer(name) {
       </div>
       <div class="pbi-card">
         <div class="klabel">Qualidade</div>
-        <div class="kpi-value-pbi">${stats.qualityIssues} <span style="font-size:12px">falhas críticas</span></div>
+        <div class="kpi-value-pbi">${stats.qualityIssues} <span style="font-size:12px">falhas</span></div>
       </div>
     `;
+
+    if(stats.idleTime !== undefined) {
+      const idlePercent = Math.min(100, (stats.idleTime / 120) * 100); // 2h de ociosidade = 100%
+      document.getElementById('drIdleVal').textContent = stats.idleTime + ' min';
+      document.getElementById('drIdleFill').style.width = idlePercent + '%';
+    }
   }
   
+  // Buscar Faltas no Período
+  const {count: absences} = await sb.from('absences').select('*', {count: 'exact'}).eq('employee_id', emp.id);
+  document.getElementById('drAbsences').innerHTML = `
+    <div class="pbi-card" style="grid-column: span 2; border-left: 4px solid ${absences > 0 ? 'var(--red)' : 'var(--green)'}">
+       <div class="klabel">Assiduidade (Faltas)</div>
+       <div style="font-size:18px; font-weight:800; color:${absences > 0 ? 'var(--red)' : 'var(--green)'}">${absences} Faltas <span style="font-size:12px; font-weight:400; color:var(--muted)">registradas no histórico</span></div>
+    </div>
+  `;
+  
   d.classList.add('active');
+}
+
+function calculateIdleTime(scans) {
+  if (scans.length < 2) return 0;
+  const sorted = [...scans].sort((a,b) => new Date(a.ts) - new Date(b.ts));
+  let totalIdleSeconds = 0;
+  const thresholdSeconds = 600; // 10 minutos
+  
+  for (let i = 1; i < sorted.length; i++) {
+    const diff = (new Date(sorted[i].ts) - new Date(sorted[i-1].ts)) / 1000;
+    if (diff > thresholdSeconds && diff < 3600 * 4) { // Entre 10min e 4h (evita virada de turno)
+       totalIdleSeconds += (diff - thresholdSeconds);
+    }
+  }
+  return Math.round(totalIdleSeconds / 60);
 }
 window._lastEmpStats = {};
 
@@ -3863,14 +3906,15 @@ initApp();
 
   <div class="pbi-card" style="margin-bottom:20px">
     <div style="display:flex; justify-content:space-between; align-items:end">
-      <div class="klabel">Índice de Qualidade</div>
-      <div id="drQualVal" class="kpi-value-pbi" style="color:var(--blue)">0%</div>
+      <div class="klabel">Tempo Interrompido (Ocioso)</div>
+      <div id="drIdleVal" class="kpi-value-pbi" style="color:var(--orange)">0 min</div>
     </div>
-    <div class="pbi-gauge-bg"><div id="drQualFill" class="pbi-gauge-fill" style="width:0%"></div></div>
-    <p style="font-size:10px; color:var(--muted)">Penalidade por falhas graves detectadas</p>
+    <div class="pbi-gauge-bg"><div id="drIdleFill" class="pbi-gauge-fill" style="width:0%; background:var(--orange)"></div></div>
+    <p style="font-size:10px; color:var(--muted)">Protocolo: Soma de intervalos > 10 min entre bipes</p>
   </div>
 
-  <div id="drTotals" style="display:grid; grid-template-columns:1fr 1fr; gap:12px"></div>
+  <div id="drTotals" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px"></div>
+  <div id="drAbsences" style="display:grid; grid-template-columns:1fr; gap:12px"></div>
 
   <div style="margin-top:32px">
      <button class="blue btn-full" onclick="alert('Funcionalidade de Relatório Individual em breve!')">📄 Gerar Dossiê PDF</button>
