@@ -396,9 +396,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       </div>
     </div>
 
-    <div class="section"><div class="section-title">Funcionário (Embalador)</div></div>
+    <div class="section"><div class="section-title">Funcionário (Bip da Caixa ou Seleção)</div></div>
     <div style="padding:0 16px 8px">
-      <div class="emp-search"><span>🔎</span><input id="qEmpSearch" oninput="filterQEmp()" placeholder="Buscar embalador..." autocomplete="off"></div>
+      <div class="emp-search" style="margin-bottom:8px; border:2px solid var(--primary)">
+        <span style="font-size:20px">📟</span>
+        <input id="qBarcode" placeholder="BIP DO CÓDIGO DA CAIXA..." autocomplete="off" onkeydown="if(event.key==='Enter') handleQBarcode(this.value)">
+      </div>
+      <div class="emp-search"><span>🔎</span><input id="qEmpSearch" oninput="filterQEmp()" placeholder="Buscar embalador manualmente..." autocomplete="off"></div>
       <div class="emp-list" id="qEmpList" style="max-height:180px;overflow-y:auto">
         <div class="loading"><div class="spinner"></div>Carregando...</div>
       </div>
@@ -1070,6 +1074,7 @@ function selectIssue(id) {
   document.querySelectorAll('.issue-opt').forEach(el =>
     el.classList.toggle('on', el.dataset.id === id)
   );
+  if ($('qBarcode')) $('qBarcode').focus();
 }
 
 async function addDefectType() {
@@ -1157,6 +1162,22 @@ function selectQEmp(id, name, barcode) {
   });
 }
 
+function handleQBarcode(code) {
+  if (!code) return;
+  const emp = employees.find(e => e.barcode === code);
+  if (emp) {
+    selectQEmp(emp.id, emp.name, emp.barcode);
+    if (qState.issue) {
+      submitQuality();
+    } else {
+      toast('👤 ' + emp.name + ' selecionado. Selecione o defeito agora!', 'ok');
+    }
+  } else {
+    toast('Código não encontrado: ' + code, 'err');
+  }
+  $('qBarcode').value = '';
+}
+
 async function submitQuality() {
   if (!qState.issue)  { toast('Selecione o tipo de defeito', 'err'); return; }
 
@@ -1215,6 +1236,7 @@ function resetQForm() {
   qState.varietyId = null;
   if($('qParcela')) $('qParcela').value = '';
   if($('qVariety')) $('qVariety').value = '';
+  if($('qBarcode')) $('qBarcode').value = '';
   qPenalty = 1;
   $('qPenaltyVal').textContent = 1;
   $('qReason').value = '';
