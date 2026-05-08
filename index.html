@@ -314,10 +314,19 @@
   <div id="tab-dash" class="tab active">
     <h1 class="ptitle">📊 Dashboard de Produção</h1>
     <div class="kgrid">
-      <div class="kcard"><div class="klabel">Prod. Total (Dia)</div><div id="kpiTotalDia" class="kval">0</div><div class="ksub">caixas embaladas</div></div>
+      <div class="kcard"><div class="klabel">Prod. Total (Período)</div><div id="kpiTotalDia" class="kval">0</div><div class="ksub">caixas embaladas</div></div>
       <div class="kcard green"><div class="klabel">Total em Quilos</div><div id="kpiTotalKg" class="kval green">0</div><div class="ksub">kg processados</div></div>
       <div class="kcard yellow"><div class="klabel">Velocidade Média</div><div id="kpiCadencia" class="kval yellow">--</div><div class="ksub"><span id="kpiMediaHora">0</span> cx/h média</div></div>
-      <div class="kcard purple"><div class="klabel">Ativos Hoje</div><div id="kpiAtivos" class="kval purple">0</div><div class="ksub">colaboradores</div></div>
+      <div class="kcard orange" id="topPerformerCard" style="display:none; cursor:pointer; grid-column: span 1" onclick="openEmpDrawer(this.dataset.name)">
+        <div class="klabel">🏆 Destaque</div>
+        <div style="display:flex; align-items:center; gap:10px; margin-top:5px">
+          <div id="topPerformerAvatar" class="avatar-ring" style="width:40px; height:40px; border-color:var(--orange); font-size:14px"></div>
+          <div>
+            <div id="topPerformerName" class="kval orange" style="font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100px">--</div>
+            <div id="topPerformerStats" class="ksub">0 cx</div>
+          </div>
+        </div>
+      </div>
       <div class="kcard blue"><div class="klabel">Saldo em Estoque</div><div id="kpiSaldoEstoque" class="kval" style="color:var(--text)">0</div><div class="ksub">kg pendentes</div></div>
     </div>
     <div class="fbar">
@@ -1182,6 +1191,22 @@ async function refreshDash(){
   buildRankingGrid(scans, '#collabDetailList'); // Show all roles in dash ranking
   buildWeightDetail(packerScans);
 
+  // Destaque do Período
+  const eb = {};
+  packerScans.forEach(x => { eb[x.employee_name] = (eb[x.employee_name] || 0) + 1; });
+  const top = Object.entries(eb).sort((a,b) => b[1] - a[1])[0];
+  if(top) {
+    const [name, boxes] = top;
+    const emp = _employees.find(e => e.name === name);
+    $('topPerformerCard').style.display = 'block';
+    $('topPerformerCard').dataset.name = name;
+    $('topPerformerName').textContent = name;
+    $('topPerformerStats').textContent = boxes + ' caixas';
+    $('topPerformerAvatar').innerHTML = emp?.photo_path ? `<img src="${emp.photo_path}">` : name[0];
+  } else {
+    $('topPerformerCard').style.display = 'none';
+  }
+
   // Per parcela + Campo
   const {data:sessions} = await sb.from('field_carrao_sessions').select('*, varieties(name)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
   buildParcelStats(scans, sessions);
@@ -1348,17 +1373,29 @@ function buildWeightDetail(scans){
 function buildRankingGrid(scans, containerId){
   const eb={};
   scans.forEach(x=>{if(!eb[x.employee_name])eb[x.employee_name]={boxes:0,kg:0};eb[x.employee_name].boxes++;eb[x.employee_name].kg+=(x.weight_kg||0);});
-  const sorted=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes);
+  const sorted=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes).slice(0,10);
   const el=containerId.startsWith('#')?document.querySelector(containerId):$(containerId);
   if(!el)return;
-  el.innerHTML=sorted.map(([name,d],i)=>`
-    <div class="rcard">
-      <div class="ravatar">${name.charAt(0)}</div>
-      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div><div style="font-size:11px;color:var(--muted)">${d.kg.toFixed(1)} kg</div></div>
-      <div style="text-align:right"><div style="font-size:16px;font-weight:800;color:var(--green)">${d.boxes}</div><div style="font-size:10px;color:var(--muted)">caixas</div></div>
-      <div style="font-size:18px;width:26px;text-align:center">${i<3?MEDALS[i]:'#'+(i+1)}</div>
+
+  window._lastEmpStats = Object.fromEntries(Object.entries(eb).map(([name, d]) => [name, { employee_name: name, boxes: d.boxes, qualityIssues: 0 }]));
+
+  el.innerHTML=sorted.map(([name,d],i)=>{
+    const emp = _employees.find(e => e.name === name);
+    const photo = emp?.photo_path;
+    return `
+    <div class="rcard pbi-card clickable-emp" onclick="openEmpDrawer('${name}')" style="display:flex; align-items:center; gap:10px; margin-bottom:6px">
+      <div class="avatar-ring" style="width:36px; height:36px; font-size:12px">${photo ? `<img src="${photo}">` : name[0]}</div>
+      <div style="flex:1; min-width:0">
+        <div style="font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div>
+        <div style="font-size:10px;color:var(--muted)">${d.kg.toFixed(1)} kg total</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:16px;font-weight:800;color:var(--blue)">${d.boxes}</div>
+        <div style="font-size:8px;color:var(--muted)">CAIXAS</div>
+      </div>
+      <div style="font-size:16px;width:26px;text-align:center">${i<3?MEDALS[i]:'#'+(i+1)}</div>
     </div>
-  `).join('')||'<div style="color:var(--muted);padding:20px;text-align:center;grid-column:1/-1">Nenhum dado.</div>';
+  `}).join('')||'<div style="color:var(--muted);padding:20px;text-align:center;grid-column:1/-1">Nenhum dado.</div>';
 }
 
 function buildParcelStats(scans){
@@ -1418,7 +1455,8 @@ async function refreshRanking(){
   }
 
   const sorted=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes).slice(0,10);
-  
+  window._lastEmpStats = Object.fromEntries(Object.entries(eb).map(([name, d]) => [name, { employee_name: name, boxes: d.boxes, qualityIssues: 0 }]));
+
   if(sorted.length === 0) {
     if(charts['chartRankCollab']) charts['chartRankCollab'].destroy();
     $('rankGrid').innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center;grid-column:1/-1">Nenhum dado encontrado para o ranking.</div>';
@@ -1427,15 +1465,23 @@ async function refreshRanking(){
 
   mkChart('chartRankCollab',{type:'bar',data:{labels:sorted.map(e=>e[0]),datasets:[{data:sorted.map(e=>e[1].boxes),backgroundColor:COLS.slice(0,sorted.length),borderRadius:7,barThickness:28}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b'}},y:{grid:{display:false},ticks:{color:'#f8fafc',font:{weight:'600',size:12}}}},plugins:{legend:{display:false},tooltip:TOPTS}}});
   
-  // Custom build ranking grid to support merged data format
-  $('rankGrid').innerHTML=sorted.map(([name,d],i)=>`
-    <div class="rcard">
-      <div class="ravatar">${name.charAt(0)}</div>
-      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div><div style="font-size:11px;color:var(--muted)">${d.kg.toFixed(1)} kg</div></div>
-      <div style="text-align:right"><div style="font-size:16px;font-weight:800;color:var(--green)">${d.boxes.toFixed(1)}</div><div style="font-size:10px;color:var(--muted)">cx/carr</div></div>
-      <div style="font-size:18px;width:26px;text-align:center">${i<3?MEDALS[i]:'#'+(i+1)}</div>
+  $('rankGrid').innerHTML=sorted.map(([name,d],i)=>{
+    const emp = _employees.find(e => e.name === name);
+    const photo = emp?.photo_path;
+    return `
+    <div class="rcard pbi-card" onclick="openEmpDrawer('${name}')" style="cursor:pointer; display:flex; align-items:center; gap:12px; margin-bottom:8px">
+      <div style="font-size:18px;width:30px;font-weight:900;color:var(--muted)">${i<3?MEDALS[i]:'#'+(i+1)}</div>
+      <div class="avatar-ring" style="width:44px; height:44px">${photo ? `<img src="${photo}">` : name[0]}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div>
+        <div style="font-size:11px;color:var(--muted)">${d.role} • ${d.kg.toFixed(1)} kg total</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:20px;font-weight:900;color:var(--blue)">${d.boxes.toFixed(1)}</div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:700">Produção</div>
+      </div>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 // ══════════════════════════════════════
@@ -2738,7 +2784,7 @@ async function refreshQuality() {
     return `<tr>
       <td>${new Date(q.ts).toLocaleString('pt-BR')}</td>
       <td>
-        <div style="display:flex;align-items:center;gap:10px">
+        <div class="clickable-emp" style="display:flex;align-items:center;gap:10px" onclick="openEmpDrawer('${empName}')">
           <div class="avatar-ring">${emp?.photo_path ? `<img src="${emp.photo_path}">` : empName[0]}</div>
           <b>${empName}</b>
         </div>
@@ -2770,15 +2816,18 @@ async function refreshQuality() {
     penalties[name] += (q.penalty_boxes || 0);
   });
   const sortedP = Object.entries(penalties).sort((a,b) => b[1] - a[1]).slice(0, 8);
-  $('qaPenaltyList').innerHTML = sortedP.map(([name, val], idx) => `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(239,68,68,0.03);border-radius:12px;margin-bottom:8px;border:1px solid rgba(239,68,68,0.08)">
+  $('qaPenaltyList').innerHTML = sortedP.map(([name, val], idx) => {
+    const emp = _employees.find(e => e.name === name);
+    const photo = emp?.photo_path;
+    return `
+    <div class="pbi-card clickable-emp" onclick="openEmpDrawer('${name}')" style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(239,68,68,0.03);border-radius:12px;margin-bottom:8px;border:1px solid rgba(239,68,68,0.08)">
       <div style="display:flex; align-items:center; gap:10px">
-        <div style="width:24px; height:24px; border-radius:50%; background:rgba(239,68,68,0.1); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; color:var(--red)">${idx+1}</div>
+        <div class="avatar-ring" style="width:32px; height:32px; font-size:12px">${photo ? `<img src="${photo}">` : name[0]}</div>
         <div style="font-weight:700;font-size:13px">${name}</div>
       </div>
       <div style="color:var(--red);font-weight:800; font-size:15px">${val} <span style="font-size:10px;font-weight:400">cx desc.</span></div>
     </div>
-  `).join('') || '<div class="empty" style="padding:10px;font-size:11px">Sem penalidades registradas.</div>';
+  `}).join('') || '<div class="empty" style="padding:10px;font-size:11px">Sem penalidades registradas.</div>';
 
   loadQualityIssues();
 }
