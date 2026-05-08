@@ -81,9 +81,75 @@ CREATE POLICY "tenant_absences_delete" ON employee_absences
 ALTER TABLE bulk_sales ADD COLUMN IF NOT EXISTS fruit_type TEXT;
 
 -- ============================================================
+-- POLÍTICAS RLS - field_carrao_sessions (App de Campo)
+-- ============================================================
+ALTER TABLE field_carrao_sessions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "fcs_select" ON field_carrao_sessions;
+DROP POLICY IF EXISTS "fcs_insert" ON field_carrao_sessions;
+DROP POLICY IF EXISTS "fcs_update" ON field_carrao_sessions;
+
+CREATE POLICY "fcs_select" ON field_carrao_sessions
+  FOR SELECT USING (
+    tenant_id IN (SELECT tenant_id FROM tenant_users WHERE user_id = auth.uid())
+  );
+
+CREATE POLICY "fcs_insert" ON field_carrao_sessions
+  FOR INSERT WITH CHECK (
+    tenant_id IN (SELECT tenant_id FROM tenant_users WHERE user_id = auth.uid())
+  );
+
+CREATE POLICY "fcs_update" ON field_carrao_sessions
+  FOR UPDATE USING (
+    tenant_id IN (SELECT tenant_id FROM tenant_users WHERE user_id = auth.uid())
+  );
+
+-- ============================================================
+-- POLÍTICAS RLS - bulk_sales (Venda Agranel)
+-- ============================================================
+ALTER TABLE bulk_sales ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "bs_select" ON bulk_sales;
+DROP POLICY IF EXISTS "bs_insert" ON bulk_sales;
+DROP POLICY IF EXISTS "bs_update" ON bulk_sales;
+
+CREATE POLICY "bs_select" ON bulk_sales
+  FOR SELECT USING (
+    tenant_id IN (SELECT tenant_id FROM tenant_users WHERE user_id = auth.uid())
+  );
+
+CREATE POLICY "bs_insert" ON bulk_sales
+  FOR INSERT WITH CHECK (
+    tenant_id IN (SELECT tenant_id FROM tenant_users WHERE user_id = auth.uid())
+  );
+
+CREATE POLICY "bs_update" ON bulk_sales
+  FOR UPDATE USING (
+    tenant_id IN (SELECT tenant_id FROM tenant_users WHERE user_id = auth.uid())
+  );
+
+-- ============================================================
+-- COLUNAS bulk_sales — adicionar todas as opcionais de uma vez
+-- ============================================================
+ALTER TABLE bulk_sales
+  ADD COLUMN IF NOT EXISTS customer_name    TEXT,
+  ADD COLUMN IF NOT EXISTS invoice_num      TEXT,
+  ADD COLUMN IF NOT EXISTS fruit_type       TEXT,
+  ADD COLUMN IF NOT EXISTS is_waste         BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS is_paid          BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS is_received      BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS signature_base64 TEXT,
+  ADD COLUMN IF NOT EXISTS ts               TIMESTAMPTZ DEFAULT NOW();
+
+-- ============================================================
+-- BÔNUS DE ASSIDUIDADE — coluna na tabela tenants
+-- ============================================================
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS attendance_bonus NUMERIC DEFAULT 0;
+
+-- ============================================================
 -- Confirmar execução
 -- ============================================================
-SELECT 
+SELECT
   (SELECT COUNT(*) FROM field_carrao_sessions) AS carrocoes_restantes,
-  (SELECT COUNT(*) FROM expeditions) AS notas_restantes,
-  (SELECT COUNT(*) FROM production_logs) AS scans_restantes;
+  (SELECT COUNT(*) FROM expeditions)           AS notas_restantes,
+  (SELECT COUNT(*) FROM production_logs)       AS scans_restantes;
