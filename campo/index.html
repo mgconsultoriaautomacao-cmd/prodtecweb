@@ -514,7 +514,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       </select>
     </div>
 
-    <div class="section"><div class="section-title">Quantidade de Carrocões</div></div>
+    <div class="section"><div class="section-title">🚜 Máquina de Colheita</div></div>
+    <div style="padding:0 16px">
+      <input id="cMachineCode" placeholder="Código da máquina (ex: COL-01)" style="margin-bottom:8px">
+      <input id="cMachineOperator" placeholder="Operador da máquina">
+    </div>
+
+
     <div style="padding:0 16px">
       <div class="counter-row">
         <button class="counter-btn" onclick="cQtyChange(-1)">−</button>
@@ -1469,6 +1475,8 @@ async function submitCarrao() {
     parcel_id         : parcelaId || null,
     variety_id        : $('cVariety').value || null,
     tractor_driver    : tractor ? tractor.name : null,
+    machine_code      : $('cMachineCode')?.value.trim() || null,
+    machine_operator  : $('cMachineOperator')?.value.trim() || null,
     qty_carrocoes     : cQty,
     price_per_carrao  : price,
     total_value       : parseFloat(total.toFixed(2)),
