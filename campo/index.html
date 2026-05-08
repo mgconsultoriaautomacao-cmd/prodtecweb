@@ -1967,29 +1967,30 @@ async function saveBulkSale() {
   };
 
   try {
-    let payload = { ...sale };
-    let { error } = await sb.from('bulk_sales').insert(payload);
+    // Tentativa 1: payload completo
+    let { error } = await sb.from('bulk_sales').insert({ ...sale });
     
-    // Fallback progressivo: remove campos opcionais que podem não existir no schema
-    if (error && (error.code === '42703' || String(error.message).includes('column') || String(error.code) === 'PGRST204')) {
-      console.warn('Fallback 1: removendo fruit_type', error.message);
-      delete payload.fruit_type;
-      const r2 = await sb.from('bulk_sales').insert(payload);
+    if (error) {
+      console.warn('Bulk Fallback 1 | code:', error.code, '| msg:', error.message, '| details:', error.details);
+      // Tentativa 2: sem fruit_type e ts (colunas que podem não existir)
+      const p2 = { tenant_id: sale.tenant_id, date: sale.date, customer_name: sale.customer_name, parcel_id: sale.parcel_id, weight_kg: sale.weight_kg, total_value: sale.total_value, signature_base64: sale.signature_base64 };
+      const r2 = await sb.from('bulk_sales').insert(p2);
       error = r2.error;
     }
-    if (error && (error.code === '42703' || String(error.message).includes('column') || String(error.code) === 'PGRST204')) {
-      console.warn('Fallback 2: removendo campos extras', error.message);
-      delete payload.is_waste; delete payload.is_paid; delete payload.is_received; delete payload.ts;
-      const r3 = await sb.from('bulk_sales').insert(payload);
+
+    if (error) {
+      console.warn('Bulk Fallback 2 | code:', error.code, '| msg:', error.message);
+      // Tentativa 3: payload absolutamente mínimo
+      const p3 = { tenant_id: sale.tenant_id, date: sale.date, weight_kg: sale.weight_kg, total_value: sale.total_value };
+      const r3 = await sb.from('bulk_sales').insert(p3);
       error = r3.error;
     }
-    if (error && (error.code === '42703' || String(error.message).includes('column') || String(error.code) === 'PGRST204')) {
-      console.warn('Fallback 3: payload mínimo', error.message);
-      payload = { tenant_id: tenantId, date: sale.date, weight_kg: sale.weight_kg, total_value: sale.total_value, customer_name: sale.customer_name, signature_base64: sale.signature_base64 };
-      const r4 = await sb.from('bulk_sales').insert(payload);
-      error = r4.error;
+
+    if (error) {
+      toast(`Erro ${error.code}: ${error.message}`, 'err');
+      console.error('Bulk sale FINAL error:', JSON.stringify(error));
+      return;
     }
-    if (error) throw error;
 
     toast('✓ Venda a granel registrada!', 'ok');
     resetBulkForm();
