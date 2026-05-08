@@ -851,7 +851,9 @@
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px">
             <div><label class="flabel">Peso Estimado p/ Carrocão (Kg)</label><input type="number" id="cfgCarraoWeight" placeholder="300"/></div>
             <div><label class="flabel">Preço p/ Carrocão Colhido (R$)</label><input type="number" id="cfgCarraoPrice" placeholder="2.00"/></div>
-            <div><label class="flabel">Bônus Assiduidade (R$) — 0 faltas</label><input type="number" id="cfgAttendanceBonus" step="0.01" placeholder="Ex: 50.00"/></div>
+            <div><label class="flabel">Bônus Assiduidade (R$) — 0 faltas</label><input type="number" id="cfgAttendanceBonus" step="0.01" placeholder="Ex: 100.00"/></div>
+            <div><label class="flabel">Penalidade p/ Falta (R$)</label><input type="number" id="cfgAttendancePenalty" step="0.01" placeholder="Ex: 25.00"/></div>
+            <div><label class="flabel">Desc. Prod. p/ Falta (%)</label><input type="number" id="cfgProdPenaltyPercent" step="0.1" placeholder="Ex: 5.0"/></div>
           </div>
         </div>
       </div>
@@ -1630,11 +1632,21 @@ async function refreshFin(){
     const emp = _employees.find(e => e.name === d.employee_name);
     const abCount = emp ? (absenceMap[emp.barcode] || 0) : 0;
     const qCount = emp ? (qualityMap[emp.barcode] || 0) : 0;
+    const attendanceBonusBase = Number(tenantConfig.attendance_bonus || 0);
+    const penaltyPerAbsence = Number(tenantConfig.attendance_penalty || 0);
+    const prodPenaltyPercent = Number(tenantConfig.prod_penalty_percent || 0) / 100;
+
     d.absences = abCount;
     d.qualityIssues = qCount;
     d.photo_path = emp?.photo_path;
-    d.penalty = d.val * (0.15 * abCount);
-    d.bonus = (abCount === 0 && attendanceBonus > 0) ? attendanceBonus : 0;
+    
+    // Penalidade na produção (Percentual por falta)
+    d.penalty = d.val * (prodPenaltyPercent * abCount);
+    
+    // Bônus Assiduidade (Dedução fixa por falta)
+    const totalBonusPenalty = abCount * penaltyPerAbsence;
+    d.bonus = Math.max(0, attendanceBonusBase - totalBonusPenalty);
+    
     d.netVal = d.val - d.penalty + d.bonus;
     totalBonusAmount += d.bonus;
   });
@@ -3058,6 +3070,8 @@ async function loadSettings(){
   $('cfgCarraoWeight').value=data.harvest_carrao_weight_kg||'300';
   $('cfgCarraoPrice').value=data.value_per_carrao||'2.00';
   $('cfgAttendanceBonus').value=data.attendance_bonus||'0';
+  $('cfgAttendancePenalty').value=data.attendance_penalty||'0';
+  $('cfgProdPenaltyPercent').value=data.prod_penalty_percent||'0';
   $('cfgWaTemplateEmp').value=data.wa_template_employee||'📦 *Produção do dia — {nome}*\n📅 {data} | *Empresa*\n\n✅ Caixas produzidas: *{caixas} cx*\n⚖️ Total pesado: *{peso} kg*\n🏆 Posição no ranking: *{ranking}*\n\n_Sistema Prodtech — Obrigado pelo trabalho de hoje!_ 🌟';
   $('cfgWaTemplateMgr').value=data.wa_template_manager||'📊 *Relatório Diário de Produção*\n📅 {data}\n\n{detalhes}\n\n🚀 *Total Geral: {total_caixas} cx | {total_peso} kg*';
 
@@ -3082,6 +3096,8 @@ async function saveSettings(){
     harvest_carrao_weight_kg:parseFloat($('cfgCarraoWeight').value)||300,
     value_per_carrao:parseFloat($('cfgCarraoPrice').value)||2.0,
     attendance_bonus:parseFloat($('cfgAttendanceBonus').value)||0,
+    attendance_penalty:parseFloat($('cfgAttendancePenalty').value)||0,
+    prod_penalty_percent:parseFloat($('cfgProdPenaltyPercent').value)||0,
     wa_template_employee:$('cfgWaTemplateEmp').value.trim()||null,
     wa_template_manager:$('cfgWaTemplateMgr').value.trim()||null
   };
