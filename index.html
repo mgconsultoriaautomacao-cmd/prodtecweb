@@ -1071,7 +1071,7 @@ async function afterLogin(user){
   const t = today();
   ['dashStart','dashEnd','rankStart','rankEnd','finStart','finEnd','logStart','logEnd','finalizeDate','qaStart','qaEnd','massStart','massEnd','bulkDate','nfeDate'].forEach(id=>{const el=$(id);if(el)el.value=t;});
 
-  await Promise.all([loadEmpSelectAll(), loadWeightSelectAll()]);
+  await Promise.all([loadEmpSelectAll(), loadWeightSelectAll(), loadEmps()]);
   await refreshDash();
   setInterval(()=>{ if($('tab-dash').classList.contains('active')) refreshDash(); },20000);
 }
@@ -1385,6 +1385,43 @@ function buildWeightDetail(scans){
       <div style="text-align:right"><div style="font-weight:800;color:var(--green);font-size:15px">${d.boxes} <span style="font-size:11px;font-weight:400;color:var(--muted)">un</span></div><div style="font-size:10px;color:var(--muted)">${d.kg.toFixed(1)} kg</div></div>
     </div>
   `).join('');
+}
+
+function buildMassCharts(harvest, exp, bulk, totalWaste) {
+  const harvestKg = (harvest||[]).reduce((a,c)=>a+(c.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300)),0);
+  const expKg = (exp||[]).reduce((a,b)=>a+Number(b.quantity_kg||0),0);
+  const bulkKg = (bulk||[]).filter(b=>!b.is_waste).reduce((a,b)=>a+Number(b.weight_kg||0),0);
+  
+  mkChart('chartMassBalance', {
+    type: 'bar',
+    data: {
+      labels: ['Entrada (Campo)', 'Saída (Faturamento)', 'Saída (Agranel)', 'Perdas/Refugo'],
+      datasets: [{
+        label: 'Toneladas',
+        data: [harvestKg/1000, expKg/1000, bulkKg/1000, totalWaste/1000],
+        backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#ef4444']
+      }]
+    },
+    options: { maintainAspectRatio: false }
+  });
+
+  const distData = {
+    MI: (exp||[]).filter(x => String(x.tes).includes('502')).reduce((a,b)=>a+Number(b.quantity_kg||0), 0) / 1000,
+    EX: (exp||[]).filter(x => String(x.tes).includes('567')).reduce((a,b)=>a+Number(b.quantity_kg||0), 0) / 1000,
+    Granel: bulkKg / 1000
+  };
+
+  mkChart('chartMassDistribution', {
+    type: 'doughnut',
+    data: {
+      labels: ['Mercado Interno', 'Exportação', 'Venda Agranel'],
+      datasets: [{
+        data: [distData.MI, distData.EX, distData.Granel],
+        backgroundColor: ['#3b82f6', '#8b5cf6', '#10b981']
+      }]
+    },
+    options: { maintainAspectRatio: false }
+  });
 }
 
 function buildRankingGrid(scans, containerId){
