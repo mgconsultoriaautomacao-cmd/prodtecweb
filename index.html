@@ -1,4 +1,4 @@
-<!-- Prodtech Web - v1.0.4 - Fix Absence & Charts -->
+<!-- Prodtech Web - v1.0.5 - Stability & PWA Sync -->
   <!DOCTYPE html>
   <html lang="pt-br">
   <head>
@@ -1472,51 +1472,8 @@ async function refreshMass() {
     $('kpiMassStock').className = 'kval ' + (estoqueKg >= 0 ? 'green' : 'red');
   }
   
-  refreshSupervisorChart();
-
-  mkChart('chartMassBalance', {
-    type: 'bar',
-    data: {
-      labels: ['Campo (Colheita)', 'Packinghouse (Saídas)'],
-      datasets: [{
-        label: 'Tons',
-        data: [estHarvestKg/1000, totalOut/1000],
-        backgroundColor: ['#f59e0b', '#3b82f6'],
-        borderRadius: 8
-      }]
-    },
-    options: { 
-      responsive:true, 
-      maintainAspectRatio:false, 
-      plugins: { 
-        legend: { display:false },
-        tooltip: { callbacks: { label: (ctx) => `${ctx.raw.toFixed(2)} Ton` } }
-      },
-      scales: { y: { beginAtZero: true, ticks: { callback: (v) => v + 't' } } }
-    }
-  });
-
-  mkChart('chartMassDistribution', {
-    type: 'doughnut',
-    data: {
-      labels: ['Mercado Interno', 'Exportação', 'Bonif/Granel', 'Perdas'],
-      datasets: [{
-        data: [expMI/1000, expEX/1000, (expBonif+totalBulkKg)/1000, (packhouseWasteKg+fieldWasteKg)/1000],
-        backgroundColor: ['#3b82f6', '#10b981', '#8b5cf6', '#ef4444'],
-        borderWidth: 0,
-        hoverOffset: 15
-      }]
-    },
-    options: { 
-      responsive:true, 
-      maintainAspectRatio:false, 
-      cutout: '65%',
-      plugins: { 
-        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } }
-      }
-    }
-  });
-
+  buildMassCharts(harvest, exp, bulk, packhouseWasteKg + fieldWasteKg);
+  
   // 5. Build Breakdown Report
   const breakdown = {};
   (exp||[]).forEach(x => {
