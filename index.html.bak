@@ -1152,7 +1152,32 @@ async function refreshRanking(){
   buildRankingGrid(data, 'rankGrid');
 }
 
+async function refreshQuality(){
+  const s=$('qaStart').value, e=$('qaEnd').value;
+  if(!s||!e)return;
+  const {data,error}=await sb.from('quality_audits').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')).order('ts',{ascending:false});
+  if(error)return;
+  const tbody=$('qaTable').querySelector('tbody');
+  tbody.innerHTML=(data||[]).map(a=>`
+    <tr>
+      <td>${new Date(a.ts).toLocaleString('pt-BR')}</td>
+      <td>${a.employee_name || a.employee_barcode}</td>
+      <td>${a.issue_type}</td>
+      <td>${a.penalty_boxes}</td>
+      <td>${a.reason||'—'}</td>
+    </tr>
+  `).join('')||'<tr><td colspan="5" style="text-align:center">Nenhuma auditoria.</td></tr>';
+  loadQualityIssues();
+}
 
+async function loadQualityIssues(){
+  const {data}=await sb.from('defect_types').select('*').eq('tenant_id',tenantId).order('name');
+  const tbody=$('issueTable').querySelector('tbody');
+  if(!tbody)return;
+  tbody.innerHTML=(data||[]).map(i=>`
+    <tr><td>${i.icon}</td><td><b>${i.name}</b></td><td><button class="sec" onclick="deleteIssue('${i.id}')">🗑️</button></td></tr>
+  `).join('')||'<tr><td colspan="3" style="text-align:center">Nenhum defeito.</td></tr>';
+}
 
 async function refreshFin(){
   const s=$('finStart').value, e=$('finEnd').value;
@@ -1162,20 +1187,10 @@ async function refreshFin(){
   
   const eb={};
   (scans||[]).forEach(x=>{
-    let displayName = x.employee_name;
-    if(!displayName || displayName.includes('-')) {
-       const emp = _employees.find(e => e.barcode === x.employee_barcode);
-       if(emp) displayName = emp.name;
-    }
-    if(!displayName) displayName = x.employee_barcode || 'Desconhecido';
-
-    if(!eb[displayName]) eb[displayName]={boxes:0,val:0,role:x.role, barcode: x.employee_barcode};
-    
-    const valPacker = Number(tenantConfig.value_per_box_packer || 0.50);
-    const valStacker = Number(tenantConfig.value_per_box_stacker || 0.15);
-    
-    eb[displayName].boxes++;
-    eb[displayName].val += (x.role==='PACKER' ? valPacker : valStacker);
+    const name = x.employee_name || 'Desconhecido';
+    if(!eb[name]) eb[name]={boxes:0,val:0,role:x.role, barcode: x.employee_barcode};
+    eb[name].boxes++;
+    eb[name].val += (x.role==='PACKER' ? 0.02 : 0.01) * x.weight_kg;
   });
   
   const bonus = Number(tenantConfig.attendance_bonus || 0);
@@ -1186,19 +1201,19 @@ async function refreshFin(){
     return `
       <tr>
         <td>PERÍODO</td>
-        <td><div style="font-weight:700">${name}</div><div style="font-size:10px;color:var(--muted)">${d.barcode||'—'}</div></td>
+        <td>${name}</td>
         <td><span class="badge ${d.role.toLowerCase()}">${d.role}</span></td>
-        <td><b>${d.boxes}</b> cx</td>
-        <td>${BRL(d.val/d.boxes)} /cx</td>
-        <td>${hasAbs?'<span class="badge red">FALTA</span>':'<span class="badge green">PRESENÇA</span>'}</td>
+        <td>${d.boxes}</td>
+        <td>${BRL(d.val/d.boxes)}</td>
+        <td>${hasAbs?'FALTA':'OK'}</td>
         <td style="color:var(--green)">${hasAbs?'-':BRL(bonus)}</td>
-        <td style="font-weight:900; font-size:15px; color:var(--blue)">${BRL(total)}</td>
+        <td style="font-weight:800">${BRL(total)}</td>
       </tr>
     `;
-  }).join('')||'<tr><td colspan="8" style="text-align:center; padding:30px">Sem dados financeiros para o período.</td></tr>';
+  }).join('')||'<tr><td colspan="8" style="text-align:center">Sem dados.</td></tr>';
   
   $('finKpiTotal').textContent = BRL(Object.values(eb).reduce((a,b)=>a+b.val,0) + (Object.keys(eb).length * bonus));
-  $('finKpiBoxes').textContent = Object.values(eb).reduce((a,b)=>a+b.boxes,0).toLocaleString() + ' cx';
+  $('finKpiBoxes').textContent = Object.values(eb).reduce((a,b)=>a+b.boxes,0) + ' cx';
 }
 
 async function loadBulk(){
@@ -1253,7 +1268,6 @@ async function loadWeightSelectAll(){
 async function refreshDash(){
   const s=$('dashStart').value, e=$('dashEnd').value, empId=$('dashEmployee').value;
   if(!s||!e)return;
-  
   let q=sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
   if(empId) {
     const emp = _employees.find(ex => ex.id === empId);
@@ -1261,26 +1275,18 @@ async function refreshDash(){
   }
   const {data:scans, error}=await q.order('ts',{ascending:false});
   if(error)return;
-
-  // Comparativo Período Anterior
-  const diff = new Date(e) - new Date(s);
-  const ps = new Date(new Date(s) - diff - 86400000).toISOString().split('T')[0];
-  const pe = new Date(new Date(s) - 86400000).toISOString().split('T')[0];
-  const {data:prevScans} = await sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(ps)).lte('ts',toISO(pe,'23:59:59'));
   
   const { data: stops } = await sb.from('global_stops').select('*').eq('tenant_id', tenantId).gte('start_ts', s).lte('start_ts', e+'T23:59:59Z');
   window._currentStops = stops || [];
   updateStopBanner();
 
-  // Dados de Campo (Carrocões)
-  const {data:harvest} = await sb.from('field_carrao_sessions').select('*, parcels(code)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
-
   const packerScans = scans.filter(s=>s.role==='PACKER');
   const kg = packerScans.reduce((a,x)=>a+(x.weight_kg||0),0);
 
   $('kpiTotalDia').textContent = packerScans.length;
-  $('kpiTotalKg').textContent  = (kg/1000).toFixed(1)+' Ton';
+  $('kpiTotalKg').textContent  = kg.toFixed(1)+' kg';
 
+  // Cadencia
   if(packerScans.length>1){
     const sorted=[...packerScans].sort((a,b)=>new Date(a.ts)-new Date(b.ts));
     const gaps=[];
@@ -1294,20 +1300,11 @@ async function refreshDash(){
   }
 
   buildRankingGrid(scans, 'dashRanking');
-  buildDashCharts(scans, packerScans, s, e, prevScans, harvest);
+  buildDashCharts(scans, packerScans, s, e);
   buildWeightDetail(packerScans);
 
   const eb = {};
-  packerScans.forEach(x => { 
-    let displayName = x.employee_name;
-    if(!displayName || displayName.includes('-')) {
-       const emp = _employees.find(e => e.barcode === x.employee_barcode);
-       if(emp) displayName = emp.name;
-    }
-    if(!displayName) displayName = x.employee_barcode || 'Desconhecido';
-    eb[displayName] = (eb[displayName] || 0) + 1; 
-  });
-  
+  packerScans.forEach(x => { eb[x.employee_name] = (eb[x.employee_name] || 0) + 1; });
   const top = Object.entries(eb).sort((a,b) => b[1] - a[1])[0];
   if(top) {
     const [name, boxes] = top;
@@ -1322,7 +1319,7 @@ async function refreshDash(){
   }
 }
 
-function buildDashCharts(scans, packerScans, s, e, prevScans, harvest){
+function buildDashCharts(scans, packerScans, s, e){
   const hrs={}; for(let i=5;i<=22;i++) hrs[i]=0;
   packerScans.forEach(x=>{const h=new Date(x.ts).getHours();if(h in hrs)hrs[h]++;});
   mkChart('chartProdHora',{type:'bar',data:{labels:Object.keys(hrs).map(h=>h+'h'),datasets:[{data:Object.values(hrs),backgroundColor:'rgba(59,130,246,.65)',borderRadius:5,barThickness:16}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b'}},x:{grid:{display:false},ticks:{color:'#64748b',font:{size:10}}}},plugins:{legend:{display:false},tooltip:TOPTS}}});
@@ -1331,71 +1328,6 @@ function buildDashCharts(scans, packerScans, s, e, prevScans, harvest){
   packerScans.forEach(x=>{const l=x.weight_name||'S/PESO';wG[l]=(wG[l]||0)+1;});
   const wL=Object.keys(wG),wD=Object.values(wG);
   mkChart('chartWeightDist',{type:'doughnut',data:{labels:wL,datasets:[{data:wD,backgroundColor:COLS.slice(0,wL.length),borderWidth:0,spacing:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false},tooltip:TOPTS}}});
-
-  const empStats = {};
-  packerScans.forEach(x => { 
-    let name = x.employee_name;
-    if(!name || name.includes('-')) {
-       const emp = _employees.find(e => e.barcode === x.employee_barcode);
-       if(emp) name = emp.name;
-    }
-    if(!name) name = x.employee_barcode || 'Desconhecido';
-    empStats[name] = (empStats[name] || 0) + 1; 
-  });
-  const sortedEmps = Object.entries(empStats).sort((a,b) => b[1] - a[1]).slice(0, 10);
-  mkChart('chartCollab', {
-    type: 'bar',
-    data: {
-      labels: sortedEmps.map(e => e[0].split(' ')[0]),
-      datasets: [{ label: 'Caixas', data: sortedEmps.map(e => e[1]), backgroundColor: 'rgba(16, 185, 129, 0.7)', borderRadius: 6 }]
-    },
-    options: { indexAxis: 'y', plugins: { legend: { display: false } } }
-  });
-
-  const curTotal = packerScans.length;
-  const prevTotal = (prevScans || []).filter(x => x.role === 'PACKER').length;
-  mkChart('chartComparison', {
-    type: 'bar',
-    data: {
-      labels: ['Anterior', 'Atual'],
-      datasets: [{ data: [prevTotal, curTotal], backgroundColor: ['rgba(148, 163, 184, 0.5)', 'rgba(59, 130, 246, 0.8)'], borderRadius: 8, barThickness: 40 }]
-    },
-    options: { plugins: { legend: { display: false } } }
-  });
-
-  const harvByDay = {};
-  (harvest || []).forEach(h => { harvByDay[h.date] = (harvByDay[h.date] || 0) + h.qty_carrocoes; });
-  const hLabels = Object.keys(harvByDay).sort();
-  mkChart('chartFieldProd', {
-    type: 'line',
-    data: {
-      labels: hLabels.map(l => l.split('-').reverse().slice(0,2).join('/')),
-      datasets: [{ label: 'Carroções', data: hLabels.map(l => harvByDay[l]), borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', fill: true, tension: 0.4 }]
-    },
-    options: { plugins: { legend: { display: false } } }
-  });
-
-  const varG = {};
-  (harvest || []).forEach(h => { 
-    const v = h.variety_name || 'Indet.'; 
-    varG[v] = (varG[v] || 0) + (h.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300));
-  });
-  mkChart('chartVarietiesHarvest', {
-    type: 'pie',
-    data: { labels: Object.keys(varG), datasets: [{ data: Object.values(varG), backgroundColor: COLS }] },
-    options: { plugins: { legend: { position: 'right' } } }
-  });
-
-  const harvestKg = (harvest||[]).reduce((a,b) => a + (b.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300)), 0);
-  const packedKg = packerScans.reduce((a,b) => a + (b.weight_kg || 0), 0);
-  mkChart('chartHarvestVsPacked', {
-    type: 'bar',
-    data: {
-      labels: ['Colhido (Campo)', 'Embalado (Packing)'],
-      datasets: [{ data: [harvestKg, packedKg], backgroundColor: ['#f97316', '#3b82f6'], borderRadius: 8 }]
-    },
-    options: { plugins: { legend: { display: false } } }
-  });
 }
 
 function buildWeightDetail(scans){
@@ -1412,17 +1344,10 @@ function buildWeightDetail(scans){
 function buildRankingGrid(scans, containerId){
   const eb={};
   scans.forEach(x=>{
-    let displayName = x.employee_name;
-    if(!displayName || displayName.includes('-')) {
-       const emp = _employees.find(e => e.barcode === x.employee_barcode);
-       if(emp) displayName = emp.name;
-    }
-    if(!displayName) displayName = x.employee_barcode || 'Desconhecido';
-
-    if(!eb[displayName]) eb[displayName] = { boxes: 0, kg: 0, scans: [] };
-    eb[displayName].boxes++;
-    eb[displayName].kg += (x.weight_kg || 0);
-    eb[displayName].scans.push(x);
+    if(!eb[x.employee_name]) eb[x.employee_name] = { boxes: 0, kg: 0, scans: [] };
+    eb[x.employee_name].boxes++;
+    eb[x.employee_name].kg += (x.weight_kg || 0);
+    eb[x.employee_name].scans.push(x);
   });
   const sorted=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes).slice(0,12);
   const el=$(containerId);
