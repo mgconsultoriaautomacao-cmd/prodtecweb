@@ -1198,7 +1198,8 @@ function showTab(n,el){
     mapping:()=>{loadMappings();loadMapSelects();},
     users_mgmt:loadAdminData, settings:loadSettings,
     finance:refreshFin, ranking:refreshRanking, quality:refreshQuality,
-    mass:refreshMass, bulk:loadBulk, finalize:loadManagers, romaneio:loadRomaneios
+    mass:refreshMass, bulk:loadBulk, finalize:loadManagers, romaneio:loadRomaneios,
+    trace:()=>{loadFruits();loadVarieties();loadParcels();loadLinks();}
   };
   if(fns[n]) fns[n]();
 }
@@ -2085,7 +2086,7 @@ async function openEmpDrawer(idOrName) {
     return;
   }
   
-  const stats = window._lastEmpStats ? window._lastEmpStats[cleanName] : null;
+  const stats = window._lastEmpStats ? window._lastEmpStats[clean] : null;
   
   // Real-time fetches for detailed dossier
   const start = $('dashStart').value;
@@ -2482,9 +2483,10 @@ async function addEmp(){
 
 function editEmp(id) {
   console.log('Editando funcionário ID:', id);
-  const e = _employees.find(x => x.id === id);
+  const e = _employees.find(x => x.id == id);
   if(!e) {
-    console.error('Funcionário não encontrado no cache:', id);
+    console.error('Funcionário não encontrado no cache:', id, _employees);
+    alert('Erro: Funcionário não encontrado na lista atual.');
     return;
   }
   openEditEmpModal(e.id, e.name, e.role, e.whatsapp, e.barcode, e.photo_path);
