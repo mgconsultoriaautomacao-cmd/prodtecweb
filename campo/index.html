@@ -267,6 +267,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       <div class="module-desc">Confirme a chegada dos carrões no Packing House</div>
       <div class="module-arrow">›</div>
     </div>
+    <div class="module-card" style="--grad:linear-gradient(90deg,var(--red),var(--orange))" onclick="showScreen('stops')">
+      <span class="module-icon">🛑</span>
+      <div class="module-name">Paradas Gerais</div>
+      <div class="module-desc">Registre manutenções ou quedas de energia</div>
+      <div class="module-arrow">›</div>
+    </div>
   </div>
 
   <div style="padding:0 16px">
@@ -664,6 +670,32 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   </div>
 </div>
 
+<!-- ══════════════ PARADAS GERAIS ══════════════ -->
+<div id="screenStops" class="screen">
+  <div class="header">
+    <div class="back-btn" onclick="showScreen('home')">‹</div>
+    <div class="header-title">🛑 Paradas Gerais</div>
+  </div>
+
+  <div class="section">
+    <div class="card">
+      <div class="section-title">Registrar Nova Parada</div>
+      <div class="form-field">
+        <label class="field-label">Motivo da Parada</label>
+        <input id="stopReason" placeholder="Ex: Manutenção, Falta de Energia...">
+      </div>
+      <button class="btn btn-danger btn-full" onclick="saveStop()">🛑 Iniciar Parada Agora</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Paradas Ativas / Recentes</div>
+    <div id="stopList">
+      <div class="loading"><div class="spinner"></div>Carregando paradas...</div>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -729,6 +761,7 @@ function showScreen(name) {
   if (name === 'bulk') setTimeout(initBulkSig, 300);
   if (name === 'phSign') setTimeout(initPhSig, 300);
   if (name === 'closure') setTimeout(initQualitySig, 300);
+  if (name === 'stops') loadStops();
 
 
 }
@@ -2157,6 +2190,75 @@ async function loadCHistory() {
       </div>
     `;
   }).join('');
+}
+
+// ═══════════════════════════════════════════
+// PARADAS GERAIS
+// ═══════════════════════════════════════════
+async function loadStops() {
+  const el = $('stopList');
+  if (!el) return;
+  el.innerHTML = '<div class="loading"><div class="spinner"></div>Carregando...</div>';
+  
+  const { data, error } = await sb.from('global_stops').select('*').eq('tenant_id', tenantId).order('start_ts', { ascending: false }).limit(10);
+  if (error) {
+    el.innerHTML = '<div class="empty">Erro ao carregar paradas.</div>';
+    return;
+  }
+  
+  el.innerHTML = (data||[]).map(s => `
+    <div class="card" style="margin-bottom:10px; border-left:4px solid ${s.end_ts ? 'var(--muted)' : 'var(--red)'}">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start">
+        <div>
+          <div style="font-weight:800; font-size:16px">${s.reason}</div>
+          <div style="font-size:11px; color:var(--muted); margin-top:4px">
+            Início: ${new Date(s.start_ts).toLocaleString('pt-BR')}
+          </div>
+          <div style="font-size:11px; color:${s.end_ts ? 'var(--muted)' : 'var(--green)'}; font-weight:700">
+            Status: ${s.end_ts ? 'Encerrada' : 'EM ANDAMENTO ⚠️'}
+          </div>
+        </div>
+        ${!s.end_ts ? `<button class="btn btn-danger" style="padding:8px 12px; font-size:11px" onclick="endStop('${s.id}')">Encerrar</button>` : ''}
+      </div>
+    </div>
+  `).join('') || '<div class="empty">Nenhuma parada registrada.</div>';
+}
+
+async function saveStop() {
+  const reason = $('stopReason').value.trim();
+  if (!reason) return toast('Informe o motivo', 'err');
+  
+  const btn = event.target;
+  btn.disabled = true;
+  
+  const { error } = await sb.from('global_stops').insert({
+    tenant_id: tenantId,
+    reason: reason,
+    start_ts: new Date().toISOString()
+  });
+  
+  btn.disabled = false;
+  if (error) {
+    toast('Erro ao salvar', 'err');
+  } else {
+    $('stopReason').value = '';
+    toast('Parada iniciada!', 'ok');
+    loadStops();
+  }
+}
+
+async function endStop(id) {
+  if (!confirm('Deseja encerrar esta parada agora?')) return;
+  
+  const { error } = await sb.from('global_stops').update({
+    end_ts: new Date().toISOString()
+  }).eq('id', id);
+  
+  if (error) toast('Erro ao encerrar', 'err');
+  else {
+    toast('Parada encerrada', 'ok');
+    loadStops();
+  }
 }
 
 // ═══════════════════════════════════════════
