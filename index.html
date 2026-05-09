@@ -278,14 +278,14 @@
   <div class="nav" onclick="showTab('finalize',this)">✅ Finalizar Dia</div>
   <div class="nav" onclick="showTab('bulk',this)">🗑️ Refugo/Descarte</div>
   <div class="nav" onclick="showTab('logs',this)">📋 Logs de Produção</div>
-  <div class="nav" onclick="showTab('quality',this)">🕵️ Qualidade</div>
+  <div class="nav" onclick="showTab('quality',this)">🕵️ Auditoria de Qualidade</div>
 
   <div class="nav-group">Cadastros</div>
   <div class="nav" onclick="showTab('employees',this)">👥 Funcionários</div>
   <div class="nav" onclick="showTab('weights',this)">📦 Tipos de Peso</div>
   <div class="nav" onclick="showTab('mapping',this)">🔗 Mapeamento</div>
   <div class="nav" onclick="showTab('stops',this)">🛑 Paradas Gerais</div>
-  <div class="nav" onclick="showTab('quality_issues',this)">🚫 Defeitos (Qualidade)</div>
+  <div class="nav" onclick="showTab('quality_issues',this)">🚫 Tipos de Defeito</div>
   <div class="nav" id="navTrace" onclick="showTab('trace',this)" style="display:none">🌿 Rastreabilidade</div>
 
   <div id="adminGroup" style="display:none">
@@ -323,7 +323,7 @@
       <div class="kcard"><div class="klabel">Prod. Total (Período)</div><div id="kpiTotalDia" class="kval">0</div><div class="ksub">caixas embaladas</div></div>
       <div class="kcard green"><div class="klabel">Total em Quilos</div><div id="kpiTotalKg" class="kval green">0</div><div class="ksub">kg processados</div></div>
       <div class="kcard yellow"><div class="klabel">Velocidade Média</div><div id="kpiCadencia" class="kval yellow">--</div><div class="ksub"><span id="kpiMediaHora">0</span> cx/h média</div></div>
-      <div class="kcard orange" id="topPerformerCard" style="display:none; cursor:pointer; grid-column: span 1" onclick="openEmpDrawer(this.dataset.name)">
+      <div class="kcard orange" id="topPerformerCard" style="display:none; cursor:pointer; grid-column: span 1" onclick="openEmpDrawer(this.dataset.barcode)">
         <div class="klabel">🏆 Destaque</div>
         <div style="display:flex; align-items:center; gap:10px; margin-top:5px">
           <div id="topPerformerAvatar" class="avatar-ring" style="width:40px; height:40px; border-color:var(--orange); font-size:14px"></div>
@@ -433,8 +433,6 @@
         </table>
       </div>
     </div>
-
-
     <div class="grid2">
       <div class="card">
         <div class="title">📥 Importar Relatório TOTVS</div>
@@ -443,7 +441,6 @@
         <div id="importStatus"></div>
         <button id="btnSaveExpeditions" class="green" style="margin-top:15px; display:none" onclick="saveExpeditions()">🚀 Confirmar Importação</button>
       </div>
-
       <div class="card">
         <div class="title">📊 Resumo do Arquivo</div>
         <div id="importSummary" style="font-size:13px; color:var(--muted)">Aguardando upload...</div>
@@ -459,8 +456,6 @@
         </table>
       </div>
     </div>
-
-
 
     <!-- 🚜 SESSÕES DE COLHEITA (CARROCÕES) -->
     <div class="card">
@@ -597,8 +592,6 @@
     </div>
   </div>
 
-
-
   <!-- ═══ LOGS ═══ -->
   <div id="tab-logs" class="tab">
     <h1 class="ptitle">📋 Logs de Produção</h1>
@@ -630,8 +623,8 @@
     </div>
   </div>
 
-  <!-- ═══ QUALIDADE ═══ -->
-  <div id="tab-quality_issues" class="tab">
+  <!-- ═══ AUDITORIA DE QUALIDADE ═══ -->
+  <div id="tab-quality" class="tab">
     <h1 class="ptitle">🕵️ Auditoria de Qualidade</h1>
     <div class="fbar">
       <div class="f"><label class="flabel">Início</label><input type="date" id="qaStart"/></div>
@@ -649,8 +642,13 @@
       <div class="title">📋 Registros de Auditoria</div>
       <table id="qaTable"><thead><tr><th>Data/Hora</th><th>Colaborador</th><th>Defeito</th><th>Caixas Desc.</th><th>Motivo</th></tr></thead><tbody></tbody></table>
     </div>
-    <div class="card" id="cardManageIssues" style="display:none">
-      <div class="title">⚙️ Gerenciar Defeitos</div>
+  </div>
+
+  <!-- ═══ DEFEITOS (CONFIG) ═══ -->
+  <div id="tab-quality_issues" class="tab">
+    <h1 class="ptitle">🚫 Gerenciar Tipos de Defeitos</h1>
+    <div class="card">
+      <div class="title">⚙️ Cadastrar Novo Defeito</div>
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <input id="newIssueName" placeholder="Novo defeito (ex: Podridão)"/>
         <input id="newIssueIcon" placeholder="Ícone (EMOJI)" style="width:80px"/>
@@ -695,7 +693,6 @@
     </div>
   </div>
 
-  <!-- ═══ BALANÇO DE MASSA ═══ -->
   <!-- ═══ PESOS ═══ -->
   <div id="tab-weights" class="tab">
     <h1 class="ptitle">📦 Pesos de Caixa</h1>
@@ -780,7 +777,6 @@
     </div>
   </div>
 
-  <!-- ═══ CONFIGURAÇÕES ═══ -->
   <!-- ═══ INTEGRAÇÕES ═══ -->
   <div id="tab-integrations" class="tab">
     <h1 class="ptitle">🔌 Integrações Externas</h1>
@@ -809,7 +805,6 @@
   <!-- ═══ ROMANEIO ═══ -->
   <div id="tab-romaneio" class="tab">
     <h1 class="ptitle">📑 Romaneio e Expedição (Copi Frutas)</h1>
-    
     <div class="card">
       <div class="title">➕ Novo Romaneio / Lote</div>
       <form id="formRomaneio" onsubmit="event.preventDefault(); saveRomaneio();">
@@ -818,7 +813,6 @@
           <div><label class="flabel">Data Expedição</label><input id="romData" type="date" required/></div>
           <div><label class="flabel">Fazenda de Origem</label><input id="romFazenda" placeholder="Ex: Fazenda Copi" required/></div>
         </div>
-        
         <div style="background:rgba(255,255,255,0.03); padding:15px; border-radius:10px; border:1px dashed var(--border); margin-bottom:15px">
           <div style="font-size:12px; font-weight:700; margin-bottom:10px; color:var(--blue)">📦 ADICIONAR ITENS (PALLETS/VARIEDADES)</div>
           <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:10px;align-items:end;margin-bottom:10px;">
@@ -836,14 +830,12 @@
           </div>
           <div id="romaneioItemsList" style="margin-top:10px; display:flex; flex-direction:column; gap:6px"></div>
         </div>
-
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;align-items:end">
           <div><label class="flabel">Total Quilos (Líquido)</label><input id="romKg" type="number" step="0.01" placeholder="Calculado automaticamente" readonly style="background:rgba(0,0,0,0.2); cursor:not-allowed"/></div>
           <button id="btnSaveRomaneio" type="submit" style="height:38px">Salvar Romaneio Completo</button>
         </div>
       </form>
     </div>
-
     <div class="card">
       <div class="title">📋 Romaneios Cadastrados</div>
       <table id="romaneioTable">
@@ -921,10 +913,8 @@
     <div id="cfgStatus" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>
   </div>
 
-  <!-- ═══ GESTÃO DE USUÁRIOS & EMPRESAS (SUPER ADMIN) ═══ -->
   <div id="tab-users_mgmt" class="tab">
     <h1 class="ptitle">🔑 Gestão Administrativa</h1>
-    
     <div class="grid2">
       <div class="card">
         <div class="title">🏢 Gerenciar Empresas (Tenants)</div>
@@ -935,7 +925,6 @@
         </div>
         <div id="tenantListMgmt" style="max-height:400px; overflow-y:auto"></div>
       </div>
-
       <div class="card">
         <div class="title">👤 Vincular Usuário a Empresa</div>
         <div style="margin-bottom:12px"><label class="flabel">E-mail do Usuário</label><input id="linkUserEmail" placeholder="usuario@email.com"/></div>
@@ -956,7 +945,6 @@
         <button onclick="linkUser()" style="width:100%">Vincular Usuário</button>
       </div>
     </div>
-
     <div class="card">
       <div class="title">📋 Usuários Cadastrados no Sistema</div>
       <table id="globalUsersTable">
@@ -991,7 +979,6 @@ function mkChart(id, cfg) {
   if (charts[id]) charts[id].destroy();
   const ctx = document.getElementById(id).getContext('2d');
   
-  // Injeção de Gradientes Automáticos para barras
   if (cfg.type === 'bar' && cfg.data.datasets[0]) {
     const gradient = ctx.createLinearGradient(0, 0, 0, 400);
     gradient.addColorStop(0, 'rgba(59, 130, 246, 0.8)');
@@ -1003,7 +990,6 @@ function mkChart(id, cfg) {
     cfg.data.datasets[0].hoverBackgroundColor = '#60a5fa';
   }
 
-  // Estilização global dos gráficos
   const defaults = {
     responsive: true,
     maintainAspectRatio: false,
@@ -1037,9 +1023,6 @@ function $(id){return document.getElementById(id)}
 function today(){return new Date().toISOString().split('T')[0]}
 function toISO(d,t='00:00:00'){return d+'T'+t+'Z'}
 
-// ══════════════════════════════════════
-// AUTH
-// ══════════════════════════════════════
 async function initApp(){
   sb = window.supabase.createClient(SUPA_URL,SUPA_KEY);
   const {data:{session}} = await sb.auth.getSession();
@@ -1057,14 +1040,12 @@ async function doLogin(){
 }
 
 async function afterLogin(user){
-  // Permite múltiplos registros (multi-tenant)
   const {data:tenants, error:e1} = await sb.from('tenant_users').select('tenant_id,role,whatsapp').eq('user_id',user.id);
   if(!tenants || tenants.length === 0 || e1){alert('Usuário não vinculado a empresa.');await sb.auth.signOut();return;}
   
-  const tu = tenants[0]; // Pega a primeira como padrão
+  const tu = tenants[0];
   const {data:tenant} = await sb.from('tenants').select('*').eq('id',tu.tenant_id).single();
   
-  // Redirecionamento por Role
   if(tu.role === 'COLHEDOR' || tu.role === 'FIELD') {
     location.href = '/campo/';
     return;
@@ -1075,9 +1056,7 @@ async function afterLogin(user){
   tenantConfig = tenant || {};
   $('tenantBadge').textContent = tenantName;
 
-  // Verificação de Admin Global (Manoel ou quem ele cadastrar)
   const isGlobalAdmin = ['mgconsultoriaautomacao@gmail.com', 'admin@prodtech.com'].includes(user.email);
-  
   if(isGlobalAdmin) {
     const {data:allTenants} = await sb.from('tenants').select('*').order('name');
     if(allTenants && allTenants.length > 1) {
@@ -1085,26 +1064,10 @@ async function afterLogin(user){
       ts.innerHTML = allTenants.map(t => `<option value="${t.id}" ${t.id===tenantId?'selected':''}>${t.name}</option>`).join('');
       $('multiTenantSelector').style.display = 'block';
     }
-    $('cardManageIssues').style.display = 'block';
     $('adminGroup').style.display = 'block';
-  } else if(tenants.length > 1) {
-    // Usuário comum com múltiplas fazendas
-    const tenantIds = tenants.map(t => t.tenant_id);
-    const {data:myTenants} = await sb.from('tenants').select('*').in('id', tenantIds).order('name');
-    if(myTenants) {
-      const ts = $('tenantSelect');
-      ts.innerHTML = myTenants.map(t => `<option value="${t.id}" ${t.id===tenantId?'selected':''}>${t.name}</option>`).join('');
-      $('multiTenantSelector').style.display = 'block';
-    }
   }
   $('authScreen').style.display='none';
   $('appMain').style.display='block';
-
-  const culture = tenantConfig.culture_type || 'MAMAO';
-  if(culture !== 'MAMAO') {$('navTrace').style.display='flex';}
-
-  const t = today();
-  ['dashStart','dashEnd','rankStart','rankEnd','finStart','finEnd','logStart','logEnd','finalizeDate','qaStart','qaEnd','massStart','massEnd','bulkDate','nfeDate'].forEach(id=>{const el=$(id);if(el)el.value=t;});
 
   await Promise.all([loadEmpSelectAll(), loadWeightSelectAll(), loadEmps(), loadStops()]);
   await refreshDash();
@@ -1121,17 +1084,11 @@ async function switchTenant(id) {
   tenantName = t.name;
   tenantConfig = t;
   $('tenantBadge').textContent = tenantName;
-  const culture = tenantConfig.culture_type || 'MAMAO';
-  $('navTrace').style.display = (culture !== 'MAMAO') ? 'flex' : 'none';
   showTab('dash', document.querySelector('.nav'));
   await Promise.all([loadEmpSelectAll(), loadWeightSelectAll()]);
   refreshDash();
-  alert('Contexto alterado para: ' + tenantName);
 }
 
-// ══════════════════════════════════════
-// NAVIGATION
-// ══════════════════════════════════════
 function showTab(n,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.nav').forEach(v=>v.classList.remove('active'));
@@ -1139,30 +1096,156 @@ function showTab(n,el){
   if($(targetId)) $(targetId).classList.add('active');
   if(el)el.classList.add('active');
   const fns={
-    dash:refreshDash,
-    employees:loadEmps,
-    weights:loadWeights,
-    stops:loadStops,
+    dash:refreshDash, employees:loadEmps, weights:loadWeights, stops:loadStops,
     mapping:()=>{loadMappings();loadMapSelects();},
-    users_mgmt:loadAdminData,
-    trace:()=>{loadFruits();loadVarieties();loadParcels();loadLinks();},
-    settings:loadSettings,
-    finance:refreshFin,
-    ranking:refreshRanking,
-    quality:refreshQuality,
-    mass:refreshMass, mass_balance:refreshMassBalance,
-    bulk:loadBulk,
-    finalize:loadManagers,
-    romaneio:loadRomaneios,
-    logs:()=>{}
+    users_mgmt:loadAdminData, settings:loadSettings,
+    finance:refreshFin, ranking:refreshRanking, quality:refreshQuality,
+    mass:refreshMass, bulk:loadBulk, finalize:loadManagers, romaneio:loadRomaneios
   };
   if(fns[n]) fns[n]();
 }
 
-// ══════════════════════════════════════
-// HELPER: load selects
-// ══════════════════════════════════════
-let _emps=[], _weights=[];
+async function loadEmps(){
+  const {data,error}=await sb.from('employees').select('*').eq('tenant_id',tenantId).order('name');
+  if(error)return;
+  _employees=data||[];
+  const tbody=$('empTable').querySelector('tbody');
+  if(!tbody)return;
+  tbody.innerHTML=_employees.map(e=>`
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="avatar-ring">${e.photo_path ? `<img src="${e.photo_path}" onerror="this.outerHTML='${e.name[0]}'">` : e.name[0]}</div>
+          <div><div style="font-weight:700">${e.name}</div><div style="font-size:10px;color:var(--muted)">ID: ${e.barcode||'—'}</div></div>
+        </div>
+      </td>
+      <td><span class="badge ${e.role.toLowerCase()}">${e.role}</span></td>
+      <td>${e.active?'<span class="badge green">Ativo</span>':'<span class="badge red">Inativo</span>'}</td>
+      <td><button class="sec" onclick="editEmp('${e.id}')">✏️</button></td>
+    </tr>
+  `).join('')||'<tr><td colspan="4" style="text-align:center">Nenhum funcionário.</td></tr>';
+}
+
+async function loadWeights(){
+  const {data,error}=await sb.from('box_weights').select('*').eq('tenant_id',tenantId).order('weight_kg');
+  if(error)return;
+  _weights=data||[];
+  const tbody=$('weightTable').querySelector('tbody');
+  if(!tbody)return;
+  tbody.innerHTML=_weights.map(w=>`
+    <tr>
+      <td><b>${w.name}</b></td>
+      <td>${w.weight_kg} kg</td>
+      <td><button class="sec" onclick="deleteWeight('${w.id}')">🗑️</button></td>
+    </tr>
+  `).join('')||'<tr><td colspan="3" style="text-align:center">Nenhum peso.</td></tr>';
+}
+
+async function refreshRanking(){
+  const s=$('rankStart').value, e=$('rankEnd').value;
+  if(!s||!e)return;
+  const {data,error}=await sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')).order('ts',{ascending:false});
+  if(error)return;
+  buildRankingGrid(data, 'rankGrid');
+}
+
+async function refreshQuality(){
+  const s=$('qaStart').value, e=$('qaEnd').value;
+  if(!s||!e)return;
+  const {data,error}=await sb.from('quality_audits').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')).order('ts',{ascending:false});
+  if(error)return;
+  const tbody=$('qaTable').querySelector('tbody');
+  tbody.innerHTML=(data||[]).map(a=>`
+    <tr>
+      <td>${new Date(a.ts).toLocaleString('pt-BR')}</td>
+      <td>${a.employee_name || a.employee_barcode}</td>
+      <td>${a.issue_type}</td>
+      <td>${a.penalty_boxes}</td>
+      <td>${a.reason||'—'}</td>
+    </tr>
+  `).join('')||'<tr><td colspan="5" style="text-align:center">Nenhuma auditoria.</td></tr>';
+  loadQualityIssues();
+}
+
+async function loadQualityIssues(){
+  const {data}=await sb.from('defect_types').select('*').eq('tenant_id',tenantId).order('name');
+  const tbody=$('issueTable').querySelector('tbody');
+  if(!tbody)return;
+  tbody.innerHTML=(data||[]).map(i=>`
+    <tr><td>${i.icon}</td><td><b>${i.name}</b></td><td><button class="sec" onclick="deleteIssue('${i.id}')">🗑️</button></td></tr>
+  `).join('')||'<tr><td colspan="3" style="text-align:center">Nenhum defeito.</td></tr>';
+}
+
+async function refreshFin(){
+  const s=$('finStart').value, e=$('finEnd').value;
+  if(!s||!e)return;
+  const {data:scans}=await sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
+  const {data:abs}=await sb.from('employee_absences').select('*').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
+  
+  const eb={};
+  (scans||[]).forEach(x=>{
+    const name = x.employee_name || 'Desconhecido';
+    if(!eb[name]) eb[name]={boxes:0,val:0,role:x.role, barcode: x.employee_barcode};
+    eb[name].boxes++;
+    eb[name].val += (x.role==='PACKER' ? 0.02 : 0.01) * x.weight_kg;
+  });
+  
+  const bonus = Number(tenantConfig.attendance_bonus || 0);
+  const tbody=$('finTable').querySelector('tbody');
+  tbody.innerHTML=Object.entries(eb).map(([name,d])=>{
+    const hasAbs = (abs||[]).some(a=>a.employee_barcode === d.barcode);
+    const total = d.val + (hasAbs ? 0 : bonus);
+    return `
+      <tr>
+        <td>PERÍODO</td>
+        <td>${name}</td>
+        <td><span class="badge ${d.role.toLowerCase()}">${d.role}</span></td>
+        <td>${d.boxes}</td>
+        <td>${BRL(d.val/d.boxes)}</td>
+        <td>${hasAbs?'FALTA':'OK'}</td>
+        <td style="color:var(--green)">${hasAbs?'-':BRL(bonus)}</td>
+        <td style="font-weight:800">${BRL(total)}</td>
+      </tr>
+    `;
+  }).join('')||'<tr><td colspan="8" style="text-align:center">Sem dados.</td></tr>';
+  
+  $('finKpiTotal').textContent = BRL(Object.values(eb).reduce((a,b)=>a+b.val,0) + (Object.keys(eb).length * bonus));
+  $('finKpiBoxes').textContent = Object.values(eb).reduce((a,b)=>a+b.boxes,0) + ' cx';
+}
+
+async function loadBulk(){
+  const {data}=await sb.from('bulk_sales').select('*, parcels(code)').eq('tenant_id',tenantId).order('date',{ascending:false});
+  const tbody=$('bulkTable').querySelector('tbody');
+  tbody.innerHTML=(data||[]).map(b=>`
+    <tr>
+      <td>${new Date(b.date+'T12:00:00').toLocaleDateString('pt-BR')}</td>
+      <td>${b.customer_name||'—'}</td>
+      <td>${b.parcels?.code||'—'}</td>
+      <td>${b.weight_kg} kg</td>
+      <td>${BRL(b.total_value)}</td>
+      <td>${b.is_paid?'✅':'⏳'}</td>
+      <td><button class="sec" onclick="deleteBulk('${b.id}')">🗑️</button></td>
+    </tr>
+  `).join('');
+}
+
+async function loadFieldSessions(s,e,p){
+  let q=sb.from('field_carrao_sessions').select('*, parcels(code), varieties(name)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
+  if(p) q=q.eq('parcel_id',p);
+  const {data}=await q.order('date',{ascending:false});
+  const tbody=$('fieldSessionTable').querySelector('tbody');
+  tbody.innerHTML=(data||[]).map(s=>`
+    <tr>
+      <td>${new Date(s.date+'T12:00:00').toLocaleDateString('pt-BR')}</td>
+      <td>${s.parcels?.code||'—'}</td>
+      <td>${s.varieties?.name||'—'}</td>
+      <td>${s.qty_carrocoes}</td>
+      <td>${s.waste_kg||0} kg</td>
+      <td><button class="sec" onclick="viewSession('${s.id}')">👁️</button></td>
+    </tr>
+  `).join('');
+}
+
 async function loadEmpSelectAll(){
   const {data}=await sb.from('employees').select('id,name,role').eq('tenant_id',tenantId).order('name');
   _emps=data||[];
@@ -1179,40 +1262,28 @@ async function loadWeightSelectAll(){
   _weights=data||[];
 }
 
-// ══════════════════════════════════════
-// DASHBOARD
-// ══════════════════════════════════════
 async function refreshDash(){
-  if(!sb||!tenantId)return;
   const s=$('dashStart').value, e=$('dashEnd').value, empId=$('dashEmployee').value;
+  if(!s||!e)return;
   let q=sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
-  if(empId) q=q.eq('employee_id',empId);
-  const {data:scans}=await q.order('ts',{ascending:false});
+  if(empId) {
+    const emp = _employees.find(ex => ex.id === empId);
+    if(emp) q = q.eq('employee_name', emp.name);
+  }
+  const {data:scans, error}=await q.order('ts',{ascending:false});
+  if(error)return;
   
-  // Expeditions for Balance
-  const {data:exped}=await sb.from('expeditions').select('quantity_kg').eq('tenant_id',tenantId);
-  
-  if(!scans) return;
+  const { data: stops } = await sb.from('global_stops').select('*').eq('tenant_id', tenantId).gte('start_ts', s).lte('start_ts', e+'T23:59:59Z');
+  window._currentStops = stops || [];
+  updateStopBanner();
 
   const packerScans = scans.filter(s=>s.role==='PACKER');
   const kg = packerScans.reduce((a,x)=>a+(x.weight_kg||0),0);
-  const emps = new Set(scans.map(s=>s.employee_name)).size;
 
   $('kpiTotalDia').textContent = packerScans.length;
   $('kpiTotalKg').textContent  = kg.toFixed(1)+' kg';
 
-  // Global Stock Balance (Total Harvest - Total Expedition)
-  const { data: allHarvest } = await sb.from('field_carrao_sessions').select('qty_carrocoes').eq('tenant_id', tenantId);
-  const { data: allExped } = await sb.from('romaneios').select('total_quilos').eq('tenant_id', tenantId);
-  
-  const hWeight = tenantConfig.harvest_carrao_weight_kg || 300;
-  const totalH = (allHarvest || []).reduce((a, x) => a + (x.qty_carrocoes * hWeight), 0);
-  const totalE = (allExped || []).reduce((a, x) => a + (Number(x.total_quilos) || 0), 0);
-  const saldoGlobal = totalH - totalE;
-  $('kpiSaldoEstoque').textContent = saldoGlobal.toLocaleString('pt-BR') + ' kg';
-  $('kpiSaldoEstoque').className = 'kval ' + (saldoGlobal >= 0 ? 'green' : 'red');
-
-  // Cadencia (avg gap between scans for PACKER)
+  // Cadencia
   if(packerScans.length>1){
     const sorted=[...packerScans].sort((a,b)=>new Date(a.ts)-new Date(b.ts));
     const gaps=[];
@@ -1225,238 +1296,46 @@ async function refreshDash(){
     $('kpiMediaHora').textContent = avgGap>0?Math.round(3600/avgGap):'--';
   }
 
+  buildRankingGrid(scans, 'dashRanking');
   buildDashCharts(scans, packerScans, s, e);
-  buildRankingGrid(scans, '#collabDetailList'); // Show all roles in dash ranking
   buildWeightDetail(packerScans);
 
-  // Destaque do Período
   const eb = {};
-  packerScans.forEach(x => { 
-    eb[x.employee_name] = (eb[x.employee_name] || 0) + 1;
-  });
-  
-  // Popula stats globais com Idle Time
-  window._lastEmpStats = Object.fromEntries(Object.entries(eb).map(([name, count]) => {
-    const idle = calculateIdleTime(packerScans.filter(s => s.employee_name === name), window._currentStops);
-    return [name, { employee_name: name, boxes: count, qualityIssues: 0, idleTime: idle }];
-  }));
-
+  packerScans.forEach(x => { eb[x.employee_name] = (eb[x.employee_name] || 0) + 1; });
   const top = Object.entries(eb).sort((a,b) => b[1] - a[1])[0];
   if(top) {
     const [name, boxes] = top;
     const emp = _employees.find(e => e.name === name);
     $('topPerformerCard').style.display = 'block';
-    $('topPerformerCard').dataset.name = name;
+    $('topPerformerCard').dataset.barcode = emp?.barcode || '';
     $('topPerformerName').textContent = name;
     $('topPerformerStats').textContent = boxes + ' caixas';
-    $('topPerformerAvatar').innerHTML = emp?.photo_path ? `<img src="${emp.photo_path}">` : name[0];
+    $('topPerformerAvatar').innerHTML = emp?.photo_path ? `<img src="${emp.photo_path}" onerror="this.outerHTML='${name[0]}'">` : name[0];
   } else {
     $('topPerformerCard').style.display = 'none';
   }
-
-  // Per parcela + Campo
-  const {data:sessions} = await sb.from('field_carrao_sessions').select('*, varieties(name)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
-  buildParcelStats(scans, sessions);
-
-  // New field and varieties charts - Use 'romaneios' for expeditions now
-  const {data:romaneios}=await sb.from('romaneios').select('*').eq('tenant_id',tenantId).gte('data_expedicao',s).lte('data_expedicao',e);
-  buildFieldManagementCharts(sessions, romaneios);
-}
-
-let _chartFieldProd, _chartVarietiesHarvest, _chartHarvestVsPacked;
-function buildFieldManagementCharts(sessions, expeditions) {
-  sessions = sessions || [];
-  expeditions = expeditions || [];
-  const hWeight = tenantConfig.harvest_carrao_weight_kg || 300;
-
-  // 1. Field Productivity (Carroções por data)
-  const prodByDate = {};
-  sessions.forEach(s => {
-    const d = s.date;
-    prodByDate[d] = (prodByDate[d] || 0) + (s.qty_carrocoes || 0);
-  });
-  const dates = Object.keys(prodByDate).sort();
-  const prodData = dates.map(d => prodByDate[d]);
-
-  if(_chartFieldProd) _chartFieldProd.destroy();
-  const ctxProd = document.getElementById('chartFieldProd').getContext('2d');
-  _chartFieldProd = new Chart(ctxProd, {
-    type: 'bar',
-    data: {
-      labels: dates.map(d => new Date(d+'T12:00:00').toLocaleDateString('pt-BR')),
-      datasets: [{ label: 'Carroções', data: prodData, backgroundColor: '#10b981' }]
-    },
-    options: { maintainAspectRatio: false }
-  });
-
-  // 2. Variedades Colhidas (kg)
-  const harvestVarMap = {};
-  sessions.forEach(s => {
-    // Tenta pegar o nome pelo join ou por um campo de nome direto ou usa o mapa global de variedades
-    let v = 'Desconhecida';
-    if(s.varieties && s.varieties.name) v = s.varieties.name;
-    else if(s.variety_name) v = s.variety_name;
-    else if(s.variety_id && typeof _varieties !== 'undefined') {
-      const found = _varieties.find(varObj => varObj.id === s.variety_id);
-      if(found) v = found.name;
-    }
-    
-    harvestVarMap[v] = (harvestVarMap[v] || 0) + (s.qty_carrocoes * hWeight);
-  });
-  const varKeys = Object.keys(harvestVarMap).sort((a,b)=>harvestVarMap[b]-harvestVarMap[a]).slice(0,5);
-  const varData = varKeys.map(k => harvestVarMap[k]);
-
-  if(_chartVarietiesHarvest) _chartVarietiesHarvest.destroy();
-  const ctxVar = document.getElementById('chartVarietiesHarvest').getContext('2d');
-  _chartVarietiesHarvest = new Chart(ctxVar, {
-    type: 'pie',
-    data: {
-      labels: varKeys,
-      datasets: [{ data: varData, backgroundColor: ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6'] }]
-    },
-    options: { maintainAspectRatio: false }
-  });
-
-  // 3. Colhido vs Expedido por Variedade
-  const expVarMap = {};
-  expeditions.forEach(e => {
-    const v = e.variedade || e.variety_name || 'Desconhecida';
-    expVarMap[v] = (expVarMap[v] || 0) + (Number(e.total_quilos) || Number(e.quantity_kg) || 0);
-  });
-  const allVarKeys = Array.from(new Set([...Object.keys(harvestVarMap), ...Object.keys(expVarMap)]));
-  
-  if(_chartHarvestVsPacked) _chartHarvestVsPacked.destroy();
-  const ctxVs = document.getElementById('chartHarvestVsPacked').getContext('2d');
-  _chartHarvestVsPacked = new Chart(ctxVs, {
-    type: 'bar',
-    data: {
-      labels: allVarKeys.slice(0,5),
-      datasets: [
-        { label: 'Colhido (kg)', data: allVarKeys.slice(0,5).map(k=>harvestVarMap[k]||0), backgroundColor: '#10b981' },
-        { label: 'Expedido (kg)', data: allVarKeys.slice(0,5).map(k=>expVarMap[k]||0), backgroundColor: '#3b82f6' }
-      ]
-    },
-    options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-  });
-}
-
-async function buildParcelStats(scans, sessions){
-  const grid = $('parcelStatsList');
-  if(!grid) return;
-  const packerScans = scans.filter(s=>s.role==='PACKER');
-  
-  // Agrupar TUDO por Parcela
-  const parcelMap = {};
-  
-  // 1. Dados de Packing
-  packerScans.forEach(s => {
-    const p = s.parcel_code || 'S/ IDENT';
-    if(!parcelMap[p]) parcelMap[p] = { boxes:0, kg:0, carrocoes:0, variety: s.variety_name || '—' };
-    parcelMap[p].boxes++;
-    parcelMap[p].kg += (s.weight_kg || 0);
-  });
-
-  // 2. Dados de Campo
-  (sessions||[]).forEach(ss => {
-    const p = ss.parcel_code || (ss.parcels?.code) || 'S/ IDENT';
-    if(!parcelMap[p]) parcelMap[p] = { boxes:0, kg:0, carrocoes:0, variety: ss.varieties?.name || ss.variety_name || '—' };
-    parcelMap[p].carrocoes += ss.qty_carrocoes;
-  });
-
-  grid.innerHTML = Object.entries(parcelMap).map(([code, d]) => `
-    <div class="pbi-card" style="margin:0; padding:16px; border-left:4px solid var(--blue)">
-      <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px">
-        <div style="font-weight:800; font-size:16px; color:var(--blue)">🚜 Parcela: ${code}</div>
-        <div class="badge-status status-good" style="font-size:10px">${d.variety}</div>
-      </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
-        <div class="pbi-card" style="background:rgba(255,255,255,0.03); padding:8px">
-          <div style="font-size:10px; color:var(--muted); text-transform:uppercase">Entrada (Campo)</div>
-          <div style="font-size:15px; font-weight:800">${d.carrocoes.toFixed(1)} <span style="font-size:10px">carr.</span></div>
-        </div>
-        <div class="pbi-card" style="background:rgba(255,255,255,0.03); padding:8px">
-          <div style="font-size:10px; color:var(--muted); text-transform:uppercase">Saída (Packing)</div>
-          <div style="font-size:15px; font-weight:800">${d.boxes} <span style="font-size:10px">cx</span></div>
-        </div>
-      </div>
-      <div style="margin-top:10px; font-size:12px; color:var(--muted); text-align:right">
-        Total Processado: <b>${d.kg.toLocaleString('pt-BR')} kg</b>
-      </div>
-    </div>
-  `).join('') || '<div style="padding:20px; color:var(--muted)">Sem dados de parcelas no período.</div>';
 }
 
 function buildDashCharts(scans, packerScans, s, e){
-  if(typeof Chart==='undefined') return;
-
-  // Por hora
   const hrs={}; for(let i=5;i<=22;i++) hrs[i]=0;
   packerScans.forEach(x=>{const h=new Date(x.ts).getHours();if(h in hrs)hrs[h]++;});
   mkChart('chartProdHora',{type:'bar',data:{labels:Object.keys(hrs).map(h=>h+'h'),datasets:[{data:Object.values(hrs),backgroundColor:'rgba(59,130,246,.65)',borderRadius:5,barThickness:16}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b'}},x:{grid:{display:false},ticks:{color:'#64748b',font:{size:10}}}},plugins:{legend:{display:false},tooltip:TOPTS}}});
 
-  // Peso
   const wG={};
   packerScans.forEach(x=>{const l=x.weight_name||'S/PESO';wG[l]=(wG[l]||0)+1;});
   const wL=Object.keys(wG),wD=Object.values(wG);
   mkChart('chartWeightDist',{type:'doughnut',data:{labels:wL,datasets:[{data:wD,backgroundColor:COLS.slice(0,wL.length),borderWidth:0,spacing:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false},tooltip:TOPTS}}});
-
-  // Collab (all roles)
-  const eb={};
-  scans.forEach(x=>{eb[x.employee_name]=(eb[x.employee_name]||0)+1;});
-  const sortedAll=Object.entries(eb).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  mkChart('chartCollab',{type:'bar',data:{labels:sortedAll.map(e=>e[0]),datasets:[{data:sortedAll.map(e=>e[1]),backgroundColor:COLS.slice(0,sortedAll.length),borderRadius:6,barThickness:22}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b'}},y:{grid:{display:false},ticks:{color:'#f8fafc',font:{weight:'600',size:11}}}},plugins:{legend:{display:false},tooltip:TOPTS}}});
-
-  // Comparativo (dummy - current vs prev period length)
-  const days = Math.max(1,Math.round((new Date(e)-new Date(s))/(86400000))+1);
-  mkChart('chartComparison',{type:'bar',data:{labels:sortedAll.slice(0,6).map(e=>e[0].split(' ')[0]),datasets:[{label:'Atual',data:sortedAll.slice(0,6).map(e=>e[1]),backgroundColor:'rgba(59,130,246,.7)',borderRadius:5},{label:'Meta',data:sortedAll.slice(0,6).map(()=>(tenantConfig.target_per_hour_packer||50)*8*days),backgroundColor:'rgba(99,102,241,.3)',borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b'}},x:{grid:{display:false},ticks:{color:'#94a3b8',font:{size:10}}}},plugins:{legend:{labels:{color:'#94a3b8'}},tooltip:TOPTS}}});
 }
 
 function buildWeightDetail(scans){
   const wG={};
-  scans.forEach(x=>{const l=x.weight_name||'S/PESO';if(!wG[l])wG[l]={boxes:0,kg:0,icon:'📦'};wG[l].boxes++;wG[l].kg+=(x.weight_kg||0);});
+  scans.forEach(x=>{const l=x.weight_name||'S/PESO';if(!wG[l])wG[l]={boxes:0,kg:0};wG[l].boxes++;wG[l].kg+=(x.weight_kg||0);});
   $('boxWeightDetailList').innerHTML=Object.entries(wG).sort((a,b)=>b[1].boxes-a[1].boxes).map(([name,d])=>`
     <div class="box-item">
       <div style="display:flex;align-items:center;gap:8px"><span>📦</span><span style="font-weight:600;font-size:13px">${name}</span></div>
       <div style="text-align:right"><div style="font-weight:800;color:var(--green);font-size:15px">${d.boxes} <span style="font-size:11px;font-weight:400;color:var(--muted)">un</span></div><div style="font-size:10px;color:var(--muted)">${d.kg.toFixed(1)} kg</div></div>
     </div>
   `).join('');
-}
-
-function buildMassCharts(harvest, exp, bulk, totalWaste) {
-  const harvestKg = (harvest||[]).reduce((a,c)=>a+(c.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300)),0);
-  const expKg = (exp||[]).reduce((a,b)=>a+Number(b.quantity_kg||0),0);
-  const bulkKg = (bulk||[]).filter(b=>!b.is_waste).reduce((a,b)=>a+Number(b.weight_kg||0),0);
-  
-  mkChart('chartMassBalance', {
-    type: 'bar',
-    data: {
-      labels: ['Entrada (Campo)', 'Saída (Faturamento)', 'Saída (Agranel)', 'Perdas/Refugo'],
-      datasets: [{
-        label: 'Toneladas',
-        data: [harvestKg/1000, expKg/1000, bulkKg/1000, totalWaste/1000],
-        backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#ef4444']
-      }]
-    },
-    options: { maintainAspectRatio: false }
-  });
-
-  const distData = {
-    MI: (exp||[]).filter(x => String(x.tes).includes('502')).reduce((a,b)=>a+Number(b.quantity_kg||0), 0) / 1000,
-    EX: (exp||[]).filter(x => String(x.tes).includes('567')).reduce((a,b)=>a+Number(b.quantity_kg||0), 0) / 1000,
-    Granel: bulkKg / 1000
-  };
-
-  mkChart('chartMassDistribution', {
-    type: 'doughnut',
-    data: {
-      labels: ['Mercado Interno', 'Exportação', 'Venda Agranel'],
-      datasets: [{
-        data: [distData.MI, distData.EX, distData.Granel],
-        backgroundColor: ['#3b82f6', '#8b5cf6', '#10b981']
-      }]
-    },
-    options: { maintainAspectRatio: false }
-  });
 }
 
 function buildRankingGrid(scans, containerId){
@@ -1468,7 +1347,7 @@ function buildRankingGrid(scans, containerId){
     eb[x.employee_name].scans.push(x);
   });
   const sorted=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes).slice(0,12);
-  const el=containerId.startsWith('#')?document.querySelector(containerId):$(containerId);
+  const el=$(containerId);
   if(!el)return;
 
   window._lastEmpStats = Object.fromEntries(Object.entries(eb).map(([name, d]) => {
@@ -1487,7 +1366,7 @@ function buildRankingGrid(scans, containerId){
     const photo = emp?.photo_path;
     return `
     <div class="rcard pbi-card clickable-emp" onclick="openEmpDrawer('${name}')" style="display:flex; align-items:center; gap:10px; margin-bottom:6px">
-      <div class="avatar-ring" style="width:36px; height:36px; font-size:12px">${photo ? `<img src="${photo}">` : name[0]}</div>
+      <div class="avatar-ring" style="width:36px; height:36px; font-size:12px">${photo ? `<img src="${photo}" onerror="this.outerHTML='${name[0]}'">` : name[0]}</div>
       <div style="flex:1; min-width:0">
         <div style="font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div>
         <div style="font-size:10px;color:var(--muted)">${d.kg.toFixed(1)} kg total</div>
@@ -1500,328 +1379,6 @@ function buildRankingGrid(scans, containerId){
     </div>
   `}).join('')||'<div style="color:var(--muted);padding:20px;text-align:center;grid-column:1/-1">Nenhum dado.</div>';
 }
-
-function buildParcelStats(scans){
-  const pg={};
-  scans.forEach(x=>{const k=x.parcel_code||'SEM PARCELA';if(!pg[k])pg[k]={boxes:0,kg:0,variety:x.variety_name||'—'};pg[k].boxes++;pg[k].kg+=(x.weight_kg||0);});
-  $('parcelStatsList').innerHTML=Object.entries(pg).sort((a,b)=>b[1].boxes-a[1].boxes).map(([code,d])=>`
-    <div class="card" style="margin:0;padding:14px">
-      <div style="font-weight:700;font-size:14px;margin-bottom:6px">🚜 ${code}</div>
-      <div style="color:var(--muted);font-size:11px;margin-bottom:8px">Var: ${d.variety}</div>
-      <div style="display:flex;justify-content:space-between"><span style="color:var(--green);font-weight:700">${d.boxes} cx</span><span style="color:var(--blue);font-weight:700">${d.kg.toFixed(1)} kg</span></div>
-    </div>
-  `).join('');
-}
-
-// ══════════════════════════════════════
-// RANKING
-// ══════════════════════════════════════
-let _rankScans=[];
-async function refreshRanking(){
-  if(!sb||!tenantId)return;
-  const s=$('rankStart').value,e=$('rankEnd').value,empId=$('rankEmp').value,role=$('rankRole').value;
-  
-  const eb={};
-
-  // 1. Production Scans (Packing House)
-  let q=sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
-  if(empId) q=q.eq('employee_id',empId);
-  if(role && role !== 'COLHEDOR' && role !== 'TRATORISTA') q=q.eq('role',role);
-  
-  const {data:scans}=await q.order('ts',{ascending:false});
-  _rankScans=scans||[];
-
-  _rankScans.forEach(x=>{
-    if(!eb[x.employee_name]) eb[x.employee_name]={boxes:0,kg:0,role:x.role};
-    eb[x.employee_name].boxes++;
-    eb[x.employee_name].kg+=(x.weight_kg||0);
-  });
-
-  // 2. Field Harvest (Campo)
-  if(!role || role === 'COLHEDOR' || role === 'TRATORISTA') {
-    const {data:sessions} = await sb.from('field_carrao_sessions')
-      .select('*, field_carrao_employees(employee_id, employee_name, value_received)')
-      .eq('tenant_id', tenantId)
-      .gte('date', s)
-      .lte('date', e);
-    
-    (sessions || []).forEach(sess => {
-      (sess.field_carrao_employees || []).forEach(ce => {
-        if(empId && ce.employee_id !== empId) return;
-        const name = ce.employee_name;
-        if(!eb[name]) eb[name]={boxes:0,kg:0,role:'COLHEDOR'};
-        // Tratando carroções como "boxes" para o ranking e convertendo para kg
-        eb[name].boxes += (sess.qty_carrocoes / Math.max(sess.employee_count, 1));
-        eb[name].kg += (sess.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300)) / Math.max(sess.employee_count, 1);
-      });
-    });
-  }
-
-  const sorted=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes).slice(0,10);
-  window._lastEmpStats = Object.fromEntries(Object.entries(eb).map(([name, d]) => {
-     const idle = calculateIdleTime(_rankScans.filter(s => s.employee_name === name));
-     return [name, { employee_name: name, boxes: d.boxes, qualityIssues: 0, idleTime: idle }];
-  }));
-
-  if(sorted.length === 0) {
-    if(charts['chartRankCollab']) charts['chartRankCollab'].destroy();
-    $('rankGrid').innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center;grid-column:1/-1">Nenhum dado encontrado para o ranking.</div>';
-    return;
-  }
-
-  mkChart('chartRankCollab',{type:'bar',data:{labels:sorted.map(e=>e[0]),datasets:[{data:sorted.map(e=>e[1].boxes),backgroundColor:COLS.slice(0,sorted.length),borderRadius:7,barThickness:28}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b'}},y:{grid:{display:false},ticks:{color:'#f8fafc',font:{weight:'600',size:12}}}},plugins:{legend:{display:false},tooltip:TOPTS}}});
-  
-  $('rankGrid').innerHTML=sorted.map(([name,d],i)=>{
-    const emp = _employees.find(e => e.name === name);
-    const photo = emp?.photo_path;
-    return `
-    <div class="rcard pbi-card" onclick="openEmpDrawer('${name}')" style="cursor:pointer; display:flex; align-items:center; gap:12px; margin-bottom:8px">
-      <div style="font-size:18px;width:30px;font-weight:900;color:var(--muted)">${i<3?MEDALS[i]:'#'+(i+1)}</div>
-      <div class="avatar-ring" style="width:44px; height:44px">${photo ? `<img src="${photo}">` : name[0]}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div>
-        <div style="font-size:11px;color:var(--muted)">${d.role} • ${d.kg.toFixed(1)} kg total</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:20px;font-weight:900;color:var(--blue)">${d.boxes.toFixed(1)}</div>
-        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:700">Produção</div>
-      </div>
-    </div>
-  `}).join('');
-}
-
-// ══════════════════════════════════════
-// FINANCEIRO
-// ══════════════════════════════════════
-async function refreshFin(){
-  if(!sb||!tenantId)return;
-  const s=$('finStart').value,e=$('finEnd').value,role=$('finRole').value;
-  
-  const cfg=tenantConfig;
-  const targetPerHour = parseFloat(cfg.target_per_hour_packer || 100);
-  const highRate = 0.03;
-  const lowRate = 0.02;
-
-  // ── 1. Buscar scans de Packing House ──
-  let q=sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
-  if(role && role !== 'COLHEDOR') q=q.eq('role',role);
-  const {data:scans}=await q.order('ts',{ascending:false});
-
-  // ── 2. Buscar sessões de colheita (Campo) ──
-  // Apenas se não filtrou por papel específico de packing, ou filtrou por COLHEDOR
-  let harvestData = [];
-  if(!role || role === 'COLHEDOR') {
-    const {data:sessions} = await sb.from('field_carrao_sessions')
-      .select('*, field_carrao_employees(employee_id, employee_name, value_received)')
-      .eq('tenant_id', tenantId)
-      .gte('date', s)
-      .lte('date', e);
-    harvestData = sessions || [];
-  }
-
-  // ── 3. Buscar Penalidades de Qualidade ──
-  const {data:audits} = await sb.from('quality_audits').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
-  const penalties = {};
-  (audits||[]).forEach(a => {
-    const day = a.ts.split('T')[0];
-    const emp = _employees.find(e => e.barcode == a.employee_barcode);
-    const name = emp ? emp.name : a.employee_barcode;
-    const k = `${day}_${name}`;
-    penalties[k] = (penalties[k]||0) + (a.penalty_boxes||0);
-  });
-
-  // ── 4. Agrupar scans Packing House por data+funcionário ──
-  const grouped = {};
-  (scans||[]).forEach(x => {
-    const day = x.ts.split('T')[0];
-    const key = `${day}_${x.employee_name}`;
-    if(!grouped[key]) {
-      grouped[key] = { date: day, employee_name: x.employee_name, role: x.role, total_boxes: 0, total_kg: 0, _is_harvest: false };
-    }
-    grouped[key].total_boxes++;
-    grouped[key].total_kg += (x.weight_kg || 0);
-  });
-
-  // ── 5. Agrupar sessões de campo por data+funcionário ──
-  const harvestGrouped = {};
-  harvestData.forEach(sess => {
-    (sess.field_carrao_employees || []).forEach(ce => {
-      const name = ce.employee_name;
-      const key = `${sess.date}_${name}`;
-      if(!harvestGrouped[key]) {
-        harvestGrouped[key] = { date: sess.date, employee_name: name, role: 'COLHEDOR', carrocoes: 0, total_kg: 0, total_value: 0, _is_harvest: true };
-      }
-      harvestGrouped[key].carrocoes += sess.qty_carrocoes / Math.max(sess.employee_count, 1);
-      harvestGrouped[key].total_kg += Number(sess.qty_carrocoes * (cfg.harvest_carrao_weight_kg || 300)) / Math.max(sess.employee_count, 1);
-      harvestGrouped[key].total_value += Number(ce.value_received) || 0;
-    });
-  });
-
-  // ── 6. Calcular valores Packing House ──
-  _finData = Object.values(grouped).sort((a,b) => b.date.localeCompare(a.date));
-  _finData.forEach(d=>{
-    if(d.role === 'PACKER') {
-      const penalty = penalties[`${d.date}_${d.employee_name}`] || 0;
-      const produced = d.total_boxes || 0;
-      const quality = produced > 0 ? (Math.max(0, produced - penalty) / produced) : 1;
-      const target = targetPerHour * 8;
-      const productivity = produced / target;
-      const isHighPerf = (quality >= 0.75 && productivity >= 0.75);
-      d._rate = isHighPerf ? highRate : lowRate;
-      d._quality = quality;
-      d._productivity = productivity;
-      d._penalties = penalty;
-    } else {
-      d._rate = parseFloat(cfg.value_per_box_stacker || 0.01);
-      d._penalties = 0;
-    }
-    const tv = (d.total_boxes || 0) * d._rate;
-    d._total_value = tv;
-  });
-
-  // ── 7. Calcular valores Campo (Colhedores) ──
-  const harvestRows = Object.values(harvestGrouped).sort((a,b) => b.date.localeCompare(a.date));
-  harvestRows.forEach(d => {
-    d._rate = 0; // Custo fixo por carrocão já calculado
-    d._total_value = d.total_value;
-    d._penalties = 0;
-    d.total_boxes = Math.round(d.carrocoes * 10) / 10; // carrocoes como "unidade"
-  });
-
-  // ── 8. Merge e totais ──
-  const allData = [..._finData, ...harvestRows];
-
-  // (KPIs calculados após assiduidade abaixo)
-
-  // ── 8.1 Buscar Faltas e Qualidade ──
-  const [absRes, qualRes, bulkRes] = await Promise.all([
-    sb.from('employee_absences').select('*').eq('tenant_id',tenantId).gte('date',s).lte('date',e),
-    sb.from('quality_audits').select('employee_barcode').eq('tenant_id',tenantId).gte('ts',s).lte('ts',e+'T23:59:59'),
-    sb.from('bulk_sales').select('total_value').eq('tenant_id',tenantId).gte('date',s).lte('date',e)
-  ]);
-  
-  const absenceMap = {};
-  (absRes.data||[]).forEach(a => { absenceMap[a.employee_barcode] = (absenceMap[a.employee_barcode]||0) + 1; });
-  
-  const qualityMap = {};
-  (qualRes.data||[]).forEach(q => { if(q.employee_barcode) qualityMap[q.employee_barcode] = (qualityMap[q.employee_barcode]||0) + 1; });
-  
-  const totalBulkSales = (bulkRes.data||[]).reduce((a,b) => a + Number(b.total_value||0), 0);
-  const elBulkFin = $('finKpiBulkSales'); if(elBulkFin) elBulkFin.textContent = BRL(totalBulkSales);
-
-  // ── 9. Tabela sumarizada por funcionário ──
-  const empSum = {};
-  allData.forEach(d => {
-    if(!empSum[d.employee_name]) empSum[d.employee_name] = { employee_name: d.employee_name, role: d.role, boxes: 0, kg: 0, val: 0, is_harvest: d._is_harvest };
-    empSum[d.employee_name].boxes += d.total_boxes || 0;
-    empSum[d.employee_name].kg += d.total_kg || 0;
-    empSum[d.employee_name].val += d._total_value || 0;
-  });
-
-  const attendanceBonus = Number(tenantConfig.attendance_bonus || 0);
-  let totalBonusAmount = 0;
-  Object.values(empSum).forEach(d => {
-    const emp = _employees.find(e => e.name === d.employee_name);
-    const abCount = emp ? (absenceMap[emp.barcode] || 0) : 0;
-    const qCount = emp ? (qualityMap[emp.barcode] || 0) : 0;
-    const attendanceBonusBase = Number(tenantConfig.attendance_bonus || 0);
-    const penaltyPerAbsence = Number(tenantConfig.attendance_penalty || 0);
-    const prodPenaltyPercent = Number(tenantConfig.prod_penalty_percent || 0) / 100;
-
-    d.absences = abCount;
-    d.qualityIssues = qCount;
-    d.photo_path = emp?.photo_path;
-    
-    // Penalidade na produção (Percentual por falta)
-    d.penalty = d.val * (prodPenaltyPercent * abCount);
-    
-    // Bônus Assiduidade (Dedução fixa por falta)
-    const totalBonusPenalty = abCount * penaltyPerAbsence;
-    d.bonus = Math.max(0, attendanceBonusBase - totalBonusPenalty);
-    
-    d.netVal = d.val - d.penalty + d.bonus;
-    totalBonusAmount += d.bonus;
-  });
-
-  const empSumArr = Object.values(empSum).sort((a,b) => b.val - a.val);
-  window._lastEmpStats = empSum; // Guarda para o Drawer
-  const totalBoxes = empSumArr.filter(d => !d.is_harvest).reduce((a,d) => a + d.boxes, 0);
-  const totalCarroes = empSumArr.filter(d => d.is_harvest).reduce((a,d) => a + d.boxes, 0);
-  
-  $('finKpiTotal').textContent = BRL(empSumArr.reduce((a,d) => a + d.netVal, 0));
-  $('finKpiBoxes').textContent = Math.round(totalBoxes) + ' cx';
-  const elCarroes = $('finKpiCarroes'); if(elCarroes) elCarroes.textContent = totalCarroes.toFixed(1) + ' carr';
-  const elBonus = $('finKpiBonus'); if(elBonus) elBonus.textContent = BRL(totalBonusAmount);
-
-  $('finTable').querySelector('tbody').innerHTML = empSumArr.map(d => {
-    const avgBoxesPerDay = d.boxes / Math.max(1, (new Date(e) - new Date(s)) / (1000*60*60*24));
-    const isUnderperforming = !d.is_harvest && avgBoxesPerDay < 150; // Exemplo: meta 150 cx/dia
-    const hasQualityIssues = d.qualityIssues > 0;
-    
-    let statusClass = 'status-good';
-    let statusLabel = 'Ótimo';
-    if (isUnderperforming || hasQualityIssues) {
-      statusClass = 'status-warn';
-      statusLabel = 'Atenção';
-    }
-    if (isUnderperforming && hasQualityIssues) {
-      statusClass = 'status-crit';
-      statusLabel = 'Crítico';
-    }
-
-    return `
-    <tr>
-      <td style="color:var(--muted)">SOMA PERÍODO</td>
-      <td>
-        <div style="display:flex;align-items:center;gap:10px">
-          <div class="avatar-ring">${d.photo_path ? `<img src="${d.photo_path}">` : d.employee_name[0]}</div>
-          <div>
-            <div class="clickable-emp" style="font-weight:700" onclick="openEmpDrawer('${d.employee_name}')">${d.employee_name}</div>
-            <div style="display:flex;gap:4px">
-              <div class="badge-status ${statusClass}">${statusLabel}</div>
-              ${d.qualityIssues > 0 ? `<div class="badge-status status-crit" style="font-size:8px">⚠ ${d.qualityIssues} Falhas</div>` : ''}
-            </div>
-          </div>
-        </div>
-      </td>
-      <td><span class="badge ${d.role.toLowerCase()}">${d.role}</span></td>
-      <td style="font-weight:700">${d.is_harvest ? (d.boxes).toFixed(1) +' carr' : Math.round(d.boxes)+' cx'}</td>
-      <td>${BRL(d.val / Math.max(d.boxes, 1))}</td>
-      <td>${d.absences > 0 ? `<span style="color:var(--red)">${d.absences} falta(s) (-${(d.absences*15)}%)</span>` : '<span style="color:var(--green)">100% Assid. ✅</span>'}</td>
-      <td style="color:var(--green);font-weight:700">${d.bonus > 0 ? BRL(d.bonus) : '<span style="color:var(--muted)">—</span>'}</td>
-      <td style="color:var(--pbi-blue);font-weight:800;font-size:15px">${BRL(d.netVal)}</td>
-    </tr>
-  `}).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:28px">Nenhum dado.</td></tr>';
-
-  // ── 10. Gráficos Separados por Setor ──
-
-  // 10a. Packing House — Caixas por dia
-  const packingByDate = {};
-  allData.filter(d => !d._is_harvest).forEach(d => { packingByDate[d.date] = (packingByDate[d.date]||0) + (d.total_boxes||0); });
-  const packDates = Object.entries(packingByDate).sort((a,b) => a[0].localeCompare(b[0]));
-  mkChart('chartFinPacking', { type: 'bar', data: { labels: packDates.map(d => d[0].slice(5)), datasets: [{ label: 'Caixas', data: packDates.map(d => d[1]), backgroundColor: '#3b82f6', borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { ...TOPTS, callbacks: { label: c => Math.round(c.raw) + ' cx' } } }, scales: { y: { beginAtZero: true, ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,.04)' } }, x: { ticks: { color: '#94a3b8' }, grid: { display: false } } } }});
-
-  // 10b. Campo — Carrocões por dia
-  const campoByDate = {};
-  allData.filter(d => d._is_harvest).forEach(d => { campoByDate[d.date] = (campoByDate[d.date]||0) + (d.total_boxes||0); });
-  const campoDates = Object.entries(campoByDate).sort((a,b) => a[0].localeCompare(b[0]));
-  mkChart('chartFinCampo', { type: 'bar', data: { labels: campoDates.map(d => d[0].slice(5)), datasets: [{ label: 'Carrocões', data: campoDates.map(d => d[1]), backgroundColor: '#10b981', borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { ...TOPTS, callbacks: { label: c => c.raw.toFixed(1) + ' carr' } } }, scales: { y: { beginAtZero: true, ticks: { color: '#64748b' } }, x: { ticks: { color: '#94a3b8' }, grid: { display: false } } } }});
-
-  // 10c. Custo por colaborador
-  const byEmp={};
-  allData.forEach(d=>{byEmp[d.employee_name]=(byEmp[d.employee_name]||0)+d._total_value;});
-  const sortedE=Object.entries(byEmp).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  mkChart('chartFinCollab',{type:'bar',data:{labels:sortedE.map(e=>e[0]),datasets:[{data:sortedE.map(e=>e[1]),backgroundColor:COLS.slice(0,sortedE.length),borderRadius:6,barThickness:24}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{beginAtZero:true,ticks:{color:'#64748b',callback:v=>BRL(v)},grid:{color:'rgba(255,255,255,.04)'}},y:{grid:{display:false},ticks:{color:'#f8fafc',font:{size:11}}}},plugins:{legend:{display:false},tooltip:{...TOPTS,callbacks:{label:c=>BRL(c.raw)}}}}});
-
-  const byDate={};
-  allData.forEach(d=>{byDate[d.date]=(byDate[d.date]||0)+d._total_value;});
-  const dates=Object.entries(byDate).sort((a,b)=>(a[0]||'').localeCompare(b[0]||''));
-  mkChart('chartFinHourly',{type:'line',data:{labels:dates.map(d=>d[0]),datasets:[{label:'Custo',data:dates.map(d=>d[1]),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.1)',borderWidth:2,fill:true,tension:.3,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,ticks:{color:'#64748b',callback:v=>BRL(v)},grid:{color:'rgba(255,255,255,.04)'}},x:{grid:{display:false},ticks:{color:'#64748b'}}},plugins:{legend:{display:false},tooltip:{...TOPTS,callbacks:{label:c=>BRL(c.raw)}}}}});
-}
-
-
-// ══════════════════════════════════════
-// BALANÇO DE MASSA
 // ══════════════════════════════════════
 async function refreshMass() {
   const s=$('massStart').value, e=$('massEnd').value, pFilter=$('massParcel').value;
@@ -1846,9 +1403,9 @@ async function refreshMass() {
   const totalBulkVal = (bulk||[]).filter(b=>!b.is_waste).reduce((a,b)=>a+Number(b.total_value||0),0);
   const packhouseWasteKg = (bulk||[]).filter(b=>b.is_waste).reduce((a,b)=>a+Number(b.weight_kg),0);
 
-  $('massKpiBulkKg').textContent = totalBulkKg.toFixed(1) + ' kg';
-  $('massKpiBulkVal').textContent = BRL(totalBulkVal);
-  $('massKpiWaste').textContent = (fieldWasteKg + packhouseWasteKg).toFixed(1) + ' kg';
+  if($('kpiMassBulk')) $('kpiMassBulk').textContent = (totalBulkKg/1000).toFixed(2) + ' Ton';
+  if($('massKpiBulkVal')) $('massKpiBulkVal').textContent = BRL(totalBulkVal);
+  if($('massKpiWaste')) $('massKpiWaste').textContent = (fieldWasteKg + packhouseWasteKg).toFixed(1) + ' kg';
   
   // 4. Expedições (TOTVS)
   const {data:parcels} = await sb.from('parcels').select('id, code, p_code').eq('tenant_id', tenantId);
@@ -2323,8 +1880,8 @@ async function openEmpDrawer(name) {
   const end = $('dashEnd').value + 'T23:59:59Z';
   
   const [qAudits, qAbs] = await Promise.all([
-    sb.from('quality_audits').select('id').eq('tenant_id', tenantId).eq('employee_name', emp.name).gte('ts', start).lte('ts', end),
-    sb.from('employee_absences').select('*').eq('employee_id', emp.id).gte('date', start.split('T')[0]).lte('date', end.split('T')[0])
+    sb.from('quality_audits').select('id').eq('tenant_id', tenantId).eq('employee_barcode', emp.barcode).gte('ts', start).lte('ts', end),
+    sb.from('employee_absences').select('*').eq('tenant_id', tenantId).eq('employee_barcode', emp.barcode).gte('date', start.split('T')[0]).lte('date', end.split('T')[0])
   ]);
 
   const qualityCount = qAudits.data?.length || 0;
@@ -2332,7 +1889,14 @@ async function openEmpDrawer(name) {
 
   document.getElementById('drName').textContent = emp.name;
   document.getElementById('drRole').textContent = emp.role;
-  document.getElementById('drAvatar').innerHTML = emp.photo_path ? `<img src="${emp.photo_path}">` : emp.name[0];
+  
+  // Foto com fallback se o bucket falhar
+  const avatarEl = document.getElementById('drAvatar');
+  if (emp.photo_path) {
+    avatarEl.innerHTML = `<img src="${emp.photo_path}" style="width:100%; height:100%; object-fit:cover" onerror="this.parentElement.innerHTML='${emp.name[0]}'">`;
+  } else {
+    avatarEl.innerHTML = emp.name[0];
+  }
   
   if(stats) {
     stats.qualityIssues = qualityCount;
