@@ -354,7 +354,7 @@
       </div>
       <div style="display:flex; gap:10px; justify-content:flex-end">
         <button class="sec" onclick="document.getElementById('empModal').style.display='none'">Cancelar</button>
-        <button onclick="saveEmpEdit()" style="background:var(--blue); font-weight:800">Salvar Alterações</button>      </div>
+        <button onclick="saveEmpEdit(event)" style="background:var(--blue); font-weight:800">Salvar Alterações</button>      </div>
     </div>
   </div>
 
@@ -2441,6 +2441,11 @@ async function addEmp(){
   }
 }
 
+function editEmp(id) {
+  const e = _employees.find(x => x.id === id);
+  if(!e) return;
+  openEditEmpModal(e.id, e.name, e.role, e.whatsapp, e.barcode, e.photo_path);
+}
 async function openEditEmpModal(id, name, role, whatsapp, barcode, photo) {
   $('editEmpId').value = id;
   $('editEmpName').value = name;
@@ -2452,21 +2457,29 @@ async function openEditEmpModal(id, name, role, whatsapp, barcode, photo) {
   $('empModal').style.display = 'flex';
 }
 
-async function saveEmpEdit() {
+async function saveEmpEdit(e) {
+  const btn = e ? e.target : document.activeElement;
   const id=$('editEmpId').value, n=$('editEmpName').value.trim(), r=$('editEmpRole').value, w=$('editEmpWhatsapp').value.trim(), b=$('editEmpBarcode').value.trim();
-  const btn = event.target;
+  if(!n) return alert('O nome é obrigatório');
+  
   btn.disabled = true; btn.textContent = 'Salvando...';
   
   try {
     let photoUrl = await uploadFileToSupabase($('editEmpPhotoFile'));
-    if(!photoUrl) photoUrl = $('editEmpPhotoUrl').value; // Mantém a antiga se não subiu nova
+    if(!photoUrl) photoUrl = $('editEmpPhotoUrl').value;
     
     const {error}=await sb.from('employees').update({name:n,role:r,whatsapp:w||null,barcode:b,photo_path:photoUrl,updated_at:new Date().toISOString()}).eq('id',id);
     if(error) throw error;
     
     $('empModal').style.display='none';
     $('editEmpPhotoFile').value = '';
-    await loadEmps();await loadEmpSelectAll();
+    await loadEmps();
+    await loadEmpSelectAll();
+    
+    // Refresh current views
+    if($('tab-dash').classList.contains('active')) refreshDash();
+    if($('tab-ranking').classList.contains('active')) refreshRanking();
+    
     toast('✓ Dados atualizados!', 'ok');
   } catch(err) {
     alert('Erro: ' + err.message);
