@@ -261,6 +261,45 @@
   <div id="tenantBadge" class="tenant-badge">...</div>
 
 
+  <div id="multiTenantSelector" style="display:none; margin-bottom: 16px;">
+    <label class="flabel" style="color:var(--blue)">Trocar Empresa</label>
+    <select id="tenantSelect" onchange="switchTenant(this.value)" style="font-size:11px; padding:6px; background:rgba(59,130,246,0.1); border-color:rgba(59,130,246,0.2)"></select>
+  </div>
+
+  <div class="nav-group">Análise Estratégica</div>
+  <div class="nav active" onclick="showTab('dash',this)"><span class="nav-icon">📊</span> Painel de Produção</div>
+  <div class="nav" onclick="showTab('ranking',this)"><span class="nav-icon">🏆</span> Ranking Performance</div>
+  <div class="nav" onclick="showTab('finance',this)"><span class="nav-icon">💰</span> Gestão Financeira</div>
+
+  <div class="nav-group">Operações & Campo</div>
+  <div class="nav" onclick="showTab('mass',this)"><span class="nav-icon">⚖️</span> Balanço de Massa</div>
+  <div class="nav" onclick="showTab('logs',this)"><span class="nav-icon">📋</span> Logs de Produção</div>
+  <div class="nav" onclick="showTab('quality',this)"><span class="nav-icon">🕵️</span> Auditoria & Qualidade</div>
+  <div class="nav" onclick="showTab('romaneio',this)"><span class="nav-icon">📑</span> Romaneio Expedição</div>
+  <div class="nav" onclick="showTab('bulk',this)"><span class="nav-icon">🗑️</span> Refugo & Vendas</div>
+
+  <div class="nav-group">Configurações & Cadastros</div>
+  <div class="nav" onclick="showTab('employees',this)"><span class="nav-icon">👥</span> Funcionários</div>
+  <div class="nav" onclick="showTab('mapping',this)"><span class="nav-icon">🔗</span> Mapeamento Etiquetas</div>
+  <div class="nav" onclick="showTab('weights',this)"><span class="nav-icon">📦</span> Tipos de Peso</div>
+  <div class="nav" onclick="showTab('stops',this)"><span class="nav-icon">🛑</span> Registro de Paradas</div>
+  <div class="nav" onclick="showTab('trace',this)"><span class="nav-icon">🌿</span> Rastreabilidade</div>
+
+  <div id="adminGroup" style="display:none">
+    <div class="nav-group">Administração Master</div>
+    <div class="nav" onclick="showTab('users_mgmt',this)"><span class="nav-icon">🔑</span> Usuários & Empresas</div>
+    <div class="nav" onclick="showTab('integrations',this)"><span class="nav-icon">🔌</span> Integrações API</div>
+  </div>
+
+  <div class="nav-group">Sistema</div>
+  <div class="nav" onclick="showTab('settings',this)"><span class="nav-icon">⚙️</span> Configurações</div>
+  <div class="nav" style="color:var(--green);font-weight:800" onclick="window.open('/campo/','_blank')"><span class="nav-icon">📱</span> Aplicativo de Campo</div>
+
+  <div class="sf">
+    <div id="statusBar" style="font-size:11px;color:var(--muted);margin-bottom:8px"><span class="dot"></span>Sistema Online</div>
+    <button class="sec" onclick="doLogout()" style="width:100%;justify-content:center;font-size:12px">Sair da Conta</button>
+  </div>
+</nav>
   <!-- ABSENCE MODAL -->
   <div id="absenceModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center">
     <div style="background:var(--card); width:100%; max-width:500px; border-radius:20px; padding:24px; border:1px solid var(--border)">
@@ -298,25 +337,17 @@
         <div><label class="flabel">Peso (Kg)</label><input type="number" id="editBulkWeight"/></div>
         <div><label class="flabel">Valor Total (R$)</label><input type="number" id="editBulkValue"/></div>
       </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
-        <div><label class="flabel">Pagamento</label><select id="editBulkPaid"><option value="true">PAGO</option><option value="false">PENDENTE</option></select></div>
-        <div><label class="flabel">Recebimento</label><select id="editBulkReceived"><option value="true">RECEBIDO</option><option value="false">PENDENTE</option></select></div>
-      </div>
-      <div style="margin-bottom:20px; display:flex; align-items:center; gap:8px">
-        <input type="checkbox" id="editBulkIsWaste" style="width:16px; height:16px">
-        <label for="editBulkIsWaste" style="font-size:12px; color:var(--muted)">Descarte/Refugo (não gera receita)</label>
-      </div>
       <div style="display:flex; gap:10px; justify-content:flex-end">
         <button class="sec" onclick="document.getElementById('bulkEditModal').style.display='none'">Cancelar</button>
-        <button onclick="saveBulkEdit()">Salvar Alterações</button>
+        <button onclick="saveBulkEdit()" style="background:var(--blue); font-weight:800">Salvar Alterações</button>
       </div>
     </div>
   </div>
 
   <!-- SIGNATURE MODAL -->
-  <div id="sigModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">
-    <div style="background:#1e293b; padding:20px; border-radius:12px; width:400px; max-width:90%; border:1px solid var(--border);">
-      <h3 style="margin-top:0; color:#fff">✍️ Assinatura do Responsável</h3>
+  <div id="sigModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center">
+    <div style="background:var(--card); width:400px; padding:20px; border-radius:15px; border:1px solid var(--border)">
+      <h3 style="margin-bottom:10px">✍️ Assinatura Digital</h3>
       <p style="font-size:12px; color:var(--muted); margin-bottom:15px">Esta ordem só pode ser impressa após a assinatura do responsável do Packing House.</p>
       <div style="background:#fff; border-radius:8px; overflow:hidden; border:2px solid #ccc; margin-bottom:15px;">
         <canvas id="sigCanvas" width="360" height="150" style="touch-action:none; display:block; width:100%; cursor:crosshair"></canvas>
@@ -357,46 +388,6 @@
         <button onclick="saveEmpEdit(event)" style="background:var(--blue); font-weight:800">Salvar Alterações</button>      </div>
     </div>
   </div>
-
-  <div id="multiTenantSelector" style="display:none; margin-bottom: 16px;">
-    <label class="flabel" style="color:var(--blue)">Trocar Empresa</label>
-    <select id="tenantSelect" onchange="switchTenant(this.value)" style="font-size:11px; padding:6px; background:rgba(59,130,246,0.1); border-color:rgba(59,130,246,0.2)"></select>
-  </div>
-
-  <div class="nav-group">Análise Estratégica</div>
-  <div class="nav active" onclick="showTab('dash',this)"><span class="nav-icon">📊</span> Painel de Produção</div>
-  <div class="nav" onclick="showTab('ranking',this)"><span class="nav-icon">🏆</span> Ranking Performance</div>
-  <div class="nav" onclick="showTab('finance',this)"><span class="nav-icon">💰</span> Gestão Financeira</div>
-
-  <div class="nav-group">Operações & Campo</div>
-  <div class="nav" onclick="showTab('mass',this)"><span class="nav-icon">⚖️</span> Balanço de Massa</div>
-  <div class="nav" onclick="showTab('logs',this)"><span class="nav-icon">📋</span> Logs de Produção</div>
-  <div class="nav" onclick="showTab('quality',this)"><span class="nav-icon">🕵️</span> Auditoria & Qualidade</div>
-  <div class="nav" onclick="showTab('romaneio',this)"><span class="nav-icon">📑</span> Romaneio Expedição</div>
-  <div class="nav" onclick="showTab('bulk',this)"><span class="nav-icon">🗑️</span> Refugo & Vendas</div>
-
-  <div class="nav-group">Configurações & Cadastros</div>
-  <div class="nav" onclick="showTab('employees',this)"><span class="nav-icon">👥</span> Funcionários</div>
-  <div class="nav" onclick="showTab('mapping',this)"><span class="nav-icon">🔗</span> Mapeamento Etiquetas</div>
-  <div class="nav" onclick="showTab('weights',this)"><span class="nav-icon">📦</span> Tipos de Peso</div>
-  <div class="nav" onclick="showTab('stops',this)"><span class="nav-icon">🛑</span> Registro de Paradas</div>
-  <div class="nav" onclick="showTab('trace',this)"><span class="nav-icon">🌿</span> Rastreabilidade</div>
-
-  <div id="adminGroup" style="display:none">
-    <div class="nav-group">Administração Master</div>
-    <div class="nav" onclick="showTab('users_mgmt',this)"><span class="nav-icon">🔑</span> Usuários & Empresas</div>
-    <div class="nav" onclick="showTab('integrations',this)"><span class="nav-icon">🔌</span> Integrações API</div>
-  </div>
-
-  <div class="nav-group">Sistema</div>
-  <div class="nav" onclick="showTab('settings',this)"><span class="nav-icon">⚙️</span> Configurações</div>
-  <div class="nav" style="color:var(--green);font-weight:800" onclick="window.open('/campo/','_blank')"><span class="nav-icon">📱</span> Aplicativo de Campo</div>
-
-  <div class="sf">
-    <div id="statusBar" style="font-size:11px;color:var(--muted);margin-bottom:8px"><span class="dot"></span>Sistema Online</div>
-    <button class="sec" onclick="doLogout()" style="width:100%;justify-content:center;font-size:12px">Sair da Conta</button>
-  </div>
-</nav>
 
 <!-- MAIN -->
 <div id="appMain" class="main" style="display:none">
@@ -577,6 +568,20 @@
       <div class="f"><label class="flabel">Colaborador</label><select id="rankEmp"><option value="">Todos</option></select></div>
       <button onclick="refreshRanking()">🔍 Filtrar</button>
       <button class="sec" onclick="exportRankPDF()">📄 PDF</button>
+    </div>
+    <div class="kgrid">
+      <div class="kcard orange">
+        <div class="klabel">🏆 Top Performer</div>
+        <div style="display:flex; align-items:center; gap:10px; margin-top:5px">
+          <div id="rankTopAvatar" class="avatar-ring" style="width:40px; height:40px; border-color:var(--orange); font-size:14px"></div>
+          <div>
+            <div id="rankTopName" class="kval orange" style="font-size:16px">--</div>
+            <div id="rankTopStats" class="ksub">0 caixas</div>
+          </div>
+        </div>
+      </div>
+      <div class="kcard"><div class="klabel">Total de Caixas</div><div id="rankKpiTotal" class="kval">0</div><div class="ksub">no período selecionado</div></div>
+      <div class="kcard green"><div class="klabel">Média por Pessoa</div><div id="rankKpiMedia" class="kval green">0</div><div class="ksub">caixas / colaborador</div></div>
     </div>
     <div class="card"><div class="title">👤 Caixas por Colaborador</div><div class="ch tall"><canvas id="chartRankCollab"></canvas></div></div>
     <div class="card"><div class="title">📊 Detalhamento Individual</div><div id="rankGrid" class="rgrid" style="margin-top:10px"></div></div>
@@ -1243,12 +1248,29 @@ async function refreshRanking(){
   
   const eb = {};
   data.forEach(x => { eb[x.employee_name] = (eb[x.employee_name] || 0) + 1; });
-  const sorted = Object.entries(eb).sort((a,b) => b[1] - a[1]).slice(0, 10);
+  const sorted = Object.entries(eb).sort((a,b) => b[1] - a[1]);
+  const top10 = sorted.slice(0, 10);
+  
+  // Update Ranking KPIs
+  const totalBoxes = data.length;
+  const avgBoxes = sorted.length ? Math.round(totalBoxes / sorted.length) : 0;
+  $('rankKpiTotal').textContent = totalBoxes.toLocaleString();
+  $('rankKpiMedia').textContent = avgBoxes.toLocaleString();
+  
+  if(sorted[0]) {
+    const [name, boxes] = sorted[0];
+    const emp = _employees.find(e => e.name === name);
+    $('rankTopName').textContent = name.split(' ')[0];
+    $('rankTopStats').textContent = boxes + ' caixas';
+    $('rankTopAvatar').innerHTML = emp?.photo_path ? `<img src="${emp.photo_path}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : '';
+    $('rankTopAvatar').innerHTML += name[0];
+  }
+
   mkChart('chartRankCollab', {
     type: 'bar',
     data: {
-      labels: sorted.map(e => e[0].split(' ')[0]),
-      datasets: [{ label: 'Caixas', data: sorted.map(e => e[1]) }]
+      labels: top10.map(e => e[0].split(' ')[0]),
+      datasets: [{ label: 'Caixas', data: top10.map(e => e[1]) }]
     },
     options: { indexAxis: 'y' }
   });
@@ -1299,9 +1321,23 @@ async function refreshFin(){
     `;
   }).join('')||'<tr><td colspan="8" style="text-align:center; padding:30px">Sem dados financeiros para o período.</td></tr>';
   
-  $('finKpiTotal').textContent = BRL(Object.values(eb).reduce((a,b)=>a+b.val,0) + (Object.keys(eb).length * bonus));
+  // Attendance Bonus logic
+  let totalBonus = 0;
+  Object.values(eb).forEach(d => {
+    const hasAbs = (abs||[]).some(a=>a.employee_barcode === d.barcode);
+    if(!hasAbs) totalBonus += bonus;
+  });
+  $('finKpiBonus').textContent = BRL(totalBonus);
+
+  const totalVal = Object.values(eb).reduce((a,b)=>a+b.val,0);
+  $('finKpiTotal').textContent = BRL(totalVal + totalBonus);
   $('finKpiBoxes').textContent = Object.values(eb).reduce((a,b)=>a+b.boxes,0).toLocaleString() + ' cx';
   
+  // Bulk Sales KPI
+  const {data:bulk} = await sb.from('bulk_sales').select('total_value').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
+  const totalBulk = (bulk||[]).reduce((a,b)=>a+(b.total_value||0),0);
+  $('finKpiBulkSales').textContent = BRL(totalBulk);
+
   // Charts
   const days = {};
   (scans||[]).forEach(x => { const d = x.ts.split('T')[0]; days[d] = (days[d]||0)+1; });
@@ -1320,6 +1356,7 @@ async function refreshFin(){
     },
     options: { indexAxis: 'y' }
   });
+
   const hourly = {};
   (scans||[]).forEach(x => { const h = x.ts.substring(0,13); hourly[h] = (hourly[h]||0)+1; });
   const hLabels = Object.keys(hourly).sort();
@@ -1328,12 +1365,14 @@ async function refreshFin(){
     data: { labels: hLabels.map(l=>l.split('T')[1]+'h'), datasets: [{ label: 'Produção/h', data: hLabels.map(l=>hourly[l]), fill: true }] }
   });
 
-  const {data:campo} = await sb.from('field_carrao_sessions').select('*').eq('tenant_id',tenantId).gte('start_ts',toISO(s)).lte('start_ts',toISO(e,'23:59:59'));
+  // Campo chart fix
+  const {data:campo} = await sb.from('field_carrao_sessions').select('date, qty_carrocoes').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
   const cDays = {};
-  (campo||[]).forEach(x => { const d = x.start_ts.split('T')[0]; cDays[d] = (cDays[d]||0)+1; });
+  (campo||[]).forEach(x => { cDays[x.date] = (cDays[x.date]||0) + (x.qty_carrocoes||0); });
+  const cLabels = Object.keys(cDays).sort();
   mkChart('chartFinCampo', {
     type: 'bar',
-    data: { labels: labels.map(l=>l.split('-').reverse().slice(0,2).join('/')), datasets: [{ label: 'Carrocões', data: labels.map(l=>cDays[l]||0) }] }
+    data: { labels: cLabels.map(l=>l.split('-').reverse().slice(0,2).join('/')), datasets: [{ label: 'Carrocões', data: cLabels.map(l=>cDays[l]||0) }] }
   });
 }
 
@@ -2442,8 +2481,12 @@ async function addEmp(){
 }
 
 function editEmp(id) {
+  console.log('Editando funcionário ID:', id);
   const e = _employees.find(x => x.id === id);
-  if(!e) return;
+  if(!e) {
+    console.error('Funcionário não encontrado no cache:', id);
+    return;
+  }
   openEditEmpModal(e.id, e.name, e.role, e.whatsapp, e.barcode, e.photo_path);
 }
 async function openEditEmpModal(id, name, role, whatsapp, barcode, photo) {
@@ -2458,7 +2501,7 @@ async function openEditEmpModal(id, name, role, whatsapp, barcode, photo) {
 }
 
 async function saveEmpEdit(e) {
-  const btn = e ? e.target : document.activeElement;
+  const btn = (e && e.target ? e.target : document.activeElement).closest('button') || document.activeElement;
   const id=$('editEmpId').value, n=$('editEmpName').value.trim(), r=$('editEmpRole').value, w=$('editEmpWhatsapp').value.trim(), b=$('editEmpBarcode').value.trim();
   if(!n) return alert('O nome é obrigatório');
   
