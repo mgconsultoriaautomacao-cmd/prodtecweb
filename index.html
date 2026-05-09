@@ -281,8 +281,10 @@
 
   <div class="nav-group">Cadastros</div>
   <div class="nav" onclick="showTab('employees',this)">👥 Funcionários</div>
-  <div class="nav" onclick="showTab('weights',this)">📦 Pesos de Caixa</div>
+  <div class="nav" onclick="showTab('weights',this)">📦 Tipos de Peso</div>
   <div class="nav" onclick="showTab('mapping',this)">🔗 Mapeamento</div>
+  <div class="nav" onclick="showTab('stops',this)">🛑 Paradas Gerais</div>
+  <div class="nav" onclick="showTab('quality_issues',this)">🚫 Defeitos (Qualidade)</div>
   <div class="nav" id="navTrace" onclick="showTab('trace',this)" style="display:none">🌿 Rastreabilidade</div>
 
   <div id="adminGroup" style="display:none">
@@ -610,8 +612,22 @@
     </div>
   </div>
 
+  <!-- ═══ PARADAS GERAIS ═══ -->
+  <div id="tab-stops" class="tab">
+    <h1 class="ptitle">🛑 Registro de Paradas Gerais</h1>
+    <div class="fbar">
+      <div class="f"><label class="flabel">Início da Parada</label><input type="datetime-local" id="stopStart"/></div>
+      <div class="f"><label class="flabel">Motivo / Descrição</label><input type="text" id="stopReason" placeholder="Ex: Queda de Energia"/></div>
+      <button onclick="saveStop()">Registrar Parada</button>
+    </div>
+    <div class="card">
+      <div class="title">Histórico Recente de Ocorrências</div>
+      <div id="stopList" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px"></div>
+    </div>
+  </div>
+
   <!-- ═══ QUALIDADE ═══ -->
-  <div id="tab-quality" class="tab">
+  <div id="tab-quality_issues" class="tab">
     <h1 class="ptitle">🕵️ Auditoria de Qualidade</h1>
     <div class="fbar">
       <div class="f"><label class="flabel">Início</label><input type="date" id="qaStart"/></div>
@@ -965,6 +981,7 @@ let _massEvents = [];
 let _massSessions = [];
 let _massEmployees = [];
 let _finData = [];
+let _globalStops = [];
 
 function mkChart(id, cfg) {
   if (charts[id]) charts[id].destroy();
@@ -1121,6 +1138,7 @@ function showTab(n,el){
     dash:refreshDash,
     employees:loadEmps,
     weights:loadWeights,
+    stops:loadStops,
     mapping:()=>{loadMappings();loadMapSelects();},
     users_mgmt:loadAdminData,
     trace:()=>{loadFruits();loadVarieties();loadParcels();loadLinks();},
@@ -1209,14 +1227,13 @@ async function refreshDash(){
 
   // Destaque do Período
   const eb = {};
-  const empIdle = {};
   packerScans.forEach(x => { 
     eb[x.employee_name] = (eb[x.employee_name] || 0) + 1;
   });
   
   // Popula stats globais com Idle Time
   window._lastEmpStats = Object.fromEntries(Object.entries(eb).map(([name, count]) => {
-    const idle = calculateIdleTime(packerScans.filter(s => s.employee_name === name));
+    const idle = calculateIdleTime(packerScans.filter(s => s.employee_name === name), window._currentStops);
     return [name, { employee_name: name, boxes: count, qualityIssues: 0, idleTime: idle }];
   }));
 
@@ -1440,12 +1457,26 @@ function buildMassCharts(harvest, exp, bulk, totalWaste) {
 
 function buildRankingGrid(scans, containerId){
   const eb={};
-  scans.forEach(x=>{if(!eb[x.employee_name])eb[x.employee_name]={boxes:0,kg:0};eb[x.employee_name].boxes++;eb[x.employee_name].kg+=(x.weight_kg||0);});
-  const sorted=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes).slice(0,10);
+  scans.forEach(x=>{
+    if(!eb[x.employee_name]) eb[x.employee_name] = { boxes: 0, kg: 0, scans: [] };
+    eb[x.employee_name].boxes++;
+    eb[x.employee_name].kg += (x.weight_kg || 0);
+    eb[x.employee_name].scans.push(x);
+  });
+  const sorted=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes).slice(0,12);
   const el=containerId.startsWith('#')?document.querySelector(containerId):$(containerId);
   if(!el)return;
 
-  window._lastEmpStats = Object.fromEntries(Object.entries(eb).map(([name, d]) => [name, { employee_name: name, boxes: d.boxes, qualityIssues: 0 }]));
+  window._lastEmpStats = Object.fromEntries(Object.entries(eb).map(([name, d]) => {
+     const idle = calculateIdleTime(d.scans, window._currentStops || []);
+     return [name.trim().toLowerCase(), { 
+        employee_name: name, 
+        boxes: d.boxes, 
+        kg: d.kg,
+        idleTime: idle,
+        qualityIssues: 0 
+     }];
+  }));
 
   el.innerHTML=sorted.map(([name,d],i)=>{
     const emp = _employees.find(e => e.name === name);
@@ -1780,7 +1811,7 @@ async function refreshFin(){
 
   const byDate={};
   allData.forEach(d=>{byDate[d.date]=(byDate[d.date]||0)+d._total_value;});
-  const dates=Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0]));
+  const dates=Object.entries(byDate).sort((a,b)=>(a[0]||'').localeCompare(b[0]||''));
   mkChart('chartFinHourly',{type:'line',data:{labels:dates.map(d=>d[0]),datasets:[{label:'Custo',data:dates.map(d=>d[1]),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.1)',borderWidth:2,fill:true,tension:.3,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,ticks:{color:'#64748b',callback:v=>BRL(v)},grid:{color:'rgba(255,255,255,.04)'}},x:{grid:{display:false},ticks:{color:'#64748b'}}},plugins:{legend:{display:false},tooltip:{...TOPTS,callbacks:{label:c=>BRL(c.raw)}}}}});
 }
 
@@ -2273,70 +2304,150 @@ async function loadBulk() {
 
 async function openEmpDrawer(name) {
   const d = document.getElementById('empDrawer');
-  // Busca insensível a maiúsculas/minúsculas para evitar erros de digitação
-  const emp = _employees.find(e => e.name.trim().toLowerCase() === name.trim().toLowerCase());
+  const cleanName = name.trim().toLowerCase();
+  const emp = _employees.find(e => e.name.trim().toLowerCase() === cleanName);
+  
   if(!emp) {
-    if(name.toUpperCase() !== 'DESCONHECIDO') console.error('Colaborador não encontrado:', name);
+    if(cleanName !== 'desconhecido') console.error('Colaborador não encontrado:', name);
     return;
   }
   
-  const stats = window._lastEmpStats ? window._lastEmpStats[name] : null;
+  const stats = window._lastEmpStats ? window._lastEmpStats[cleanName] : null;
   
+  // Real-time fetches for detailed dossier
+  const start = $('dashStart').value;
+  const end = $('dashEnd').value + 'T23:59:59Z';
+  
+  const [qAudits, qAbs] = await Promise.all([
+    sb.from('quality_audits').select('id').eq('tenant_id', tenantId).eq('employee_name', emp.name).gte('ts', start).lte('ts', end),
+    sb.from('employee_absences').select('*').eq('employee_id', emp.id).gte('date', start.split('T')[0]).lte('date', end.split('T')[0])
+  ]);
+
+  const qualityCount = qAudits.data?.length || 0;
+  const absencesCount = qAbs.data?.length || 0;
+
   document.getElementById('drName').textContent = emp.name;
   document.getElementById('drRole').textContent = emp.role;
   document.getElementById('drAvatar').innerHTML = emp.photo_path ? `<img src="${emp.photo_path}">` : emp.name[0];
   
   if(stats) {
+    stats.qualityIssues = qualityCount;
+    stats.absences = absencesCount;
+    
     const prodTarget = emp.role === 'EMBALADOR' ? 150 : 300;
     const prodScore = Math.min(100, Math.round((stats.boxes / prodTarget) * 100));
-    const qualScore = Math.max(0, 100 - (stats.qualityIssues * 20));
     
     document.getElementById('drProdVal').textContent = prodScore + '%';
     document.getElementById('drProdFill').style.width = prodScore + '%';
     
+    document.getElementById('drIdleVal').textContent = stats.idleTime + ' min';
+    const idleLimit = 120; // 2h de ociosidade como limite visual
+    document.getElementById('drIdleFill').style.width = Math.min(100, (stats.idleTime / idleLimit) * 100) + '%';
+
     document.getElementById('drTotals').innerHTML = `
       <div class="pbi-card" style="margin-bottom:12px">
-        <div class="klabel">Produção Total</div>
-        <div class="kpi-value-pbi">${Math.round(stats.boxes)} <span style="font-size:12px">unidades</span></div>
+        <div class="klabel">Produção Real</div>
+        <div class="kpi-value-pbi">${Math.round(stats.boxes)} <span style="font-size:12px">caixas</span></div>
       </div>
-      <div class="pbi-card">
-        <div class="klabel">Qualidade</div>
-        <div class="kpi-value-pbi">${stats.qualityIssues} <span style="font-size:12px">falhas</span></div>
+      <div class="pbi-card" style="margin-bottom:12px">
+        <div class="klabel">Volume Total</div>
+        <div class="kpi-value-pbi">${(stats.kg||0).toFixed(1)} <span style="font-size:12px">kg</span></div>
       </div>
     `;
 
-    if(stats.idleTime !== undefined) {
-      const idlePercent = Math.min(100, (stats.idleTime / 120) * 100); // 2h de ociosidade = 100%
-      document.getElementById('drIdleVal').textContent = stats.idleTime + ' min';
-      document.getElementById('drIdleFill').style.width = idlePercent + '%';
-    }
+    document.getElementById('drAbsences').innerHTML = `
+      <div class="pbi-card" style="border-left:4px solid var(--purple)">
+        <div style="display:flex; justify-content:space-between">
+          <div>
+            <div class="klabel">Assiduidade</div>
+            <div class="kpi-value-pbi" style="color:var(--purple)">${absencesCount} <span style="font-size:12px">faltas</span></div>
+          </div>
+          <div style="text-align:right">
+            <div class="klabel">Qualidade</div>
+            <div class="kpi-value-pbi" style="color:var(--red)">${qualityCount} <span style="font-size:12px">falhas</span></div>
+          </div>
+        </div>
+      </div>
+    `;
   }
-  
-  // Buscar Faltas no Período
-  const {count: absences} = await sb.from('absences').select('*', {count: 'exact'}).eq('employee_id', emp.id);
-  document.getElementById('drAbsences').innerHTML = `
-    <div class="pbi-card" style="grid-column: span 2; border-left: 4px solid ${absences > 0 ? 'var(--red)' : 'var(--green)'}">
-       <div class="klabel">Assiduidade (Faltas)</div>
-       <div style="font-size:18px; font-weight:800; color:${absences > 0 ? 'var(--red)' : 'var(--green)'}">${absences} Faltas <span style="font-size:12px; font-weight:400; color:var(--muted)">registradas no histórico</span></div>
-    </div>
-  `;
   
   d.classList.add('active');
 }
 
-function calculateIdleTime(scans) {
+function calculateIdleTime(scans, globalStops = []) {
   if (scans.length < 2) return 0;
   const sorted = [...scans].sort((a,b) => new Date(a.ts) - new Date(b.ts));
   let totalIdleSeconds = 0;
   const thresholdSeconds = 600; // 10 minutos
   
   for (let i = 1; i < sorted.length; i++) {
-    const diff = (new Date(sorted[i].ts) - new Date(sorted[i-1].ts)) / 1000;
-    if (diff > thresholdSeconds && diff < 3600 * 4) { // Entre 10min e 4h (evita virada de turno)
-       totalIdleSeconds += (diff - thresholdSeconds);
+    const start = new Date(sorted[i-1].ts);
+    const end = new Date(sorted[i].ts);
+    const diff = (end - start) / 1000;
+    
+    if (diff > thresholdSeconds && diff < 3600 * 4) {
+       // Calcular sobreposição com paradas globais
+       let overlapSeconds = 0;
+       (globalStops || []).forEach(gs => {
+          const gsStart = new Date(gs.start_ts);
+          const gsEnd = gs.end_ts ? new Date(gs.end_ts) : new Date();
+          
+          const intersectStart = Math.max(start.getTime(), gsStart.getTime());
+          const intersectEnd = Math.min(end.getTime(), gsEnd.getTime());
+          
+          if (intersectEnd > intersectStart) {
+            overlapSeconds += (intersectEnd - intersectStart) / 1000;
+          }
+       });
+       
+       const effectiveIdle = diff - overlapSeconds;
+       if (effectiveIdle > thresholdSeconds) {
+          totalIdleSeconds += (effectiveIdle - thresholdSeconds);
+       }
     }
   }
   return Math.round(totalIdleSeconds / 60);
+}
+
+async function loadStops() {
+  const { data, error } = await sb.from('global_stops').select('*').eq('tenant_id', tenantId).order('start_ts', { ascending: false });
+  if (error) return console.error(error);
+  _globalStops = data || [];
+  
+  $('stopList').innerHTML = (data||[]).map(s => `
+    <div class="rcard pbi-card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center">
+      <div>
+        <div style="font-weight:800; color:var(--red)">🛑 ${s.reason}</div>
+        <div style="font-size:11px; color:var(--muted)">Início: ${new Date(s.start_ts).toLocaleString('pt-BR')}</div>
+        <div style="font-size:11px; color:var(--muted)">Fim: ${s.end_ts ? new Date(s.end_ts).toLocaleString('pt-BR') : '<span style="color:var(--green)">EM ANDAMENTO</span>'}</div>
+      </div>
+      ${!s.end_ts ? `<button onclick="endStop('${s.id}')" class="sec">Encerrar Parada</button>` : ''}
+    </div>
+  `).join('') || '<div style="padding:20px; color:var(--muted)">Nenhuma parada registrada.</div>';
+}
+
+async function saveStop() {
+  const start = $('stopStart').value;
+  const reason = $('stopReason').value.trim();
+  if(!start || !reason) return alert('Informe o início e o motivo.');
+  
+  const { error } = await sb.from('global_stops').insert({
+    tenant_id: tenantId,
+    start_ts: new Date(start).toISOString(),
+    reason: reason
+  });
+  
+  if (error) alert(error.message);
+  else {
+    $('stopReason').value = '';
+    loadStops();
+  }
+}
+
+async function endStop(id) {
+  const { error } = await sb.from('global_stops').update({ end_ts: new Date().toISOString() }).eq('id', id);
+  if (error) alert(error.message);
+  else loadStops();
 }
 window._lastEmpStats = {};
 
