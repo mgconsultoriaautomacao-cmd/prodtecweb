@@ -139,6 +139,7 @@
     .cgrid,.grid2,.grid3,.grid4{grid-template-columns:1fr !important;gap:15px}
     .kgrid{grid-template-columns:1fr 1fr}
   }
+  @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
   </style>
 </head>
 <body>
@@ -314,7 +315,10 @@
 
   <!-- ═══ DASHBOARD ═══ -->
   <div id="tab-dash" class="tab active">
-    <h1 class="ptitle">📊 Dashboard de Produção</h1>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:15px; flex-wrap:wrap">
+       <h1 class="ptitle" style="margin-bottom:0">📊 Dashboard de Produção</h1>
+       <button onclick="showTab('stops')" class="red" style="font-weight:900; box-shadow:0 0 15px rgba(239,68,68,0.3)">🛑 REGISTRAR PARADA GERAL</button>
+    </div>
     <div class="kgrid">
       <div class="kcard"><div class="klabel">Prod. Total (Período)</div><div id="kpiTotalDia" class="kval">0</div><div class="ksub">caixas embaladas</div></div>
       <div class="kcard green"><div class="klabel">Total em Quilos</div><div id="kpiTotalKg" class="kval green">0</div><div class="ksub">kg processados</div></div>
@@ -1102,7 +1106,7 @@ async function afterLogin(user){
   const t = today();
   ['dashStart','dashEnd','rankStart','rankEnd','finStart','finEnd','logStart','logEnd','finalizeDate','qaStart','qaEnd','massStart','massEnd','bulkDate','nfeDate'].forEach(id=>{const el=$(id);if(el)el.value=t;});
 
-  await Promise.all([loadEmpSelectAll(), loadWeightSelectAll(), loadEmps()]);
+  await Promise.all([loadEmpSelectAll(), loadWeightSelectAll(), loadEmps(), loadStops()]);
   await refreshDash();
   setInterval(()=>{ if($('tab-dash').classList.contains('active')) refreshDash(); },20000);
 }
@@ -2413,6 +2417,7 @@ async function loadStops() {
   const { data, error } = await sb.from('global_stops').select('*').eq('tenant_id', tenantId).order('start_ts', { ascending: false });
   if (error) return console.error(error);
   _globalStops = data || [];
+  updateStopBanner();
   
   $('stopList').innerHTML = (data||[]).map(s => `
     <div class="rcard pbi-card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center">
@@ -2448,6 +2453,21 @@ async function endStop(id) {
   const { error } = await sb.from('global_stops').update({ end_ts: new Date().toISOString() }).eq('id', id);
   if (error) alert(error.message);
   else loadStops();
+}
+
+function updateStopBanner() {
+  const ongoing = _globalStops.find(s => !s.end_ts);
+  let banner = $('stopBanner');
+  if(ongoing) {
+    if(!banner) {
+       document.body.insertAdjacentHTML('afterbegin', `<div id="stopBanner" style="background:var(--red); color:#fff; padding:12px; text-align:center; font-weight:800; animation: blink 1.5s infinite; position:sticky; top:0; z-index:3000; cursor:pointer; font-size:14px; border-bottom:3px solid rgba(0,0,0,0.2)" onclick="showTab('stops')">🛑 ALERTA: PARADA GERAL EM ANDAMENTO (${ongoing.reason.toUpperCase()}) - CLIQUE PARA ENCERRAR</div>`);
+    } else {
+       banner.style.display = 'block';
+       banner.textContent = `🛑 ALERTA: PARADA GERAL EM ANDAMENTO (${ongoing.reason.toUpperCase()}) - CLIQUE PARA ENCERRAR`;
+    }
+  } else if(banner) {
+    banner.style.display = 'none';
+  }
 }
 window._lastEmpStats = {};
 
