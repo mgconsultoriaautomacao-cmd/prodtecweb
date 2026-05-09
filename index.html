@@ -1064,8 +1064,10 @@ let _finData = [];
 let _globalStops = [];
 
 function mkChart(id, cfg) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
   if (charts[id]) charts[id].destroy();
-  const ctx = document.getElementById(id).getContext('2d');
+  const ctx = canvas.getContext('2d');
   
   if (cfg.type === 'bar' && cfg.data.datasets[0]) {
     const gradient = ctx.createLinearGradient(0, 0, 0, 400);
@@ -1206,7 +1208,7 @@ async function loadEmps(){
     <tr>
       <td>
         <div style="display:flex;align-items:center;gap:10px">
-          <div class="avatar-ring">${e.photo_path ? `<img src="${e.photo_path}" onerror="this.outerHTML='${e.name[0]}'">` : e.name[0]}</div>
+          <div class="avatar-ring" style="position:relative">${e.photo_path ? `<img src="${e.photo_path}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : ''}${e.name[0]}</div>
           <div><div style="font-weight:700">${e.name}</div><div style="font-size:10px;color:var(--muted)">ID: ${e.barcode||'—'}</div></div>
         </div>
       </td>
@@ -1238,6 +1240,18 @@ async function refreshRanking(){
   const {data,error}=await sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')).order('ts',{ascending:false});
   if(error)return;
   buildRankingGrid(data, 'rankGrid');
+  
+  const eb = {};
+  data.forEach(x => { eb[x.employee_name] = (eb[x.employee_name] || 0) + 1; });
+  const sorted = Object.entries(eb).sort((a,b) => b[1] - a[1]).slice(0, 10);
+  mkChart('chartRankCollab', {
+    type: 'bar',
+    data: {
+      labels: sorted.map(e => e[0].split(' ')[0]),
+      datasets: [{ label: 'Caixas', data: sorted.map(e => e[1]) }]
+    },
+    options: { indexAxis: 'y' }
+  });
 }
 
 
@@ -1287,6 +1301,40 @@ async function refreshFin(){
   
   $('finKpiTotal').textContent = BRL(Object.values(eb).reduce((a,b)=>a+b.val,0) + (Object.keys(eb).length * bonus));
   $('finKpiBoxes').textContent = Object.values(eb).reduce((a,b)=>a+b.boxes,0).toLocaleString() + ' cx';
+  
+  // Charts
+  const days = {};
+  (scans||[]).forEach(x => { const d = x.ts.split('T')[0]; days[d] = (days[d]||0)+1; });
+  const labels = Object.keys(days).sort();
+  mkChart('chartFinPacking', {
+    type: 'bar',
+    data: { labels: labels.map(l=>l.split('-').reverse().slice(0,2).join('/')), datasets: [{ label: 'Caixas', data: labels.map(l=>days[l]) }] }
+  });
+  
+  const collabCosts = Object.entries(eb).sort((a,b)=>b[1].val - a[1].val).slice(0,10);
+  mkChart('chartFinCollab', {
+    type: 'bar',
+    data: { 
+      labels: collabCosts.map(c=>c[0].split(' ')[0]), 
+      datasets: [{ label: 'Custo (R$)', data: collabCosts.map(c=>c[1].val) }] 
+    },
+    options: { indexAxis: 'y' }
+  });
+  const hourly = {};
+  (scans||[]).forEach(x => { const h = x.ts.substring(0,13); hourly[h] = (hourly[h]||0)+1; });
+  const hLabels = Object.keys(hourly).sort();
+  mkChart('chartFinHourly', {
+    type: 'line',
+    data: { labels: hLabels.map(l=>l.split('T')[1]+'h'), datasets: [{ label: 'Produção/h', data: hLabels.map(l=>hourly[l]), fill: true }] }
+  });
+
+  const {data:campo} = await sb.from('field_carrao_sessions').select('*').eq('tenant_id',tenantId).gte('start_ts',toISO(s)).lte('start_ts',toISO(e,'23:59:59'));
+  const cDays = {};
+  (campo||[]).forEach(x => { const d = x.start_ts.split('T')[0]; cDays[d] = (cDays[d]||0)+1; });
+  mkChart('chartFinCampo', {
+    type: 'bar',
+    data: { labels: labels.map(l=>l.split('-').reverse().slice(0,2).join('/')), datasets: [{ label: 'Carrocões', data: labels.map(l=>cDays[l]||0) }] }
+  });
 }
 
 async function loadBulk(){
@@ -1528,11 +1576,12 @@ function buildRankingGrid(scans, containerId){
   }));
 
   el.innerHTML=sorted.map(([name,d],i)=>{
-    const emp = _employees.find(e => e.name === name);
+    const emp = _employees.find(e => e.name === name || e.barcode === d.scans[0]?.employee_barcode);
     const photo = emp?.photo_path;
+    const barcode = emp?.barcode || d.scans[0]?.employee_barcode || name;
     return `
-    <div class="rcard pbi-card clickable-emp" onclick="openEmpDrawer('${name}')" style="display:flex; align-items:center; gap:10px; margin-bottom:6px">
-      <div class="avatar-ring" style="width:36px; height:36px; font-size:12px">${photo ? `<img src="${photo}" onerror="this.outerHTML='${name[0]}'">` : name[0]}</div>
+    <div class="rcard pbi-card clickable-emp" onclick="openEmpDrawer('${barcode}')" style="display:flex; align-items:center; gap:10px; margin-bottom:6px">
+      <div class="avatar-ring" style="width:36px; height:36px; font-size:12px; position:relative">${photo ? `<img src="${photo}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : ''}${name[0]}</div>
       <div style="flex:1; min-width:0">
         <div style="font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div>
         <div style="font-size:10px;color:var(--muted)">${d.kg.toFixed(1)} kg total</div>
@@ -1986,13 +2035,14 @@ async function loadBulk() {
   }
 }
 
-async function openEmpDrawer(name) {
+async function openEmpDrawer(idOrName) {
   const d = document.getElementById('empDrawer');
-  const cleanName = name.trim().toLowerCase();
-  const emp = _employees.find(e => e.name.trim().toLowerCase() === cleanName);
+  const clean = idOrName.trim().toLowerCase();
+  let emp = _employees.find(e => (e.barcode||'').toLowerCase() === clean);
+  if(!emp) emp = _employees.find(e => e.name.trim().toLowerCase() === clean);
   
   if(!emp) {
-    if(cleanName !== 'desconhecido') console.error('Colaborador não encontrado:', name);
+    if(clean !== 'desconhecido') console.error('Colaborador não encontrado:', idOrName);
     return;
   }
   
@@ -2015,8 +2065,9 @@ async function openEmpDrawer(name) {
   
   // Foto com fallback se o bucket falhar
   const avatarEl = document.getElementById('drAvatar');
+  avatarEl.style.position = 'relative';
   if (emp.photo_path) {
-    avatarEl.innerHTML = `<img src="${emp.photo_path}" style="width:100%; height:100%; object-fit:cover" onerror="this.outerHTML='${emp.name[0]}'">`;
+    avatarEl.innerHTML = `<img src="${emp.photo_path}" style="width:100%; height:100%; object-fit:cover; position:absolute; inset:0" onerror="this.remove()">${emp.name[0]}`;
   } else {
     avatarEl.innerHTML = emp.name[0];
   }
