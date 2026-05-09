@@ -398,6 +398,11 @@
         <div id="kpiMassBulk" class="kval orange">0 Ton</div>
         <div id="massKpiBulkVal" class="ksub">R$ 0,00</div>
       </div>
+      <div class="kcard purple">
+        <div class="klabel">🎁 Bonificações/Doações</div>
+        <div id="kpiMassBonif" class="kval purple">0 Ton</div>
+        <div class="ksub">Saídas sem faturamento</div>
+      </div>
       <div class="kcard red"><div class="klabel">♻️ Refugo/Perda</div><div id="massKpiWaste" class="kval red">0 kg</div><div class="ksub">Campo + Packing House</div></div>
       <div class="kcard green"><div class="klabel">📦 Estoque Atual</div><div id="kpiMassStock" class="kval green">0 Ton</div><div class="ksub">Saldo disponível</div></div>
     </div>
@@ -1861,7 +1866,9 @@ async function refreshMass() {
   $('kpiMassExp').textContent = ((expMI + expEX)/1000).toFixed(2) + ' Ton';
   if($('kpiMassExpSub')) $('kpiMassExpSub').textContent = `MI: ${(expMI/1000).toFixed(1)}t | EX: ${(expEX/1000).toFixed(1)}t`;
   
-  if($('kpiMassBulk')) $('kpiMassBulk').textContent = ((expBonif + totalBulkKg + packhouseWasteKg)/1000).toFixed(2) + ' Ton';
+  if($('kpiMassBulk')) $('kpiMassBulk').textContent = (totalBulkKg/1000).toFixed(2) + ' Ton';
+  if($('kpiMassBonif')) $('kpiMassBonif').textContent = (expBonif/1000).toFixed(2) + ' Ton';
+  
   if($('massKpiBulkVal')) $('massKpiBulkVal').textContent = BRL(totalBulkVal);
   if($('massKpiWaste')) $('massKpiWaste').textContent = (fieldWasteKg + packhouseWasteKg).toFixed(1) + ' kg';
   
@@ -3985,6 +3992,72 @@ function toast(msg, type='info') {
   else alert(msg);
 }
 
+async function exportEmpDossierPDF() {
+  const name = $('drName').textContent;
+  const role = $('drRole').textContent;
+  const stats = window._lastEmpStats ? window._lastEmpStats[name] : null;
+  const btn = $('drPdfBtn');
+  
+  if(!stats) { alert('Dados de desempenho não carregados para o período atual.'); return; }
+  
+  btn.disabled = true; btn.textContent = 'Gerando PDF...';
+  
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFillColor(15, 23, 42); // --card color
+    doc.rect(0, 0, 210, 40, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22); doc.setFont("helvetica", "bold");
+    doc.text("DOSSIÊ DE DESEMPENHO", 105, 20, { align: 'center' });
+    doc.setFontSize(10); doc.setFont("helvetica", "normal");
+    doc.text("Sistema de Gestão PackingHouse - Prodtech", 105, 30, { align: 'center' });
+    
+    // Employee Info
+    doc.setTextColor(0,0,0);
+    doc.setFontSize(16); doc.setFont("helvetica", "bold");
+    doc.text(name, 20, 55);
+    doc.setFontSize(11); doc.setFont("helvetica", "normal");
+    doc.text(`Cargo: ${role}`, 20, 62);
+    doc.text(`Data do Relatório: ${new Date().toLocaleDateString('pt-BR')}`, 20, 68);
+    
+    // Line
+    doc.setDrawColor(200, 200, 200); doc.line(20, 75, 190, 75);
+    
+    // Summary Cards (as a table)
+    doc.autoTable({
+      startY: 85,
+      head: [['Métrica', 'Valor']],
+      body: [
+        ['Produção Total (Caixas)', `${Math.round(stats.boxes)} unidades`],
+        ['Volume Processado (Kg)', `${(stats.kg||0).toFixed(1)} kg`],
+        ['Qualidade (Falhas)', `${stats.qualityIssues || 0} registros`],
+        ['Assiduidade (Faltas)', `${stats.absences || 0} faltas no período`],
+        ['Tempo Interrompido', `${stats.idleTime || 0} minutos ociosos`]
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [59, 130, 246] }
+    });
+    
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    doc.setFontSize(8);
+    for(let i=1; i<=pageCount; i++) {
+       doc.setPage(i);
+       doc.text(`Gerado por Prodtech Web - Página ${i} de ${pageCount}`, 105, 285, { align: 'center' });
+    }
+    
+    doc.save(`Dossie_${name.replace(/\s+/g, '_')}.pdf`);
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao gerar PDF: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '📄 Gerar Dossiê PDF';
+  }
+}
+
 initApp();
 </script><!-- DRAWER DE DESEMPENHO DO COLABORADOR -->
 <div id="empDrawer" class="drawer">
@@ -4024,7 +4097,7 @@ initApp();
   <div id="drAbsences" style="display:grid; grid-template-columns:1fr; gap:12px"></div>
 
   <div style="margin-top:32px">
-     <button class="blue btn-full" onclick="alert('Funcionalidade de Relatório Individual em breve!')">📄 Gerar Dossiê PDF</button>
+     <button id="drPdfBtn" class="blue btn-full" onclick="exportEmpDossierPDF()">📄 Gerar Dossiê PDF</button>
   </div>
 </div>
 
