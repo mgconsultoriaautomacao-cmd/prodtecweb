@@ -17,7 +17,7 @@
   <style>  :root{--bg:#030712;--card:#0f172a;--text:#f8fafc;--muted:#94a3b8;--border:rgba(255,255,255,.065);--blue:#3b82f6;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--accent:#6366f1;--purple:#8b5cf6;--orange:#f97316;--r:16px; --glass:blur(20px); }
   
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh; overflow-x:hidden;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh; overflow-x:hidden; background-image:radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.05) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 40%); background-attachment:fixed;}
 
   /* PBI AESTHETICS & GLASSMORPHISM */
   .pbi-card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.2); padding: 20px; }
@@ -223,6 +223,18 @@
     .kgrid { grid-template-columns: 1fr 1fr; }
   }
   @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+  
+  /* TABS SYSTEM */
+  .tab { display: none; animation: fs .2s ease; }
+  .tab.active { display: block; }
+  @keyframes fs { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* DRAWER & GAUGES */
+  .drawer { position: fixed; right: 0; top: 0; bottom: 0; width: min(480px, 95vw); background: #070c18; z-index: 2000; transform: translateX(110%); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-left: 1px solid var(--border); box-shadow: -20px 0 60px rgba(0, 0, 0, 0.8); padding: 40px; overflow-y: auto; }
+  .drawer.active { transform: translateX(0); }
+  .pbi-gauge-bg { height: 12px; width: 100%; background: rgba(255,255,255,.05); border-radius: 100px; overflow: hidden; position: relative; margin: 10px 0; }
+  .pbi-gauge-fill { height: 100%; border-radius: 100px; transition: width 1s ease-out; background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%); }
+  .kpi-value-pbi { font-size: 24px; font-weight: 900; letter-spacing: -1px; }
   </style>
 </head>
 <body>
@@ -247,9 +259,7 @@
   <div class="brand">PRODTECH</div>
   <div class="brand-sub">v3.0</div>
   <div id="tenantBadge" class="tenant-badge">...</div>
-  <div id="multiTenantSelector" style="display:none; margin-bottom: 16px;">
-    <select id="multiTenantSelect" style="width:100%; border:1px solid rgba(255,255,255,.1); background:#1e293b; color:#fff"></select>
-  </div>
+
 
   <!-- ABSENCE MODAL -->
   <div id="absenceModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center">
@@ -348,7 +358,7 @@
     </div>
   </div>
 
-  <div id="multiTenantSelector" style="margin-bottom: 16px;">
+  <div id="multiTenantSelector" style="display:none; margin-bottom: 16px;">
     <label class="flabel" style="color:var(--blue)">Trocar Empresa</label>
     <select id="tenantSelect" onchange="switchTenant(this.value)" style="font-size:11px; padding:6px; background:rgba(59,130,246,0.1); border-color:rgba(59,130,246,0.2)"></select>
   </div>
@@ -2006,7 +2016,7 @@ async function openEmpDrawer(name) {
   // Foto com fallback se o bucket falhar
   const avatarEl = document.getElementById('drAvatar');
   if (emp.photo_path) {
-    avatarEl.innerHTML = `<img src="${emp.photo_path}" style="width:100%; height:100%; object-fit:cover" onerror="this.parentElement.innerHTML='${emp.name[0]}'">`;
+    avatarEl.innerHTML = `<img src="${emp.photo_path}" style="width:100%; height:100%; object-fit:cover" onerror="this.outerHTML='${emp.name[0]}'">`;
   } else {
     avatarEl.innerHTML = emp.name[0];
   }
