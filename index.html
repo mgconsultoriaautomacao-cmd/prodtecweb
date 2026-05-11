@@ -2444,15 +2444,15 @@ async function uploadFileToSupabase(fileInput) {
   const file = fileInput.files[0];
   if (!file) return null;
   const ext = file.name.split('.').pop();
-  const path = `avatars/${tenantId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+  const path = `${tenantId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
   try {
-    const { data, error } = await sb.storage.from('public').upload(path, file);
+    const { data, error } = await sb.storage.from('avatars').upload(path, file);
     if (error) throw error;
-    const { data: { publicUrl } } = sb.storage.from('public').getPublicUrl(path);
+    const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(path);
     return publicUrl;
   } catch (err) {
     console.error('Erro no upload:', err);
-    alert('Erro ao carregar imagem: ' + err.message);
+    alert('Erro ao carregar imagem: Certifique-se de que o bucket "avatars" existe e é público no Supabase Storage.');
     return null;
   }
 }
