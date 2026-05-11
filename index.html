@@ -40,6 +40,33 @@
     z-index: 100;
     overflow-y: auto;
   }
+  
+  /* AUTH SCREEN FIX */
+  .auth-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999; /* Garantir que fique na frente de tudo */
+    background-image: radial-gradient(ellipse at 20% 50%, rgba(59, 130, 246, 0.15) 0%, transparent 60%);
+    backdrop-filter: blur(10px);
+  }
+  .auth-card {
+    width: 100%;
+    max-width: 420px;
+    padding: 40px;
+    background: var(--card);
+    border-radius: 24px;
+    border: 1px solid var(--border);
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    margin: 20px;
+  }
+  .auth-logo { font-size: 32px; font-weight: 950; color: var(--blue); text-align: center; margin-bottom: 8px; letter-spacing: -1.5px; }
+  .auth-sub { font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 32px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+  .auth-err { background: rgba(239, 68, 68, 0.1); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.2); padding: 12px; border-radius: 12px; font-size: 13px; margin-bottom: 16px; display: none; text-align: center; }
+
   .brand {
     font-size: 22px;
     font-weight: 900;
@@ -215,13 +242,17 @@
   /* MOBILE */
   .menu-toggle { display: none; position: fixed; top: 15px; left: 15px; z-index: 1100; background: var(--blue); color: #fff; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; }
   @media(max-width:1024px) {
-    .sidebar { transform: translateX(-260px); transition: transform 0.3s ease; }
+    .sidebar { transform: translateX(-260px); transition: transform 0.3s ease; width: 260px; }
     .sidebar.active { transform: translateX(0); }
-    .main { margin-left: 0; padding: 20px; padding-top: 80px; }
+    .main { margin-left: 0 !important; padding: 20px !important; padding-top: 80px !important; width: 100% !important; }
     .menu-toggle { display: block; }
-    .cgrid { grid-template-columns: 1fr; }
-    .kgrid { grid-template-columns: 1fr 1fr; }
+    .cgrid { grid-template-columns: 1fr !important; }
+    .kgrid { grid-template-columns: 1fr 1fr !important; }
+    .grid2, .grid3, .grid4 { grid-template-columns: 1fr !important; }
+    .auth-card { padding: 30px 20px; }
+    .drawer { width: 100vw; padding: 20px; }
   }
+
   @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
   
   /* TABS SYSTEM */
