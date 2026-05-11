@@ -407,6 +407,18 @@
           <option value="SUPERVISOR">Supervisor(a)</option>
         </select>
       </div>
+      <div style="margin-bottom:12px"><label class="flabel">Setor</label>
+        <select id="editEmpSector">
+          <option value="ESTUFA">Estufa</option>
+          <option value="CAPINA">Capina</option>
+          <option value="COLHEITA">Colheita</option>
+          <option value="PACKING">Packing House</option>
+          <option value="PLANTIO">Plantio</option>
+          <option value="SERVICOS_GERAIS">Serviços Gerais</option>
+          <option value="LIMPEZA">Limpeza</option>
+          <option value="MANUTENCAO">Manutenção</option>
+        </select>
+      </div>
       <div style="margin-bottom:12px"><label class="flabel">WhatsApp</label><input id="editEmpWhatsapp" placeholder="55..."/></div>
       <div style="margin-bottom:20px">
         <label class="flabel">Foto do Colaborador</label>
@@ -799,6 +811,18 @@
             <option value="SUPERVISOR">Supervisor(a)</option>
           </select>
         </div>
+        <div><label class="flabel">Setor</label>
+          <select id="empSector">
+            <option value="ESTUFA">Estufa</option>
+            <option value="CAPINA">Capina</option>
+            <option value="COLHEITA">Colheita</option>
+            <option value="PACKING">Packing House</option>
+            <option value="PLANTIO">Plantio</option>
+            <option value="SERVICOS_GERAIS">Serviços Gerais</option>
+            <option value="LIMPEZA">Limpeza</option>
+            <option value="MANUTENCAO">Manutenção</option>
+          </select>
+        </div>
         <div><label class="flabel">WhatsApp</label><input id="empWhatsapp" placeholder="5511999999999"/></div>
         <div>
           <label class="flabel">Foto do Colaborador</label>
@@ -811,7 +835,7 @@
     <div class="card">
       <div class="title">📋 Lista de Funcionários</div>
       <table id="empTable">
-        <thead><tr><th>Barcode</th><th>Nome</th><th>Função</th><th>Status</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Barcode</th><th>Nome</th><th>Setor</th><th>Função</th><th>Status</th><th>Ações</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -2507,11 +2531,11 @@ async function loadEmps(){
             <div style="font-weight:700">${e.name}</div>
           </div>
         </td>
+        <td><span class="badge" style="background:rgba(255,255,255,.1)">${e.sector||'—'}</span></td>
         <td><span class="badge ${e.role.toLowerCase()}">${e.role}</span></td>
-        <td>${e.whatsapp||'<span style="color:var(--muted)">—</span>'}</td>
-        <td><span class="badge ${e.active?'active':'inactive'}">${e.active?'Ativo':'Inativo'}</span></td>
+        <td>${e.active?'<span class="badge green">Ativo</span>':'<span class="badge red">Inativo</span>'}</td>
         <td>
-          <button class="sec" style="padding:4px 9px" onclick="openEditEmpModal('${e.id}', '${e.name}', '${e.role}', '${e.whatsapp||''}', '${e.barcode}', '${e.photo_path||''}')">✏️ Editar</button>
+          <button class="sec" style="padding:4px 9px" onclick="openEditEmpModal('${e.id}', '${e.name}', '${e.role}', '${e.sector||''}', '${e.whatsapp||''}', '${e.barcode}', '${e.photo_path||''}')">✏️ Editar</button>
           <button class="sec" style="padding:4px 9px;margin-left:4px" onclick="toggleEmpActive('${e.id}',${e.active})">${e.active?'Desativar':'Ativar'}</button>
           <button class="danger" style="padding:4px 9px;margin-left:4px" onclick="delEmp('${e.id}')">Excluir</button>
         </td>
@@ -2541,7 +2565,7 @@ async function uploadFileToSupabase(fileInput) {
 }
 
 async function addEmp(){
-  const b=$('empBarcode').value.trim(),n=$('empName').value.trim(),r=$('empRole').value,w=$('empWhatsapp').value.trim();
+  const b=$('empBarcode').value.trim(),n=$('empName').value.trim(),r=$('empRole').value,s=$('empSector').value,w=$('empWhatsapp').value.trim();
   if(!b||!n){alert('Preencha barcode e nome.');return;}
   
   const btn = event.target;
@@ -2549,7 +2573,7 @@ async function addEmp(){
   
   try {
     const photoUrl = await uploadFileToSupabase($('empPhotoFile'));
-    const {error}=await sb.from('employees').insert([{barcode:b,name:n,role:r,whatsapp:w||null,photo_path:photoUrl,active:true,tenant_id:tenantId,updated_at:new Date().toISOString()}]);
+    const {error}=await sb.from('employees').insert([{barcode:b,name:n,role:r,sector:s,whatsapp:w||null,photo_path:photoUrl,active:true,tenant_id:tenantId,updated_at:new Date().toISOString()}]);
     if(error) throw error;
     
     ['empBarcode','empName','empWhatsapp'].forEach(id=>$(id).value='');
@@ -2572,12 +2596,13 @@ function editEmp(id) {
     alert('Erro: Funcionário não encontrado na lista atual.');
     return;
   }
-  openEditEmpModal(e.id, e.name, e.role, e.whatsapp, e.barcode, e.photo_path);
+  openEditEmpModal(e.id, e.name, e.role, e.sector, e.whatsapp, e.barcode, e.photo_path);
 }
-async function openEditEmpModal(id, name, role, whatsapp, barcode, photo) {
+async function openEditEmpModal(id, name, role, sector, whatsapp, barcode, photo) {
   $('editEmpId').value = id;
   $('editEmpName').value = name;
   $('editEmpRole').value = role;
+  $('editEmpSector').value = sector || 'ESTUFA';
   $('editEmpWhatsapp').value = whatsapp;
   $('editEmpBarcode').value = barcode;
   $('editEmpPhotoUrl').value = photo;
@@ -2587,7 +2612,7 @@ async function openEditEmpModal(id, name, role, whatsapp, barcode, photo) {
 
 async function saveEmpEdit(e) {
   const btn = (e && e.target ? e.target : document.activeElement).closest('button') || document.activeElement;
-  const id=$('editEmpId').value, n=$('editEmpName').value.trim(), r=$('editEmpRole').value, w=$('editEmpWhatsapp').value.trim(), b=$('editEmpBarcode').value.trim();
+  const id=$('editEmpId').value, n=$('editEmpName').value.trim(), r=$('editEmpRole').value, s=$('editEmpSector').value, w=$('editEmpWhatsapp').value.trim(), b=$('editEmpBarcode').value.trim();
   if(!n) return alert('O nome é obrigatório');
   
   btn.disabled = true; btn.textContent = 'Salvando...';
@@ -2596,7 +2621,7 @@ async function saveEmpEdit(e) {
     let photoUrl = await uploadFileToSupabase($('editEmpPhotoFile'));
     if(!photoUrl) photoUrl = $('editEmpPhotoUrl').value;
     
-    const {error}=await sb.from('employees').update({name:n,role:r,whatsapp:w||null,barcode:b,photo_path:photoUrl,updated_at:new Date().toISOString()}).eq('id',id);
+    const {error}=await sb.from('employees').update({name:n,role:r,sector:s,whatsapp:w||null,barcode:b,photo_path:photoUrl,updated_at:new Date().toISOString()}).eq('id',id);
     if(error) throw error;
     
     $('empModal').style.display='none';

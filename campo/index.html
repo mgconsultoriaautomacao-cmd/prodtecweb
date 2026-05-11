@@ -2470,7 +2470,7 @@ function renderFEmpList(list) {
   list.forEach(e => {
     const isSel = fState.workers.has(e.id);
     html += `
-      <div class="emp-item ${isSel ? 'on' : ''}" onclick="toggleFEmp(${e.id}, '${e.name}')" data-id="${e.id}">
+      <div class="emp-item ${isSel ? 'on' : ''}" onclick="toggleFEmp('${e.id}', '${e.name}')" data-id="${e.id}">
         <div class="emp-avatar">${e.name.substring(0,2).toUpperCase()}</div>
         <div class="emp-name">${e.name} <div style="font-size:10px;color:var(--muted)">${e.role || 'Geral'}</div></div>
         <div class="emp-check">${isSel ? '✓' : ''}</div>
@@ -2489,10 +2489,10 @@ function toggleFEmp(id, name) {
 
 function toggleAllFEmp() {
   const items = Array.from(document.querySelectorAll('#fEmpList .emp-item'));
-  const allSelected = items.every(el => fState.workers.has(parseInt(el.getAttribute('data-id'))));
+  const allSelected = items.every(el => fState.workers.has(el.getAttribute('data-id')));
   
   items.forEach(el => {
-    const id = parseInt(el.getAttribute('data-id'));
+    const id = el.getAttribute('data-id');
     const name = el.querySelector('.emp-name').childNodes[0].nodeValue.trim();
     if (allSelected) fState.workers.delete(id);
     else fState.workers.set(id, name);
