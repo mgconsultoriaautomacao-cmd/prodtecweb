@@ -2092,65 +2092,120 @@ async function openEmpDrawer(idOrName) {
   const start = $('dashStart').value;
   const end = $('dashEnd').value + 'T23:59:59Z';
   
-  const [qAudits, qAbs] = await Promise.all([
+  const [qAudits, qAbs, qHourly] = await Promise.all([
     sb.from('quality_audits').select('id').eq('tenant_id', tenantId).eq('employee_barcode', emp.barcode).gte('ts', start).lte('ts', end),
-    sb.from('employee_absences').select('*').eq('tenant_id', tenantId).eq('employee_barcode', emp.barcode).gte('date', start.split('T')[0]).lte('date', end.split('T')[0])
+    sb.from('employee_absences').select('*').eq('tenant_id', tenantId).eq('employee_barcode', emp.barcode).gte('date', start.split('T')[0]).lte('date', end.split('T')[0]),
+    sb.from('production_scans').select('ts').eq('tenant_id', tenantId).eq('employee_name', emp.name).gte('ts', start).lte('ts', end)
   ]);
 
   const qualityCount = qAudits.data?.length || 0;
   const absencesCount = qAbs.data?.length || 0;
+  const scanTimestamps = (qHourly.data || []).map(s => new Date(s.ts).getTime());
+
+  // Calcular Produtividade Hora a Hora
+  const hourlyData = new Array(24).fill(0);
+  scanTimestamps.forEach(ts => {
+    const hour = new Date(ts).getHours();
+    hourlyData[hour]++;
+  });
+  
+  // Pegar apenas horas comerciais ou horas com produção
+  const labels = [];
+  const chartPoints = [];
+  for(let i=0; i<24; i++) {
+    if(hourlyData[i] > 0 || (i >= 7 && i <= 18)) {
+        labels.push(`${i}h`);
+        chartPoints.push(hourlyData[i]);
+    }
+  }
 
   document.getElementById('drName').textContent = emp.name;
   document.getElementById('drRole').textContent = emp.role;
   
-  // Foto com fallback se o bucket falhar
   const avatarEl = document.getElementById('drAvatar');
-  avatarEl.style.position = 'relative';
-  if (emp.photo_path) {
-    avatarEl.innerHTML = `<img src="${emp.photo_path}" style="width:100%; height:100%; object-fit:cover; position:absolute; inset:0" onerror="this.remove()">${emp.name[0]}`;
-  } else {
-    avatarEl.innerHTML = emp.name[0];
-  }
+  avatarEl.innerHTML = emp.photo_path 
+    ? `<img src="${emp.photo_path}" style="width:100%; height:100%; object-fit:cover; border-radius:50%">`
+    : emp.name[0];
   
-  if(stats) {
-    stats.qualityIssues = qualityCount;
-    stats.absences = absencesCount;
+    const baseBonus = parseFloat($('cfgAttendanceBonus').value || 0);
+    const bonusEarned = (absencesCount === 0) ? baseBonus : 0;
     
-    const prodTarget = emp.role === 'EMBALADOR' ? 150 : 300;
-    const prodScore = Math.min(100, Math.round((stats.boxes / prodTarget) * 100));
-    
-    document.getElementById('drProdVal').textContent = prodScore + '%';
-    document.getElementById('drProdFill').style.width = prodScore + '%';
-    
-    document.getElementById('drIdleVal').textContent = stats.idleTime + ' min';
-    const idleLimit = 120; // 2h de ociosidade como limite visual
-    document.getElementById('drIdleFill').style.width = Math.min(100, (stats.idleTime / idleLimit) * 100) + '%';
+    // Engenharia de Produção: Alvos por Função
+    const cfgPacker = parseFloat($('cfgTargetPacker')?.value || 150);
+    const cfgStacker = parseFloat($('cfgTargetStacker')?.value || 300);
+    const cfgHarvester = 500; // Alvo padrão para campo
+
+    let prodTarget = cfgPacker;
+    if (emp.role === 'EMPILHADOR') prodTarget = cfgStacker;
+    if (emp.role === 'COLHEDOR') prodTarget = cfgHarvester;
+
+    const prodScore = stats ? Math.min(100, Math.round((stats.boxes / prodTarget) * 100)) : 0;
+    const stabilityScore = stats && stats.boxes > 0 ? Math.max(40, 100 - (stats.idleTime / 10)) : 100;
 
     document.getElementById('drTotals').innerHTML = `
-      <div class="pbi-card" style="margin-bottom:12px">
-        <div class="klabel">Produção Real</div>
-        <div class="kpi-value-pbi">${Math.round(stats.boxes)} <span style="font-size:12px">caixas</span></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px">
+        <div class="pbi-card">
+            <div class="klabel">Produtividade Líquida</div>
+            <div class="kpi-value-pbi">${Math.round(stats.boxes)} <span style="font-size:10px">cx</span></div>
+            <div style="font-size:10px; color:${prodScore > 90 ? 'var(--green)' : 'var(--yellow)'}">${prodScore}% da Meta</div>
+        </div>
+        <div class="pbi-card">
+            <div class="klabel">Estabilidade (Ritmo)</div>
+            <div class="kpi-value-pbi" style="color:var(--blue)">${stabilityScore}%</div>
+            <div style="font-size:10px; color:var(--muted)">Fluxo de Esteira</div>
+        </div>
       </div>
-      <div class="pbi-card" style="margin-bottom:12px">
-        <div class="klabel">Volume Total</div>
-        <div class="kpi-value-pbi">${(stats.kg||0).toFixed(1)} <span style="font-size:12px">kg</span></div>
-      </div>
-    `;
 
-    document.getElementById('drAbsences').innerHTML = `
-      <div class="pbi-card" style="border-left:4px solid var(--purple)">
-        <div style="display:flex; justify-content:space-between">
-          <div>
+      <div class="pbi-card" style="margin-bottom:20px">
+        <div class="klabel" style="margin-bottom:10px">Produtividade Hora a Hora (Cadência)</div>
+        <canvas id="drHourlyChart" height="100"></canvas>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+        <div class="pbi-card" style="border-left:4px solid ${absencesCount > 0 ? 'var(--red)' : 'var(--green)'}">
             <div class="klabel">Assiduidade</div>
-            <div class="kpi-value-pbi" style="color:var(--purple)">${absencesCount} <span style="font-size:12px">faltas</span></div>
-          </div>
-          <div style="text-align:right">
+            <div style="font-weight:800; color:${absencesCount > 0 ? 'var(--red)' : 'var(--green)'}">${absencesCount} faltas</div>
+            <div style="font-size:10px; color:var(--muted)">Bônus: R$ ${bonusEarned.toFixed(2)}</div>
+        </div>
+        <div class="pbi-card" style="border-left:4px solid var(--yellow)">
             <div class="klabel">Qualidade</div>
-            <div class="kpi-value-pbi" style="color:var(--red)">${qualityCount} <span style="font-size:12px">falhas</span></div>
-          </div>
+            <div style="font-weight:800; color:var(--yellow)">${qualityCount} erros</div>
+            <div style="font-size:10px; color:var(--muted)">Taxa: ${((qualityCount/stats.boxes)*100 || 0).toFixed(1)}%</div>
         </div>
       </div>
     `;
+
+    // Renderizar o gráfico de cadência
+    setTimeout(() => {
+        const ctx = document.getElementById('drHourlyChart').getContext('2d');
+        if(window._drChart) window._drChart.destroy();
+        window._drChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Caixas/Hora',
+                    data: chartPoints,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 2,
+                    pointRadius: 2
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 } } },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 9 } } }
+                }
+            }
+        });
+    }, 100);
+    
+    // Limpar o drAbsences que não será mais usado separado
+    document.getElementById('drAbsences').innerHTML = '';
   }
   
   d.classList.add('active');

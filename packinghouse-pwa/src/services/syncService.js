@@ -34,6 +34,29 @@ export async function syncUp() {
       console.log(`Sync Up: ${unsyncedScans.length} leituras sincronizadas.`);
     }
   }
+
+  // 2. Sincronizar Auditorias de Qualidade (Faltava este bloco!)
+  const unsyncedAudits = await db.quality_audits.where('synced').equals(0).toArray();
+  if (unsyncedAudits.length > 0) {
+    const { error } = await supabase
+      .from('quality_audits')
+      .insert(unsyncedAudits.map(a => ({
+        ts: new Date(a.ts).toISOString(),
+        employee_id: a.employee_id, // UUID do funcionário
+        penalty_boxes: a.penalty_boxes,
+        issue_type: a.issue_type || 'Defeito',
+        reason: a.reason || '',
+        station_id: a.station_id || 'ST01',
+        tenant_id: a.tenant_id // ID da empresa
+      })));
+
+    if (!error) {
+      await db.quality_audits.where('id').anyOf(unsyncedAudits.map(a => a.id)).modify({ synced: 1 });
+      console.log(`Sync Up: ${unsyncedAudits.length} auditorias de qualidade sincronizadas.`);
+    } else {
+      console.error('Erro ao sincronizar auditorias:', error);
+    }
+  }
 }
 
 /**
