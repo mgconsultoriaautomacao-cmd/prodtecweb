@@ -2154,7 +2154,11 @@ async function openEmpDrawer(idOrName) {
         ? `<img src="${emp.photo_path}" style="width:100%; height:100%; object-fit:cover; border-radius:50%">`
         : emp.name[0];
 
+    // Limpar campos antigos para evitar duplicidade
+    document.getElementById('drStats').innerHTML = ''; 
+    
     if (stats) {
+
         const baseBonus = parseFloat($('cfgAttendanceBonus').value || 0);
         const bonusEarned = (absencesCount === 0) ? baseBonus : 0;
         const cfgPacker = parseFloat($('cfgTargetPacker')?.value || 150);
@@ -2169,35 +2173,40 @@ async function openEmpDrawer(idOrName) {
         const stabilityScore = stats.boxes > 0 ? Math.max(40, 100 - (stats.idleTime / 10)) : 100;
 
         document.getElementById('drTotals').innerHTML = `
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px">
-                <div class="pbi-card">
-                    <div class="klabel">Produtividade Líquida</div>
-                    <div class="kpi-value-pbi">${Math.round(stats.boxes)} <span style="font-size:10px">cx</span></div>
-                    <div style="font-size:10px; color:${prodScore > 90 ? 'var(--green)' : 'var(--yellow)'}">${prodScore}% da Meta</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px">
+                <div class="pbi-card" style="padding:15px">
+                    <div class="klabel" style="font-size:9px">Produção Líquida</div>
+                    <div class="kpi-value-pbi" style="font-size:20px">${Math.round(stats.boxes)} <span style="font-size:10px">cx</span></div>
+                    <div style="font-size:9px; color:${prodScore > 90 ? 'var(--green)' : 'var(--yellow)'}">${prodScore}% da Meta</div>
                 </div>
-                <div class="pbi-card">
-                    <div class="klabel">Estabilidade (Ritmo)</div>
-                    <div class="kpi-value-pbi" style="color:var(--blue)">${stabilityScore}%</div>
-                    <div style="font-size:10px; color:var(--muted)">Fluxo de Esteira</div>
+                <div class="pbi-card" style="padding:15px">
+                    <div class="klabel" style="font-size:9px">Estabilidade</div>
+                    <div class="kpi-value-pbi" style="font-size:20px; color:var(--blue)">${stabilityScore}%</div>
+                    <div style="font-size:9px; color:var(--muted)">Fluxo de Esteira</div>
                 </div>
             </div>
-            <div class="pbi-card" style="margin-bottom:20px">
-                <div class="klabel" style="margin-bottom:10px">Produtividade Hora a Hora (Cadência)</div>
-                <canvas id="drHourlyChart" height="100"></canvas>
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
-                <div class="pbi-card" style="border-left:4px solid ${absencesCount > 0 ? 'var(--red)' : 'var(--green)'}">
-                    <div class="klabel">Assiduidade</div>
-                    <div style="font-weight:800; color:${absencesCount > 0 ? 'var(--red)' : 'var(--green)'}">${absencesCount} faltas</div>
-                    <div style="font-size:10px; color:var(--muted)">Bônus: R$ ${bonusEarned.toFixed(2)}</div>
+
+            <div class="pbi-card" style="margin-bottom:16px; padding:15px; overflow:hidden">
+                <div class="klabel" style="margin-bottom:10px">Cadência (Caixas/Hora)</div>
+                <div style="width:100%; height:140px">
+                    <canvas id="drHourlyChart"></canvas>
                 </div>
-                <div class="pbi-card" style="border-left:4px solid var(--yellow)">
-                    <div class="klabel">Qualidade</div>
-                    <div style="font-weight:800; color:var(--yellow)">${qualityCount} erros</div>
-                    <div style="font-size:10px; color:var(--muted)">Taxa: ${((qualityCount / stats.boxes) * 100 || 0).toFixed(1)}%</div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px">
+                <div class="pbi-card" style="border-left:4px solid ${absencesCount > 0 ? 'var(--red)' : 'var(--green)'}; padding:15px">
+                    <div class="klabel" style="font-size:9px">Assiduidade</div>
+                    <div style="font-weight:800; font-size:14px; color:${absencesCount > 0 ? 'var(--red)' : 'var(--green)'}">${absencesCount} faltas</div>
+                    <div style="font-size:9px; color:var(--muted)">Bônus: R$ ${bonusEarned.toFixed(2)}</div>
+                </div>
+                <div class="pbi-card" style="border-left:4px solid var(--yellow); padding:15px">
+                    <div class="klabel" style="font-size:9px">Qualidade</div>
+                    <div style="font-weight:800; font-size:14px; color:var(--yellow)">${qualityCount} erros</div>
+                    <div style="font-size:9px; color:var(--muted)">Taxa: ${((qualityCount / (stats.boxes || 1)) * 100).toFixed(1)}%</div>
                 </div>
             </div>
         `;
+
 
         setTimeout(() => {
             const ctx = document.getElementById('drHourlyChart').getContext('2d');
