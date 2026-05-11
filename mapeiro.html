@@ -127,7 +127,7 @@
     </div>
 
     <script>
-        let supabase = null;
+        let sb = null;
         let user = null;
         let tenantId = null;
         let activeCollabBarcode = null;
@@ -151,11 +151,11 @@
         }
 
         function setupSupabase(url, key) {
-            supabase = supabase.createClient(url, key);
+            sb = window.supabase.createClient(url, key);
         }
 
         async function checkAuth() {
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await sb.auth.getSession();
             if (session) {
                 user = session.user;
                 tenantId = user.user_metadata?.tenant_id;
@@ -181,7 +181,7 @@
             document.getElementById('loading').style.display = 'block';
 
             setupSupabase(url, key);
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            const { data, error } = await sb.auth.signInWithPassword({ email, password });
             
             if (error) {
                 alert('Erro: ' + error.message);
@@ -212,7 +212,7 @@
         document.getElementById('btnScanCollab').onclick = () => {
             openScanner(async (barcode) => {
                 // Look up employee
-                const { data, error } = await supabase
+                const { data, error } = await sb
                     .from('employees')
                     .select('name')
                     .eq('barcode', barcode)
@@ -243,7 +243,7 @@
             const station = document.getElementById('stationId').value;
             const now = new Date().toISOString();
 
-            const { error } = await supabase
+            const { error } = await sb
                 .from('production_scans')
                 .insert([{
                     ts: now,
