@@ -1363,7 +1363,8 @@ async function refreshFin(){
     const valStacker = Number(tenantConfig.value_per_box_stacker || 0.15);
     
     eb[displayName].boxes++;
-    eb[displayName].val += (x.role==='PACKER' ? valPacker : valStacker);
+    const isPacker = (x.role === 'PACKER' || x.role === 'EMBALADOR' || x.role === 'PACKING');
+    eb[displayName].val += (isPacker ? valPacker : valStacker);
   });
   
   // Inclui Apontamentos de Campo
@@ -2183,7 +2184,7 @@ async function openEmpDrawer(idOrName) {
         return;
     }
 
-    const stats = window._lastEmpStats ? window._lastEmpStats[clean] : null;
+    const stats = window._lastEmpStats ? (window._lastEmpStats[clean] || (emp ? window._lastEmpStats[emp.name.trim().toLowerCase()] : null)) : null;
     const start = $('dashStart').value;
     const end = $('dashEnd').value + 'T23:59:59Z';
 
@@ -3296,13 +3297,20 @@ async function saveSettings(){
     wa_template_manager:$('cfgWaTemplateMgr').value.trim()||null
   };
 
-  const {error}=await sb.from('tenants').update(payload).eq('id',tenantId);
-  btn.disabled=false;
-  if(error) {
-    st.innerHTML=`<span style="color:var(--red)">Erro: ${error.message}</span>`;
-  } else {
-    st.innerHTML=`<span style="color:var(--green)">✓ Configurações salvas com sucesso!</span>`;
-    await loadSettings();
+  try {
+    const {error}=await sb.from('tenants').update(payload).eq('id',tenantId);
+    btn.disabled=false;
+    if(error) {
+      console.error('Save Settings Error:', error);
+      st.innerHTML=`<span style="color:var(--red)">Erro ao salvar: ${error.message} (Verifique se todas as colunas existem no banco)</span>`;
+    } else {
+      st.innerHTML=`<span style="color:var(--green)">✓ Configurações salvas com sucesso!</span>`;
+      await loadSettings();
+    }
+  } catch (e) {
+    btn.disabled=false;
+    console.error('Save Settings Exception:', e);
+    st.innerHTML=`<span style="color:var(--red)">Erro inesperado: ${e.message}</span>`;
   }
 }
 
