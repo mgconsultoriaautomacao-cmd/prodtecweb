@@ -1260,24 +1260,32 @@ function showTab(n,el){
 }
 
 async function loadEmps(){
-  const {data,error}=await sb.from('employees').select('*').eq('tenant_id',tenantId).order('name');
-  if(error)return;
-  _employees=data||[];
-  const tbody=$('empTable').querySelector('tbody');
-  if(!tbody)return;
-  tbody.innerHTML=_employees.map(e=>`
-    <tr>
-      <td>
-        <div style="display:flex;align-items:center;gap:10px">
-          <div class="avatar-ring" style="position:relative">${e.photo_path ? `<img src="${e.photo_path}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : ''}${e.name[0]}</div>
-          <div><div style="font-weight:700">${e.name}</div><div style="font-size:10px;color:var(--muted)">ID: ${e.barcode||'—'}</div></div>
-        </div>
-      </td>
-      <td><span class="badge ${e.role.toLowerCase()}">${e.role}</span></td>
-      <td>${e.active?'<span class="badge green">Ativo</span>':'<span class="badge red">Inativo</span>'}</td>
-      <td><button class="sec" onclick="editEmp('${e.id}')">✏️</button></td>
-    </tr>
-  `).join('')||'<tr><td colspan="4" style="text-align:center">Nenhum funcionário.</td></tr>';
+  try {
+    const {data, error}=await sb.from('employees').select('*').eq('tenant_id',tenantId).order('name');
+    if(error) throw error;
+    _employees = data || []; 
+    const tbody=$('empTable')?.querySelector('tbody');
+    if(tbody) {
+      tbody.innerHTML=_employees.map(e=>`
+        <tr>
+          <td><code style="background:rgba(255,255,255,.05);padding:2px 6px;border-radius:5px;font-size:12px">${e.barcode||'—'}</code></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="avatar-ring" style="position:relative">${e.photo_path ? `<img src="${e.photo_path}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : ''}${e.name[0]}</div>
+              <div style="font-weight:700">${e.name}</div>
+            </div>
+          </td>
+          <td><span class="badge" style="background:rgba(255,255,255,.1)">${e.sector||'—'}</span></td>
+          <td><span class="badge ${e.role.toLowerCase()}">${e.role}</span></td>
+          <td>${e.active?'<span class="badge green">Ativo</span>':'<span class="badge red">Inativo</span>'}</td>
+          <td>
+             <button class="sec" style="padding:4px 9px" onclick="openEditEmpModal('${e.id}', '${e.name}', '${e.role}', '${e.sector||''}', '${e.whatsapp||''}', '${e.barcode}', '${e.photo_path||''}')">✏️ Editar</button>
+             <button class="sec" style="padding:4px 9px;margin-left:4px" onclick="toggleEmpActive('${e.id}',${e.active})">${e.active?'Ativar':'Desativar'}</button>
+          </td>
+        </tr>
+      `).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:28px">Nenhum funcionário encontrado.</td></tr>';
+    }
+  } catch(e) { console.error(e); }
 }
 
 async function loadWeights(){
@@ -1349,7 +1357,7 @@ async function refreshFin(){
     }
     if(!displayName) displayName = x.employee_barcode || 'Desconhecido';
 
-    if(!eb[displayName]) eb[displayName]={boxes:0,val:0,role:x.role, barcode: x.employee_barcode};
+    if(!eb[displayName]) eb[displayName]={boxes:0,val:0,role:x.role, barcode: x.employee_barcode, fieldVal:0, fieldOps:0};
     
     const valPacker = Number(tenantConfig.value_per_box_packer || 0.50);
     const valStacker = Number(tenantConfig.value_per_box_stacker || 0.15);
@@ -1358,18 +1366,48 @@ async function refreshFin(){
     eb[displayName].val += (x.role==='PACKER' ? valPacker : valStacker);
   });
   
+  // Inclui Apontamentos de Campo
+  const {data:fServices} = await sb.from('field_services').select('*, field_service_employees(*)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
+  (fServices||[]).forEach(srv => {
+    (srv.field_service_employees||[]).forEach(emp => {
+      let realEmp = _employees.find(e => e.id === emp.employee_id);
+      let dName = realEmp ? realEmp.name : emp.employee_name;
+      let barcode = realEmp ? realEmp.barcode : null;
+      
+      if(!eb[dName]) eb[dName] = {boxes:0, val:0, role: srv.sector || 'CAMPO', barcode: barcode, fieldVal:0, fieldOps:0};
+      
+      eb[dName].fieldVal += Number(emp.value_received || 0);
+      eb[dName].val += Number(emp.value_received || 0);
+      eb[dName].fieldOps += 1;
+      
+      // Atualiza role se for só de campo
+      if (eb[dName].role !== 'PACKER' && eb[dName].role !== 'STACKER' && !['EMBALADOR', 'EMPILHADOR'].includes(eb[dName].role)) {
+         eb[dName].role = srv.sector || 'CAMPO';
+      }
+    });
+  });
+  
   const bonus = Number(tenantConfig.attendance_bonus || 0);
   const tbody=$('finTable').querySelector('tbody');
   tbody.innerHTML=Object.entries(eb).map(([name,d])=>{
-    const hasAbs = (abs||[]).some(a=>a.employee_barcode === d.barcode);
+    const hasAbs = (abs||[]).some(a=>a.employee_barcode === d.barcode && d.barcode);
     const total = d.val + (hasAbs ? 0 : bonus);
+    
+    let qtyDisplay = [];
+    if(d.boxes > 0) qtyDisplay.push(`<b>${d.boxes}</b> cx`);
+    if(d.fieldOps > 0) qtyDisplay.push(`<b>${d.fieldOps}</b> op. campo`);
+    
+    let valDisplay = [];
+    if(d.boxes > 0) valDisplay.push(`${BRL((d.val - d.fieldVal)/d.boxes)} /cx`);
+    if(d.fieldOps > 0) valDisplay.push(`(Campo)`);
+
     return `
       <tr>
         <td>PERÍODO</td>
         <td><div style="font-weight:700">${name}</div><div style="font-size:10px;color:var(--muted)">${d.barcode||'—'}</div></td>
         <td><span class="badge ${d.role.toLowerCase()}">${d.role}</span></td>
-        <td><b>${d.boxes}</b> cx</td>
-        <td>${BRL(d.val/d.boxes)} /cx</td>
+        <td>${qtyDisplay.join('<br>')}</td>
+        <td>${valDisplay.join('<br>')}</td>
         <td>${hasAbs?'<span class="badge red">FALTA</span>':'<span class="badge green">PRESENÇA</span>'}</td>
         <td style="color:var(--green)">${hasAbs?'-':BRL(bonus)}</td>
         <td style="font-weight:900; font-size:15px; color:var(--blue)">${BRL(total)}</td>
@@ -1671,7 +1709,11 @@ function buildRankingGrid(scans, containerId){
   }));
 
   el.innerHTML=sorted.map(([name,d],i)=>{
-    const emp = _employees.find(e => e.name === name || e.barcode === d.scans[0]?.employee_barcode);
+    // Busca mais robusta: tenta por nome exato, depois por nome sem espaços, depois por barcode do primeiro scan
+    const emp = _employees.find(e => 
+      e.name.trim().toLowerCase() === name.trim().toLowerCase() || 
+      e.barcode === d.scans[0]?.employee_barcode
+    );
     const photo = emp?.photo_path;
     const barcode = emp?.barcode || d.scans[0]?.employee_barcode || name;
     return `
@@ -2517,35 +2559,7 @@ async function refreshLogs(){
 // ══════════════════════════════════════
 // FUNCIONÁRIOS
 // ══════════════════════════════════════
-async function loadEmps(){
-  try {
-    const {data, error}=await sb.from('employees').select('*').eq('tenant_id',tenantId).order('name');
-    if(error) throw error;
-    _employees = data || []; // Persist global
-    $('empTable').querySelector('tbody').innerHTML=(data||[]).map(e=>`
-      <tr>
-        <td><code style="background:rgba(255,255,255,.05);padding:2px 6px;border-radius:5px;font-size:12px">${e.barcode}</code></td>
-        <td>
-          <div style="display:flex;align-items:center;gap:10px">
-            <div class="avatar-ring">${e.photo_path ? `<img src="${e.photo_path}">` : e.name[0]}</div>
-            <div style="font-weight:700">${e.name}</div>
-          </div>
-        </td>
-        <td><span class="badge" style="background:rgba(255,255,255,.1)">${e.sector||'—'}</span></td>
-        <td><span class="badge ${e.role.toLowerCase()}">${e.role}</span></td>
-        <td>${e.active?'<span class="badge green">Ativo</span>':'<span class="badge red">Inativo</span>'}</td>
-        <td>
-          <button class="sec" style="padding:4px 9px" onclick="openEditEmpModal('${e.id}', '${e.name}', '${e.role}', '${e.sector||''}', '${e.whatsapp||''}', '${e.barcode}', '${e.photo_path||''}')">✏️ Editar</button>
-          <button class="sec" style="padding:4px 9px;margin-left:4px" onclick="toggleEmpActive('${e.id}',${e.active})">${e.active?'Desativar':'Ativar'}</button>
-          <button class="danger" style="padding:4px 9px;margin-left:4px" onclick="delEmp('${e.id}')">Excluir</button>
-        </td>
-      </tr>
-    `).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:28px">Nenhum funcionário encontrado para esta empresa.</td></tr>';
-  } catch(err) {
-    console.error(err);
-    $('empTable').querySelector('tbody').innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--red);padding:28px">Erro ao carregar: ${err.message}</td></tr>`;
-  }
-}
+// loadEmps removida (usando a versão consolidada na linha 1262)
 
 async function uploadFileToSupabase(fileInput) {
   const file = fileInput.files[0];
