@@ -532,9 +532,18 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       </select>
     </div>
 
-    <div class="section"><div class="section-title">🚜 Máquina de Colheita</div></div>
+    <div class="section"><div class="section-title">🚜 Número do Carrocão</div></div>
     <div style="padding:0 16px">
-      <input id="cMachineCode" placeholder="Código da máquina (ex: COL-01)" style="margin-bottom:8px">
+      <select id="cCarriage" onchange="cState.carriageCode=this.options[this.selectedIndex].text; cState.carriageId=this.value;">
+        <option value="">— Selecionar Carrocão —</option>
+      </select>
+    </div>
+
+    <div class="section"><div class="section-title">⚙️ Máquina de Colheita</div></div>
+    <div style="padding:0 16px">
+      <select id="cMachine" onchange="cState.machineId=this.value; cState.machineCode=this.options[this.selectedIndex].text;" style="margin-bottom:8px">
+        <option value="">— Selecionar Máquina (Opcional) —</option>
+      </select>
       <input id="cMachineOperator" placeholder="Operador da máquina">
     </div>
 
@@ -733,12 +742,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
     <div style="padding:0 16px">
       <select id="fSector" onchange="fUpdateOperations()">
         <option value="">— Selecionar Setor —</option>
-        <option value="ESTUFA">🌱 Estufa</option>
-        <option value="CAPINA">🌿 Capina</option>
-        <option value="PLANTIO">🌾 Plantio</option>
-        <option value="SERVICOS_GERAIS">🧹 Serviços Gerais</option>
-        <option value="LIMPEZA">🗑 Limpeza</option>
-        <option value="MANUTENCAO">🔧 Manutenção</option>
       </select>
     </div>
 
@@ -940,6 +943,36 @@ function updateOnlineDots() {
 // OFFLINE QUEUE — IndexedDB
 // ═══════════════════════════════════════════
 let idb = null;
+let sectors = [], roles = [], carriages = [], operations = [], machines = [];
+
+async function loadCustomRegisters() {
+  const [sRes, rRes, cRes, oRes, mRes] = await Promise.all([
+    sb.from('sectors').select('*').eq('tenant_id', tenantId).eq('active', true),
+    sb.from('roles').select('*').eq('tenant_id', tenantId).eq('active', true),
+    sb.from('carriages').select('*').eq('tenant_id', tenantId).eq('active', true).order('code'),
+    sb.from('operations').select('*, sectors(name)').eq('tenant_id', tenantId).eq('active', true),
+    sb.from('machines').select('*').eq('tenant_id', tenantId).eq('active', true).order('code')
+  ]);
+  sectors = sRes.data || [];
+  roles = rRes.data || [];
+  carriages = cRes.data || [];
+  operations = oRes.data || [];
+  machines = mRes.data || [];
+}
+
+async function loadCarraoSelects() {
+  const cSel = $('cCarriage');
+  if(cSel) {
+    cSel.innerHTML = '<option value="">— Selecionar Carrocão —</option>' + 
+      carriages.map(c => `<option value="${c.id}">${c.code} ${c.name ? '- '+c.name : ''}</option>`).join('');
+  }
+  const mSel = $('cMachine');
+  if(mSel) {
+    mSel.innerHTML = '<option value="">— Selecionar Máquina (Opcional) —</option>' + 
+      machines.map(m => `<option value="${m.id}">${m.code} ${m.name ? '- '+m.name : ''} (${m.type || 'OUTRO'})</option>`).join('');
+  }
+}
+
 function initIDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open('prodtech-campo', 1);
@@ -1077,6 +1110,9 @@ async function afterLogin(u) {
   await loadParcelLinks();
   await loadVarieties();
   await loadFruits();
+  await loadCustomRegisters();
+  await loadFieldOpSelects();
+  await loadCarraoSelects();
   await initQualityForm();
   initCarraoForm();
   loadPhParcelas();
@@ -1712,8 +1748,9 @@ async function submitCarrao() {
     parcel_id         : parcelaId || null,
     variety_id        : $('cVariety').value || null,
     tractor_driver    : tractor ? tractor.name : null,
-    machine_code      : $('cMachineCode')?.value.trim() || null,
+    machine_code      : cState.machineCode || $('cMachine')?.options[$('cMachine')?.selectedIndex]?.text || null,
     machine_operator  : $('cMachineOperator')?.value.trim() || null,
+    machine_id        : $('cMachine')?.value || null,
     qty_carrocoes     : cQty,
     price_per_carrao  : price,
     total_value       : parseFloat(total.toFixed(2)),
@@ -1722,6 +1759,8 @@ async function submitCarrao() {
     registered_by     : regBy,
     julian_lot        : julianLot,
     synced            : true,
+    carriage_id       : cState.carriageId || null,
+    carriage_code     : cState.carriageCode || null,
   };
 
 
@@ -2408,14 +2447,7 @@ async function endStop(id) {
 // APONTAMENTO DE CAMPO (FIELD OP)
 // ═══════════════════════════════════════════
 const fState = { workers: new Map() };
-const fOperations = {
-  ESTUFA: ['Cobrir Bandejas', 'Corrigir Bandejas', 'Semear', 'Encher Bandejas', 'Lavar Bandejas'],
-  CAPINA: ['Capina de Enxada', 'Capina Manual', 'Remover Arcos', 'Soltar Manta'],
-  PLANTIO: ['Distribuição de Mudas', 'Transplante', 'Irrigação Inicial'],
-  SERVICOS_GERAIS: ['Limpeza da Área', 'Remoção de Mulching', 'Recolher Mangueiras'],
-  LIMPEZA: ['Limpeza de Carreador', 'Recolher Lixo'],
-  MANUTENCAO: ['Revisão de Gotejo', 'Conserto de Bomba', 'Manutenção de Trator']
-};
+// Operações carregadas dinamicamente do banco
 
 function showFTab(tab) {
   $('fTabNew').className    = 'tab-pane' + (tab==='new' ?' on':'');
@@ -2426,20 +2458,29 @@ function showFTab(tab) {
 }
 
 function fUpdateOperations() {
-  const sector = $('fSector').value;
+  const sectorName = $('fSector').value;
   const opSelect = $('fOperation');
   opSelect.innerHTML = '<option value="">— Selecionar Operação —</option>';
-  if (sector && fOperations[sector]) {
-    fOperations[sector].forEach(op => {
-      opSelect.insertAdjacentHTML('beforeend', `<option value="${op}">${op}</option>`);
+  
+  const sector = sectors.find(s => s.name === sectorName);
+  const filteredOps = operations.filter(o => o.sector_id === sector?.id || !o.sector_id);
+
+  if (filteredOps.length > 0) {
+    filteredOps.forEach(op => {
+      opSelect.insertAdjacentHTML('beforeend', `<option value="${op.name}">${op.name}</option>`);
     });
-  } else if (sector) {
+  } else if (sectorName) {
     opSelect.insertAdjacentHTML('beforeend', `<option value="Outros">Outros</option>`);
   }
 }
 
 function loadFieldOpSelects() {
   $('fDate').value = today();
+  
+  const sSel = $('fSector');
+  if(sSel) {
+    sSel.innerHTML = '<option value="">— Selecionar Setor —</option>' + sectors.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+  }
   
   const pSel = $('fParcela');
   const vSel = $('fVariety');

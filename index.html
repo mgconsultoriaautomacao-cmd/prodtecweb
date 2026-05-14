@@ -266,6 +266,30 @@
   .pbi-gauge-bg { height: 12px; width: 100%; background: rgba(255,255,255,.05); border-radius: 100px; overflow: hidden; position: relative; margin: 10px 0; }
   .pbi-gauge-fill { height: 100%; border-radius: 100px; transition: width 1s ease-out; background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%); }
   .kpi-value-pbi { font-size: 24px; font-weight: 900; letter-spacing: -1px; }
+
+  /* CRUD CARD LIST */
+  .card-list-item { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:10px; margin-bottom:6px; transition:all .15s; }
+  .card-list-item:hover { border-color:var(--blue); background:rgba(59,130,246,.04); }
+  .card-list-item .item-info { flex:1; min-width:0; }
+  .card-list-item .item-name { font-weight:700; font-size:13px; }
+  .card-list-item .item-meta { font-size:10px; color:var(--muted); margin-top:2px; display:flex; gap:8px; flex-wrap:wrap; }
+  .card-list-item .item-meta .pill { padding:2px 8px; border-radius:6px; font-size:9px; font-weight:700; }
+  .card-list-item .item-actions { display:flex; gap:4px; flex-shrink:0; }
+  .card-list-item .item-actions button { padding:4px 8px; font-size:11px; border-radius:6px; }
+  .grid3 { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px; margin-bottom:24px; }
+
+  /* IDLE BAR */
+  .idle-bar { height:6px; border-radius:3px; background:rgba(255,255,255,.05); overflow:hidden; margin:4px 0; }
+  .idle-bar .fill { height:100%; border-radius:3px; transition:width .8s ease; }
+  .idle-bar .fill.good { background:var(--green); }
+  .idle-bar .fill.warn { background:var(--yellow); }
+  .idle-bar .fill.bad { background:var(--red); }
+
+  /* PRODUCTION LOG */
+  .prod-log-entry { display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid var(--border); font-size:12px; }
+  .prod-log-entry .time { color:var(--blue); font-weight:700; font-family:monospace; min-width:50px; }
+  .prod-log-entry .gap-warn { color:var(--yellow); font-size:10px; font-weight:700; }
+  .prod-log-entry .gap-danger { color:var(--red); font-size:10px; font-weight:700; }
   </style>
 </head>
 <body>
@@ -315,6 +339,7 @@
   <div class="nav" onclick="showTab('weights',this)"><span class="nav-icon">📦</span> Tipos de Peso</div>
   <div class="nav" onclick="showTab('stops',this)"><span class="nav-icon">🛑</span> Registro de Paradas</div>
   <div class="nav" onclick="showTab('trace',this)"><span class="nav-icon">🌿</span> Rastreabilidade</div>
+  <div class="nav" onclick="showTab('registers',this)"><span class="nav-icon">📁</span> Cadastros Gerais</div>
 
   <div id="adminGroup" style="display:none">
     <div class="nav-group">Administração Master</div>
@@ -399,25 +424,10 @@
       <div style="margin-bottom:12px"><label class="flabel">Barcode</label><input id="editEmpBarcode"/></div>
       <div style="margin-bottom:12px"><label class="flabel">Nome</label><input id="editEmpName"/></div>
       <div style="margin-bottom:12px"><label class="flabel">Função</label>
-        <select id="editEmpRole">
-          <option value="EMBALADOR">Embalador(a)</option>
-          <option value="EMPILHADOR">Empilhador(a)</option>
-          <option value="COLHEDOR">Colhedor(a)</option>
-          <option value="TRATORISTA">Tratorista</option>
-          <option value="SUPERVISOR">Supervisor(a)</option>
-        </select>
+        <select id="editEmpRole"></select>
       </div>
       <div style="margin-bottom:12px"><label class="flabel">Setor</label>
-        <select id="editEmpSector">
-          <option value="ESTUFA">Estufa</option>
-          <option value="CAPINA">Capina</option>
-          <option value="COLHEITA">Colheita</option>
-          <option value="PACKING">Packing House</option>
-          <option value="PLANTIO">Plantio</option>
-          <option value="SERVICOS_GERAIS">Serviços Gerais</option>
-          <option value="LIMPEZA">Limpeza</option>
-          <option value="MANUTENCAO">Manutenção</option>
-        </select>
+        <select id="editEmpSector"></select>
       </div>
       <div style="margin-bottom:12px"><label class="flabel">WhatsApp</label><input id="editEmpWhatsapp" placeholder="55..."/></div>
       <div style="margin-bottom:20px">
@@ -882,6 +892,91 @@
   </div>
 
   <!-- ═══ RASTREABILIDADE ═══ -->
+  <!-- ═══ CADASTROS GERAIS ═══ -->
+  <div id="tab-registers" class="tab">
+    <h1 class="ptitle">📁 Cadastros Operacionais</h1>
+    <p style="color:var(--muted); font-size:12px; margin-bottom:20px">Personalize setores, funções, carrocões, máquinas e operações da sua fazenda. Cada item é customizável por empresa.</p>
+    
+    <div class="grid3">
+      <!-- SETORES -->
+      <div class="card">
+        <div class="title">🏢 Setores</div>
+        <div style="display:flex; gap:8px; margin-bottom:12px">
+          <input id="regSectorName" placeholder="Novo Setor (ex: Estufa)"/>
+          <button onclick="addSector()">+</button>
+        </div>
+        <div id="regSectorList" class="card-list" style="max-height:300px; overflow-y:auto"></div>
+      </div>
+
+      <!-- FUNÇÕES (ROLES) com meta e valor -->
+      <div class="card">
+        <div class="title">👥 Funções / Cargos</div>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px">
+          <select id="regRoleSector"><option value="">— Vincular a Setor (Opcional) —</option></select>
+          <div style="display:flex; gap:8px">
+            <input id="regRoleName" placeholder="Nova Função (ex: Embalador)" style="flex:1"/>
+            <button onclick="addRole()">+</button>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px">
+            <input id="regRoleTarget" type="number" step="1" placeholder="Meta/hora (cx)" style="font-size:11px; padding:8px"/>
+            <input id="regRoleValue" type="number" step="0.01" placeholder="R$/unidade" style="font-size:11px; padding:8px"/>
+          </div>
+        </div>
+        <div id="regRoleList" class="card-list" style="max-height:300px; overflow-y:auto"></div>
+      </div>
+
+      <!-- CARROCÕES com capacidade -->
+      <div class="card">
+        <div class="title">🚜 Carrocões</div>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px">
+          <div style="display:flex; gap:8px">
+            <input id="regCarriageCode" placeholder="Código (ex: ABJ23)" style="flex:1; text-transform:uppercase"/>
+            <button onclick="addCarriage()">+</button>
+          </div>
+          <div style="display:grid; grid-template-columns:2fr 1fr; gap:6px">
+            <input id="regCarriageName" placeholder="Descrição (opcional)"/>
+            <input id="regCarriageCap" type="number" step="1" placeholder="Cap. (kg)" style="font-size:11px; padding:8px"/>
+          </div>
+        </div>
+        <div id="regCarriageList" class="card-list" style="max-height:300px; overflow-y:auto"></div>
+      </div>
+
+      <!-- MÁQUINAS (NOVO) -->
+      <div class="card">
+        <div class="title">⚙️ Máquinas</div>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px">
+          <div style="display:flex; gap:8px">
+            <input id="regMachineCode" placeholder="Código (ex: COL-01)" style="flex:1; text-transform:uppercase"/>
+            <button onclick="addMachine()">+</button>
+          </div>
+          <div style="display:grid; grid-template-columns:2fr 1fr; gap:6px">
+            <input id="regMachineName" placeholder="Nome/Descrição"/>
+            <select id="regMachineType" style="font-size:11px; padding:8px">
+              <option value="COLHEITADEIRA">Colheitadeira</option>
+              <option value="TRATOR">Trator</option>
+              <option value="PULVERIZADOR">Pulverizador</option>
+              <option value="OUTRO">Outro</option>
+            </select>
+          </div>
+        </div>
+        <div id="regMachineList" class="card-list" style="max-height:300px; overflow-y:auto"></div>
+      </div>
+
+      <!-- OPERAÇÕES / SERVIÇOS -->
+      <div class="card">
+        <div class="title">🌱 Operações / Serviços de Campo</div>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px">
+          <select id="regOpSector"><option value="">— Vincular a Setor (Opcional) —</option></select>
+          <div style="display:flex; gap:8px">
+            <input id="regOpName" placeholder="Novo Serviço (ex: Capina Manual)" style="flex:1"/>
+            <button onclick="addOperation()">+</button>
+          </div>
+        </div>
+        <div id="regOpList" class="card-list" style="max-height:300px; overflow-y:auto"></div>
+      </div>
+    </div>
+  </div>
+
   <div id="tab-trace" class="tab">
     <h1 class="ptitle">🌿 Rastreabilidade</h1>
     <div class="grid3">
@@ -1030,6 +1125,16 @@
             <div><label class="flabel">Penalidade p/ Falta (R$)</label><input type="number" id="cfgAttendancePenalty" step="0.01" placeholder="Ex: 25.00"/></div>
             <div><label class="flabel">Desc. Prod. p/ Falta (%)</label><input type="number" id="cfgProdPenaltyPercent" step="0.1" placeholder="Ex: 5.0"/></div>
           </div>
+        </div>
+      </div>
+      <div class="card" style="border-left:3px solid var(--yellow)">
+        <div class="title">🕐 Carga Horária</div>
+        <p style="font-size:11px; color:var(--muted); margin-bottom:12px">Configure o expediente e intervalo de almoço. Scans fora do horário não contam como ociosidade.</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px">
+          <div><label class="flabel">Início Expediente</label><input type="time" id="cfgWorkStart" value="07:00"/></div>
+          <div><label class="flabel">Fim Expediente</label><input type="time" id="cfgWorkEnd" value="17:00"/></div>
+          <div><label class="flabel">Almoço Início</label><input type="time" id="cfgLunchStart" value="11:30"/></div>
+          <div><label class="flabel">Almoço Fim</label><input type="time" id="cfgLunchEnd" value="13:00"/></div>
         </div>
       </div>
       <div class="card">
@@ -1254,13 +1359,210 @@ function showTab(n,el){
     users_mgmt:loadAdminData, settings:loadSettings,
     finance:refreshFin, ranking:refreshRanking, quality:refreshQuality,
     mass:refreshMass, bulk:loadBulk, finalize:loadManagers, romaneio:loadRomaneios,
-    trace:()=>{loadFruits();loadVarieties();loadParcels();loadLinks();}
+    trace:()=>{loadFruits();loadVarieties();loadParcels();loadLinks();},
+    registers:loadRegisters
   };
   if(fns[n]) fns[n]();
 }
 
+async function loadRegisters() {
+  await Promise.all([loadSectors(), loadRoles(), loadCarriages(), loadOperations()]);
+}
+
+async function loadSectors() {
+  const {data} = await sb.from('sectors').select('*').eq('tenant_id', tenantId).order('name');
+  window._sectors = data || [];
+  if(data) {
+    $('regSectorList').innerHTML = data.map(s => `<div class="card-list-item">
+      <div class="item-info"><div class="item-name">${s.name}</div></div>
+      <div class="item-actions">
+        <button class="danger" onclick="delSector('${s.id}')">×</button>
+      </div>
+    </div>`).join('') || '<div style="padding:12px;color:var(--muted);font-size:12px;text-align:center">Nenhum setor cadastrado</div>';
+    const selects = ['regRoleSector', 'regOpSector', 'editEmpSector'];
+    selects.forEach(sid => {
+      const el = $(sid);
+      if(el) {
+        const val = el.value;
+        el.innerHTML = '<option value="">— Selecionar Setor —</option>' + data.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+        el.value = val;
+      }
+    });
+  }
+}
+
+async function loadRoles() {
+  const {data} = await sb.from('roles').select('*, sectors(name)').eq('tenant_id', tenantId).order('name');
+  window._roles = data || [];
+  if(data) {
+    $('regRoleList').innerHTML = data.map(r => `<div class="card-list-item">
+      <div class="item-info">
+        <div class="item-name">${r.icon || '👤'} ${r.name}</div>
+        <div class="item-meta">
+          <span class="pill" style="background:rgba(59,130,246,.12);color:var(--blue)">${r.sectors?.name || 'Geral'}</span>
+          ${r.target_per_hour ? `<span class="pill" style="background:rgba(16,185,129,.12);color:var(--green)">Meta: ${r.target_per_hour} cx/h</span>` : '<span class="pill" style="background:rgba(255,255,255,.06);color:var(--muted)">Sem meta</span>'}
+          ${r.value_per_unit ? `<span class="pill" style="background:rgba(245,158,11,.12);color:var(--yellow)">R$ ${Number(r.value_per_unit).toFixed(2)}/un</span>` : ''}
+        </div>
+      </div>
+      <div class="item-actions">
+        <button class="sec" onclick="editRoleInline('${r.id}')">✏️</button>
+        <button class="danger" onclick="delRole('${r.id}')">×</button>
+      </div>
+    </div>`).join('') || '<div style="padding:12px;color:var(--muted);font-size:12px;text-align:center">Nenhuma função cadastrada</div>';
+    if($('editEmpRole')) {
+       const val = $('editEmpRole').value;
+       $('editEmpRole').innerHTML = data.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+       $('editEmpRole').value = val;
+    }
+    // Populate role filters in ranking and finance
+    ['rankRole', 'finRole'].forEach(sid => {
+       const el = $(sid); if(!el) return;
+       const val = el.value;
+       el.innerHTML = '<option value="">Todos</option>' + data.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+       el.value = val;
+    });
+  }
+}
+
+async function loadCarriages() {
+  const {data} = await sb.from('carriages').select('*').eq('tenant_id', tenantId).order('code');
+  window._carriages = data || [];
+  if(data) {
+    $('regCarriageList').innerHTML = data.map(c => `<div class="card-list-item">
+      <div class="item-info">
+        <div class="item-name">🚜 <code style="background:rgba(255,255,255,.08);padding:2px 8px;border-radius:5px;font-weight:900;letter-spacing:1px">${c.code}</code></div>
+        <div class="item-meta">
+          ${c.name ? `<span>${c.name}</span>` : ''}
+          <span class="pill" style="background:rgba(249,115,22,.12);color:var(--orange)">${c.capacity_kg || 300} kg</span>
+          <span class="pill" style="background:${c.active !== false ? 'rgba(16,185,129,.12);color:var(--green)' : 'rgba(239,68,68,.12);color:var(--red)'}">${c.active !== false ? 'Ativo' : 'Inativo'}</span>
+        </div>
+      </div>
+      <div class="item-actions">
+        <button class="danger" onclick="delCarriage('${c.id}')">×</button>
+      </div>
+    </div>`).join('') || '<div style="padding:12px;color:var(--muted);font-size:12px;text-align:center">Nenhum carrocão cadastrado</div>';
+  }
+}
+
+async function loadMachines() {
+  const {data} = await sb.from('machines').select('*').eq('tenant_id', tenantId).order('code');
+  window._machines = data || [];
+  const el = $('regMachineList');
+  if(el && data) {
+    el.innerHTML = data.map(m => `<div class="card-list-item">
+      <div class="item-info">
+        <div class="item-name">⚙️ <code style="background:rgba(255,255,255,.08);padding:2px 8px;border-radius:5px;font-weight:900">${m.code}</code> ${m.name || ''}</div>
+        <div class="item-meta">
+          <span class="pill" style="background:rgba(59,130,246,.12);color:var(--blue)">${m.type || 'OUTRO'}</span>
+          <span class="pill" style="background:${m.status==='ATIVO' ? 'rgba(16,185,129,.12);color:var(--green)' : m.status==='MANUTENCAO' ? 'rgba(245,158,11,.12);color:var(--yellow)' : 'rgba(239,68,68,.12);color:var(--red)'}">${m.status || 'ATIVO'}</span>
+        </div>
+      </div>
+      <div class="item-actions">
+        <button class="danger" onclick="delMachine('${m.id}')">×</button>
+      </div>
+    </div>`).join('') || '<div style="padding:12px;color:var(--muted);font-size:12px;text-align:center">Nenhuma máquina cadastrada</div>';
+  }
+}
+
+async function loadOperations() {
+  const {data} = await sb.from('operations').select('*, sectors(name)').eq('tenant_id', tenantId).order('name');
+  window._operations = data || [];
+  if(data) {
+    $('regOpList').innerHTML = data.map(o => `<div class="card-list-item">
+      <div class="item-info">
+        <div class="item-name">${o.name}</div>
+        <div class="item-meta"><span class="pill" style="background:rgba(59,130,246,.12);color:var(--blue)">${o.sectors?.name || 'Geral'}</span></div>
+      </div>
+      <div class="item-actions">
+        <button class="danger" onclick="delOperation('${o.id}')">×</button>
+      </div>
+    </div>`).join('') || '<div style="padding:12px;color:var(--muted);font-size:12px;text-align:center">Nenhuma operação cadastrada</div>';
+  }
+}
+
+async function addSector() {
+  const name = $('regSectorName').value.trim();
+  if(!name) return;
+  const {error} = await sb.from('sectors').insert([{name, tenant_id: tenantId}]);
+  if(error) alert(error.message); else { $('regSectorName').value = ''; loadSectors(); }
+}
+
+async function addRole() {
+  const name = $('regRoleName').value.trim();
+  const sectorName = $('regRoleSector').value;
+  const target = parseFloat($('regRoleTarget')?.value) || null;
+  const value = parseFloat($('regRoleValue')?.value) || null;
+  let sector_id = null;
+  if(sectorName) {
+    const res = await sb.from('sectors').select('id').eq('tenant_id', tenantId).eq('name', sectorName).single();
+    sector_id = res.data?.id || null;
+  }
+  if(!name) return;
+  const {error} = await sb.from('roles').insert([{name, sector_id, target_per_hour: target, value_per_unit: value, tenant_id: tenantId}]);
+  if(error) alert(error.message); else { $('regRoleName').value = ''; $('regRoleTarget').value = ''; $('regRoleValue').value = ''; loadRoles(); }
+}
+
+async function editRoleInline(id) {
+  const role = (window._roles || []).find(r => r.id === id);
+  if(!role) return;
+  const newTarget = prompt('Meta por hora (cx/h):', role.target_per_hour || '');
+  if(newTarget === null) return;
+  const newValue = prompt('Valor por unidade (R$):', role.value_per_unit || '');
+  if(newValue === null) return;
+  const payload = { target_per_hour: parseFloat(newTarget) || null, value_per_unit: parseFloat(newValue) || null };
+  const {error} = await sb.from('roles').update(payload).eq('id', id);
+  if(error) alert(error.message); else loadRoles();
+}
+
+async function addCarriage() {
+  const code = $('regCarriageCode').value.trim().toUpperCase();
+  const name = $('regCarriageName').value.trim();
+  const capacity_kg = parseFloat($('regCarriageCap')?.value) || 300;
+  if(!code) return;
+  const {error} = await sb.from('carriages').insert([{code, name, capacity_kg, tenant_id: tenantId}]);
+  if(error) alert(error.message); else { $('regCarriageCode').value = ''; $('regCarriageName').value = ''; $('regCarriageCap').value = ''; loadCarriages(); }
+}
+
+async function addMachine() {
+  const code = $('regMachineCode').value.trim().toUpperCase();
+  const name = $('regMachineName').value.trim();
+  const type = $('regMachineType').value;
+  if(!code) return;
+  const {error} = await sb.from('machines').insert([{code, name, type, tenant_id: tenantId}]);
+  if(error) alert(error.message); else { $('regMachineCode').value = ''; $('regMachineName').value = ''; loadMachines(); }
+}
+
+async function addOperation() {
+  const name = $('regOpName').value.trim();
+  const sectorName = $('regOpSector').value;
+  let sector_id = null;
+  if(sectorName) {
+    const res = await sb.from('sectors').select('id').eq('tenant_id', tenantId).eq('name', sectorName).single();
+    sector_id = res.data?.id || null;
+  }
+  if(!name) return;
+  const {error} = await sb.from('operations').insert([{name, sector_id, tenant_id: tenantId}]);
+  if(error) alert(error.message); else { $('regOpName').value = ''; loadOperations(); }
+}
+
+async function delSector(id) { if(confirm('Excluir este setor?')) { await sb.from('sectors').delete().eq('id', id); loadSectors(); } }
+async function delRole(id) { if(confirm('Excluir esta função?')) { await sb.from('roles').delete().eq('id', id); loadRoles(); } }
+async function delCarriage(id) { if(confirm('Excluir este carrocão?')) { await sb.from('carriages').delete().eq('id', id); loadCarriages(); } }
+async function delMachine(id) { if(confirm('Excluir esta máquina?')) { await sb.from('machines').delete().eq('id', id); loadMachines(); } }
+async function delOperation(id) { if(confirm('Excluir esta operação?')) { await sb.from('operations').delete().eq('id', id); loadOperations(); } }
+
+// Helper: get role config for a given role name
+function getRoleConfig(roleName) {
+  const r = (window._roles || []).find(x => x.name === roleName);
+  return {
+    target: r?.target_per_hour || tenantConfig.target_per_hour_packer || 150,
+    value: r?.value_per_unit || tenantConfig.value_per_box_packer || 0.50
+  };
+}
+
 async function loadEmps(){
   try {
+    await Promise.all([loadSectors(), loadRoles(), loadCarriages(), loadMachines()]);
     const {data, error}=await sb.from('employees').select('*').eq('tenant_id',tenantId).order('name');
     if(error) throw error;
     _employees = data || []; 
@@ -1359,12 +1661,11 @@ async function refreshFin(){
 
     if(!eb[displayName]) eb[displayName]={boxes:0,val:0,role:x.role, barcode: x.employee_barcode, fieldVal:0, fieldOps:0};
     
-    const valPacker = Number(tenantConfig.value_per_box_packer || 0.50);
-    const valStacker = Number(tenantConfig.value_per_box_stacker || 0.15);
+    // Use role-based value from roles table, fallback to tenant config
+    const roleVal = getRoleConfig(x.role || emp?.role || 'EMBALADOR');
     
     eb[displayName].boxes++;
-    const isPacker = (x.role === 'PACKER' || x.role === 'EMBALADOR' || x.role === 'PACKING');
-    eb[displayName].val += (isPacker ? valPacker : valStacker);
+    eb[displayName].val += roleVal.value;
   });
   
   // Inclui Apontamentos de Campo
@@ -2188,15 +2489,16 @@ async function openEmpDrawer(idOrName) {
     const start = $('dashStart').value;
     const end = $('dashEnd').value + 'T23:59:59Z';
 
-    const [qAudits, qAbs, qHourly] = await Promise.all([
+    const [qAudits, qAbs, qScans] = await Promise.all([
         sb.from('quality_audits').select('id').eq('tenant_id', tenantId).eq('employee_barcode', emp.barcode).gte('ts', start).lte('ts', end),
         sb.from('employee_absences').select('*').eq('tenant_id', tenantId).eq('employee_barcode', emp.barcode).gte('date', start.split('T')[0]).lte('date', end.split('T')[0]),
-        sb.from('production_scans').select('ts').eq('tenant_id', tenantId).eq('employee_name', emp.name).gte('ts', start).lte('ts', end)
+        sb.from('production_scans').select('ts, weight_kg, role').eq('tenant_id', tenantId).eq('employee_name', emp.name).gte('ts', start).lte('ts', end).order('ts', {ascending: true})
     ]);
 
     const qualityCount = qAudits.data?.length || 0;
     const absencesCount = qAbs.data?.length || 0;
-    const scanTimestamps = (qHourly.data || []).map(s => new Date(s.ts).getTime());
+    const allScans = qScans.data || [];
+    const scanTimestamps = allScans.map(s => new Date(s.ts).getTime());
 
     const hourlyData = new Array(24).fill(0);
     scanTimestamps.forEach(ts => {
@@ -2222,42 +2524,84 @@ async function openEmpDrawer(idOrName) {
         : emp.name[0];
 
 
-    if (stats) {
+    const totalBoxes = stats?.boxes || allScans.length;
+    if (totalBoxes > 0 || stats) {
+        const roleConfig = getRoleConfig(emp.role);
+        const prodTarget = roleConfig.target;
+        const valuePerUnit = roleConfig.value;
 
-        const baseBonus = parseFloat($('cfgAttendanceBonus').value || 0);
+        const baseBonus = parseFloat($('cfgAttendanceBonus')?.value || tenantConfig.attendance_bonus || 0);
         const bonusEarned = (absencesCount === 0) ? baseBonus : 0;
-        const cfgPacker = parseFloat($('cfgTargetPacker')?.value || 150);
-        const cfgStacker = parseFloat($('cfgTargetStacker')?.value || 300);
-        const cfgHarvester = 500;
+        const prodScore = Math.min(100, Math.round((totalBoxes / prodTarget) * 100));
+        const idleDetails = calculateIdleDetails(allScans, window._currentStops || []);
+        const stabClass = idleDetails.totalMinutes < 30 ? 'good' : idleDetails.totalMinutes < 60 ? 'warn' : 'bad';
+        const valueEarned = totalBoxes * valuePerUnit;
 
-        let prodTarget = cfgPacker;
-        if (emp.role === 'EMPILHADOR') prodTarget = cfgStacker;
-        if (emp.role === 'COLHEDOR') prodTarget = cfgHarvester;
+        // Work hours calc
+        const [wsH,wsM] = (tenantConfig.work_start_time||'07:00').split(':').map(Number);
+        const [weH,weM] = (tenantConfig.work_end_time||'17:00').split(':').map(Number);
+        const [lsH,lsM] = (tenantConfig.lunch_start_time||'11:30').split(':').map(Number);
+        const [leH,leM] = (tenantConfig.lunch_end_time||'13:00').split(':').map(Number);
+        const totalWorkMin = (weH*60+weM)-(wsH*60+wsM)-((leH*60+leM)-(lsH*60+lsM));
+        let activeMin = 0;
+        if(allScans.length>=2){ const f=new Date(allScans[0].ts),l=new Date(allScans[allScans.length-1].ts); activeMin=Math.round((l-f)/60000)-Math.round(getLunchOverlap(f,l)/60); }
+        const workPct = totalWorkMin>0?Math.min(100,Math.round((activeMin/totalWorkMin)*100)):0;
 
-        const prodScore = Math.min(100, Math.round((stats.boxes / prodTarget) * 100));
-        const stabilityScore = stats.boxes > 0 ? Math.max(40, 100 - (stats.idleTime / 10)) : 100;
+        // Idle gaps HTML
+        let gapsHtml = '';
+        if(idleDetails.gaps.length>0){
+          gapsHtml=`<div class="pbi-card" style="margin-bottom:16px;padding:15px"><div class="klabel" style="margin-bottom:8px">⏸ Períodos de Inatividade (${idleDetails.gaps.length})</div><div style="max-height:120px;overflow-y:auto">${idleDetails.gaps.slice(0,8).map(g=>{
+            const fr=new Date(g.from).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+            const to=new Date(g.to).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+            const c=g.minutes>30?'var(--red)':g.minutes>15?'var(--yellow)':'var(--muted)';
+            return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px"><span style="font-family:monospace">${fr} → ${to}</span><span style="font-weight:800;color:${c}">${g.minutes} min</span></div>`;
+          }).join('')}</div></div>`;
+        }
+
+        // Production log (last 15)
+        const recent=allScans.slice(-15).reverse();
+        let logHtml='';
+        if(recent.length>0){
+          logHtml=`<div class="pbi-card" style="margin-bottom:16px;padding:15px"><div class="klabel" style="margin-bottom:8px">📋 Log de Produção (últimos ${Math.min(15,allScans.length)})</div><div style="max-height:140px;overflow-y:auto">${recent.map((s,i)=>{
+            const t=new Date(s.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+            return `<div class="prod-log-entry"><span class="time">${t}</span><span style="flex:1;color:var(--muted)">${s.weight_kg?s.weight_kg+' kg':''}</span><span style="color:var(--muted);font-size:10px">#${allScans.length-i}</span></div>`;
+          }).join('')}</div></div>`;
+        }
 
         document.getElementById('drTotals').innerHTML = `
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px">
                 <div class="pbi-card" style="padding:15px">
                     <div class="klabel" style="font-size:9px">Produção Líquida</div>
-                    <div class="kpi-value-pbi" style="font-size:20px">${Math.round(stats.boxes)} <span style="font-size:10px">cx</span></div>
-                    <div style="font-size:9px; color:${prodScore > 90 ? 'var(--green)' : 'var(--yellow)'}">${prodScore}% da Meta</div>
+                    <div class="kpi-value-pbi" style="font-size:20px">${Math.round(totalBoxes)} <span style="font-size:10px">cx</span></div>
+                    <div style="font-size:9px; color:${prodScore>90?'var(--green)':prodScore>60?'var(--yellow)':'var(--red)'}">${prodScore}% da Meta (${prodTarget} cx)</div>
                 </div>
                 <div class="pbi-card" style="padding:15px">
-                    <div class="klabel" style="font-size:9px">Estabilidade</div>
-                    <div class="kpi-value-pbi" style="font-size:20px; color:var(--blue)">${stabilityScore}%</div>
-                    <div style="font-size:9px; color:var(--muted)">Fluxo de Esteira</div>
+                    <div class="klabel" style="font-size:9px">Valor Produzido</div>
+                    <div class="kpi-value-pbi" style="font-size:20px; color:var(--green)">R$ ${valueEarned.toFixed(2)}</div>
+                    <div style="font-size:9px; color:var(--muted)">R$ ${valuePerUnit.toFixed(2)}/cx</div>
                 </div>
             </div>
-
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px">
+                <div class="pbi-card" style="padding:10px;text-align:center">
+                    <div class="klabel" style="font-size:8px">Ociosidade</div>
+                    <div style="font-weight:900;font-size:16px;color:${stabClass==='good'?'var(--green)':stabClass==='warn'?'var(--yellow)':'var(--red)'}">${idleDetails.totalMinutes} min</div>
+                    <div class="idle-bar"><div class="fill ${stabClass}" style="width:${Math.min(100,idleDetails.totalMinutes)}%"></div></div>
+                </div>
+                <div class="pbi-card" style="padding:10px;text-align:center">
+                    <div class="klabel" style="font-size:8px">Gap Médio</div>
+                    <div style="font-weight:900;font-size:16px;color:var(--blue)">${idleDetails.avgGapMinutes} min</div>
+                    <div style="font-size:8px;color:var(--muted)">${idleDetails.gaps.length} pausas</div>
+                </div>
+                <div class="pbi-card" style="padding:10px;text-align:center">
+                    <div class="klabel" style="font-size:8px">Jornada</div>
+                    <div style="font-weight:900;font-size:16px;color:var(--blue)">${workPct}%</div>
+                    <div style="font-size:8px;color:var(--muted)">${activeMin}/${totalWorkMin} min</div>
+                </div>
+            </div>
             <div class="pbi-card" style="margin-bottom:16px; padding:15px; overflow:hidden">
                 <div class="klabel" style="margin-bottom:10px">Cadência (Caixas/Hora)</div>
-                <div style="width:100%; height:140px">
-                    <canvas id="drHourlyChart"></canvas>
-                </div>
+                <div style="width:100%; height:140px"><canvas id="drHourlyChart"></canvas></div>
             </div>
-
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px">
                 <div class="pbi-card" style="border-left:4px solid ${absencesCount > 0 ? 'var(--red)' : 'var(--green)'}; padding:15px">
                     <div class="klabel" style="font-size:9px">Assiduidade</div>
@@ -2267,9 +2611,11 @@ async function openEmpDrawer(idOrName) {
                 <div class="pbi-card" style="border-left:4px solid var(--yellow); padding:15px">
                     <div class="klabel" style="font-size:9px">Qualidade</div>
                     <div style="font-weight:800; font-size:14px; color:var(--yellow)">${qualityCount} erros</div>
-                    <div style="font-size:9px; color:var(--muted)">Taxa: ${((qualityCount / (stats.boxes || 1)) * 100).toFixed(1)}%</div>
+                    <div style="font-size:9px; color:var(--muted)">Taxa: ${((qualityCount / (totalBoxes || 1)) * 100).toFixed(1)}%</div>
                 </div>
             </div>
+            ${gapsHtml}
+            ${logHtml}
         `;
 
 
@@ -2306,6 +2652,32 @@ async function openEmpDrawer(idOrName) {
     d.classList.add('active');
 }
 
+function isInLunchBreak(timestamp) {
+  const lunchStart = tenantConfig.lunch_start_time || '11:30';
+  const lunchEnd = tenantConfig.lunch_end_time || '13:00';
+  const d = new Date(timestamp);
+  const hhmm = d.getHours() * 60 + d.getMinutes();
+  const [lsH, lsM] = lunchStart.split(':').map(Number);
+  const [leH, leM] = lunchEnd.split(':').map(Number);
+  return hhmm >= (lsH * 60 + lsM) && hhmm <= (leH * 60 + leM);
+}
+
+function getLunchOverlap(start, end) {
+  const lunchStart = tenantConfig.lunch_start_time || '11:30';
+  const lunchEnd = tenantConfig.lunch_end_time || '13:00';
+  const [lsH, lsM] = lunchStart.split(':').map(Number);
+  const [leH, leM] = lunchEnd.split(':').map(Number);
+  
+  const day = new Date(start);
+  const lunchStartMs = new Date(day.getFullYear(), day.getMonth(), day.getDate(), lsH, lsM).getTime();
+  const lunchEndMs = new Date(day.getFullYear(), day.getMonth(), day.getDate(), leH, leM).getTime();
+  
+  const overlapStart = Math.max(start.getTime(), lunchStartMs);
+  const overlapEnd = Math.min(end.getTime(), lunchEndMs);
+  
+  return overlapEnd > overlapStart ? (overlapEnd - overlapStart) / 1000 : 0;
+}
+
 function calculateIdleTime(scans, globalStops = []) {
   if (scans.length < 2) return 0;
   const sorted = [...scans].sort((a,b) => new Date(a.ts) - new Date(b.ts));
@@ -2318,27 +2690,66 @@ function calculateIdleTime(scans, globalStops = []) {
     const diff = (end - start) / 1000;
     
     if (diff > thresholdSeconds && diff < 3600 * 4) {
-       // Calcular sobreposição com paradas globais
+       // Subtrair sobreposição com paradas globais
        let overlapSeconds = 0;
        (globalStops || []).forEach(gs => {
           const gsStart = new Date(gs.start_ts);
           const gsEnd = gs.end_ts ? new Date(gs.end_ts) : new Date();
-          
           const intersectStart = Math.max(start.getTime(), gsStart.getTime());
           const intersectEnd = Math.min(end.getTime(), gsEnd.getTime());
-          
-          if (intersectEnd > intersectStart) {
-            overlapSeconds += (intersectEnd - intersectStart) / 1000;
-          }
+          if (intersectEnd > intersectStart) overlapSeconds += (intersectEnd - intersectStart) / 1000;
        });
        
-       const effectiveIdle = diff - overlapSeconds;
+       // Subtrair sobreposição com almoço
+       const lunchOverlap = getLunchOverlap(start, end);
+       
+       const effectiveIdle = diff - overlapSeconds - lunchOverlap;
        if (effectiveIdle > thresholdSeconds) {
           totalIdleSeconds += (effectiveIdle - thresholdSeconds);
        }
     }
   }
   return Math.round(totalIdleSeconds / 60);
+}
+
+// Detailed idle breakdown for employee dossier
+function calculateIdleDetails(scans, globalStops = []) {
+  const gaps = [];
+  if (scans.length < 2) return { totalMinutes: 0, gaps, avgGapMinutes: 0 };
+  const sorted = [...scans].sort((a,b) => new Date(a.ts) - new Date(b.ts));
+  const thresholdSeconds = 600;
+  
+  for (let i = 1; i < sorted.length; i++) {
+    const start = new Date(sorted[i-1].ts);
+    const end = new Date(sorted[i].ts);
+    const diff = (end - start) / 1000;
+    
+    if (diff > thresholdSeconds && diff < 3600 * 4) {
+      const lunchOverlap = getLunchOverlap(start, end);
+      let stopOverlap = 0;
+      (globalStops || []).forEach(gs => {
+        const gsStart = new Date(gs.start_ts);
+        const gsEnd = gs.end_ts ? new Date(gs.end_ts) : new Date();
+        const is = Math.max(start.getTime(), gsStart.getTime());
+        const ie = Math.min(end.getTime(), gsEnd.getTime());
+        if (ie > is) stopOverlap += (ie - is) / 1000;
+      });
+      
+      const effectiveSeconds = diff - lunchOverlap - stopOverlap;
+      if (effectiveSeconds > thresholdSeconds) {
+        gaps.push({
+          from: sorted[i-1].ts,
+          to: sorted[i].ts,
+          minutes: Math.round(effectiveSeconds / 60),
+          isLunch: lunchOverlap > diff * 0.5
+        });
+      }
+    }
+  }
+  
+  const totalMinutes = gaps.reduce((a, g) => a + g.minutes, 0);
+  const avgGapMinutes = gaps.length ? Math.round(totalMinutes / gaps.length) : 0;
+  return { totalMinutes, gaps, avgGapMinutes };
 }
 
 async function loadStops() {
@@ -3269,6 +3680,11 @@ async function loadSettings(){
   $('cfgProdPenaltyPercent').value=data.prod_penalty_percent||'0';
   $('cfgWaTemplateEmp').value=data.wa_template_employee||'📦 *Produção do dia — {nome}*\n📅 {data} | *Empresa*\n\n✅ Caixas produzidas: *{caixas} cx*\n⚖️ Total pesado: *{peso} kg*\n🏆 Posição no ranking: *{ranking}*\n\n_Sistema Prodtech — Obrigado pelo trabalho de hoje!_ 🌟';
   $('cfgWaTemplateMgr').value=data.wa_template_manager||'📊 *Relatório Diário de Produção*\n📅 {data}\n\n{detalhes}\n\n🚀 *Total Geral: {total_caixas} cx | {total_peso} kg*';
+  // Work Hours
+  if($('cfgWorkStart')) $('cfgWorkStart').value=data.work_start_time||'07:00';
+  if($('cfgWorkEnd')) $('cfgWorkEnd').value=data.work_end_time||'17:00';
+  if($('cfgLunchStart')) $('cfgLunchStart').value=data.lunch_start_time||'11:30';
+  if($('cfgLunchEnd')) $('cfgLunchEnd').value=data.lunch_end_time||'13:00';
 
   const {data:users}=await sb.from('tenant_users').select('role,whatsapp').eq('tenant_id',tenantId);
   $('usersTable').querySelector('tbody').innerHTML=(users||[]).map(u=>`<tr><td><span class="badge packer">${u.role}</span></td><td>${u.whatsapp||'—'}</td></tr>`).join('');
@@ -3294,7 +3710,11 @@ async function saveSettings(){
     attendance_penalty:parseFloat($('cfgAttendancePenalty').value)||0,
     prod_penalty_percent:parseFloat($('cfgProdPenaltyPercent').value)||0,
     wa_template_employee:$('cfgWaTemplateEmp').value.trim()||null,
-    wa_template_manager:$('cfgWaTemplateMgr').value.trim()||null
+    wa_template_manager:$('cfgWaTemplateMgr').value.trim()||null,
+    work_start_time:$('cfgWorkStart')?.value||'07:00',
+    work_end_time:$('cfgWorkEnd')?.value||'17:00',
+    lunch_start_time:$('cfgLunchStart')?.value||'11:30',
+    lunch_end_time:$('cfgLunchEnd')?.value||'13:00'
   };
 
   try {
