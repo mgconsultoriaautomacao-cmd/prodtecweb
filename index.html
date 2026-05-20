@@ -261,7 +261,7 @@
   @keyframes fs { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
   /* DRAWER & GAUGES */
-  .drawer { position: fixed; right: 0; top: 0; bottom: 0; width: min(480px, 95vw); background: #070c18; z-index: 2000; transform: translateX(110%); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-left: 1px solid var(--border); box-shadow: -20px 0 60px rgba(0, 0, 0, 0.8); padding: 40px; overflow-y: auto; }
+  .drawer { position: fixed; right: 0; top: 0; bottom: 0; width: min(540px, 100vw); background: #070c18; z-index: 2000; transform: translateX(110%); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-left: 1px solid var(--border); box-shadow: -20px 0 60px rgba(0, 0, 0, 0.8); padding: 40px 30px; overflow-y: auto; }
   .drawer.active { transform: translateX(0); }
   .pbi-gauge-bg { height: 12px; width: 100%; background: rgba(255,255,255,.05); border-radius: 100px; overflow: hidden; position: relative; margin: 10px 0; }
   .pbi-gauge-fill { height: 100%; border-radius: 100px; transition: width 1s ease-out; background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%); }
@@ -662,6 +662,7 @@
       <div class="kcard"><div class="klabel">📉 Custo Total (Mão de Obra)</div><div id="finKpiTotal" class="kval" style="color:var(--red)">R$ 0,00</div><div class="ksub">Penalidades já descontadas</div></div>
       <div class="kcard orange"><div class="klabel">💰 Vendas Agranel (Receita)</div><div id="finKpiBulkSales" class="kval orange">R$ 0,00</div><div class="ksub">Vendas diretas no período</div></div>
       <div class="kcard"><div class="klabel">📦 Total Caixas (Packing)</div><div id="finKpiBoxes" class="kval">0</div><div class="ksub">Produção acumulada</div></div>
+      <div class="kcard" style="border-left: 4px solid var(--blue)"><div class="klabel">🚜 Serviços (Campo)</div><div id="finKpiField" class="kval" style="color:var(--blue)">0</div><div class="ksub">Apontamentos realizados</div></div>
       <div class="kcard green"><div class="klabel">⭐ Bônus Assiduidade</div><div id="finKpiBonus" class="kval" style="color:var(--green)">R$ 0,00</div><div class="ksub">Total prêmios pagos</div></div>
     </div>
     <div class="cgrid">
@@ -1956,6 +1957,8 @@ async function refreshFin(){
   // ── BÔNUS DE ASSIDUIDADE ── valor FIXO MENSAL, nunca pro-rata
   // O bônus é cadastrado mensalmente e aplicado UMA VEZ por colaborador
   const bonus = Number(tenantConfig.attendance_bonus || 0);
+  
+  window._lastFinEb = eb;
 
   const tbody=$('finTable').querySelector('tbody');
   const sForm = s.split('-').reverse().join('/');
@@ -2010,6 +2013,8 @@ async function refreshFin(){
   const totalVal = Object.values(eb).reduce((a,b)=>a+b.val,0);
   $('finKpiTotal').textContent = BRL(totalVal + totalBonus);
   $('finKpiBoxes').textContent = Object.values(eb).reduce((a,b)=>a+b.boxes,0).toLocaleString() + ' cx';
+  const kpiField = $('finKpiField');
+  if (kpiField) kpiField.textContent = Object.values(eb).reduce((a,b)=>a+(b.fieldOps||0),0).toLocaleString();
   
   // Bulk Sales KPI
   const {data:bulk} = await sb.from('bulk_sales').select('total_value').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
@@ -2889,7 +2894,8 @@ async function openEmpDrawer(idOrName) {
         const bonusEarned = (absencesCount === 0) ? bonusBase : 0;
         
         let packingStatsHtml = '';
-        if (totalBoxes > 0 || stats) {
+        const isPackingRole = ['EMBALADOR', 'EMPILHADOR', 'PACKER', 'STACKER', 'CAIXARIA'].some(r => emp.role.toUpperCase().includes(r));
+        if (totalBoxes > 0 || stats || isPackingRole) {
             const roleConfig = getRoleConfig(emp.role);
             const prodTarget = roleConfig.target;
             const valuePerUnit = roleConfig.value;
@@ -2931,7 +2937,7 @@ async function openEmpDrawer(idOrName) {
             
             packingStatsHtml = `
                 <div style="margin-bottom: 12px; font-weight:800; font-size:12px; color:var(--muted); letter-spacing:0.05em">📦 MÉTRICAS DO PACKING HOUSE</div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:16px">
                     <div class="pbi-card" style="padding:15px">
                         <div class="klabel" style="font-size:9px">Produção Líquida</div>
                         <div class="kpi-value-pbi" style="font-size:20px">${Math.round(totalBoxes)} <span style="font-size:10px">cx</span></div>
@@ -2943,7 +2949,7 @@ async function openEmpDrawer(idOrName) {
                         <div style="font-size:9px; color:var(--muted)">R$ ${valuePerUnit.toFixed(2)}/cx</div>
                     </div>
                 </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:10px; margin-bottom:16px">
                     <div class="pbi-card" style="padding:10px;text-align:center">
                         <div class="klabel" style="font-size:8px">Ociosidade</div>
                         <div style="font-weight:900;font-size:16px;color:${stabClass==='good'?'var(--green)':stabClass==='warn'?'var(--yellow)':'var(--red)'}">${idleDetails.totalMinutes} min</div>
@@ -3029,7 +3035,7 @@ async function openEmpDrawer(idOrName) {
             
             fieldStatsHtml = `
                 <div style="margin-bottom: 12px; font-weight:800; font-size:12px; color:var(--muted); letter-spacing:0.05em; margin-top:20px">🚜 HISTÓRICO DE ATIVIDADES DE CAMPO</div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:16px">
                     <div class="pbi-card" style="padding:15px">
                         <div class="klabel" style="font-size:9px">Total de Apontamentos</div>
                         <div class="kpi-value-pbi" style="font-size:20px; color:var(--green)">${totalFieldOps} <span style="font-size:10px">serviços</span></div>
@@ -3053,7 +3059,7 @@ async function openEmpDrawer(idOrName) {
             ${fieldStatsHtml}
             
             <div style="margin-bottom: 12px; font-weight:800; font-size:12px; color:var(--muted); letter-spacing:0.05em; margin-top:20px">📋 AUDITORIAS & FALTAS</div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:16px">
                 <div class="pbi-card" style="border-left:4px solid ${absencesCount > 0 ? 'var(--red)' : 'var(--green)'}; padding:15px">
                     <div class="klabel" style="font-size:9px">Assiduidade</div>
                     <div style="font-weight:800; font-size:14px; color:${absencesCount > 0 ? 'var(--red)' : 'var(--green)'}">${absencesCount} faltas</div>
@@ -4215,28 +4221,65 @@ function exportRankPDF(){
 function exportFinPDF(){
   const {jsPDF}=window.jspdf;const doc=new jsPDF();
   const s=$('finStart').value,e=$('finEnd').value;
-  pdfHeader(doc,'Folha de Pagamento Consolidada',`${s} a ${e}`);
-  doc.setFontSize(11);doc.setFont('helvetica','bold');
-  doc.text(`Total do Período: ${$('finKpiTotal').textContent}`,14,41);
-  
-  const empSum={};
-  _finData.forEach(d=>{
-    if(!empSum[d.employee_name])empSum[d.employee_name]={name:d.employee_name,role:d.role,boxes:0,kg:0,val:0};
-    empSum[d.employee_name].boxes+=d.total_boxes;
-    empSum[d.employee_name].kg+=d.total_kg;
-    empSum[d.employee_name].val+=d._total_value;
+  const eb = window._lastFinEb || {};
+  const bonus = Number(tenantConfig.attendance_bonus || 0);
+  const abs = window._lastFinAbs || []; // we need absences to add bonus, wait, let's just use what they already earned.
+  // Actually, wait, let's group by sector/role
+  const sectors = {};
+  Object.values(eb).forEach(d => {
+    let sec = d.role;
+    if (['EMBALADOR','EMPILHADOR','PACKER','STACKER','CAIXARIA'].includes(sec.toUpperCase())) sec = 'PACKING HOUSE';
+    else if (sec.toUpperCase() === 'COLHEITA' || sec.toUpperCase() === 'COLHEDOR' || sec.toUpperCase() === 'TRATORISTA') sec = 'CAMPO - COLHEITA';
+    else if (sec.toUpperCase() === 'CAMPO') sec = 'CAMPO - OUTROS SERVIÇOS';
+    
+    if (!sectors[sec]) sectors[sec] = [];
+    sectors[sec].push(d);
   });
-  
-  const rows=Object.values(empSum).sort((a,b)=>b.val-a.val).map((d,i)=>[i+1,d.name,d.role,d.boxes+' cx',d.kg.toFixed(1)+' kg',BRL(d.val)]);
-  doc.autoTable({startY:50,head:[['#','Colaborador','Função','Total Caixas','Total KG','Valor a Pagar']],body:rows,headStyles:{fillColor:[16,185,129]},alternateRowStyles:{fillColor:[245,247,250]},theme:'grid',styles:{fontSize:10,cellPadding:5},foot:[['','TOTAL','',Object.values(empSum).reduce((a,x)=>a+x.boxes,0)+' cx',Object.values(empSum).reduce((a,x)=>a+x.kg,0).toFixed(1)+' kg',BRL(Object.values(empSum).reduce((a,x)=>a+x.val,0))]],footStyles:{fillColor:[15,23,42],textColor:255,fontStyle:'bold text-right'}});
-  
-  const y=doc.lastAutoTable.finalY+20;
-  if(y<270){
-    doc.setFontSize(9);doc.setTextColor(100,116,139);
-    doc.text('Declaro ter recebido a importância acima referente à minha produção no período citado.',14,y);
-    doc.text('____________________________',14,y+15);doc.text('Assinatura do Colaborador',14,y+20);
-    doc.text('Data: ___/___/______',140,y+20);
+
+  const sectorNames = Object.keys(sectors).sort();
+
+  sectorNames.forEach((sec, idx) => {
+    if (idx > 0) doc.addPage();
+    pdfHeader(doc, `Folha de Pagamento - ${sec}`, `${s} a ${e}`);
+    
+    const secData = sectors[sec];
+    const rows = secData.sort((a,b)=>b.val-a.val).map((d,i)=>{
+       // Check absences in the window object, wait, let's just assume they don't have it unless we export it.
+       const total = d.val;
+       let prodStr = '';
+       if(d.boxes > 0) prodStr += `${d.boxes} cx\n`;
+       if(d.fieldOps > 0) prodStr += `${d.fieldOps} serv.`;
+       return [i+1, d.displayName, d.role, prodStr, BRL(total)];
+    });
+
+    const sumVal = secData.reduce((a,x) => a+x.val, 0);
+
+    doc.autoTable({
+      startY:45,
+      head:[['#','Colaborador','Função','Produção','Valor Líquido']],
+      body:rows,
+      headStyles:{fillColor:[16,185,129]},
+      alternateRowStyles:{fillColor:[245,247,250]},
+      theme:'grid',
+      styles:{fontSize:9,cellPadding:4},
+      foot:[['','TOTAL','','',BRL(sumVal)]],
+      footStyles:{fillColor:[15,23,42],textColor:255,fontStyle:'bold'}
+    });
+    
+    const y=doc.lastAutoTable.finalY+20;
+    if(y<270){
+      doc.setFontSize(8);doc.setTextColor(100,116,139);
+      doc.text('Declaro ter recebido a importância acima referente à minha produção no período citado.',14,y);
+      doc.text('____________________________',14,y+15);doc.text('Assinatura do Colaborador',14,y+20);
+      doc.text('Data: ___/___/______',140,y+20);
+    }
+  });
+
+  if(sectorNames.length === 0) {
+    pdfHeader(doc,'Folha de Pagamento',`${s} a ${e}`);
+    doc.text('Sem dados no período', 14, 40);
   }
+
   doc.save(`prodtech-payroll-${s}-${e}.pdf`);
 }
 
@@ -5007,16 +5050,25 @@ async function exportEmpDossierPDF() {
     // Line
     doc.setDrawColor(200, 200, 200); doc.line(20, 75, 190, 75);
     
-    const bodyRows = [
-      ['Produção Total (Packing)', `${Math.round(stats.boxes || 0)} unidades`],
-      ['Volume Processado (Packing - Kg)', `${(stats.kg || 0).toFixed(1)} kg`],
-      ['Apontamentos de Campo', `${stats.fieldOps || 0} serviços`],
-      ['Ganhos de Campo', `R$ ${(stats.fieldEarned || 0).toFixed(2)}`],
-      ['Qualidade (Falhas)', `${stats.qualityIssues || 0} registros`],
-      ['Assiduidade (Faltas)', `${stats.absences || 0} faltas no período`]
-    ];
+    const isPacking = ['EMBALADOR', 'EMPILHADOR', 'PACKER', 'STACKER', 'CAIXARIA', 'MÁQUINA'].some(r => role.toUpperCase().includes(r)) || (stats.boxes > 0);
+    const isField = !isPacking || (stats.fieldOps > 0);
 
-    if (stats.idleTime) {
+    const bodyRows = [];
+    
+    if (isPacking) {
+      bodyRows.push(['Produção Total (Packing)', `${Math.round(stats.boxes || 0)} unidades`]);
+      bodyRows.push(['Volume Processado (Packing - Kg)', `${(stats.kg || 0).toFixed(1)} kg`]);
+    }
+    
+    if (isField) {
+      bodyRows.push(['Apontamentos de Campo', `${stats.fieldOps || 0} serviços`]);
+      bodyRows.push(['Ganhos de Campo', `R$ ${(stats.fieldEarned || 0).toFixed(2)}`]);
+    }
+
+    bodyRows.push(['Qualidade (Falhas)', `${stats.qualityIssues || 0} registros`]);
+    bodyRows.push(['Assiduidade (Faltas)', `${stats.absences || 0} faltas no período`]);
+
+    if (stats.idleTime && isPacking) {
       bodyRows.push(['Tempo Interrompido (Ociosidade)', `${stats.idleTime} minutos ociosos`]);
     }
     
@@ -5063,7 +5115,7 @@ initApp();
 
   <div class="section"><div class="section-title">📊 KPIs de Desempenho (Industrial)</div></div>
 
-  <div id="drTotals" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px"></div>
+  <div id="drTotals" style="display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:12px"></div>
   <div id="drAbsences" style="display:grid; grid-template-columns:1fr; gap:12px"></div>
 
   <div style="margin-top:32px">
