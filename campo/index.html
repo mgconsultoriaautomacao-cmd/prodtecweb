@@ -1846,7 +1846,10 @@ function showOrdemColheita(list) {
     const varietyName = variety?.name || '—';
     const shiftLabel = session.shift === 'MANHA' ? 'Manhã' : 'Tarde';
     const fruitIcon  = session.fruit_type === 'MELANCIA' ? '🍉 Melancia' : '🍈 Melão';
-    const seqNum = session.carrao_seq || '—';
+    const seqNum = (() => {
+      const carriageObj = carriages.find(c => c.id == session.carriage_id);
+      return carriageObj ? carriageObj.code : (session.carrao_seq || session.qty_carrocoes || '—');
+    })();
 
     const workerRows = (workers || []).map(w =>
       `<tr><td>${w.employee_name}</td><td style="text-align:right">Colhido</td></tr>`

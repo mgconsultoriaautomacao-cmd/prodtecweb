@@ -1560,10 +1560,17 @@ async function delOperation(id) { if(confirm('Excluir esta operação?')) { awai
 
 // Helper: get role config for a given role name
 function getRoleConfig(roleName) {
-  const r = (window._roles || []).find(x => x.name === roleName);
+  let target = tenantConfig.target_per_hour_packer;
+  let value = tenantConfig.value_per_box_packer;
+
+  if (roleName && (roleName.toUpperCase().includes('EMPILHADOR') || roleName.toUpperCase().includes('STACKER'))) {
+    target = tenantConfig.target_per_hour_stacker || target;
+    value = tenantConfig.value_per_box_stacker || value;
+  }
+
   return {
-    target: r?.target_per_hour || tenantConfig.target_per_hour_packer || 150,
-    value: r?.value_per_unit || tenantConfig.value_per_box_packer || 0.50
+    target: target || 150,
+    value: value || 0.03
   };
 }
 
@@ -1897,6 +1904,51 @@ async function refreshFin(){
 
       if (!['EMBALADOR','EMPILHADOR'].includes(eb[key].role)) {
         eb[key].role = srv.sector || 'CAMPO';
+      }
+    });
+  });
+
+  // Apontamentos de Colheita (Carrão)
+  const {data:cServices} = await sb.from('field_carrao_sessions').select('*, field_carrao_employees(*)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
+  (cServices||[]).forEach(srv => {
+    if (selectedRole && selectedRole !== 'COLHEITA') return;
+
+    (srv.field_carrao_employees||[]).forEach(emp => {
+      // Filtro por colaborador selecionado
+      if (selectedEmpId && emp.employee_id !== selectedEmpId) {
+        let isMatch = false;
+        if (emp.employee_name && targetNameNormalized) {
+          const cleanName = emp.employee_name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          if (cleanName === targetNameNormalized) isMatch = true;
+        }
+        if (!isMatch) return;
+      }
+
+      let realEmp = _employees.find(em => em.id === emp.employee_id);
+      if (!realEmp && emp.employee_name) {
+        const cleanName = emp.employee_name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        realEmp = _employees.find(em => em.name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === cleanName);
+      }
+      const dName = realEmp ? realEmp.name : emp.employee_name;
+      const barcode = realEmp ? realEmp.barcode : null;
+
+      const key = resolveEmpKey(barcode, dName);
+      if (!eb[key]) eb[key] = {displayName: dName, boxes:0, val:0, role: 'COLHEITA', barcode, fieldVal:0, fieldOps:0, activities:[]};
+      if (!eb[key].activities) eb[key].activities = [];
+      if (realEmp && eb[key].displayName !== realEmp.name) eb[key].displayName = realEmp.name;
+
+      eb[key].fieldVal += Number(emp.value_received || 0);
+      eb[key].val     += Number(emp.value_received || 0);
+      eb[key].fieldOps++;
+      eb[key].activities.push({
+        date: srv.date,
+        sector: 'COLHEITA',
+        operation: 'CARRÃO',
+        value: Number(emp.value_received || 0)
+      });
+
+      if (!['EMBALADOR','EMPILHADOR'].includes(eb[key].role)) {
+        eb[key].role = 'COLHEITA';
       }
     });
   });
@@ -2765,11 +2817,12 @@ async function openEmpDrawer(idOrName) {
     const start = $('dashStart').value;
     const end = $('dashEnd').value + 'T23:59:59Z';
 
-    const [qAudits, qAbs, qScans, qFieldServices] = await Promise.all([
+    const [qAudits, qAbs, qScans, qFieldServices, qCarraoServices] = await Promise.all([
         sb.from('quality_audits').select('id').eq('tenant_id', tenantId).eq('employee_barcode', emp.barcode).gte('ts', start).lte('ts', end),
         sb.from('employee_absences').select('*').eq('tenant_id', tenantId).eq('employee_barcode', emp.barcode).gte('date', start.split('T')[0]).lte('date', end.split('T')[0]),
         sb.from('production_scans').select('ts, weight_kg, role').eq('tenant_id', tenantId).eq('employee_name', emp.name).gte('ts', start).lte('ts', end).order('ts', {ascending: true}),
-        sb.from('field_service_employees').select('*, field_services(*)').eq('employee_id', emp.id)
+        sb.from('field_service_employees').select('*, field_services(*)').eq('employee_id', emp.id),
+        sb.from('field_carrao_employees').select('*, field_carrao_sessions(*)').eq('employee_id', emp.id)
     ]);
 
     const qualityCount = qAudits.data?.length || 0;
@@ -2809,8 +2862,14 @@ async function openEmpDrawer(idOrName) {
       return dateVal >= start.split('T')[0] && dateVal <= end.split('T')[0];
     });
     
-    const totalFieldOps = fieldServicesList.length;
-    const totalFieldEarned = fieldServicesList.reduce((sum, srv) => sum + Number(srv.value_received || 0), 0);
+    const carraoServicesList = (qCarraoServices.data || []).filter(fs => {
+      if (!fs.field_carrao_sessions) return false;
+      const dateVal = fs.field_carrao_sessions.date;
+      return dateVal >= start.split('T')[0] && dateVal <= end.split('T')[0];
+    });
+    
+    const totalFieldOps = fieldServicesList.length + carraoServicesList.length;
+    const totalFieldEarned = fieldServicesList.reduce((sum, srv) => sum + Number(srv.value_received || 0), 0) + carraoServicesList.reduce((sum, srv) => sum + Number(srv.value_received || 0), 0);
 
     window._activeDrawerStats = {
       name: emp.name,
@@ -2942,7 +3001,7 @@ async function openEmpDrawer(idOrName) {
         
         let fieldStatsHtml = '';
         if (totalFieldOps > 0) {
-            const listHtml = fieldServicesList.map(srv => {
+            const listHtml1 = fieldServicesList.map(srv => {
                 const formattedDate = srv.field_services.date.split('-').reverse().slice(0, 2).join('/');
                 return `
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:11px">
@@ -2953,7 +3012,20 @@ async function openEmpDrawer(idOrName) {
                         <div style="font-weight:800; color:var(--green)">R$ ${Number(srv.value_received || 0).toFixed(2)}</div>
                     </div>
                 `;
-            }).join('');
+            });
+            const listHtml2 = carraoServicesList.map(srv => {
+                const formattedDate = srv.field_carrao_sessions.date.split('-').reverse().slice(0, 2).join('/');
+                return `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:11px">
+                        <div>
+                            <div style="font-weight:700">COLHEITA (CARRÃO)</div>
+                            <div style="color:var(--muted); font-size:10px">${formattedDate} • Lote ${srv.field_carrao_sessions.julian_lot || '—'}</div>
+                        </div>
+                        <div style="font-weight:800; color:var(--green)">R$ ${Number(srv.value_received || 0).toFixed(2)}</div>
+                    </div>
+                `;
+            });
+            const listHtml = listHtml1.concat(listHtml2).join('');
             
             fieldStatsHtml = `
                 <div style="margin-bottom: 12px; font-weight:800; font-size:12px; color:var(--muted); letter-spacing:0.05em; margin-top:20px">🚜 HISTÓRICO DE ATIVIDADES DE CAMPO</div>
@@ -4258,7 +4330,9 @@ function exportHarvestOrderPDF(sid) {
   doc.setFontSize(7); doc.setFont('helvetica', 'normal');
   doc.text('Nº DO CARROÇÃO', mg + 132, y + 4);
   doc.setFontSize(14);
-  doc.text(String(s.carrao_seq || s.qty_carrocoes || '—'), 165, y + 11, { align: 'center' });
+  const carriageObj = window._carriages ? window._carriages.find(c => c.id == s.carriage_id) : null;
+  const carriageName = carriageObj ? carriageObj.code : (s.carrao_seq || s.qty_carrocoes || '—');
+  doc.text(String(carriageName), 165, y + 11, { align: 'center' });
   doc.line(mg + 132, y + 12, mg + 188, y + 12);
   y += h4;
 
@@ -4304,7 +4378,7 @@ function exportHarvestOrderPDF(sid) {
   // ── LINHA: MÁQUINA E OPERADOR DA MÁQUINA ─────────────────────────────────
   const hMachine = 14;
   doc.rect(mg, y, 190, hMachine);
-  doc.line(mg + 65, y, mg + 65, y + hMachine);
+  doc.line(mg + 95, y, mg + 95, y + hMachine);
   
   doc.setFontSize(7); doc.setFont('helvetica', 'normal');
   doc.text('CÓD. MÁQUINA:', mg + 2, y + 4);
@@ -4312,9 +4386,9 @@ function exportHarvestOrderPDF(sid) {
   doc.text(s.machine_code || '—', mg + 5, y + 11);
 
   doc.setFontSize(7); doc.setFont('helvetica', 'normal');
-  doc.text('OPERADOR DA MÁQUINA:', mg + 67, y + 4);
+  doc.text('OPERADOR DA MÁQUINA:', mg + 97, y + 4);
   doc.setFontSize(12);
-  doc.text(s.machine_operator || '—', mg + 70, y + 11);
+  doc.text(s.machine_operator || '—', mg + 100, y + 11);
   y += hMachine;
 
   // ── LINHA: RESPONSÁVEL COLHEITA E RESPONSÁVEL EMBALAGEM ─────────────────
