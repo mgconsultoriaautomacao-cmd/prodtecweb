@@ -614,6 +614,12 @@
   <!-- ═══ RANKING ═══ -->
   <div id="tab-ranking" class="tab">
     <h1 class="ptitle">🏆 Ranking de Produtividade</h1>
+    
+    <div style="display:inline-flex; gap:6px; margin-bottom:20px; background:rgba(255,255,255,0.03); padding:4px; border-radius:10px; border:1px solid var(--border)">
+      <button id="btnRankTypePacking" class="sec" onclick="switchRankType('PACKING')" style="padding:6px 16px; border-radius:8px; font-size:12px; font-weight:700; background:var(--blue); color:#fff; border:none; transition: all 0.2s">📦 Packing House</button>
+      <button id="btnRankTypeField" class="sec" onclick="switchRankType('FIELD')" style="padding:6px 16px; border-radius:8px; font-size:12px; font-weight:700; background:transparent; color:var(--muted); border:none; transition: all 0.2s">🚜 Serviço de Campo</button>
+    </div>
+
     <div class="fbar">
       <div class="f"><label class="flabel">Início</label><input type="date" id="rankStart"/></div>
       <div class="f"><label class="flabel">Fim</label><input type="date" id="rankEnd"/></div>
@@ -633,11 +639,11 @@
           </div>
         </div>
       </div>
-      <div class="kcard"><div class="klabel">Total de Caixas</div><div id="rankKpiTotal" class="kval">0</div><div class="ksub">no período selecionado</div></div>
-      <div class="kcard green"><div class="klabel">Média por Pessoa</div><div id="rankKpiMedia" class="kval green">0</div><div class="ksub">caixas / colaborador</div></div>
+      <div class="kcard"><div class="klabel" id="lblRankKpiTotal">Total de Caixas</div><div id="rankKpiTotal" class="kval">0</div><div class="ksub" id="subRankKpiTotal">no período selecionado</div></div>
+      <div class="kcard green"><div class="klabel" id="lblRankKpiMedia">Média por Pessoa</div><div id="rankKpiMedia" class="kval green">0</div><div class="ksub" id="subRankKpiMedia">caixas / colaborador</div></div>
     </div>
-    <div class="card"><div class="title">👤 Caixas por Colaborador</div><div class="ch tall"><canvas id="chartRankCollab"></canvas></div></div>
-    <div class="card"><div class="title">📊 Detalhamento Individual</div><div id="rankGrid" class="rgrid" style="margin-top:10px"></div></div>
+    <div class="card"><div class="title" id="lblRankChartTitle">👤 Caixas por Colaborador</div><div class="ch tall"><canvas id="chartRankCollab"></canvas></div></div>
+    <div class="card"><div class="title" id="lblRankGridTitle">📊 Detalhamento Individual</div><div id="rankGrid" class="rgrid" style="margin-top:10px"></div></div>
   </div>
 
   <!-- ═══ FINANCEIRO ═══ -->
@@ -1608,38 +1614,169 @@ async function loadWeights(){
 async function refreshRanking(){
   const s=$('rankStart').value, e=$('rankEnd').value;
   if(!s||!e)return;
-  const {data,error}=await sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')).order('ts',{ascending:false});
-  if(error)return;
-  buildRankingGrid(data, 'rankGrid');
   
-  const eb = {};
-  data.forEach(x => { eb[x.employee_name] = (eb[x.employee_name] || 0) + 1; });
-  const sorted = Object.entries(eb).sort((a,b) => b[1] - a[1]);
-  const top10 = sorted.slice(0, 10);
+  const selectedRole = $('rankRole')?.value;
+  const selectedEmp = $('rankEmp')?.value; // barcode
   
-  // Update Ranking KPIs
-  const totalBoxes = data.length;
-  const avgBoxes = sorted.length ? Math.round(totalBoxes / sorted.length) : 0;
-  $('rankKpiTotal').textContent = totalBoxes.toLocaleString();
-  $('rankKpiMedia').textContent = avgBoxes.toLocaleString();
+  const type = window._rankType || 'PACKING';
   
-  if(sorted[0]) {
-    const [name, boxes] = sorted[0];
-    const emp = _employees.find(e => e.name === name);
-    $('rankTopName').textContent = name.split(' ')[0];
-    $('rankTopStats').textContent = boxes + ' caixas';
-    $('rankTopAvatar').innerHTML = emp?.photo_path ? `<img src="${emp.photo_path}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : '';
-    $('rankTopAvatar').innerHTML += name[0];
-  }
+  if (type === 'PACKING') {
+    const {data,error}=await sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')).order('ts',{ascending:false});
+    if(error)return;
+    
+    // Apply client side filters if selected
+    let filteredData = data || [];
+    if (selectedRole) {
+      filteredData = filteredData.filter(x => x.role === selectedRole);
+    }
+    if (selectedEmp) {
+      filteredData = filteredData.filter(x => x.employee_barcode === selectedEmp);
+    }
+    
+    buildRankingGrid(filteredData, 'rankGrid');
+    
+    const eb = {};
+    filteredData.forEach(x => { eb[x.employee_name] = (eb[x.employee_name] || 0) + 1; });
+    const sorted = Object.entries(eb).sort((a,b) => b[1] - a[1]);
+    const top10 = sorted.slice(0, 10);
+    
+    // Update Ranking KPIs
+    const totalBoxes = filteredData.length;
+    const avgBoxes = sorted.length ? Math.round(totalBoxes / sorted.length) : 0;
+    $('rankKpiTotal').textContent = totalBoxes.toLocaleString();
+    $('rankKpiMedia').textContent = avgBoxes.toLocaleString();
+    
+    if(sorted[0]) {
+      const [name, boxes] = sorted[0];
+      const emp = _employees.find(e => e.name === name);
+      $('rankTopName').textContent = name.split(' ')[0];
+      $('rankTopStats').textContent = boxes + ' caixas';
+      $('rankTopAvatar').innerHTML = emp?.photo_path ? `<img src="${emp.photo_path}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : '';
+      $('rankTopAvatar').innerHTML += name[0];
+    } else {
+      $('rankTopName').textContent = '--';
+      $('rankTopStats').textContent = '0 caixas';
+      $('rankTopAvatar').innerHTML = '';
+    }
 
-  mkChart('chartRankCollab', {
-    type: 'bar',
-    data: {
-      labels: top10.map(e => e[0].split(' ')[0]),
-      datasets: [{ label: 'Caixas', data: top10.map(e => e[1]) }]
-    },
-    options: { indexAxis: 'y' }
-  });
+    mkChart('chartRankCollab', {
+      type: 'bar',
+      data: {
+        labels: top10.map(e => e[0].split(' ')[0]),
+        datasets: [{ label: 'Caixas', data: top10.map(e => e[1]) }]
+      },
+      options: { indexAxis: 'y' }
+    });
+  } else {
+    // Field Service Mode!
+    const {data: fServices, error} = await sb.from('field_services')
+      .select('*, field_service_employees(*)')
+      .eq('tenant_id', tenantId)
+      .gte('date', s)
+      .lte('date', e);
+    if(error)return;
+    
+    const eb = {};
+    (fServices || []).forEach(srv => {
+      // Filter by sector (role) if selected
+      if (selectedRole && srv.sector !== selectedRole) return;
+      
+      (srv.field_service_employees || []).forEach(emp => {
+        const displayName = emp.employee_name;
+        
+        // Find employee details (barcode, photo, role)
+        const cleanName = displayName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const realEmp = _employees.find(e => e.name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === cleanName);
+        const barcode = realEmp ? realEmp.barcode : null;
+        
+        if (selectedEmp && barcode !== selectedEmp) return;
+        
+        if (!eb[displayName]) {
+          eb[displayName] = {
+            name: displayName,
+            barcode: barcode,
+            photo_path: realEmp ? realEmp.photo_path : null,
+            opsCount: 0,
+            totalVal: 0,
+            activities: []
+          };
+        }
+        eb[displayName].opsCount++;
+        eb[displayName].totalVal += Number(emp.value_received || 0);
+        eb[displayName].activities.push({
+          date: srv.date,
+          sector: srv.sector,
+          operation: srv.operation,
+          qty: srv.quantity,
+          unit: srv.unit,
+          val: Number(emp.value_received || 0)
+        });
+      });
+    });
+    
+    const sorted = Object.values(eb).sort((a, b) => b.opsCount - a.opsCount);
+    buildFieldRankingGrid(sorted, 'rankGrid');
+    
+    const top10 = sorted.slice(0, 10);
+    const totalOps = sorted.reduce((sum, item) => sum + item.opsCount, 0);
+    const avgOps = sorted.length ? (totalOps / sorted.length).toFixed(1) : '0';
+    
+    $('rankKpiTotal').textContent = totalOps.toLocaleString();
+    $('rankKpiMedia').textContent = avgOps;
+    
+    if(sorted[0]) {
+      const topWorker = sorted[0];
+      $('rankTopName').textContent = topWorker.name.split(' ')[0];
+      $('rankTopStats').textContent = `${topWorker.opsCount} apontamentos`;
+      $('rankTopAvatar').innerHTML = topWorker.photo_path ? `<img src="${topWorker.photo_path}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : '';
+      $('rankTopAvatar').innerHTML += topWorker.name[0];
+    } else {
+      $('rankTopName').textContent = '--';
+      $('rankTopStats').textContent = '0 apontamentos';
+      $('rankTopAvatar').innerHTML = '';
+    }
+    
+    mkChart('chartRankCollab', {
+      type: 'bar',
+      data: {
+        labels: top10.map(e => e.name.split(' ')[0]),
+        datasets: [{ label: 'Apontamentos', data: top10.map(e => e.opsCount), backgroundColor: '#10b981' }]
+      },
+      options: { indexAxis: 'y' }
+    });
+  }
+}
+
+window._rankType = 'PACKING';
+function switchRankType(type) {
+  window._rankType = type;
+  const btnPacking = document.getElementById('btnRankTypePacking');
+  const btnField = document.getElementById('btnRankTypeField');
+  
+  if (type === 'PACKING') {
+    btnPacking.style.background = 'var(--blue)';
+    btnPacking.style.color = '#fff';
+    btnField.style.background = 'transparent';
+    btnField.style.color = 'var(--muted)';
+    
+    document.getElementById('lblRankKpiTotal').textContent = 'Total de Caixas';
+    document.getElementById('lblRankKpiMedia').textContent = 'Média por Pessoa';
+    document.getElementById('subRankKpiMedia').textContent = 'caixas / colaborador';
+    document.getElementById('lblRankChartTitle').textContent = '👤 Caixas por Colaborador';
+    document.getElementById('lblRankGridTitle').textContent = '📊 Detalhamento Individual';
+  } else {
+    btnField.style.background = 'var(--blue)';
+    btnField.style.color = '#fff';
+    btnPacking.style.background = 'transparent';
+    btnPacking.style.color = 'var(--muted)';
+    
+    document.getElementById('lblRankKpiTotal').textContent = 'Total de Apontamentos';
+    document.getElementById('lblRankKpiMedia').textContent = 'Média por Pessoa';
+    document.getElementById('subRankKpiMedia').textContent = 'apontamentos / colaborador';
+    document.getElementById('lblRankChartTitle').textContent = '🚜 Apontamentos de Campo por Colaborador';
+    document.getElementById('lblRankGridTitle').textContent = '📊 Apontamentos de Campo';
+  }
+  refreshRanking();
 }
 
 
@@ -1701,7 +1838,15 @@ async function refreshFin(){
     });
   });
   
-  const bonus = Number(tenantConfig.attendance_bonus || 0);
+  const date1 = new Date(s);
+  const date2 = new Date(e);
+  const diffTime = Math.abs(date2 - date1);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  const baseBonus = Number(tenantConfig.attendance_bonus || 0);
+  let bonus = (baseBonus / 30) * diffDays;
+  if (diffDays >= 28 && diffDays <= 31) {
+    bonus = baseBonus; // Cap/floor to standard monthly bonus value
+  }
   const tbody=$('finTable').querySelector('tbody');
   
   const sForm = s.split('-').reverse().join('/');
@@ -2060,6 +2205,49 @@ function buildRankingGrid(scans, containerId){
       <div style="font-size:16px;width:26px;text-align:center">${i<3?MEDALS[i]:'#'+(i+1)}</div>
     </div>
   `}).join('')||'<div style="color:var(--muted);padding:20px;text-align:center;grid-column:1/-1">Nenhum dado.</div>';
+}
+function buildFieldRankingGrid(sorted, containerId) {
+  const el = $(containerId);
+  if (!el) return;
+  
+  el.innerHTML = sorted.map((emp, i) => {
+    const photo = emp.photo_path;
+    const barcode = emp.barcode || emp.name;
+    
+    // Create a mini badge list of their most frequent operations in the period
+    const opSummaries = {};
+    emp.activities.forEach(act => {
+      const key = `${act.sector} (${act.operation})`;
+      opSummaries[key] = (opSummaries[key] || 0) + 1;
+    });
+    const topOpsHtml = Object.entries(opSummaries)
+      .slice(0, 3)
+      .map(([opName, count]) => `<span class="badge" style="font-size:9px; background:rgba(255,255,255,0.05); margin-right:4px; margin-top:4px; display:inline-block">${opName} x${count}</span>`)
+      .join('');
+      
+    return `
+    <div class="rcard pbi-card" style="display:flex; flex-direction:column; gap:8px; margin-bottom:6px; padding:12px">
+      <div style="display:flex; align-items:center; gap:10px; width:100%">
+        <div class="avatar-ring" style="width:36px; height:36px; font-size:12px; position:relative; flex-shrink:0; cursor:pointer" onclick="openEmpDrawer('${barcode}')">
+          ${photo ? `<img src="${photo}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : ''}
+          ${emp.name[0]}
+        </div>
+        <div style="flex:1; min-width:0; cursor:pointer" onclick="openEmpDrawer('${barcode}')">
+          <div style="font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${emp.name} <span style="font-weight:normal;color:var(--muted);font-size:10px">(Cartão: ${emp.barcode || '—'})</span></div>
+          <div style="font-size:10px;color:var(--muted)">R$ ${emp.totalVal.toFixed(2)} acumulado</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:16px;font-weight:800;color:var(--green)">${emp.opsCount}</div>
+          <div style="font-size:8px;color:var(--muted)">SERVIÇOS</div>
+        </div>
+        <div style="font-size:16px;width:26px;text-align:center;flex-shrink:0">${i<3?MEDALS[i]:'#'+(i+1)}</div>
+      </div>
+      <div style="border-top:1px solid rgba(255,255,255,0.05); padding-top:6px; display:flex; flex-wrap:wrap">
+        ${topOpsHtml || '<span style="font-size:9px; color:var(--muted)">Sem operações registradas</span>'}
+      </div>
+    </div>
+    `;
+  }).join('') || '<div style="color:var(--muted);padding:20px;text-align:center;grid-column:1/-1">Nenhum dado de campo no período.</div>';
 }
 // ══════════════════════════════════════
 async function refreshMass() {
@@ -2520,10 +2708,11 @@ async function openEmpDrawer(idOrName) {
     const start = $('dashStart').value;
     const end = $('dashEnd').value + 'T23:59:59Z';
 
-    const [qAudits, qAbs, qScans] = await Promise.all([
+    const [qAudits, qAbs, qScans, qFieldServices] = await Promise.all([
         sb.from('quality_audits').select('id').eq('tenant_id', tenantId).eq('employee_barcode', emp.barcode).gte('ts', start).lte('ts', end),
         sb.from('employee_absences').select('*').eq('tenant_id', tenantId).eq('employee_barcode', emp.barcode).gte('date', start.split('T')[0]).lte('date', end.split('T')[0]),
-        sb.from('production_scans').select('ts, weight_kg, role').eq('tenant_id', tenantId).eq('employee_name', emp.name).gte('ts', start).lte('ts', end).order('ts', {ascending: true})
+        sb.from('production_scans').select('ts, weight_kg, role').eq('tenant_id', tenantId).eq('employee_name', emp.name).gte('ts', start).lte('ts', end).order('ts', {ascending: true}),
+        sb.from('field_service_employees').select('*, field_services(*)').eq('employee_id', emp.id)
     ]);
 
     const qualityCount = qAudits.data?.length || 0;
@@ -2551,88 +2740,185 @@ async function openEmpDrawer(idOrName) {
 
     const avatarEl = document.getElementById('drAvatar');
     avatarEl.innerHTML = emp.photo_path
-        ? `<img src="${emp.photo_path}" style="width:100%; height:100%; object-fit:cover; border-radius:50%">`
+        ? `<img src="${emp.photo_path}" style="width:100%; height:100%; object-fit:cover; border-radius:50%" onerror="this.parentElement.innerHTML='${emp.name[0]}'">`
         : emp.name[0];
 
-
     const totalBoxes = stats?.boxes || allScans.length;
-    if (totalBoxes > 0 || stats) {
-        const roleConfig = getRoleConfig(emp.role);
-        const prodTarget = roleConfig.target;
-        const valuePerUnit = roleConfig.value;
+    
+    // Client-side date filter for field services
+    const fieldServicesList = (qFieldServices.data || []).filter(fs => {
+      if (!fs.field_services) return false;
+      const dateVal = fs.field_services.date;
+      return dateVal >= start.split('T')[0] && dateVal <= end.split('T')[0];
+    });
+    
+    const totalFieldOps = fieldServicesList.length;
+    const totalFieldEarned = fieldServicesList.reduce((sum, srv) => sum + Number(srv.value_received || 0), 0);
 
+    if (totalBoxes > 0 || stats || totalFieldOps > 0) {
         const baseBonus = parseFloat($('cfgAttendanceBonus')?.value || tenantConfig.attendance_bonus || 0);
-        const bonusEarned = (absencesCount === 0) ? baseBonus : 0;
-        const prodScore = Math.min(100, Math.round((totalBoxes / prodTarget) * 100));
-        const idleDetails = calculateIdleDetails(allScans, window._currentStops || []);
-        const stabClass = idleDetails.totalMinutes < 30 ? 'good' : idleDetails.totalMinutes < 60 ? 'warn' : 'bad';
-        const valueEarned = totalBoxes * valuePerUnit;
-
-        // Work hours calc
-        const [wsH,wsM] = (tenantConfig.work_start_time||'07:00').split(':').map(Number);
-        const [weH,weM] = (tenantConfig.work_end_time||'17:00').split(':').map(Number);
-        const [lsH,lsM] = (tenantConfig.lunch_start_time||'11:30').split(':').map(Number);
-        const [leH,leM] = (tenantConfig.lunch_end_time||'13:00').split(':').map(Number);
-        const totalWorkMin = (weH*60+weM)-(wsH*60+wsM)-((leH*60+leM)-(lsH*60+lsM));
-        let activeMin = 0;
-        if(allScans.length>=2){ const f=new Date(allScans[0].ts),l=new Date(allScans[allScans.length-1].ts); activeMin=Math.round((l-f)/60000)-Math.round(getLunchOverlap(f,l)/60); }
-        const workPct = totalWorkMin>0?Math.min(100,Math.round((activeMin/totalWorkMin)*100)):0;
-
-        // Idle gaps HTML
-        let gapsHtml = '';
-        if(idleDetails.gaps.length>0){
-          gapsHtml=`<div class="pbi-card" style="margin-bottom:16px;padding:15px"><div class="klabel" style="margin-bottom:8px">⏸ Períodos de Inatividade (${idleDetails.gaps.length})</div><div style="max-height:120px;overflow-y:auto">${idleDetails.gaps.slice(0,8).map(g=>{
-            const fr=new Date(g.from).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-            const to=new Date(g.to).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-            const c=g.minutes>30?'var(--red)':g.minutes>15?'var(--yellow)':'var(--muted)';
-            return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px"><span style="font-family:monospace">${fr} → ${to}</span><span style="font-weight:800;color:${c}">${g.minutes} min</span></div>`;
-          }).join('')}</div></div>`;
+        const date1 = new Date(start);
+        const date2 = new Date(end.split('T')[0]);
+        const diffTime = Math.abs(date2 - date1);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        let proratedBaseBonus = (baseBonus / 30) * diffDays;
+        if (diffDays >= 28 && diffDays <= 31) {
+          proratedBaseBonus = baseBonus; // Cap to standard monthly bonus value
         }
+        const bonusEarned = (absencesCount === 0) ? proratedBaseBonus : 0;
+        
+        let packingStatsHtml = '';
+        if (totalBoxes > 0 || stats) {
+            const roleConfig = getRoleConfig(emp.role);
+            const prodTarget = roleConfig.target;
+            const valuePerUnit = roleConfig.value;
+            const prodScore = Math.min(100, Math.round((totalBoxes / prodTarget) * 100));
+            const idleDetails = calculateIdleDetails(allScans, window._currentStops || []);
+            const stabClass = idleDetails.totalMinutes < 30 ? 'good' : idleDetails.totalMinutes < 60 ? 'warn' : 'bad';
+            const valueEarned = totalBoxes * valuePerUnit;
 
-        // Production log (last 15)
-        const recent=allScans.slice(-15).reverse();
-        let logHtml='';
-        if(recent.length>0){
-          logHtml=`<div class="pbi-card" style="margin-bottom:16px;padding:15px"><div class="klabel" style="margin-bottom:8px">📋 Log de Produção (últimos ${Math.min(15,allScans.length)})</div><div style="max-height:140px;overflow-y:auto">${recent.map((s,i)=>{
-            const t=new Date(s.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-            return `<div class="prod-log-entry"><span class="time">${t}</span><span style="flex:1;color:var(--muted)">${s.weight_kg?s.weight_kg+' kg':''}</span><span style="color:var(--muted);font-size:10px">#${allScans.length-i}</span></div>`;
-          }).join('')}</div></div>`;
+            // Work hours calc
+            const [wsH,wsM] = (tenantConfig.work_start_time||'07:00').split(':').map(Number);
+            const [weH,weM] = (tenantConfig.work_end_time||'17:00').split(':').map(Number);
+            const [lsH,lsM] = (tenantConfig.lunch_start_time||'11:30').split(':').map(Number);
+            const [leH,leM] = (tenantConfig.lunch_end_time||'13:00').split(':').map(Number);
+            const totalWorkMin = (weH*60+weM)-(wsH*60+wsM)-((leH*60+leM)-(lsH*60+lsM));
+            let activeMin = 0;
+            if(allScans.length>=2){ const f=new Date(allScans[0].ts),l=new Date(allScans[allScans.length-1].ts); activeMin=Math.round((l-f)/60000)-Math.round(getLunchOverlap(f,l)/60); }
+            const workPct = totalWorkMin>0?Math.min(100,Math.round((activeMin/totalWorkMin)*100)):0;
+
+            // Idle gaps HTML
+            let gapsHtml = '';
+            if(idleDetails.gaps.length>0){
+              gapsHtml=`<div class="pbi-card" style="margin-bottom:16px;padding:15px"><div class="klabel" style="margin-bottom:8px">⏸ Períodos de Inatividade (${idleDetails.gaps.length})</div><div style="max-height:120px;overflow-y:auto">${idleDetails.gaps.slice(0,8).map(g=>{
+                const fr=new Date(g.from).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+                const to=new Date(g.to).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+                const c=g.minutes>30?'var(--red)':g.minutes>15?'var(--yellow)':'var(--muted)';
+                return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px"><span style="font-family:monospace">${fr} → ${to}</span><span style="font-weight:800;color:${c}">${g.minutes} min</span></div>`;
+              }).join('')}</div></div>`;
+            }
+
+            // Production log (last 15)
+            const recent=allScans.slice(-15).reverse();
+            let logHtml='';
+            if(recent.length>0){
+              logHtml=`<div class="pbi-card" style="margin-bottom:16px;padding:15px"><div class="klabel" style="margin-bottom:8px">📋 Log de Produção (últimos ${Math.min(15,allScans.length)})</div><div style="max-height:140px;overflow-y:auto">${recent.map((s,i)=>{
+                const t=new Date(s.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+                return `<div class="prod-log-entry"><span class="time">${t}</span><span style="flex:1;color:var(--muted)">${s.weight_kg?s.weight_kg+' kg':''}</span><span style="color:var(--muted);font-size:10px">#${allScans.length-i}</span></div>`;
+              }).join('')}</div></div>`;
+            }
+            
+            packingStatsHtml = `
+                <div style="margin-bottom: 12px; font-weight:800; font-size:12px; color:var(--muted); letter-spacing:0.05em">📦 MÉTRICAS DO PACKING HOUSE</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px">
+                    <div class="pbi-card" style="padding:15px">
+                        <div class="klabel" style="font-size:9px">Produção Líquida</div>
+                        <div class="kpi-value-pbi" style="font-size:20px">${Math.round(totalBoxes)} <span style="font-size:10px">cx</span></div>
+                        <div style="font-size:9px; color:${prodScore>90?'var(--green)':prodScore>60?'var(--yellow)':'var(--red)'}">${prodScore}% da Meta (${prodTarget} cx)</div>
+                    </div>
+                    <div class="pbi-card" style="padding:15px">
+                        <div class="klabel" style="font-size:9px">Valor Produzido</div>
+                        <div class="kpi-value-pbi" style="font-size:20px; color:var(--green)">R$ ${valueEarned.toFixed(2)}</div>
+                        <div style="font-size:9px; color:var(--muted)">R$ ${valuePerUnit.toFixed(2)}/cx</div>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px">
+                    <div class="pbi-card" style="padding:10px;text-align:center">
+                        <div class="klabel" style="font-size:8px">Ociosidade</div>
+                        <div style="font-weight:900;font-size:16px;color:${stabClass==='good'?'var(--green)':stabClass==='warn'?'var(--red)'}">${idleDetails.totalMinutes} min</div>
+                        <div class="idle-bar"><div class="fill ${stabClass}" style="width:${Math.min(100,idleDetails.totalMinutes)}%"></div></div>
+                    </div>
+                    <div class="pbi-card" style="padding:10px;text-align:center">
+                        <div class="klabel" style="font-size:8px">Gap Médio</div>
+                        <div style="font-weight:900;font-size:16px;color:var(--blue)">${idleDetails.avgGapMinutes} min</div>
+                        <div style="font-size:8px;color:var(--muted)">${idleDetails.gaps.length} pausas</div>
+                    </div>
+                    <div class="pbi-card" style="padding:10px;text-align:center">
+                        <div class="klabel" style="font-size:8px">Jornada</div>
+                        <div style="font-weight:900;font-size:16px;color:var(--blue)">${workPct}%</div>
+                        <div style="font-size:8px;color:var(--muted)">${activeMin}/${totalWorkMin} min</div>
+                    </div>
+                </div>
+                <div class="pbi-card" style="margin-bottom:16px; padding:15px; overflow:hidden">
+                    <div class="klabel" style="margin-bottom:10px">Cadência (Caixas/Hora)</div>
+                    <div style="width:100%; height:140px"><canvas id="drHourlyChart"></canvas></div>
+                </div>
+                ${gapsHtml}
+                ${logHtml}
+            `;
+            
+            setTimeout(() => {
+                const elChart = document.getElementById('drHourlyChart');
+                if (!elChart) return;
+                const ctx = elChart.getContext('2d');
+                if (window._drChart) window._drChart.destroy();
+                window._drChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Caixas/Hora',
+                            data: chartPoints,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointRadius: 2
+                        }]
+                    },
+                    options: {
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 } } },
+                            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 9 } } }
+                        }
+                    }
+                });
+            }, 100);
         }
-
+        
+        let fieldStatsHtml = '';
+        if (totalFieldOps > 0) {
+            const listHtml = fieldServicesList.map(srv => {
+                const formattedDate = srv.field_services.date.split('-').reverse().slice(0, 2).join('/');
+                return `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:11px">
+                        <div>
+                            <div style="font-weight:700">${srv.field_services.sector} (${srv.field_services.operation})</div>
+                            <div style="color:var(--muted); font-size:10px">${formattedDate} • ${srv.field_services.quantity} ${srv.field_services.unit || 'un'}</div>
+                        </div>
+                        <div style="font-weight:800; color:var(--green)">R$ ${Number(srv.value_received || 0).toFixed(2)}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            fieldStatsHtml = `
+                <div style="margin-bottom: 12px; font-weight:800; font-size:12px; color:var(--muted); letter-spacing:0.05em; margin-top:20px">🚜 HISTÓRICO DE ATIVIDADES DE CAMPO</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px">
+                    <div class="pbi-card" style="padding:15px">
+                        <div class="klabel" style="font-size:9px">Total de Apontamentos</div>
+                        <div class="kpi-value-pbi" style="font-size:20px; color:var(--green)">${totalFieldOps} <span style="font-size:10px">serviços</span></div>
+                    </div>
+                    <div class="pbi-card" style="padding:15px">
+                        <div class="klabel" style="font-size:9px">Ganhos em Campo</div>
+                        <div class="kpi-value-pbi" style="font-size:20px; color:var(--green)">R$ ${totalFieldEarned.toFixed(2)}</div>
+                    </div>
+                </div>
+                <div class="pbi-card" style="margin-bottom:16px; padding:15px">
+                    <div class="klabel" style="margin-bottom:8px">Serviços Executados no Período</div>
+                    <div style="max-height:220px; overflow-y:auto">
+                        ${listHtml}
+                    </div>
+                </div>
+            `;
+        }
+        
         document.getElementById('drTotals').innerHTML = `
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px">
-                <div class="pbi-card" style="padding:15px">
-                    <div class="klabel" style="font-size:9px">Produção Líquida</div>
-                    <div class="kpi-value-pbi" style="font-size:20px">${Math.round(totalBoxes)} <span style="font-size:10px">cx</span></div>
-                    <div style="font-size:9px; color:${prodScore>90?'var(--green)':prodScore>60?'var(--yellow)':'var(--red)'}">${prodScore}% da Meta (${prodTarget} cx)</div>
-                </div>
-                <div class="pbi-card" style="padding:15px">
-                    <div class="klabel" style="font-size:9px">Valor Produzido</div>
-                    <div class="kpi-value-pbi" style="font-size:20px; color:var(--green)">R$ ${valueEarned.toFixed(2)}</div>
-                    <div style="font-size:9px; color:var(--muted)">R$ ${valuePerUnit.toFixed(2)}/cx</div>
-                </div>
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px">
-                <div class="pbi-card" style="padding:10px;text-align:center">
-                    <div class="klabel" style="font-size:8px">Ociosidade</div>
-                    <div style="font-weight:900;font-size:16px;color:${stabClass==='good'?'var(--green)':stabClass==='warn'?'var(--yellow)':'var(--red)'}">${idleDetails.totalMinutes} min</div>
-                    <div class="idle-bar"><div class="fill ${stabClass}" style="width:${Math.min(100,idleDetails.totalMinutes)}%"></div></div>
-                </div>
-                <div class="pbi-card" style="padding:10px;text-align:center">
-                    <div class="klabel" style="font-size:8px">Gap Médio</div>
-                    <div style="font-weight:900;font-size:16px;color:var(--blue)">${idleDetails.avgGapMinutes} min</div>
-                    <div style="font-size:8px;color:var(--muted)">${idleDetails.gaps.length} pausas</div>
-                </div>
-                <div class="pbi-card" style="padding:10px;text-align:center">
-                    <div class="klabel" style="font-size:8px">Jornada</div>
-                    <div style="font-weight:900;font-size:16px;color:var(--blue)">${workPct}%</div>
-                    <div style="font-size:8px;color:var(--muted)">${activeMin}/${totalWorkMin} min</div>
-                </div>
-            </div>
-            <div class="pbi-card" style="margin-bottom:16px; padding:15px; overflow:hidden">
-                <div class="klabel" style="margin-bottom:10px">Cadência (Caixas/Hora)</div>
-                <div style="width:100%; height:140px"><canvas id="drHourlyChart"></canvas></div>
-            </div>
+            ${packingStatsHtml}
+            ${fieldStatsHtml}
+            
+            <div style="margin-bottom: 12px; font-weight:800; font-size:12px; color:var(--muted); letter-spacing:0.05em; margin-top:20px">📋 AUDITORIAS & FALTAS</div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px">
                 <div class="pbi-card" style="border-left:4px solid ${absencesCount > 0 ? 'var(--red)' : 'var(--green)'}; padding:15px">
                     <div class="klabel" style="font-size:9px">Assiduidade</div>
@@ -2640,45 +2926,18 @@ async function openEmpDrawer(idOrName) {
                     <div style="font-size:9px; color:var(--muted)">Bônus: R$ ${bonusEarned.toFixed(2)}</div>
                 </div>
                 <div class="pbi-card" style="border-left:4px solid var(--yellow); padding:15px">
-                    <div class="klabel" style="font-size:9px">Qualidade</div>
+                    <div class="klabel" style="font-size:9px">Qualidade (Packing)</div>
                     <div style="font-weight:800; font-size:14px; color:var(--yellow)">${qualityCount} erros</div>
-                    <div style="font-size:9px; color:var(--muted)">Taxa: ${((qualityCount / (totalBoxes || 1)) * 100).toFixed(1)}%</div>
+                    <div style="font-size:9px; color:var(--muted)">Taxa: ${totalBoxes > 0 ? ((qualityCount / totalBoxes) * 100).toFixed(1) + '%' : '—'}</div>
                 </div>
             </div>
-            ${gapsHtml}
-            ${logHtml}
         `;
 
-
-        setTimeout(() => {
-            const ctx = document.getElementById('drHourlyChart').getContext('2d');
-            if (window._drChart) window._drChart.destroy();
-            window._drChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Caixas/Hora',
-                        data: chartPoints,
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        borderWidth: 2,
-                        pointRadius: 2
-                    }]
-                },
-                options: {
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 } } },
-                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 9 } } }
-                    }
-                }
-            });
-        }, 100);
-
         document.getElementById('drAbsences').innerHTML = '';
+    } else {
+        document.getElementById('drTotals').innerHTML = `
+            <div style="color:var(--muted); text-align:center; padding:30px">Nenhuma atividade registrada para este colaborador no período selecionado.</div>
+        `;
     }
     d.classList.add('active');
 }
@@ -3421,7 +3680,7 @@ async function refreshQuality() {
       <td>${new Date(q.ts).toLocaleString('pt-BR')}</td>
       <td>
         <div class="clickable-emp" style="display:flex;align-items:center;gap:10px" onclick="openEmpDrawer('${empName}')">
-          <div class="avatar-ring">${emp?.photo_path ? `<img src="${emp.photo_path}">` : empName[0]}</div>
+          <div class="avatar-ring">${emp?.photo_path ? `<img src="${emp.photo_path}" onerror="this.remove()">` : empName[0]}</div>
           <b>${empName}</b>
         </div>
       </td>
@@ -3458,7 +3717,7 @@ async function refreshQuality() {
     return `
     <div class="pbi-card clickable-emp" onclick="openEmpDrawer('${name}')" style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(239,68,68,0.03);border-radius:12px;margin-bottom:8px;border:1px solid rgba(239,68,68,0.08)">
       <div style="display:flex; align-items:center; gap:10px">
-        <div class="avatar-ring" style="width:32px; height:32px; font-size:12px">${photo ? `<img src="${photo}">` : name[0]}</div>
+        <div class="avatar-ring" style="width:32px; height:32px; font-size:12px">${photo ? `<img src="${photo}" onerror="this.remove()">` : name[0]}</div>
         <div style="font-weight:700;font-size:13px">${name}</div>
       </div>
       <div style="color:var(--red);font-weight:800; font-size:15px">${val} <span style="font-size:10px;font-weight:400">cx desc.</span></div>

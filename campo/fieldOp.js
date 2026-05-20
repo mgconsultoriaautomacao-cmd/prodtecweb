@@ -66,7 +66,7 @@ function renderFEmpList(list) {
     html += `
       <div class="emp-item ${isSel ? 'on' : ''}" onclick="toggleFEmp(${e.id}, '${e.name}')" data-id="${e.id}">
         <div class="emp-avatar">${e.name.substring(0,2).toUpperCase()}</div>
-        <div class="emp-name">${e.name} <div style="font-size:10px;color:var(--muted)">${e.role || 'Geral'}</div></div>
+        <div class="emp-name">${e.name} <div style="font-size:10px;color:var(--muted)">Cartão: ${e.barcode || '—'} | ${e.role || 'Geral'}</div></div>
         <div class="emp-check">${isSel ? '✓' : ''}</div>
       </div>
     `;
