@@ -2899,15 +2899,34 @@ async function openEmpDrawer(idOrName) {
             const stabClass = idleDetails.totalMinutes < 30 ? 'good' : idleDetails.totalMinutes < 60 ? 'warn' : 'bad';
             const valueEarned = totalBoxes * valuePerUnit;
 
-            // Work hours calc
+            // Work hours calc (grouped by day)
             const [wsH,wsM] = (tenantConfig.work_start_time||'07:00').split(':').map(Number);
             const [weH,weM] = (tenantConfig.work_end_time||'17:00').split(':').map(Number);
             const [lsH,lsM] = (tenantConfig.lunch_start_time||'11:30').split(':').map(Number);
             const [leH,leM] = (tenantConfig.lunch_end_time||'13:00').split(':').map(Number);
-            const totalWorkMin = (weH*60+weM)-(wsH*60+wsM)-((leH*60+leM)-(lsH*60+lsM));
+            const dailyWorkMin = (weH*60+weM)-(wsH*60+wsM)-((leH*60+leM)-(lsH*60+lsM));
+            
+            const scansByDay = {};
+            allScans.forEach(s => {
+              const d = s.ts.split('T')[0];
+              if(!scansByDay[d]) scansByDay[d] = [];
+              scansByDay[d].push(s);
+            });
+            
             let activeMin = 0;
-            if(allScans.length>=2){ const f=new Date(allScans[0].ts),l=new Date(allScans[allScans.length-1].ts); activeMin=Math.round((l-f)/60000)-Math.round(getLunchOverlap(f,l)/60); }
-            const workPct = totalWorkMin>0?Math.min(100,Math.round((activeMin/totalWorkMin)*100)):0;
+            let totalWorkMin = 0;
+            
+            Object.values(scansByDay).forEach(dayScans => {
+              if (dayScans.length >= 2) {
+                const daySorted = dayScans.sort((a,b) => new Date(a.ts) - new Date(b.ts));
+                const f = new Date(daySorted[0].ts);
+                const l = new Date(daySorted[daySorted.length-1].ts);
+                activeMin += Math.round((l - f) / 60000) - Math.round(getLunchOverlap(f, l) / 60);
+              }
+              totalWorkMin += dailyWorkMin;
+            });
+            
+            const workPct = totalWorkMin > 0 ? Math.min(100, Math.round((activeMin / totalWorkMin) * 100)) : 0;
 
             // Idle gaps HTML
             let gapsHtml = '';
