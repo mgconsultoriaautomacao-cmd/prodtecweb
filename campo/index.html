@@ -1087,24 +1087,55 @@ async function afterLogin(u) {
   if (tuErr) { console.error('Erro ao buscar tenant:', tuErr); }
   if (!tuList || tuList.length === 0) { alert('Usuário não vinculado a uma empresa.'); await sb.auth.signOut(); return; }
 
-  let tu;
   if (tuList.length === 1) {
-    tu = tuList[0];
+    await selectTenantAndContinue(tuList[0]);
   } else {
-    const names = tuList.map((t, i) => `${i+1}. ${t.tenants?.name || 'Empresa'}`).join('\n');
-    const choice = prompt(`Você pertence a ${tuList.length} empresas.\nEscolha o número:\n\n${names}`);
-    const idx = parseInt(choice) - 1;
-    tu = (isNaN(idx) || idx < 0 || idx >= tuList.length) ? tuList[0] : tuList[idx];
+    // Render custom elegant modal for tenant selection to avoid browser prompt suppression
+    let modal = document.getElementById('tenantSelectModal');
+    if (!modal) {
+      document.body.insertAdjacentHTML('beforeend', `
+        <div id="tenantSelectModal" style="position:fixed; inset:0; background:rgba(15, 23, 42, 0.9); display:flex; justify-content:center; align-items:center; z-index:99999; backdrop-filter:blur(8px); padding:20px; font-family:inherit;">
+          <div style="background:#1e293b; border:1px solid #334155; border-radius:24px; padding:28px; width:100%; max-width:400px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); text-align:center; box-sizing:border-box;">
+            <div style="font-size:36px; margin-bottom:12px;">🏢</div>
+            <h3 style="margin:0 0 8px 0; color:#f8fafc; font-size:20px; font-weight:700;">Selecionar Empresa</h3>
+            <p style="margin:0 0 24px 0; color:#94a3b8; font-size:14px; line-height:1.4;">Você está vinculado a múltiplas empresas. Escolha uma para acessar:</p>
+            <div id="tenantOptionsContainer" style="display:flex; flex-direction:column; gap:12px; max-height:250px; overflow-y:auto; padding-right:4px;"></div>
+          </div>
+        </div>
+      `);
+      modal = document.getElementById('tenantSelectModal');
+    }
+    
+    const container = document.getElementById('tenantOptionsContainer');
+    container.innerHTML = tuList.map((tu, idx) => `
+      <button class="btn btn-primary btn-full" style="background:#3b82f6; border:none; padding:16px; border-radius:14px; font-weight:600; font-size:15px; text-align:left; display:flex; justify-content:space-between; align-items:center; cursor:pointer; color:#ffffff; width:100%; box-shadow:0 4px 6px -1px rgba(59,130,246,0.2); transition:transform 0.1s ease;" onclick="chooseTenantByIndex(${idx})">
+        <span>${tu.tenants?.name || 'Empresa'}</span>
+        <span style="font-size:12px; opacity:0.8;">Selecionar ›</span>
+      </button>
+    `).join('');
+    
+    // Save tuList to window context
+    window._tempTuList = tuList;
+    modal.style.display = 'flex';
   }
+}
 
+window.chooseTenantByIndex = async (idx) => {
+  const modal = document.getElementById('tenantSelectModal');
+  if (modal) modal.style.display = 'none';
+  const tu = window._tempTuList[idx];
+  await selectTenantAndContinue(tu);
+};
+
+async function selectTenantAndContinue(tu) {
   tenantId   = tu.tenant_id;
   tenantName = tu.tenants?.name || 'Empresa';
   window.farmCode = tu.tenants?.farm_code || '4';
   window.pricePerCarrao = parseFloat(tu.tenants?.value_per_carrao || 2.00);
 
-  window.currentInspector = u.email.split('@')[0];
+  window.currentInspector = user.email.split('@')[0];
   $('homeTenant').textContent = tenantName;
-  $('loggedAs').textContent   = u.email;
+  $('loggedAs').textContent   = user.email;
   await loadEmployees();
   await loadParcelas();
   await loadParcelLinks();
@@ -1126,7 +1157,6 @@ async function afterLogin(u) {
   }, 500);
 
   await updateSyncBadge();
-
 
   showScreen('home');
   if ('serviceWorker' in navigator) {
@@ -1760,7 +1790,6 @@ async function submitCarrao() {
     julian_lot        : julianLot,
     synced            : true,
     carriage_id       : cState.carriageId || null,
-    carriage_code     : cState.carriageCode || null,
   };
 
 

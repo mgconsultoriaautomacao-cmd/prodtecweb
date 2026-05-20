@@ -1659,10 +1659,10 @@ async function refreshFin(){
     }
     if(!displayName) displayName = x.employee_barcode || 'Desconhecido';
 
-    if(!eb[displayName]) eb[displayName]={boxes:0,val:0,role:x.role, barcode: x.employee_barcode, fieldVal:0, fieldOps:0};
+    if(!eb[displayName]) eb[displayName]={boxes:0,val:0,role:x.role, barcode: x.employee_barcode, fieldVal:0, fieldOps:0, activities: []};
     
     // Use role-based value from roles table, fallback to tenant config
-    const roleVal = getRoleConfig(x.role || emp?.role || 'EMBALADOR');
+    const roleVal = getRoleConfig(x.role || 'EMBALADOR');
     
     eb[displayName].boxes++;
     eb[displayName].val += roleVal.value;
@@ -1673,14 +1673,26 @@ async function refreshFin(){
   (fServices||[]).forEach(srv => {
     (srv.field_service_employees||[]).forEach(emp => {
       let realEmp = _employees.find(e => e.id === emp.employee_id);
+      if(!realEmp && emp.employee_name) {
+        const cleanName = emp.employee_name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        realEmp = _employees.find(e => e.name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === cleanName);
+      }
       let dName = realEmp ? realEmp.name : emp.employee_name;
       let barcode = realEmp ? realEmp.barcode : null;
       
-      if(!eb[dName]) eb[dName] = {boxes:0, val:0, role: srv.sector || 'CAMPO', barcode: barcode, fieldVal:0, fieldOps:0};
+      if(!eb[dName]) eb[dName] = {boxes:0, val:0, role: srv.sector || 'CAMPO', barcode: barcode, fieldVal:0, fieldOps:0, activities: []};
+      if(!eb[dName].activities) eb[dName].activities = [];
       
       eb[dName].fieldVal += Number(emp.value_received || 0);
       eb[dName].val += Number(emp.value_received || 0);
       eb[dName].fieldOps += 1;
+      
+      eb[dName].activities.push({
+        date: srv.date,
+        sector: srv.sector,
+        operation: srv.operation,
+        value: Number(emp.value_received || 0)
+      });
       
       // Atualiza role se for só de campo
       if (eb[dName].role !== 'PACKER' && eb[dName].role !== 'STACKER' && !['EMBALADOR', 'EMPILHADOR'].includes(eb[dName].role)) {
@@ -1691,6 +1703,11 @@ async function refreshFin(){
   
   const bonus = Number(tenantConfig.attendance_bonus || 0);
   const tbody=$('finTable').querySelector('tbody');
+  
+  const sForm = s.split('-').reverse().join('/');
+  const eForm = e.split('-').reverse().join('/');
+  const periodRange = `${sForm} a ${eForm}`;
+  
   tbody.innerHTML=Object.entries(eb).map(([name,d])=>{
     const hasAbs = (abs||[]).some(a=>a.employee_barcode === d.barcode && d.barcode);
     const total = d.val + (hasAbs ? 0 : bonus);
@@ -1698,18 +1715,29 @@ async function refreshFin(){
     let qtyDisplay = [];
     if(d.boxes > 0) qtyDisplay.push(`<b>${d.boxes}</b> cx`);
     if(d.fieldOps > 0) qtyDisplay.push(`<b>${d.fieldOps}</b> op. campo`);
+    if (d.activities && d.activities.length > 0) {
+      d.activities.forEach(act => {
+        const formattedDate = act.date.split('-').reverse().slice(0, 2).join('/');
+        qtyDisplay.push(`<small style="color:var(--muted); padding-left:6px; display:block; line-height:1.2; margin-top:2px;">• ${formattedDate}: ${act.sector} (${act.operation})</small>`);
+      });
+    }
     
     let valDisplay = [];
     if(d.boxes > 0) valDisplay.push(`${BRL((d.val - d.fieldVal)/d.boxes)} /cx`);
-    if(d.fieldOps > 0) valDisplay.push(`(Campo)`);
+    if(d.fieldOps > 0) valDisplay.push(`—`);
+    if (d.activities && d.activities.length > 0) {
+      d.activities.forEach(act => {
+        valDisplay.push(`<small style="color:var(--green); font-weight:600; display:block; line-height:1.2; margin-top:2px;">${BRL(act.value)}</small>`);
+      });
+    }
 
     return `
       <tr>
-        <td>PERÍODO</td>
+        <td style="font-size:11px; color:var(--muted); white-space:nowrap">${periodRange}</td>
         <td><div style="font-weight:700">${name}</div><div style="font-size:10px;color:var(--muted)">${d.barcode||'—'}</div></td>
         <td><span class="badge ${d.role.toLowerCase()}">${d.role}</span></td>
-        <td>${qtyDisplay.join('<br>')}</td>
-        <td>${valDisplay.join('<br>')}</td>
+        <td>${qtyDisplay.join('')}</td>
+        <td>${valDisplay.join('')}</td>
         <td>${hasAbs?'<span class="badge red">FALTA</span>':'<span class="badge green">PRESENÇA</span>'}</td>
         <td style="color:var(--green)">${hasAbs?'-':BRL(bonus)}</td>
         <td style="font-weight:900; font-size:15px; color:var(--blue)">${BRL(total)}</td>
@@ -2476,12 +2504,15 @@ async function loadBulk() {
 
 async function openEmpDrawer(idOrName) {
     const d = document.getElementById('empDrawer');
-    const clean = idOrName.trim().toLowerCase();
-    let emp = _employees.find(e => (e.barcode || '').toLowerCase() === clean);
-    if (!emp) emp = _employees.find(e => e.name.trim().toLowerCase() === clean);
+    const normalizeStr = (str) => (str || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const clean = normalizeStr(idOrName);
+    
+    let emp = _employees.find(e => normalizeStr(e.barcode) === clean);
+    if (!emp) emp = _employees.find(e => normalizeStr(e.name) === clean);
+    if (!emp) emp = _employees.find(e => normalizeStr(e.name).includes(clean) || clean.includes(normalizeStr(e.name)));
 
     if (!emp) {
-        if (clean !== 'desconhecido') console.error('Colaborador não encontrado:', idOrName);
+        if (clean !== 'desconhecido' && clean !== '—') console.error('Colaborador não encontrado:', idOrName);
         return;
     }
 
@@ -3137,9 +3168,10 @@ const simpleList=(tbl,el,label,keyCol)=>async(items)=>{
       <div>
         <span style="font-weight:700;color:var(--blue);margin-right:8px">${i.track_code||'—'}</span>
         <span>${i[keyCol]}</span>
-        ${i.value_per_carrao ? `<span style="color:var(--green);font-size:11px;margin-left:8px">(R$ ${i.value_per_carrao})</span>` : ''}
+        ${i.value_per_carrao ? `<span style="color:var(--green);font-size:11px;margin-left:8px">(R$ ${Number(i.value_per_carrao).toFixed(2).replace('.',',')})</span>` : ''}
       </div>
       <div>
+        ${tbl === 'fruit' ? `<button class="sec" style="padding:3px 8px;margin-right:4px;border-color:var(--green);color:var(--green);" onclick="editFruitPrice('${i.id}', '${i[keyCol].replace(/'/g, "\\'")}', ${i.value_per_carrao || 0})">✏️ R$</button>` : ''}
         <button class="sec" style="padding:3px 8px;margin-right:4px" onclick="setTrackCode('${tbl}s','${i.id}','${i.track_code||''}')">Code</button>
         <button class="danger" style="padding:3px 8px" onclick="window.del_${tbl}('${i.id}')">×</button>
       </div>
@@ -3157,6 +3189,23 @@ async function loadFruits(){
     if(sel) sel.innerHTML = fruitOptions;
     if(varFruitSel) varFruitSel.innerHTML = fruitOptions;
   } catch(e) { console.error(e); }
+}
+
+async function editFruitPrice(id, name, currentVal) {
+  const newPrice = prompt(`Novo valor por carroção para ${name} (R$):`, currentVal);
+  if (newPrice === null) return;
+  const parsed = parseFloat(newPrice.replace(',', '.'));
+  if (isNaN(parsed)) {
+    alert('Valor inválido!');
+    return;
+  }
+  const { error } = await sb.from('fruits').update({ value_per_carrao: parsed }).eq('id', id);
+  if (error) {
+    alert('Erro ao atualizar valor: ' + error.message);
+  } else {
+    toast('Valor atualizado com sucesso!', 'success');
+    loadFruits();
+  }
 }
 async function loadVarieties(){
   try {
