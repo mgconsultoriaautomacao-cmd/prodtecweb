@@ -1839,10 +1839,10 @@ async function refreshFin(){
   // eb[barcode] = { displayName, boxes, val, role, barcode, fieldVal, fieldOps, activities }
   const eb = {};
 
-  const resolveEmpKey = (barcode, rawName) => {
-    if (barcode) return barcode;
-    // Sem barcode: normaliza o nome como fallback
-    return (rawName || 'desconhecido').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const resolveEmpKey = (barcode, rawName, empId) => {
+    if (barcode) return `bc:${barcode}`;
+    if (empId) return `id:${empId}`;
+    return `nm:${(rawName || 'desconhecido').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`;
   };
 
   (scans||[]).forEach(x => {
@@ -1854,9 +1854,9 @@ async function refreshFin(){
     let displayName = empRecord ? empRecord.name : (x.employee_name || x.employee_barcode || 'Desconhecido');
     let barcode = x.employee_barcode || null;
 
-    const key = resolveEmpKey(barcode, displayName);
+    const empId = empRecord?.id || null;
+    const key = resolveEmpKey(barcode, displayName, empId);
     if (!eb[key]) eb[key] = {displayName, boxes:0, val:0, role:x.role, barcode, fieldVal:0, fieldOps:0, activities:[]};
-    // Garante que sempre usa o nome correto se encontrou depois
     if (empRecord && eb[key].displayName !== empRecord.name) eb[key].displayName = empRecord.name;
 
     const roleVal = getRoleConfig(x.role || 'EMBALADOR');
@@ -1888,7 +1888,7 @@ async function refreshFin(){
       const dName = realEmp ? realEmp.name : emp.employee_name;
       const barcode = realEmp ? realEmp.barcode : null;
 
-      const key = resolveEmpKey(barcode, dName);
+      const key = resolveEmpKey(barcode, dName, realEmp?.id || emp.employee_id);
       if (!eb[key]) eb[key] = {displayName: dName, boxes:0, val:0, role: srv.sector || 'CAMPO', barcode, fieldVal:0, fieldOps:0, activities:[]};
       if (!eb[key].activities) eb[key].activities = [];
       if (realEmp && eb[key].displayName !== realEmp.name) eb[key].displayName = realEmp.name;
@@ -1933,7 +1933,7 @@ async function refreshFin(){
       const dName = realEmp ? realEmp.name : emp.employee_name;
       const barcode = realEmp ? realEmp.barcode : null;
 
-      const key = resolveEmpKey(barcode, dName);
+      const key = resolveEmpKey(barcode, dName, realEmp?.id || emp.employee_id);
       if (!eb[key]) eb[key] = {displayName: dName, boxes:0, val:0, role: 'COLHEITA', barcode, fieldVal:0, fieldOps:0, activities:[]};
       if (!eb[key].activities) eb[key].activities = [];
       if (realEmp && eb[key].displayName !== realEmp.name) eb[key].displayName = realEmp.name;
@@ -1997,8 +1997,13 @@ async function refreshFin(){
   }).join('') || '<tr><td colspan="8" style="text-align:center; padding:30px">Sem dados financeiros para o período.</td></tr>';
 
   // KPIs de totalização
+  // IMPORTANTE: Cada colaborador recebe bônus UMA ÚNICA VEZ no período
+  // O bônus é calculado com base nas faltas registradas no barcode
   let totalBonus = 0;
-  Object.values(eb).forEach(d => {
+  const seenForBonus = new Set();
+  Object.entries(eb).forEach(([key, d]) => {
+    if (seenForBonus.has(key)) return; // Garante que nunca conta duas vezes
+    seenForBonus.add(key);
     const absencesCount = (abs||[]).filter(a => a.employee_barcode === d.barcode && d.barcode).length;
     totalBonus += Math.max(0, bonus - (absencesCount * penalty));
   });
@@ -2124,8 +2129,8 @@ async function refreshDash(){
   window._currentStops = stops || [];
   updateStopBanner();
 
-  // Dados de Campo (Carrocões)
-  const {data:harvest} = await sb.from('field_carrao_sessions').select('*, parcels(code)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
+  // Dados de Campo (Carrocões) - incluindo parcela e variedade
+  const {data:harvest} = await sb.from('field_carrao_sessions').select('*, parcels(code, name), varieties(name)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
 
   const packerScans = scans.filter(s=>s.role==='PACKER');
   const kg = packerScans.reduce((a,x)=>a+(x.weight_kg||0),0);
@@ -2229,7 +2234,7 @@ function buildDashCharts(scans, packerScans, s, e, prevScans, harvest){
 
   const varG = {};
   (harvest || []).forEach(h => { 
-    const v = h.variety_name || 'Indet.'; 
+    const v = h.varieties?.name || h.variety_name || 'Indet.'; 
     varG[v] = (varG[v] || 0) + (h.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300));
   });
   mkChart('chartVarietiesHarvest', {
@@ -2478,12 +2483,17 @@ async function refreshMass() {
     `).join('') || '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">Sem dados de faturamento para o período.</td></tr>';
   }
 
-  // Populate Supervisor Select
+  // Populate Supervisor Select — inclui parcelas de expedição E de colheita
   const supSel = $('supParcelSelect');
-  const uniqueParcels = [...new Set((exp||[]).map(x => {
+  const expParcels = (exp||[]).map(x => {
     const p = pMap[cleanCode(x.traceability_code)] || lotMap[cleanCode(x.traceability_code)];
     return p ? p.code : (x.traceability_code || null);
-  }).filter(Boolean))].sort();
+  }).filter(Boolean);
+  
+  // Adiciona parcelas da colheita (campo) que possam não ter expedição ainda
+  const harvestParcels = (window._currentHarvestData || []).map(h => h.parcels?.code).filter(Boolean);
+  
+  const uniqueParcels = [...new Set([...expParcels, ...harvestParcels])].sort();
   
   const currentVal = supSel.value;
   supSel.innerHTML = '<option value="">Selecione a Parcela para Analisar</option>' + uniqueParcels.map(p => `<option value="${p}">${p}</option>`).join('');
@@ -3950,20 +3960,39 @@ function refreshSupervisorChart() {
   });
 
   const totalCarrao = filteredHarvest.reduce((a,b) => a + b.qty_carrocoes, 0);
+  const totalCarraoKg = totalCarrao * (tenantConfig.harvest_carrao_weight_kg || 300);
   const totalKgExp = filteredExp.reduce((a,b) => a + Number(b.quantity_kg), 0);
   
+  // Caixas embaladas — usando scans de produção do Packing filtrados por rastreabilidade desta parcela
+  const totalPackedBoxes = filteredExp.reduce((a,b) => a + Number(b.quantity_boxes || 0), 0);
+  
+  // Variedade(s) registradas nas sessões de colheita
+  const varSet = [...new Set(filteredHarvest.map(h => h.varieties?.name || h.variety_name).filter(Boolean))];
+  const varLabel = varSet.length > 0 ? varSet.join(', ') : '—';
+  
+  // Eficiência: % aproveitamento (expedido / entrada)
+  const efic = totalCarraoKg > 0 ? Math.min(100, ((totalKgExp / totalCarraoKg) * 100)).toFixed(1) : '—';
+
   // Atualiza mini KPIs de apoio no gráfico
   const elInfo = $('supParcelInfo');
   if(elInfo) {
     elInfo.innerHTML = `
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px">
+      <div style="margin-bottom:8px; font-size:11px; color:var(--muted)">🌱 Variedade: <strong style="color:var(--text)">${varLabel}</strong></div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-top:10px">
         <div class="pbi-card" style="padding:10px">
-          <div class="klabel">Entrada Campo</div>
-          <div style="font-size:18px; font-weight:800">${totalCarrao.toFixed(1)} <span style="font-size:10px">carr.</span></div>
+          <div class="klabel">🚜 Carroções Colhidos</div>
+          <div style="font-size:20px; font-weight:800">${totalCarrao.toFixed(0)} <span style="font-size:10px">carr.</span></div>
+          <div style="font-size:10px; color:var(--muted)">${(totalCarraoKg/1000).toFixed(1)} Ton est.</div>
         </div>
         <div class="pbi-card" style="padding:10px">
-          <div class="klabel">Saída Packing</div>
-          <div style="font-size:18px; font-weight:800">${(totalKgExp/1000).toFixed(1)} <span style="font-size:10px">Ton.</span></div>
+          <div class="klabel">📦 Saída Packing</div>
+          <div style="font-size:20px; font-weight:800">${(totalKgExp/1000).toFixed(1)} <span style="font-size:10px">Ton</span></div>
+          ${totalPackedBoxes > 0 ? `<div style="font-size:10px; color:var(--muted)">${totalPackedBoxes} cx embaladas</div>` : ''}
+        </div>
+        <div class="pbi-card" style="padding:10px">
+          <div class="klabel">📊 Aproveitamento</div>
+          <div style="font-size:20px; font-weight:800; color:${efic > 70 ? 'var(--green)' : 'var(--yellow)'}">${efic}%</div>
+          <div style="font-size:10px; color:var(--muted)">entrada → packing</div>
         </div>
       </div>
     `;
