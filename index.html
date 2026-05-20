@@ -1957,8 +1957,10 @@ async function refreshFin(){
   // ── BÔNUS DE ASSIDUIDADE ── valor FIXO MENSAL, nunca pro-rata
   // O bônus é cadastrado mensalmente e aplicado UMA VEZ por colaborador
   const bonus = Number(tenantConfig.attendance_bonus || 0);
+  const penalty = Number(tenantConfig.attendance_penalty || 0);
   
   window._lastFinEb = eb;
+  window._lastFinAbs = abs;
 
   const tbody=$('finTable').querySelector('tbody');
   const sForm = s.split('-').reverse().join('/');
@@ -1966,27 +1968,19 @@ async function refreshFin(){
   const periodRange = `${sForm} a ${eForm}`;
 
   tbody.innerHTML = Object.values(eb).map(d => {
-    const hasAbs = (abs||[]).some(a => a.employee_barcode === d.barcode && d.barcode);
-    const total = d.val + (hasAbs ? 0 : bonus);
+    const absencesCount = (abs||[]).filter(a => a.employee_barcode === d.barcode && d.barcode).length;
+    const finalBonus = Math.max(0, bonus - (absencesCount * penalty));
+    const total = d.val + finalBonus;
 
     let qtyDisplay = [];
-    if(d.boxes > 0) qtyDisplay.push(`<b>${d.boxes}</b> cx`);
-    if(d.fieldOps > 0) qtyDisplay.push(`<b>${d.fieldOps}</b> op. campo`);
-    if (d.activities && d.activities.length > 0) {
-      d.activities.forEach(act => {
-        const fd = act.date.split('-').reverse().slice(0,2).join('/');
-        qtyDisplay.push(`<small style="color:var(--muted); padding-left:6px; display:block; line-height:1.2; margin-top:2px;">• ${fd}: ${act.sector} (${act.operation})</small>`);
-      });
-    }
+    if(d.boxes > 0) qtyDisplay.push(`<b>${d.boxes}</b> cx<br>`);
+    if(d.fieldOps > 0) qtyDisplay.push(`<b>${d.fieldOps}</b> op. campo<br>`);
+    
+    qtyDisplay.push(`<div style="margin-top:6px"><button class="sec" style="font-size:10px; padding:4px 8px; border-radius:4px" onclick="openEmpDrawer('${d.barcode || d.displayName}')">👁 Ver Dossiê</button></div>`);
 
     let valDisplay = [];
-    if(d.boxes > 0) valDisplay.push(`${BRL((d.val - d.fieldVal)/d.boxes)} /cx`);
-    if(d.fieldOps > 0) valDisplay.push(`—`);
-    if (d.activities && d.activities.length > 0) {
-      d.activities.forEach(act => {
-        valDisplay.push(`<small style="color:var(--green); font-weight:600; display:block; line-height:1.2; margin-top:2px;">${BRL(act.value)}</small>`);
-      });
-    }
+    if(d.boxes > 0) valDisplay.push(`${BRL((d.val - d.fieldVal)/d.boxes)} /cx<br>`);
+    if(d.fieldOps > 0) valDisplay.push(`—<br>`);
 
     return `
       <tr>
@@ -1995,8 +1989,8 @@ async function refreshFin(){
         <td><span class="badge ${d.role.toLowerCase()}">${d.role}</span></td>
         <td>${qtyDisplay.join('')}</td>
         <td>${valDisplay.join('')}</td>
-        <td>${hasAbs?'<span class="badge red">FALTA</span>':'<span class="badge green">PRESENÇA</span>'}</td>
-        <td style="color:var(--green)">${hasAbs ? '-' : BRL(bonus)}</td>
+        <td>${absencesCount > 0 ? `<span class="badge red">${absencesCount} FALTA${absencesCount>1?'S':''}</span>` : '<span class="badge green">PRESENÇA</span>'}</td>
+        <td style="color:var(--green)">${BRL(finalBonus)}</td>
         <td style="font-weight:900; font-size:15px; color:var(--blue)">${BRL(total)}</td>
       </tr>
     `;
@@ -2005,8 +1999,8 @@ async function refreshFin(){
   // KPIs de totalização
   let totalBonus = 0;
   Object.values(eb).forEach(d => {
-    const hasAbs = (abs||[]).some(a => a.employee_barcode === d.barcode && d.barcode);
-    if (!hasAbs) totalBonus += bonus;
+    const absencesCount = (abs||[]).filter(a => a.employee_barcode === d.barcode && d.barcode).length;
+    totalBonus += Math.max(0, bonus - (absencesCount * penalty));
   });
   $('finKpiBonus').textContent = BRL(totalBonus);
 
@@ -2819,18 +2813,19 @@ async function openEmpDrawer(idOrName) {
     }
 
     const stats = window._lastEmpStats ? (window._lastEmpStats[clean] || (emp ? window._lastEmpStats[emp.name.trim().toLowerCase()] : null)) : null;
-    const start = $('dashStart').value;
-    const end = $('dashEnd').value + 'T23:59:59Z';
+    const activeTab = document.querySelector('.tab.active')?.id;
+    const start = activeTab === 'tab-finance' ? $('finStart').value : $('dashStart').value;
+    const end = (activeTab === 'tab-finance' ? $('finEnd').value : $('dashEnd').value) + 'T23:59:59Z';
 
     const [qAudits, qAbs, qScans, qFieldServices, qCarraoServices] = await Promise.all([
-        sb.from('quality_audits').select('id').eq('tenant_id', tenantId).eq('employee_barcode', emp.barcode).gte('ts', start).lte('ts', end),
+        sb.from('quality_audits').select('penalty_boxes').eq('tenant_id', tenantId).eq('employee_barcode', emp.barcode).gte('ts', start).lte('ts', end),
         sb.from('employee_absences').select('*').eq('tenant_id', tenantId).eq('employee_barcode', emp.barcode).gte('date', start.split('T')[0]).lte('date', end.split('T')[0]),
         sb.from('production_scans').select('ts, weight_kg, role').eq('tenant_id', tenantId).eq('employee_name', emp.name).gte('ts', start).lte('ts', end).order('ts', {ascending: true}),
         sb.from('field_service_employees').select('*, field_services(*)').eq('employee_id', emp.id),
         sb.from('field_carrao_employees').select('*, field_carrao_sessions(*)').eq('employee_id', emp.id)
     ]);
 
-    const qualityCount = qAudits.data?.length || 0;
+    const qualityCount = (qAudits.data || []).reduce((sum, q) => sum + Number(q.penalty_boxes || 0), 0);
     const absencesCount = qAbs.data?.length || 0;
     const allScans = qScans.data || [];
     const scanTimestamps = allScans.map(s => new Date(s.ts).getTime());
@@ -3112,7 +3107,7 @@ function calculateIdleTime(scans, globalStops = []) {
   if (scans.length < 2) return 0;
   const sorted = [...scans].sort((a,b) => new Date(a.ts) - new Date(b.ts));
   let totalIdleSeconds = 0;
-  const thresholdSeconds = 600; // 10 minutos
+  const thresholdSeconds = 300; // 5 minutos
   
   for (let i = 1; i < sorted.length; i++) {
     const start = new Date(sorted[i-1].ts);
@@ -3147,7 +3142,7 @@ function calculateIdleDetails(scans, globalStops = []) {
   const gaps = [];
   if (scans.length < 2) return { totalMinutes: 0, gaps, avgGapMinutes: 0 };
   const sorted = [...scans].sort((a,b) => new Date(a.ts) - new Date(b.ts));
-  const thresholdSeconds = 600;
+  const thresholdSeconds = 300;
   
   for (let i = 1; i < sorted.length; i++) {
     const start = new Date(sorted[i-1].ts);
@@ -4223,8 +4218,9 @@ function exportFinPDF(){
   const s=$('finStart').value,e=$('finEnd').value;
   const eb = window._lastFinEb || {};
   const bonus = Number(tenantConfig.attendance_bonus || 0);
-  const abs = window._lastFinAbs || []; // we need absences to add bonus, wait, let's just use what they already earned.
-  // Actually, wait, let's group by sector/role
+  const abs = window._lastFinAbs || [];
+  const penalty = Number(tenantConfig.attendance_penalty || 0);
+
   const sectors = {};
   Object.values(eb).forEach(d => {
     let sec = d.role;
@@ -4243,16 +4239,19 @@ function exportFinPDF(){
     pdfHeader(doc, `Folha de Pagamento - ${sec}`, `${s} a ${e}`);
     
     const secData = sectors[sec];
+    let sumVal = 0;
+    
     const rows = secData.sort((a,b)=>b.val-a.val).map((d,i)=>{
-       // Check absences in the window object, wait, let's just assume they don't have it unless we export it.
-       const total = d.val;
+       const absencesCount = abs.filter(a => a.employee_barcode === d.barcode && d.barcode).length;
+       const finalBonus = Math.max(0, bonus - (absencesCount * penalty));
+       const total = d.val + finalBonus;
+       sumVal += total;
+       
        let prodStr = '';
        if(d.boxes > 0) prodStr += `${d.boxes} cx\n`;
        if(d.fieldOps > 0) prodStr += `${d.fieldOps} serv.`;
        return [i+1, d.displayName, d.role, prodStr, BRL(total)];
     });
-
-    const sumVal = secData.reduce((a,x) => a+x.val, 0);
 
     doc.autoTable({
       startY:45,
