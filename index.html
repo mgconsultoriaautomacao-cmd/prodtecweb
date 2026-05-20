@@ -1826,34 +1826,43 @@ async function refreshFin(){
 
   const {data:scans}=await sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
   const {data:abs}=await sb.from('employee_absences').select('*').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
-  
-  const eb={};
-  (scans||[]).forEach(x=>{
+
+  // Chave única por BARCODE (ou nome normalizado como fallback) — evita entradas duplicadas
+  // eb[barcode] = { displayName, boxes, val, role, barcode, fieldVal, fieldOps, activities }
+  const eb = {};
+
+  const resolveEmpKey = (barcode, rawName) => {
+    if (barcode) return barcode;
+    // Sem barcode: normaliza o nome como fallback
+    return (rawName || 'desconhecido').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  };
+
+  (scans||[]).forEach(x => {
     if (selectedRole && x.role !== selectedRole) return;
     if (targetBarcode && x.employee_barcode !== targetBarcode) return;
 
-    let displayName = x.employee_name;
-    if(!displayName || displayName.includes('-')) {
-       const emp = _employees.find(e => e.barcode === x.employee_barcode);
-       if(emp) displayName = emp.name;
-    }
-    if(!displayName) displayName = x.employee_barcode || 'Desconhecido';
+    // Sempre resolve o nome canônico pelo barcode → evita variações de digitação
+    let empRecord = _employees.find(em => em.barcode === x.employee_barcode);
+    let displayName = empRecord ? empRecord.name : (x.employee_name || x.employee_barcode || 'Desconhecido');
+    let barcode = x.employee_barcode || null;
 
-    if(!eb[displayName]) eb[displayName]={boxes:0,val:0,role:x.role, barcode: x.employee_barcode, fieldVal:0, fieldOps:0, activities: []};
-    
-    // Use role-based value from roles table, fallback to tenant config
+    const key = resolveEmpKey(barcode, displayName);
+    if (!eb[key]) eb[key] = {displayName, boxes:0, val:0, role:x.role, barcode, fieldVal:0, fieldOps:0, activities:[]};
+    // Garante que sempre usa o nome correto se encontrou depois
+    if (empRecord && eb[key].displayName !== empRecord.name) eb[key].displayName = empRecord.name;
+
     const roleVal = getRoleConfig(x.role || 'EMBALADOR');
-    
-    eb[displayName].boxes++;
-    eb[displayName].val += roleVal.value;
+    eb[key].boxes++;
+    eb[key].val += roleVal.value;
   });
-  
-  // Inclui Apontamentos de Campo
+
+  // Apontamentos de Campo
   const {data:fServices} = await sb.from('field_services').select('*, field_service_employees(*)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
   (fServices||[]).forEach(srv => {
     if (selectedRole && srv.sector !== selectedRole) return;
 
     (srv.field_service_employees||[]).forEach(emp => {
+      // Filtro por colaborador selecionado
       if (selectedEmpId && emp.employee_id !== selectedEmpId) {
         let isMatch = false;
         if (emp.employee_name && targetNameNormalized) {
@@ -1863,64 +1872,58 @@ async function refreshFin(){
         if (!isMatch) return;
       }
 
-      let realEmp = _employees.find(e => e.id === emp.employee_id);
-      if(!realEmp && emp.employee_name) {
+      let realEmp = _employees.find(em => em.id === emp.employee_id);
+      if (!realEmp && emp.employee_name) {
         const cleanName = emp.employee_name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        realEmp = _employees.find(e => e.name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === cleanName);
+        realEmp = _employees.find(em => em.name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === cleanName);
       }
-      let dName = realEmp ? realEmp.name : emp.employee_name;
-      let barcode = realEmp ? realEmp.barcode : null;
-      
-      if(!eb[dName]) eb[dName] = {boxes:0, val:0, role: srv.sector || 'CAMPO', barcode: barcode, fieldVal:0, fieldOps:0, activities: []};
-      if(!eb[dName].activities) eb[dName].activities = [];
-      
-      eb[dName].fieldVal += Number(emp.value_received || 0);
-      eb[dName].val += Number(emp.value_received || 0);
-      eb[dName].fieldOps += 1;
-      
-      eb[dName].activities.push({
+      const dName = realEmp ? realEmp.name : emp.employee_name;
+      const barcode = realEmp ? realEmp.barcode : null;
+
+      const key = resolveEmpKey(barcode, dName);
+      if (!eb[key]) eb[key] = {displayName: dName, boxes:0, val:0, role: srv.sector || 'CAMPO', barcode, fieldVal:0, fieldOps:0, activities:[]};
+      if (!eb[key].activities) eb[key].activities = [];
+      if (realEmp && eb[key].displayName !== realEmp.name) eb[key].displayName = realEmp.name;
+
+      eb[key].fieldVal += Number(emp.value_received || 0);
+      eb[key].val     += Number(emp.value_received || 0);
+      eb[key].fieldOps++;
+      eb[key].activities.push({
         date: srv.date,
         sector: srv.sector,
         operation: srv.operation,
         value: Number(emp.value_received || 0)
       });
-      
-      // Atualiza role se for só de campo
-      if (eb[dName].role !== 'PACKER' && eb[dName].role !== 'STACKER' && !['EMBALADOR', 'EMPILHADOR'].includes(eb[dName].role)) {
-         eb[dName].role = srv.sector || 'CAMPO';
+
+      if (!['EMBALADOR','EMPILHADOR'].includes(eb[key].role)) {
+        eb[key].role = srv.sector || 'CAMPO';
       }
     });
   });
-  
-  const date1 = new Date(s);
-  const date2 = new Date(e);
-  const diffTime = Math.abs(date2 - date1);
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-  const baseBonus = Number(tenantConfig.attendance_bonus || 0);
-  let bonus = (baseBonus / 30) * diffDays;
-  if (diffDays >= 28 && diffDays <= 31) {
-    bonus = baseBonus; // Cap/floor to standard monthly bonus value
-  }
+
+  // ── BÔNUS DE ASSIDUIDADE ── valor FIXO MENSAL, nunca pro-rata
+  // O bônus é cadastrado mensalmente e aplicado UMA VEZ por colaborador
+  const bonus = Number(tenantConfig.attendance_bonus || 0);
+
   const tbody=$('finTable').querySelector('tbody');
-  
   const sForm = s.split('-').reverse().join('/');
   const eForm = e.split('-').reverse().join('/');
   const periodRange = `${sForm} a ${eForm}`;
-  
-  tbody.innerHTML=Object.entries(eb).map(([name,d])=>{
-    const hasAbs = (abs||[]).some(a=>a.employee_barcode === d.barcode && d.barcode);
+
+  tbody.innerHTML = Object.values(eb).map(d => {
+    const hasAbs = (abs||[]).some(a => a.employee_barcode === d.barcode && d.barcode);
     const total = d.val + (hasAbs ? 0 : bonus);
-    
+
     let qtyDisplay = [];
     if(d.boxes > 0) qtyDisplay.push(`<b>${d.boxes}</b> cx`);
     if(d.fieldOps > 0) qtyDisplay.push(`<b>${d.fieldOps}</b> op. campo`);
     if (d.activities && d.activities.length > 0) {
       d.activities.forEach(act => {
-        const formattedDate = act.date.split('-').reverse().slice(0, 2).join('/');
-        qtyDisplay.push(`<small style="color:var(--muted); padding-left:6px; display:block; line-height:1.2; margin-top:2px;">• ${formattedDate}: ${act.sector} (${act.operation})</small>`);
+        const fd = act.date.split('-').reverse().slice(0,2).join('/');
+        qtyDisplay.push(`<small style="color:var(--muted); padding-left:6px; display:block; line-height:1.2; margin-top:2px;">• ${fd}: ${act.sector} (${act.operation})</small>`);
       });
     }
-    
+
     let valDisplay = [];
     if(d.boxes > 0) valDisplay.push(`${BRL((d.val - d.fieldVal)/d.boxes)} /cx`);
     if(d.fieldOps > 0) valDisplay.push(`—`);
@@ -1933,22 +1936,22 @@ async function refreshFin(){
     return `
       <tr>
         <td style="font-size:11px; color:var(--muted); white-space:nowrap">${periodRange}</td>
-        <td><div style="font-weight:700">${name}</div><div style="font-size:10px;color:var(--muted)">${d.barcode||'—'}</div></td>
+        <td><div style="font-weight:700">${d.displayName}</div><div style="font-size:10px;color:var(--muted)">${d.barcode||'—'}</div></td>
         <td><span class="badge ${d.role.toLowerCase()}">${d.role}</span></td>
         <td>${qtyDisplay.join('')}</td>
         <td>${valDisplay.join('')}</td>
         <td>${hasAbs?'<span class="badge red">FALTA</span>':'<span class="badge green">PRESENÇA</span>'}</td>
-        <td style="color:var(--green)">${hasAbs?'-':BRL(bonus)}</td>
+        <td style="color:var(--green)">${hasAbs ? '-' : BRL(bonus)}</td>
         <td style="font-weight:900; font-size:15px; color:var(--blue)">${BRL(total)}</td>
       </tr>
     `;
-  }).join('')||'<tr><td colspan="8" style="text-align:center; padding:30px">Sem dados financeiros para o período.</td></tr>';
-  
-  // Attendance Bonus logic
+  }).join('') || '<tr><td colspan="8" style="text-align:center; padding:30px">Sem dados financeiros para o período.</td></tr>';
+
+  // KPIs de totalização
   let totalBonus = 0;
   Object.values(eb).forEach(d => {
-    const hasAbs = (abs||[]).some(a=>a.employee_barcode === d.barcode);
-    if(!hasAbs) totalBonus += bonus;
+    const hasAbs = (abs||[]).some(a => a.employee_barcode === d.barcode && d.barcode);
+    if (!hasAbs) totalBonus += bonus;
   });
   $('finKpiBonus').textContent = BRL(totalBonus);
 
@@ -2822,16 +2825,9 @@ async function openEmpDrawer(idOrName) {
     };
 
     if (totalBoxes > 0 || stats || totalFieldOps > 0) {
-        const baseBonus = parseFloat($('cfgAttendanceBonus')?.value || tenantConfig.attendance_bonus || 0);
-        const date1 = new Date(start);
-        const date2 = new Date(end.split('T')[0]);
-        const diffTime = Math.abs(date2 - date1);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-        let proratedBaseBonus = (baseBonus / 30) * diffDays;
-        if (diffDays >= 28 && diffDays <= 31) {
-          proratedBaseBonus = baseBonus; // Cap to standard monthly bonus value
-        }
-        const bonusEarned = (absencesCount === 0) ? proratedBaseBonus : 0;
+        // Bônus de assiduidade: valor FIXO MENSAL, sem pro-rata por dias
+        const bonusBase = parseFloat($('cfgAttendanceBonus')?.value || tenantConfig.attendance_bonus || 0);
+        const bonusEarned = (absencesCount === 0) ? bonusBase : 0;
         
         let packingStatsHtml = '';
         if (totalBoxes > 0 || stats) {
