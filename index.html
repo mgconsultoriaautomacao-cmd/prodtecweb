@@ -2825,7 +2825,7 @@ async function openEmpDrawer(idOrName) {
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px">
                     <div class="pbi-card" style="padding:10px;text-align:center">
                         <div class="klabel" style="font-size:8px">Ociosidade</div>
-                        <div style="font-weight:900;font-size:16px;color:${stabClass==='good'?'var(--green)':stabClass==='warn'?'var(--red)'}">${idleDetails.totalMinutes} min</div>
+                        <div style="font-weight:900;font-size:16px;color:${stabClass==='good'?'var(--green)':stabClass==='warn'?'var(--yellow)':'var(--red)'}">${idleDetails.totalMinutes} min</div>
                         <div class="idle-bar"><div class="fill ${stabClass}" style="width:${Math.min(100,idleDetails.totalMinutes)}%"></div></div>
                     </div>
                     <div class="pbi-card" style="padding:10px;text-align:center">
@@ -4196,7 +4196,7 @@ function exportHarvestOrderPDF(sid) {
   doc.setFontSize(7); doc.setFont('helvetica', 'normal');
   doc.text('Nº DO CARROÇÃO', mg + 132, y + 4);
   doc.setFontSize(14);
-  doc.text(String(s.qty_carrocoes || '—'), 165, y + 11, { align: 'center' });
+  doc.text(String(s.carrao_seq || s.qty_carrocoes || '—'), 165, y + 11, { align: 'center' });
   doc.line(mg + 132, y + 12, mg + 188, y + 12);
   y += h4;
 
@@ -4238,6 +4238,22 @@ function exportHarvestOrderPDF(sid) {
   doc.setFontSize(12);
   doc.text(s.tractor_driver || '—', mg + 135, y + 11);
   y += h6;
+
+  // ── LINHA: MÁQUINA E OPERADOR DA MÁQUINA ─────────────────────────────────
+  const hMachine = 14;
+  doc.rect(mg, y, 190, hMachine);
+  doc.line(mg + 65, y, mg + 65, y + hMachine);
+  
+  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+  doc.text('CÓD. MÁQUINA:', mg + 2, y + 4);
+  doc.setFontSize(12);
+  doc.text(s.machine_code || '—', mg + 5, y + 11);
+
+  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+  doc.text('OPERADOR DA MÁQUINA:', mg + 67, y + 4);
+  doc.setFontSize(12);
+  doc.text(s.machine_operator || '—', mg + 70, y + 11);
+  y += hMachine;
 
   // ── LINHA: RESPONSÁVEL COLHEITA E RESPONSÁVEL EMBALAGEM ─────────────────
   const h7 = 16;
