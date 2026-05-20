@@ -653,6 +653,7 @@
       <div class="f"><label class="flabel">Início</label><input type="date" id="finStart"/></div>
       <div class="f"><label class="flabel">Fim</label><input type="date" id="finEnd"/></div>
       <div class="f"><label class="flabel">Função</label><select id="finRole"><option value="">Todos</option><option value="EMBALADOR">Embalador</option><option value="EMPILHADOR">Empilhador</option><option value="COLHEDOR">Colhedor</option><option value="TRATORISTA">Tratorista</option><option value="SUPERVISOR">Supervisor</option></select></div>
+      <div class="f"><label class="flabel">Colaborador</label><select id="finEmp"><option value="">Todos</option></select></div>
       <button onclick="refreshFin()">Gerar</button>
       <button class="sec" onclick="openAbsenceModal()">📅 Gestão de Faltas</button>
       <button class="sec" onclick="exportFinPDF()">📄 PDF Folha</button>
@@ -1616,7 +1617,11 @@ async function refreshRanking(){
   if(!s||!e)return;
   
   const selectedRole = $('rankRole')?.value;
-  const selectedEmp = $('rankEmp')?.value; // barcode
+  const selectedEmpId = $('rankEmp')?.value; // UUID
+  
+  const targetEmp = selectedEmpId ? _employees.find(x => x.id === selectedEmpId) : null;
+  const targetBarcode = targetEmp ? targetEmp.barcode : null;
+  const targetNameNormalized = targetEmp ? targetEmp.name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : null;
   
   const type = window._rankType || 'PACKING';
   
@@ -1629,8 +1634,8 @@ async function refreshRanking(){
     if (selectedRole) {
       filteredData = filteredData.filter(x => x.role === selectedRole);
     }
-    if (selectedEmp) {
-      filteredData = filteredData.filter(x => x.employee_barcode === selectedEmp);
+    if (targetBarcode) {
+      filteredData = filteredData.filter(x => x.employee_barcode === targetBarcode);
     }
     
     buildRankingGrid(filteredData, 'rankGrid');
@@ -1653,10 +1658,22 @@ async function refreshRanking(){
       $('rankTopStats').textContent = boxes + ' caixas';
       $('rankTopAvatar').innerHTML = emp?.photo_path ? `<img src="${emp.photo_path}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : '';
       $('rankTopAvatar').innerHTML += name[0];
+
+      const topCard = $('rankTopName').closest('.kcard');
+      if (topCard) {
+        topCard.style.cursor = 'pointer';
+        topCard.onclick = () => openEmpDrawer(emp?.barcode || name);
+      }
     } else {
       $('rankTopName').textContent = '--';
       $('rankTopStats').textContent = '0 caixas';
       $('rankTopAvatar').innerHTML = '';
+
+      const topCard = $('rankTopName').closest('.kcard');
+      if (topCard) {
+        topCard.style.cursor = 'default';
+        topCard.onclick = null;
+      }
     }
 
     mkChart('chartRankCollab', {
@@ -1689,7 +1706,11 @@ async function refreshRanking(){
         const realEmp = _employees.find(e => e.name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === cleanName);
         const barcode = realEmp ? realEmp.barcode : null;
         
-        if (selectedEmp && barcode !== selectedEmp) return;
+        if (selectedEmpId && emp.employee_id !== selectedEmpId) {
+          let isMatch = false;
+          if (targetNameNormalized && cleanName === targetNameNormalized) isMatch = true;
+          if (!isMatch) return;
+        }
         
         if (!eb[displayName]) {
           eb[displayName] = {
@@ -1730,10 +1751,22 @@ async function refreshRanking(){
       $('rankTopStats').textContent = `${topWorker.opsCount} apontamentos`;
       $('rankTopAvatar').innerHTML = topWorker.photo_path ? `<img src="${topWorker.photo_path}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : '';
       $('rankTopAvatar').innerHTML += topWorker.name[0];
+
+      const topCard = $('rankTopName').closest('.kcard');
+      if (topCard) {
+        topCard.style.cursor = 'pointer';
+        topCard.onclick = () => openEmpDrawer(topWorker.barcode || topWorker.name);
+      }
     } else {
       $('rankTopName').textContent = '--';
       $('rankTopStats').textContent = '0 apontamentos';
       $('rankTopAvatar').innerHTML = '';
+
+      const topCard = $('rankTopName').closest('.kcard');
+      if (topCard) {
+        topCard.style.cursor = 'default';
+        topCard.onclick = null;
+      }
     }
     
     mkChart('chartRankCollab', {
@@ -1784,11 +1817,21 @@ function switchRankType(type) {
 async function refreshFin(){
   const s=$('finStart').value, e=$('finEnd').value;
   if(!s||!e)return;
+  const selectedRole = $('finRole')?.value;
+  const selectedEmpId = $('finEmp')?.value;
+
+  const targetEmp = selectedEmpId ? _employees.find(x => x.id === selectedEmpId) : null;
+  const targetBarcode = targetEmp ? targetEmp.barcode : null;
+  const targetNameNormalized = targetEmp ? targetEmp.name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : null;
+
   const {data:scans}=await sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
   const {data:abs}=await sb.from('employee_absences').select('*').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
   
   const eb={};
   (scans||[]).forEach(x=>{
+    if (selectedRole && x.role !== selectedRole) return;
+    if (targetBarcode && x.employee_barcode !== targetBarcode) return;
+
     let displayName = x.employee_name;
     if(!displayName || displayName.includes('-')) {
        const emp = _employees.find(e => e.barcode === x.employee_barcode);
@@ -1808,7 +1851,18 @@ async function refreshFin(){
   // Inclui Apontamentos de Campo
   const {data:fServices} = await sb.from('field_services').select('*, field_service_employees(*)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
   (fServices||[]).forEach(srv => {
+    if (selectedRole && srv.sector !== selectedRole) return;
+
     (srv.field_service_employees||[]).forEach(emp => {
+      if (selectedEmpId && emp.employee_id !== selectedEmpId) {
+        let isMatch = false;
+        if (emp.employee_name && targetNameNormalized) {
+          const cleanName = emp.employee_name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          if (cleanName === targetNameNormalized) isMatch = true;
+        }
+        if (!isMatch) return;
+      }
+
       let realEmp = _employees.find(e => e.id === emp.employee_id);
       if(!realEmp && emp.employee_name) {
         const cleanName = emp.employee_name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -1981,7 +2035,7 @@ async function loadFieldSessions(s,e,p){
 async function loadEmpSelectAll(){
   const {data}=await sb.from('employees').select('id,name,role').eq('tenant_id',tenantId).order('name');
   _emps=data||[];
-  ['dashEmployee','rankEmp','logEmp'].forEach(id=>{
+  ['dashEmployee','rankEmp','logEmp','finEmp'].forEach(id=>{
     const sel=$(id); if(!sel)return;
     const cur=sel.value;
     sel.innerHTML='<option value="">Todos</option>';
@@ -2754,6 +2808,18 @@ async function openEmpDrawer(idOrName) {
     
     const totalFieldOps = fieldServicesList.length;
     const totalFieldEarned = fieldServicesList.reduce((sum, srv) => sum + Number(srv.value_received || 0), 0);
+
+    window._activeDrawerStats = {
+      name: emp.name,
+      role: emp.role,
+      boxes: totalBoxes,
+      kg: allScans.reduce((sum, s) => sum + Number(s.weight_kg || 0), 0),
+      qualityIssues: qualityCount,
+      absences: absencesCount,
+      fieldOps: totalFieldOps,
+      fieldEarned: totalFieldEarned,
+      idleTime: stats?.idleTime || 0
+    };
 
     if (totalBoxes > 0 || stats || totalFieldOps > 0) {
         const baseBonus = parseFloat($('cfgAttendanceBonus')?.value || tenantConfig.attendance_bonus || 0);
@@ -4840,10 +4906,10 @@ function toast(msg, type='info') {
 async function exportEmpDossierPDF() {
   const name = $('drName').textContent;
   const role = $('drRole').textContent;
-  const stats = window._lastEmpStats ? window._lastEmpStats[name] : null;
+  const stats = (window._activeDrawerStats && window._activeDrawerStats.name === name) 
+    ? window._activeDrawerStats 
+    : (window._lastEmpStats ? (window._lastEmpStats[name] || window._lastEmpStats[name.trim().toLowerCase()] || {}) : {});
   const btn = $('drPdfBtn');
-  
-  if(!stats) { alert('Dados de desempenho não carregados para o período atual.'); return; }
   
   btn.disabled = true; btn.textContent = 'Gerando PDF...';
   
@@ -4858,7 +4924,7 @@ async function exportEmpDossierPDF() {
     doc.setFontSize(22); doc.setFont("helvetica", "bold");
     doc.text("DOSSIÊ DE DESEMPENHO", 105, 20, { align: 'center' });
     doc.setFontSize(10); doc.setFont("helvetica", "normal");
-    doc.text("Sistema de Gestão PackingHouse - Prodtech", 105, 30, { align: 'center' });
+    doc.text("Sistema de Gestão - Prodtech", 105, 30, { align: 'center' });
     
     // Employee Info
     doc.setTextColor(0,0,0);
@@ -4871,17 +4937,24 @@ async function exportEmpDossierPDF() {
     // Line
     doc.setDrawColor(200, 200, 200); doc.line(20, 75, 190, 75);
     
+    const bodyRows = [
+      ['Produção Total (Packing)', `${Math.round(stats.boxes || 0)} unidades`],
+      ['Volume Processado (Packing - Kg)', `${(stats.kg || 0).toFixed(1)} kg`],
+      ['Apontamentos de Campo', `${stats.fieldOps || 0} serviços`],
+      ['Ganhos de Campo', `R$ ${(stats.fieldEarned || 0).toFixed(2)}`],
+      ['Qualidade (Falhas)', `${stats.qualityIssues || 0} registros`],
+      ['Assiduidade (Faltas)', `${stats.absences || 0} faltas no período`]
+    ];
+
+    if (stats.idleTime) {
+      bodyRows.push(['Tempo Interrompido (Ociosidade)', `${stats.idleTime} minutos ociosos`]);
+    }
+    
     // Summary Cards (as a table)
     doc.autoTable({
       startY: 85,
       head: [['Métrica', 'Valor']],
-      body: [
-        ['Produção Total (Caixas)', `${Math.round(stats.boxes)} unidades`],
-        ['Volume Processado (Kg)', `${(stats.kg||0).toFixed(1)} kg`],
-        ['Qualidade (Falhas)', `${stats.qualityIssues || 0} registros`],
-        ['Assiduidade (Faltas)', `${stats.absences || 0} faltas no período`],
-        ['Tempo Interrompido', `${stats.idleTime || 0} minutos ociosos`]
-      ],
+      body: bodyRows,
       theme: 'grid',
       headStyles: { fillColor: [59, 130, 246] }
     });
