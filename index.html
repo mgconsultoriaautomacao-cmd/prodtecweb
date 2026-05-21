@@ -1855,6 +1855,7 @@ async function refreshFin(){
   };
 
   // ── 1. PACKING (production_scans) ──────────────────────────────────────────
+  const scansByEmp = {};
   (scans||[]).forEach(x => {
     if (selectedRole && x.role !== selectedRole) return;
     if (targetBarcode && x.employee_barcode !== targetBarcode) return;
@@ -1874,6 +1875,9 @@ async function refreshFin(){
     const roleVal = getRoleConfig(x.role || 'EMBALADOR');
     eb[key].boxes++;
     eb[key].val += roleVal.value;
+
+    if (!scansByEmp[key]) scansByEmp[key] = [];
+    scansByEmp[key].push(x);
   });
 
   // ── 2. CAMPO — Serviços Gerais (field_services) ─────────────────────────────
@@ -1945,14 +1949,69 @@ async function refreshFin(){
     });
   });
 
+  const {data:qAudits}=await sb.from('quality_audits').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
+  const {data:stops}=await sb.from('global_stops').select('*').eq('tenant_id',tenantId).gte('start_ts',s).lte('start_ts',e+'T23:59:59Z');
+
   const bonus   = Number(tenantConfig.attendance_bonus   || 0);
   const penalty = Number(tenantConfig.attendance_penalty || 0);
+  const prodPenaltyPct = Number(tenantConfig.prod_penalty_percent || 0);
+
+  // Group quality audits by canonical key
+  const auditsByEmp = {};
+  (qAudits||[]).forEach(q => {
+    const normName = (str) => (str||'').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const empRecord = _employees.find(em => em.id === q.employee_id) 
+                   || _employees.find(em => em.barcode === q.employee_barcode)
+                   || (q.employee_barcode ? _employees.find(em => em.barcode === q.employee_barcode) : null);
+    const barcode = empRecord?.barcode || q.employee_barcode || null;
+    const displayName = empRecord?.name || barcode || 'Desconhecido';
+    const key = resolveCanonicalKey(empRecord, barcode, displayName, q.employee_id);
+    
+    if (!auditsByEmp[key]) auditsByEmp[key] = [];
+    auditsByEmp[key].push(q);
+  });
 
   Object.keys(eb).forEach(key => {
     const d = eb[key];
     const absCount = (abs||[]).filter(a => a.employee_barcode === d.barcode && d.barcode).length;
     d._absCount   = absCount;
-    d._finalBonus = Math.max(0, bonus - (absCount * penalty));
+    d._attendanceBonus = bonus;
+    d._attendanceDeduction = absCount * penalty;
+    d._finalBonus = Math.max(0, bonus - d._attendanceDeduction);
+
+    // Inicializa métricas de packinghouse
+    d._qualityPenalties = 0;
+    d._qualityPenaltyValue = 0;
+    d._idleMinutes = 0;
+    d._idlePenaltyValue = 0;
+    d._prodPenaltyPercent = 0;
+    d._prodPenaltyValue = 0;
+    d._netPay = d.val + d._finalBonus;
+
+    const isPacking = ['EMBALADOR','EMPILHADOR','PACKER','STACKER','CAIXARIA'].includes(d.role.toUpperCase());
+    if (isPacking) {
+      // 1. Penalidade de Qualidade
+      const empAudits = auditsByEmp[key] || [];
+      const qualityBoxes = empAudits.reduce((sum, q) => sum + Number(q.penalty_boxes || 0), 0);
+      d._qualityPenalties = qualityBoxes;
+      const roleConfig = getRoleConfig(d.role);
+      d._qualityPenaltyValue = qualityBoxes * roleConfig.value;
+
+      // 2. Penalidade de Produtividade (Desc. Produtividade por faltas)
+      d._prodPenaltyPercent = prodPenaltyPct;
+      d._prodPenaltyValue = d.val * (absCount * prodPenaltyPct / 100);
+
+      // 3. Penalidade de Ociosidade (R$ 0,10 por minuto inativo)
+      const empScans = scansByEmp[key] || [];
+      const idleMinutes = calculateIdleTime(empScans, stops || []);
+      d._idleMinutes = idleMinutes;
+      d._idlePenaltyValue = idleMinutes * 0.10;
+
+      // Cálculo final do líquido
+      d._netPay = Math.max(0, d.val + d._finalBonus - d._qualityPenaltyValue - d._prodPenaltyValue - d._idlePenaltyValue);
+    } else {
+      d._netPay = d.val + d._finalBonus;
+    }
   });
 
   window._lastFinEb  = eb;
@@ -1964,7 +2023,7 @@ async function refreshFin(){
   const periodRange = `${sForm} a ${eForm}`;
 
   tbody.innerHTML = Object.values(eb).map(d => {
-    const total = d.val + d._finalBonus;
+    const isPacking = ['EMBALADOR','EMPILHADOR','PACKER','STACKER','CAIXARIA'].includes(d.role.toUpperCase());
     let qtyDisplay = [];
     if (d.boxes   > 0) qtyDisplay.push(`<b>${d.boxes}</b> cx<br>`);
     if (d.fieldOps > 0) qtyDisplay.push(`<b>${d.fieldOps}</b> op. campo<br>`);
@@ -1973,6 +2032,17 @@ async function refreshFin(){
     let valDisplay = [];
     if (d.boxes   > 0) valDisplay.push(`${BRL((d.val - d.fieldVal) / d.boxes)} /cx<br>`);
     if (d.fieldOps > 0) valDisplay.push(`—<br>`);
+
+    // Detalhar valor líquido se Packing House
+    let netPayDisplay = `<b>${BRL(d._netPay)}</b>`;
+    if (isPacking && (d._qualityPenaltyValue > 0 || d._idlePenaltyValue > 0 || d._prodPenaltyValue > 0 || d._attendanceDeduction > 0)) {
+      let descParts = [];
+      if (d._attendanceDeduction > 0) descParts.push(`-${BRL(d._attendanceDeduction)} assid.`);
+      if (d._qualityPenaltyValue > 0) descParts.push(`-${BRL(d._qualityPenaltyValue)} qual.`);
+      if (d._prodPenaltyValue > 0) descParts.push(`-${BRL(d._prodPenaltyValue)} prod.`);
+      if (d._idlePenaltyValue > 0) descParts.push(`-${BRL(d._idlePenaltyValue)} ocios.`);
+      netPayDisplay += `<div style="font-size:9px;color:var(--red);margin-top:4px;font-weight:normal;line-height:1.2">Desc: ${descParts.join(' | ')}</div>`;
+    }
 
     return `
       <tr>
@@ -1983,7 +2053,7 @@ async function refreshFin(){
         <td>${valDisplay.join('')}</td>
         <td>${d._absCount > 0 ? `<span class="badge red">${d._absCount} FALTA${d._absCount>1?'S':''}</span>` : '<span class="badge green">PRESENÇA</span>'}</td>
         <td style="color:var(--green)">${BRL(d._finalBonus)}</td>
-        <td style="font-weight:900; font-size:15px; color:var(--blue)">${BRL(total)}</td>
+        <td style="font-weight:900; font-size:15px; color:var(--blue)">${netPayDisplay}</td>
       </tr>
     `;
   }).join('') || '<tr><td colspan="8" style="text-align:center; padding:30px">Sem dados financeiros para o período.</td></tr>';
@@ -1991,8 +2061,8 @@ async function refreshFin(){
   const totalBonus = Object.values(eb).reduce((a, d) => a + d._finalBonus, 0);
   $('finKpiBonus').textContent = BRL(totalBonus);
 
-  const totalVal = Object.values(eb).reduce((a, b) => a + b.val, 0);
-  $('finKpiTotal').textContent = BRL(totalVal + totalBonus);
+  const totalVal = Object.values(eb).reduce((a, b) => a + b._netPay, 0);
+  $('finKpiTotal').textContent = BRL(totalVal);
   $('finKpiBoxes').textContent = Object.values(eb).reduce((a, b) => a + b.boxes, 0).toLocaleString() + ' cx';
   const kpiField = $('finKpiField');
   if (kpiField) kpiField.textContent = Object.values(eb).reduce((a, b) => a + (b.fieldOps||0), 0).toLocaleString();
@@ -2110,7 +2180,7 @@ async function refreshDash(){
   updateStopBanner();
 
   // Dados de Campo (Carrocões) - incluindo parcela e variedade
-  const {data:harvest} = await sb.from('field_carrao_sessions').select('*, parcels(code, name), varieties(name)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
+  const {data:harvest} = await sb.from('field_carrao_sessions').select('*, parcels(code), varieties(name)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
 
   const packerScans = scans.filter(s=>s.role==='PACKER');
   const kg = packerScans.reduce((a,x)=>a+(x.weight_kg||0),0);
@@ -4245,9 +4315,6 @@ function exportFinPDF(){
   const {jsPDF}=window.jspdf;const doc=new jsPDF();
   const s=$('finStart').value,e=$('finEnd').value;
   const eb = window._lastFinEb || {};
-  const bonus = Number(tenantConfig.attendance_bonus || 0);
-  const abs = window._lastFinAbs || [];
-  const penalty = Number(tenantConfig.attendance_penalty || 0);
 
   const sectors = {};
   Object.values(eb).forEach(d => {
@@ -4268,30 +4335,95 @@ function exportFinPDF(){
     
     const secData = sectors[sec];
     let sumVal = 0;
-    
-    const rows = secData.sort((a,b)=>b.val-a.val).map((d,i)=>{
-       const absencesCount = abs.filter(a => a.employee_barcode === d.barcode && d.barcode).length;
-       const finalBonus = Math.max(0, bonus - (absencesCount * penalty));
-       const total = d.val + finalBonus;
-       sumVal += total;
-       
-       let prodStr = '';
-       if(d.boxes > 0) prodStr += `${d.boxes} cx\n`;
-       if(d.fieldOps > 0) prodStr += `${d.fieldOps} serv.`;
-       return [i+1, d.displayName, d.role, prodStr, BRL(total)];
-    });
+    const isPacking = (sec === 'PACKING HOUSE');
 
-    doc.autoTable({
-      startY:45,
-      head:[['#','Colaborador','Função','Produção','Valor Líquido']],
-      body:rows,
-      headStyles:{fillColor:[16,185,129]},
-      alternateRowStyles:{fillColor:[245,247,250]},
-      theme:'grid',
-      styles:{fontSize:9,cellPadding:4},
-      foot:[['','TOTAL','','',BRL(sumVal)]],
-      footStyles:{fillColor:[15,23,42],textColor:255,fontStyle:'bold'}
-    });
+    if (isPacking) {
+      const rows = secData.sort((a,b)=>b._netPay-a._netPay).map((d,i)=>{
+         sumVal += d._netPay;
+         
+         const prodStr = `${d.boxes} cx\n${BRL(d.val)}`;
+         const bonusStr = BRL(d._attendanceBonus);
+         const descAssidStr = d._attendanceDeduction > 0 ? `-${BRL(d._attendanceDeduction)}\n(${d._absCount} f.)` : 'R$ 0,00';
+         
+         let penStr = [];
+         if (d._qualityPenaltyValue > 0) penStr.push(`Qual: -${BRL(d._qualityPenaltyValue)} (${d._qualityPenalties} cx)`);
+         if (d._prodPenaltyValue > 0) penStr.push(`Prod: -${BRL(d._prodPenaltyValue)} (${d._prodPenaltyPercent}%)`);
+         if (d._idlePenaltyValue > 0) penStr.push(`Ocio: -${BRL(d._idlePenaltyValue)} (${d._idleMinutes}m)`);
+         const penText = penStr.join('\n') || 'R$ 0,00';
+
+         return [
+           i+1, 
+           `${d.displayName}\n(${d.barcode || '—'})`, 
+           d.role, 
+           prodStr, 
+           bonusStr, 
+           descAssidStr, 
+           penText, 
+           BRL(d._netPay)
+         ];
+      });
+
+      doc.autoTable({
+        startY:45,
+        head:[['#','Colaborador','Função','Produção Base','Bônus Assid.','Desc. Assid.','Penalidades (Qual/Prod/Ocio)','Valor Líquido']],
+        body:rows,
+        headStyles:{fillColor:[16,185,129]},
+        alternateRowStyles:{fillColor:[245,247,250]},
+        theme:'grid',
+        styles:{fontSize:7.5,cellPadding:2.5},
+        columnStyles: {
+          0: { cellWidth: 6 },
+          1: { cellWidth: 36 },
+          2: { cellWidth: 20 },
+          3: { cellWidth: 22 },
+          4: { cellWidth: 20 },
+          5: { cellWidth: 20 },
+          6: { cellWidth: 36 },
+          7: { cellWidth: 22 }
+        },
+        foot:[['','TOTAL','','','','','',BRL(sumVal)]],
+        footStyles:{fillColor:[15,23,42],textColor:255,fontStyle:'bold'}
+      });
+    } else {
+      const rows = secData.sort((a,b)=>b._netPay-a._netPay).map((d,i)=>{
+         sumVal += d._netPay;
+         
+         let prodStr = '';
+         if(d.boxes > 0) prodStr += `${d.boxes} cx\n`;
+         if(d.fieldOps > 0) prodStr += `${d.fieldOps} serv.`;
+         
+         const absText = d._absCount > 0 ? `${d._absCount} falta${d._absCount > 1 ? 's' : ''}` : 'Presença';
+
+         return [
+           i+1, 
+           d.displayName, 
+           d.role, 
+           prodStr, 
+           absText,
+           BRL(d._netPay)
+         ];
+      });
+
+      doc.autoTable({
+        startY:45,
+        head:[['#','Colaborador','Função','Produção','Faltas','Valor Líquido']],
+        body:rows,
+        headStyles:{fillColor:[16,185,129]},
+        alternateRowStyles:{fillColor:[245,247,250]},
+        theme:'grid',
+        styles:{fontSize:9,cellPadding:4},
+        columnStyles: {
+          0: { cellWidth: 8 },
+          1: { cellWidth: 50 },
+          2: { cellWidth: 30 },
+          3: { cellWidth: 34 },
+          4: { cellWidth: 30 },
+          5: { cellWidth: 30 }
+        },
+        foot:[['','TOTAL','','','',BRL(sumVal)]],
+        footStyles:{fillColor:[15,23,42],textColor:255,fontStyle:'bold'}
+      });
+    }
     
     const y=doc.lastAutoTable.finalY+20;
     if(y<270){
