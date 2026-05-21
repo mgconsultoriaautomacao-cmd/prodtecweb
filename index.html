@@ -4,11 +4,11 @@
   <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Prodtech | Gestão Completa</title>
-  <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22C12 22 20 18 20 12V4L12 2L4 4V12C4 18 12 22 12 22Z'/%3E%3Cpath d='M12 8v8' stroke='%2310b981'/%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="logo.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -120,11 +120,30 @@
     border-radius: 4px 12px 12px 4px;
     font-weight: 800;
   }
-  .nav-icon { font-size: 18px; width: 24px; text-align: center; }
+  .nav-icon {
+    font-size: 18px;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    transition: all 0.2s ease;
+  }
+  .nav-icon svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2.2px;
+  }
+  .nav:hover .nav-icon svg, .nav.active .nav-icon svg {
+    color: var(--blue);
+    transform: scale(1.15);
+  }
 
   /* MAIN */
   .main { margin-left: 260px; padding: 40px 48px; max-width: 1440px; }
-  .ptitle { font-size: 28px; font-weight: 900; letter-spacing: -1px; margin-bottom: 32px; }
+  .ptitle { font-size: 28px; font-weight: 900; letter-spacing: -1px; margin-bottom: 32px; display: flex; align-items: center; gap: 12px; }
+  .ptitle svg, .ptitle i { width: 28px; height: 28px; color: var(--blue); stroke-width: 2.2px; flex-shrink: 0; }
 
   /* KPI CARDS */
   .kgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
@@ -231,6 +250,7 @@
   .cgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 32px; }
   .card { background: var(--card); border-radius: var(--r); padding: 24px; border: 1px solid var(--border); }
   .card .title { font-weight: 800; font-size: 15px; margin-bottom: 20px; color: var(--text); display: flex; align-items: center; gap: 10px; }
+  .card .title svg, .card .title i { width: 18px; height: 18px; color: var(--blue); stroke-width: 2px; flex-shrink: 0; }
   .ch { height: 280px; position: relative; }
   .ch.tall { height: 350px; }
 
@@ -299,7 +319,14 @@
 <!-- AUTH -->
 <div id="authScreen" class="auth-screen">
   <div class="auth-card">
-    <div class="auth-logo">PRODTECH</div>
+    <div class="auth-logo" style="display:flex; align-items:center; justify-content:center; gap:10px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:36px; height:36px; color:var(--blue); flex-shrink:0;">
+        <path d="M12 22C12 22 20 18 20 12V4L12 2L4 4V12C4 18 12 22 12 22Z" stroke="var(--blue)"/>
+        <path d="M12 8v8" stroke="var(--green)"/>
+        <path d="M9 12h6" stroke="var(--green)" stroke-width="1.75"/>
+      </svg>
+      PRODTECH
+    </div>
     <div class="auth-sub">Plataforma de Gestão de Produção</div>
     <div id="authErr" class="auth-err"></div>
     <div style="margin-bottom:12px"><label class="flabel">Email</label><input id="authEmail" type="email" placeholder="seu@email.com"/></div>
@@ -311,7 +338,14 @@
 
 <!-- SIDEBAR -->
 <nav class="sidebar">
-  <div class="brand">PRODTECH</div>
+  <div class="brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:24px; height:24px; color:var(--blue); flex-shrink:0;">
+      <path d="M12 22C12 22 20 18 20 12V4L12 2L4 4V12C4 18 12 22 12 22Z" stroke="var(--blue)"/>
+      <path d="M12 8v8" stroke="var(--green)"/>
+      <path d="M9 12h6" stroke="var(--green)" stroke-width="1.75"/>
+    </svg>
+    PRODTECH
+  </div>
   <div class="brand-sub">v3.0</div>
   <div id="tenantBadge" class="tenant-badge">...</div>
 
@@ -322,34 +356,34 @@
   </div>
 
   <div class="nav-group">Análise Estratégica</div>
-  <div class="nav active" onclick="showTab('dash',this)"><span class="nav-icon">📊</span> Painel de Produção</div>
-  <div class="nav" onclick="showTab('ranking',this)"><span class="nav-icon">🏆</span> Ranking Performance</div>
-  <div class="nav" onclick="showTab('finance',this)"><span class="nav-icon">💰</span> Gestão Financeira</div>
+  <div class="nav active" onclick="showTab('dash',this)"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span> Painel de Produção</div>
+  <div class="nav" onclick="showTab('ranking',this)"><span class="nav-icon"><i data-lucide="trophy"></i></span> Ranking Performance</div>
+  <div class="nav" onclick="showTab('finance',this)"><span class="nav-icon"><i data-lucide="dollar-sign"></i></span> Gestão Financeira</div>
 
   <div class="nav-group">Operações & Campo</div>
-  <div class="nav" onclick="showTab('mass',this)"><span class="nav-icon">⚖️</span> Balanço de Massa</div>
-  <div class="nav" onclick="showTab('logs',this)"><span class="nav-icon">📋</span> Logs de Produção</div>
-  <div class="nav" onclick="showTab('quality',this)"><span class="nav-icon">🕵️</span> Auditoria & Qualidade</div>
-  <div class="nav" onclick="showTab('romaneio',this)"><span class="nav-icon">📑</span> Romaneio Expedição</div>
-  <div class="nav" onclick="showTab('bulk',this)"><span class="nav-icon">🗑️</span> Refugo & Vendas</div>
+  <div class="nav" onclick="showTab('mass',this)"><span class="nav-icon"><i data-lucide="scale"></i></span> Balanço de Massa</div>
+  <div class="nav" onclick="showTab('logs',this)"><span class="nav-icon"><i data-lucide="file-spreadsheet"></i></span> Logs de Produção</div>
+  <div class="nav" onclick="showTab('quality',this)"><span class="nav-icon"><i data-lucide="check-square"></i></span> Auditoria & Qualidade</div>
+  <div class="nav" onclick="showTab('romaneio',this)"><span class="nav-icon"><i data-lucide="truck"></i></span> Romaneio Expedição</div>
+  <div class="nav" onclick="showTab('bulk',this)"><span class="nav-icon"><i data-lucide="shopping-cart"></i></span> Refugo & Vendas</div>
 
   <div class="nav-group">Configurações & Cadastros</div>
-  <div class="nav" onclick="showTab('employees',this)"><span class="nav-icon">👥</span> Funcionários</div>
-  <div class="nav" onclick="showTab('mapping',this)"><span class="nav-icon">🔗</span> Mapeamento Etiquetas</div>
-  <div class="nav" onclick="showTab('weights',this)"><span class="nav-icon">📦</span> Tipos de Peso</div>
-  <div class="nav" onclick="showTab('stops',this)"><span class="nav-icon">🛑</span> Registro de Paradas</div>
-  <div class="nav" onclick="showTab('trace',this)"><span class="nav-icon">🌿</span> Rastreabilidade</div>
-  <div class="nav" onclick="showTab('registers',this)"><span class="nav-icon">📁</span> Cadastros Gerais</div>
+  <div class="nav" onclick="showTab('employees',this)"><span class="nav-icon"><i data-lucide="users"></i></span> Funcionários</div>
+  <div class="nav" onclick="showTab('mapping',this)"><span class="nav-icon"><i data-lucide="qr-code"></i></span> Mapeamento Etiquetas</div>
+  <div class="nav" onclick="showTab('weights',this)"><span class="nav-icon"><i data-lucide="weight"></i></span> Tipos de Peso</div>
+  <div class="nav" onclick="showTab('stops',this)"><span class="nav-icon"><i data-lucide="ban"></i></span> Registro de Paradas</div>
+  <div class="nav" onclick="showTab('trace',this)"><span class="nav-icon"><i data-lucide="sprout"></i></span> Rastreabilidade</div>
+  <div class="nav" onclick="showTab('registers',this)"><span class="nav-icon"><i data-lucide="folder-open"></i></span> Cadastros Gerais</div>
 
   <div id="adminGroup" style="display:none">
     <div class="nav-group">Administração Master</div>
-    <div class="nav" onclick="showTab('users_mgmt',this)"><span class="nav-icon">🔑</span> Usuários & Empresas</div>
-    <div class="nav" onclick="showTab('integrations',this)"><span class="nav-icon">🔌</span> Integrações API</div>
+    <div class="nav" onclick="showTab('users_mgmt',this)"><span class="nav-icon"><i data-lucide="key-round"></i></span> Usuários & Empresas</div>
+    <div class="nav" onclick="showTab('integrations',this)"><span class="nav-icon"><i data-lucide="webhook"></i></span> Integrações API</div>
   </div>
 
   <div class="nav-group">Sistema</div>
-  <div class="nav" onclick="showTab('settings',this)"><span class="nav-icon">⚙️</span> Configurações</div>
-  <div class="nav" style="color:var(--green);font-weight:800" onclick="window.open('/campo/','_blank')"><span class="nav-icon">📱</span> Aplicativo de Campo</div>
+  <div class="nav" onclick="showTab('settings',this)"><span class="nav-icon"><i data-lucide="settings"></i></span> Configurações</div>
+  <div class="nav" style="color:var(--green);font-weight:800" onclick="window.open('/campo/','_blank')"><span class="nav-icon"><i data-lucide="smartphone"></i></span> Aplicativo de Campo</div>
 
   <div class="sf">
     <div id="statusBar" style="font-size:11px;color:var(--muted);margin-bottom:8px"><span class="dot"></span>Sistema Online</div>
@@ -359,13 +393,13 @@
   <!-- ABSENCE MODAL -->
   <div id="absenceModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center">
     <div style="background:var(--card); width:100%; max-width:500px; border-radius:20px; padding:24px; border:1px solid var(--border)">
-      <h3 style="margin-bottom:16px">📅 Lançar Falta (Assiduidade)</h3>
+      <h3 style="margin-bottom:16px; display:flex; align-items:center; gap:8px"><i data-lucide="calendar" style="width:20px; height:20px; color:var(--blue)"></i> Lançar Falta (Assiduidade)</h3>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
         <div><label class="flabel">Funcionário</label><select id="absenceEmp"></select></div>
         <div><label class="flabel">Data</label><input type="date" id="absenceDate"/></div>
       </div>
       <div style="margin-bottom:20px"><label class="flabel">Motivo (Opcional)</label><input id="absenceReason" placeholder="Justificativa..."/></div>
-      <button class="blue btn-full" onclick="addAbsence()" style="margin-bottom:20px">➕ Registrar Falta</button>
+      <button class="blue btn-full" onclick="addAbsence()" style="margin-bottom:20px; display:flex; align-items:center; justify-content:center; gap:6px"><i data-lucide="plus-circle" style="width:16px; height:16px"></i> Registrar Falta</button>
       
       <div class="title" style="font-size:12px; border-top:1px solid var(--border); padding-top:16px; margin-top:16px">Faltas no período filtrado:</div>
       <div id="absenceList" style="max-height:200px; overflow-y:auto; margin-bottom:20px"></div>
@@ -379,7 +413,7 @@
   <!-- BULK EDIT MODAL -->
   <div id="bulkEditModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center">
     <div style="background:var(--card); width:100%; max-width:450px; border-radius:20px; padding:24px; border:1px solid var(--border)">
-      <h3 style="margin-bottom:16px">✏️ Editar Venda Agranel</h3>
+      <h3 style="margin-bottom:16px; display:flex; align-items:center; gap:8px"><i data-lucide="edit-3" style="width:20px; height:20px; color:var(--blue)"></i> Editar Venda Agranel</h3>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
         <div><label class="flabel">Data</label><input type="date" id="editBulkDate"/></div>
         <div><label class="flabel">NF</label><input id="editBulkInvoice" placeholder="000..."/></div>
@@ -403,7 +437,7 @@
   <!-- SIGNATURE MODAL -->
   <div id="sigModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center">
     <div style="background:var(--card); width:400px; padding:20px; border-radius:15px; border:1px solid var(--border)">
-      <h3 style="margin-bottom:10px">✍️ Assinatura Digital</h3>
+      <h3 style="margin-bottom:10px; display:flex; align-items:center; gap:8px"><i data-lucide="pen-tool" style="width:20px; height:20px; color:var(--blue)"></i> Assinatura Digital</h3>
       <p style="font-size:12px; color:var(--muted); margin-bottom:15px">Esta ordem só pode ser impressa após a assinatura do responsável do Packing House.</p>
       <div style="background:#fff; border-radius:8px; overflow:hidden; border:2px solid #ccc; margin-bottom:15px;">
         <canvas id="sigCanvas" width="360" height="150" style="touch-action:none; display:block; width:100%; cursor:crosshair"></canvas>
@@ -419,7 +453,7 @@
   <!-- EMPLOYEE EDIT MODAL -->
   <div id="empModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">
     <div style="background:#1e293b; padding:24px; border-radius:12px; width:450px; max-width:95%; border:1px solid var(--border);">
-      <h3 style="margin-top:0; color:#fff; margin-bottom:20px">✏️ Editar Funcionário</h3>
+      <h3 style="margin-top:0; color:#fff; margin-bottom:20px; display:flex; align-items:center; gap:8px"><i data-lucide="user-cog" style="width:20px; height:20px; color:var(--blue)"></i> Editar Funcionário</h3>
       <input type="hidden" id="editEmpId">
       <div style="margin-bottom:12px"><label class="flabel">Barcode</label><input id="editEmpBarcode"/></div>
       <div style="margin-bottom:12px"><label class="flabel">Nome</label><input id="editEmpName"/></div>
@@ -432,8 +466,8 @@
       <div style="margin-bottom:12px"><label class="flabel">WhatsApp</label><input id="editEmpWhatsapp" placeholder="55..."/></div>
       <div style="margin-bottom:20px">
         <label class="flabel">Foto do Colaborador</label>
-        <input type="file" id="editEmpPhotoFile" accept="image/*" style="display:none" onchange="$('editEmpPhotoBtn').textContent='✅ Nova Foto Selecionada'">
-        <button id="editEmpPhotoBtn" onclick="$('editEmpPhotoFile').click()" style="width:100%; padding:11px; background:rgba(59,130,246,0.1); color:var(--blue); border:1px dashed var(--blue); border-radius:10px; font-size:12px; font-weight:700">📷 TROCAR FOTO</button>
+        <input type="file" id="editEmpPhotoFile" accept="image/*" style="display:none" onchange="$('editEmpPhotoBtn').textContent='Nova Foto Selecionada'">
+        <button id="editEmpPhotoBtn" onclick="$('editEmpPhotoFile').click()" style="width:100%; padding:11px; background:rgba(59,130,246,0.1); color:var(--blue); border:1px dashed var(--blue); border-radius:10px; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px"><i data-lucide="camera" style="width:16px; height:16px"></i> TROCAR FOTO</button>
         <input type="hidden" id="editEmpPhotoUrl">
       </div>
       <div style="display:flex; gap:10px; justify-content:flex-end">
@@ -448,15 +482,15 @@
   <!-- ═══ DASHBOARD ═══ -->
   <div id="tab-dash" class="tab active">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:15px; flex-wrap:wrap">
-       <h1 class="ptitle" style="margin-bottom:0">📊 Dashboard de Produção</h1>
-       <button onclick="showTab('stops')" class="red" style="font-weight:900; box-shadow:0 0 15px rgba(239,68,68,0.3)">🛑 REGISTRAR PARADA GERAL</button>
+       <h1 class="ptitle" style="margin-bottom:0"><i data-lucide="layout-dashboard"></i> Dashboard de Produção</h1>
+       <button onclick="showTab('stops')" class="red" style="font-weight:900; box-shadow:0 0 15px rgba(239,68,68,0.3); display:inline-flex; align-items:center; gap:8px"><i data-lucide="ban" style="width:16px; height:16px; stroke-width:2.5px"></i> REGISTRAR PARADA GERAL</button>
     </div>
     <div class="kgrid">
       <div class="kcard"><div class="klabel">Prod. Total (Período)</div><div id="kpiTotalDia" class="kval">0</div><div class="ksub">caixas embaladas</div></div>
       <div class="kcard green"><div class="klabel">Total em Quilos</div><div id="kpiTotalKg" class="kval green">0</div><div class="ksub">kg processados</div></div>
       <div class="kcard yellow"><div class="klabel">Velocidade Média</div><div id="kpiCadencia" class="kval yellow">--</div><div class="ksub"><span id="kpiMediaHora">0</span> cx/h média</div></div>
       <div class="kcard orange" id="topPerformerCard" style="display:none; cursor:pointer; grid-column: span 1" onclick="openEmpDrawer(this.dataset.barcode)">
-        <div class="klabel">🏆 Destaque</div>
+        <div class="klabel" style="display:flex; align-items:center; gap:6px"><i data-lucide="trophy" style="width:14px; height:14px; color:var(--orange)"></i> Destaque</div>
         <div style="display:flex; align-items:center; gap:10px; margin-top:5px">
           <div id="topPerformerAvatar" class="avatar-ring" style="width:40px; height:40px; border-color:var(--orange); font-size:14px"></div>
           <div>
@@ -471,12 +505,12 @@
       <div class="f"><label class="flabel">Início</label><input type="date" id="dashStart"/></div>
       <div class="f"><label class="flabel">Fim</label><input type="date" id="dashEnd"/></div>
       <div class="f"><label class="flabel">Colaborador</label><select id="dashEmployee"><option value="">Todos</option></select></div>
-      <button onclick="refreshDash()">🔍 Filtrar</button>
-      <button class="sec" onclick="exportDashPDF()">📄 PDF</button>
+      <button onclick="refreshDash()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="search" style="width:14px; height:14px"></i> Filtrar</button>
+      <button class="sec" onclick="exportDashPDF()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-text" style="width:14px; height:14px"></i> PDF</button>
     </div>
     <div class="cgrid">
-      <div class="card"><div class="title">📈 Produção por Hora</div><div class="ch"><canvas id="chartProdHora"></canvas></div></div>
-      <div class="card"><div class="title">📦 Distribuição por Peso</div>
+      <div class="card"><div class="title"><i data-lucide="trending-up"></i> Produção por Hora</div><div class="ch"><canvas id="chartProdHora"></canvas></div></div>
+      <div class="card"><div class="title"><i data-lucide="box"></i> Distribuição por Peso</div>
         <div style="display:flex;gap:12px;height:230px">
           <div style="flex:1;position:relative"><canvas id="chartWeightDist"></canvas></div>
           <div id="boxWeightDetailList" style="flex:1;display:flex;flex-direction:column;gap:6px;overflow-y:auto"></div>
@@ -484,25 +518,25 @@
       </div>
     </div>
     <div class="cgrid">
-      <div class="card"><div class="title">👥 Produção por Colaborador (Top 10)</div><div class="ch"><canvas id="chartCollab"></canvas></div></div>
-      <div class="card"><div class="title">📊 Comparativo Período Atual vs Anterior</div><div class="ch"><canvas id="chartComparison"></canvas></div></div>
+      <div class="card"><div class="title"><i data-lucide="users"></i> Produção por Colaborador (Top 10)</div><div class="ch"><canvas id="chartCollab"></canvas></div></div>
+      <div class="card"><div class="title"><i data-lucide="layout-dashboard"></i> Comparativo Período Atual vs Anterior</div><div class="ch"><canvas id="chartComparison"></canvas></div></div>
     </div>
-    <div class="card"><div class="title">🏆 Ranking Detalhado</div><div id="collabDetailList" class="rgrid" style="margin-top:12px"></div></div>
+    <div class="card"><div class="title"><i data-lucide="trophy"></i> Ranking Detalhado</div><div id="collabDetailList" class="rgrid" style="margin-top:12px"></div></div>
     
-    <h2 class="ptitle" style="margin-top:20px; border-top:1px solid var(--border); padding-top:20px">🚜 Gestão de Campo e Variedades</h2>
+    <h2 class="ptitle" style="margin-top:20px; border-top:1px solid var(--border); padding-top:20px"><i data-lucide="tractor"></i> Gestão de Campo e Variedades</h2>
     <div class="cgrid" style="grid-template-columns: 1fr 1fr 1fr">
-      <div class="card"><div class="title">🚜 Produtividade (Carroções)</div><div class="ch"><canvas id="chartFieldProd"></canvas></div></div>
-      <div class="card"><div class="title">🍉 Variedades Colhidas (kg)</div><div class="ch"><canvas id="chartVarietiesHarvest"></canvas></div></div>
-      <div class="card"><div class="title">⚖️ Colhido vs Expedido por Variedade</div><div class="ch"><canvas id="chartHarvestVsPacked"></canvas></div></div>
+      <div class="card"><div class="title"><i data-lucide="tractor"></i> Produtividade (Carroções)</div><div class="ch"><canvas id="chartFieldProd"></canvas></div></div>
+      <div class="card"><div class="title"><i data-lucide="pie-chart"></i> Variedades Colhidas (kg)</div><div class="ch"><canvas id="chartVarietiesHarvest"></canvas></div></div>
+      <div class="card"><div class="title"><i data-lucide="scale"></i> Colhido vs Expedido por Variedade</div><div class="ch"><canvas id="chartHarvestVsPacked"></canvas></div></div>
     </div>
     <div id="parcelStatsCard" class="card" style="display:none">
-      <div class="title">🚜 Produção por Parcela / Variedade</div>
+      <div class="title"><i data-lucide="tractor"></i> Produção por Parcela / Variedade</div>
       <div id="parcelStatsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:10px"></div>
     </div>
 
     <!-- DASHBOARD SUPERVISOR (CALIBRES) -->
     <div class="card">
-      <div class="title">🧪 Análise Agronômica (Calibres por Parcela)</div>
+      <div class="title"><i data-lucide="activity"></i> Análise Agronômica (Calibres por Parcela)</div>
       <p style="font-size:12px; color:var(--muted); margin-bottom:15px">Acompanhe a evolução do tamanho dos frutos para ajuste de adubação.</p>
       <div style="display:flex; gap:10px; margin-bottom:20px">
         <select id="supParcelSelect" style="flex:1" onchange="refreshSupervisorChart()">
@@ -516,48 +550,48 @@
 
   <!-- ═══ BALANÇO DE MASSA ═══ -->
   <div id="tab-mass" class="tab">
-    <h1 class="ptitle">⚖️ Balanço de Massa (Entrada vs Saída)</h1>
+    <h1 class="ptitle"><i data-lucide="scale"></i> Balanço de Massa (Entrada vs Saída)</h1>
     <div class="fbar">
       <div class="f"><label class="flabel">Início</label><input type="date" id="massStart"/></div>
       <div class="f"><label class="flabel">Fim</label><input type="date" id="massEnd"/></div>
       <div class="f"><label class="flabel">Filtrar Parcela</label><select id="massParcel"><option value="">Todas</option></select></div>
-      <button onclick="refreshMass()">📊 Calcular Balanço</button>
-      <button class="sec" onclick="exportAuditPDF()">📜 Relatório Auditoria</button>
+      <button onclick="refreshMass()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="scale"></i> Calcular Balanço</button>
+      <button class="sec" onclick="exportAuditPDF()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-check"></i> Relatório Auditoria</button>
     </div>
     <div class="kgrid">
-      <div class="kcard yellow"><div class="klabel">🚜 Total Colhido</div><div id="kpiMassHarvest" class="kval yellow">0 Ton</div><div class="ksub">Entrada total (Campo)</div></div>
+      <div class="kcard yellow"><div class="klabel" style="display:flex; align-items:center; gap:6px"><i data-lucide="tractor" style="width:14px; height:14px; color:var(--yellow)"></i> Total Colhido</div><div id="kpiMassHarvest" class="kval yellow">0 Ton</div><div class="ksub">Entrada total (Campo)</div></div>
       <div class="kcard blue">
-        <div class="klabel">🚚 Saídas (Faturamento)</div>
+        <div class="klabel" style="display:flex; align-items:center; gap:6px"><i data-lucide="truck" style="width:14px; height:14px; color:var(--blue)"></i> Saídas (Faturamento)</div>
         <div id="kpiMassExp" class="kval blue">0 Ton</div>
         <div id="kpiMassExpSub" class="ksub">MI: 0t | EX: 0t</div>
       </div>
       <div class="kcard orange">
-        <div class="klabel">💰 Vendas Agranel</div>
+        <div class="klabel" style="display:flex; align-items:center; gap:6px"><i data-lucide="dollar-sign" style="width:14px; height:14px; color:var(--orange)"></i> Vendas Agranel</div>
         <div id="kpiMassBulk" class="kval orange">0 Ton</div>
         <div id="massKpiBulkVal" class="ksub">R$ 0,00</div>
       </div>
       <div class="kcard purple">
-        <div class="klabel">🎁 Bonificações/Doações</div>
+        <div class="klabel" style="display:flex; align-items:center; gap:6px"><i data-lucide="gift" style="width:14px; height:14px; color:var(--purple)"></i> Bonificações/Doações</div>
         <div id="kpiMassBonif" class="kval purple">0 Ton</div>
         <div class="ksub">Saídas sem faturamento</div>
       </div>
-      <div class="kcard red"><div class="klabel">♻️ Refugo/Perda</div><div id="massKpiWaste" class="kval red">0 kg</div><div class="ksub">Campo + Packing House</div></div>
-      <div class="kcard green"><div class="klabel">📦 Estoque Atual</div><div id="kpiMassStock" class="kval green">0 Ton</div><div class="ksub">Saldo disponível</div></div>
+      <div class="kcard red"><div class="klabel" style="display:flex; align-items:center; gap:6px"><i data-lucide="trash-2" style="width:14px; height:14px; color:var(--red)"></i> Refugo/Perda</div><div id="massKpiWaste" class="kval red">0 kg</div><div class="ksub">Campo + Packing House</div></div>
+      <div class="kcard green"><div class="klabel" style="display:flex; align-items:center; gap:6px"><i data-lucide="box" style="width:14px; height:14px; color:var(--green)"></i> Estoque Atual</div><div id="kpiMassStock" class="kval green">0 Ton</div><div class="ksub">Saldo disponível</div></div>
     </div>
     
     <div class="grid2">
-      <div class="card"><div class="title">📈 Entradas vs Saídas (Tons)</div><div class="ch"><canvas id="chartMassBalance"></canvas></div></div>
-      <div class="card"><div class="title">📊 Distribuição de Saídas</div><div class="ch"><canvas id="chartMassDistribution"></canvas></div></div>
+      <div class="card"><div class="title"><i data-lucide="trending-up"></i> Entradas vs Saídas (Tons)</div><div class="ch"><canvas id="chartMassBalance"></canvas></div></div>
+      <div class="card"><div class="title"><i data-lucide="pie-chart"></i> Distribuição de Saídas</div><div class="ch"><canvas id="chartMassDistribution"></canvas></div></div>
     </div>
     <div class="card">
-      <div class="title">📋 Cardex de Rastreabilidade (Entradas e Saídas / Movimentação)</div>
+      <div class="title"><i data-lucide="list-collapse"></i> Cardex de Rastreabilidade (Entradas e Saídas / Movimentação)</div>
       <table id="massTable">
         <thead><tr><th>Data/Hora</th><th>Tipo</th><th>Lote/Parcela</th><th>Descrição/Destino</th><th>Entrada (kg)</th><th>Saída (kg)</th><th>Saldo (kg)</th><th>Ações</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
     <div class="card">
-      <div class="title">📊 Detalhamento de Saídas (Variedade / Calibre / Caixa)</div>
+      <div class="title"><i data-lucide="bar-chart-3"></i> Detalhamento de Saídas (Variedade / Calibre / Caixa)</div>
       <div style="overflow:auto; max-height:400px">
         <table id="massBreakdownTable">
           <thead><tr><th>Parcela</th><th>Variedade</th><th>Caixa</th><th>Calibre</th><th>Qtd (Cx)</th><th>Total (Kg)</th></tr></thead>
@@ -613,11 +647,11 @@
 
   <!-- ═══ RANKING ═══ -->
   <div id="tab-ranking" class="tab">
-    <h1 class="ptitle">🏆 Ranking de Produtividade</h1>
+    <h1 class="ptitle"><i data-lucide="trophy"></i> Ranking de Produtividade</h1>
     
     <div style="display:inline-flex; gap:6px; margin-bottom:20px; background:rgba(255,255,255,0.03); padding:4px; border-radius:10px; border:1px solid var(--border)">
-      <button id="btnRankTypePacking" class="sec" onclick="switchRankType('PACKING')" style="padding:6px 16px; border-radius:8px; font-size:12px; font-weight:700; background:var(--blue); color:#fff; border:none; transition: all 0.2s">📦 Packing House</button>
-      <button id="btnRankTypeField" class="sec" onclick="switchRankType('FIELD')" style="padding:6px 16px; border-radius:8px; font-size:12px; font-weight:700; background:transparent; color:var(--muted); border:none; transition: all 0.2s">🚜 Serviço de Campo</button>
+      <button id="btnRankTypePacking" class="sec" onclick="switchRankType('PACKING')" style="padding:6px 16px; border-radius:8px; font-size:12px; font-weight:700; background:var(--blue); color:#fff; border:none; transition: all 0.2s; display:inline-flex; align-items:center; gap:6px"><i data-lucide="box" style="width:12px; height:12px"></i> Packing House</button>
+      <button id="btnRankTypeField" class="sec" onclick="switchRankType('FIELD')" style="padding:6px 16px; border-radius:8px; font-size:12px; font-weight:700; background:transparent; color:var(--muted); border:none; transition: all 0.2s; display:inline-flex; align-items:center; gap:6px"><i data-lucide="tractor" style="width:12px; height:12px"></i> Serviço de Campo</button>
     </div>
 
     <div class="fbar">
@@ -625,12 +659,12 @@
       <div class="f"><label class="flabel">Fim</label><input type="date" id="rankEnd"/></div>
       <div class="f"><label class="flabel">Função</label><select id="rankRole"><option value="">Todos</option><option value="EMBALADOR">Embalador</option><option value="EMPILHADOR">Empilhador</option><option value="COLHEDOR">Colhedor</option><option value="TRATORISTA">Tratorista</option><option value="SUPERVISOR">Supervisor</option></select></div>
       <div class="f"><label class="flabel">Colaborador</label><select id="rankEmp"><option value="">Todos</option></select></div>
-      <button onclick="refreshRanking()">🔍 Filtrar</button>
-      <button class="sec" onclick="exportRankPDF()">📄 PDF</button>
+      <button onclick="refreshRanking()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="search" style="width:14px; height:14px"></i> Filtrar</button>
+      <button class="sec" onclick="exportRankPDF()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-text" style="width:14px; height:14px"></i> PDF</button>
     </div>
     <div class="kgrid">
       <div class="kcard orange">
-        <div class="klabel">🏆 Top Performer</div>
+        <div class="klabel" style="display:flex; align-items:center; gap:6px"><i data-lucide="trophy" style="width:14px; height:14px; color:var(--orange)"></i> Top Performer</div>
         <div style="display:flex; align-items:center; gap:10px; margin-top:5px">
           <div id="rankTopAvatar" class="avatar-ring" style="width:40px; height:40px; border-color:var(--orange); font-size:14px"></div>
           <div>
@@ -642,77 +676,77 @@
       <div class="kcard"><div class="klabel" id="lblRankKpiTotal">Total de Caixas</div><div id="rankKpiTotal" class="kval">0</div><div class="ksub" id="subRankKpiTotal">no período selecionado</div></div>
       <div class="kcard green"><div class="klabel" id="lblRankKpiMedia">Média por Pessoa</div><div id="rankKpiMedia" class="kval green">0</div><div class="ksub" id="subRankKpiMedia">caixas / colaborador</div></div>
     </div>
-    <div class="card"><div class="title" id="lblRankChartTitle">👤 Caixas por Colaborador</div><div class="ch tall"><canvas id="chartRankCollab"></canvas></div></div>
-    <div class="card"><div class="title" id="lblRankGridTitle">📊 Detalhamento Individual</div><div id="rankGrid" class="rgrid" style="margin-top:10px"></div></div>
+    <div class="card"><div class="title" id="lblRankChartTitle"><i data-lucide="user"></i> Caixas por Colaborador</div><div class="ch tall"><canvas id="chartRankCollab"></canvas></div></div>
+    <div class="card"><div class="title" id="lblRankGridTitle"><i data-lucide="bar-chart-3"></i> Detalhamento Individual</div><div id="rankGrid" class="rgrid" style="margin-top:10px"></div></div>
   </div>
 
   <!-- ═══ FINANCEIRO ═══ -->
   <div id="tab-finance" class="tab">
-    <h1 class="ptitle">💰 Relatório Financeiro</h1>
+    <h1 class="ptitle"><i data-lucide="dollar-sign"></i> Relatório Financeiro</h1>
     <div class="fbar">
       <div class="f"><label class="flabel">Início</label><input type="date" id="finStart"/></div>
       <div class="f"><label class="flabel">Fim</label><input type="date" id="finEnd"/></div>
       <div class="f"><label class="flabel">Função</label><select id="finRole"><option value="">Todos</option><option value="EMBALADOR">Embalador</option><option value="EMPILHADOR">Empilhador</option><option value="COLHEDOR">Colhedor</option><option value="TRATORISTA">Tratorista</option><option value="SUPERVISOR">Supervisor</option></select></div>
       <div class="f"><label class="flabel">Colaborador</label><select id="finEmp"><option value="">Todos</option></select></div>
-      <button onclick="refreshFin()">Gerar</button>
-      <button class="sec" onclick="openAbsenceModal()">📅 Gestão de Faltas</button>
-      <button class="sec" onclick="exportFinPDF()">📄 PDF Folha</button>
+      <button onclick="refreshFin()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="play" style="width:14px; height:14px"></i> Gerar</button>
+      <button class="sec" onclick="openAbsenceModal()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="calendar" style="width:14px; height:14px"></i> Gestão de Faltas</button>
+      <button class="sec" onclick="exportFinPDF()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-text" style="width:14px; height:14px"></i> PDF Folha</button>
     </div>
     <div class="kgrid">
-      <div class="kcard"><div class="klabel">📉 Custo Total (Mão de Obra)</div><div id="finKpiTotal" class="kval" style="color:var(--red)">R$ 0,00</div><div class="ksub">Penalidades já descontadas</div></div>
-      <div class="kcard orange"><div class="klabel">💰 Vendas Agranel (Receita)</div><div id="finKpiBulkSales" class="kval orange">R$ 0,00</div><div class="ksub">Vendas diretas no período</div></div>
-      <div class="kcard"><div class="klabel">📦 Total Caixas (Packing)</div><div id="finKpiBoxes" class="kval">0</div><div class="ksub">Produção acumulada</div></div>
-      <div class="kcard" style="border-left: 4px solid var(--blue)"><div class="klabel">🚜 Serviços (Campo)</div><div id="finKpiField" class="kval" style="color:var(--blue)">0</div><div class="ksub">Apontamentos realizados</div></div>
-      <div class="kcard green"><div class="klabel">⭐ Bônus Assiduidade</div><div id="finKpiBonus" class="kval" style="color:var(--green)">R$ 0,00</div><div class="ksub">Total prêmios pagos</div></div>
+      <div class="kcard"><div class="klabel" style="display:flex; align-items:center; gap:6px"><i data-lucide="trending-down" style="width:14px; height:14px; color:var(--red)"></i> Custo Total (Mão de Obra)</div><div id="finKpiTotal" class="kval" style="color:var(--red)">R$ 0,00</div><div class="ksub">Penalidades já descontadas</div></div>
+      <div class="kcard orange"><div class="klabel" style="display:flex; align-items:center; gap:6px"><i data-lucide="dollar-sign" style="width:14px; height:14px; color:var(--orange)"></i> Vendas Agranel (Receita)</div><div id="finKpiBulkSales" class="kval orange">R$ 0,00</div><div class="ksub">Vendas diretas no período</div></div>
+      <div class="kcard"><div class="klabel" style="display:flex; align-items:center; gap:6px"><i data-lucide="box" style="width:14px; height:14px"></i> Total Caixas (Packing)</div><div id="finKpiBoxes" class="kval">0</div><div class="ksub">Produção acumulada</div></div>
+      <div class="kcard" style="border-left: 4px solid var(--blue)"><div class="klabel" style="display:flex; align-items:center; gap:6px"><i data-lucide="tractor" style="width:14px; height:14px; color:var(--blue)"></i> Serviços (Campo)</div><div id="finKpiField" class="kval" style="color:var(--blue)">0</div><div class="ksub">Apontamentos realizados</div></div>
+      <div class="kcard green"><div class="klabel" style="display:flex; align-items:center; gap:6px"><i data-lucide="star" style="width:14px; height:14px; color:var(--green)"></i> Bônus Assiduidade</div><div id="finKpiBonus" class="kval" style="color:var(--green)">R$ 0,00</div><div class="ksub">Total prêmios pagos</div></div>
     </div>
     <div class="cgrid">
-      <div class="card"><div class="title">📦 Produção Packing House (Caixas/dia)</div><div class="ch"><canvas id="chartFinPacking"></canvas></div></div>
-      <div class="card"><div class="title">🚜 Produção Campo (Carrocões/dia)</div><div class="ch"><canvas id="chartFinCampo"></canvas></div></div>
+      <div class="card"><div class="title"><i data-lucide="box"></i> Produção Packing House (Caixas/dia)</div><div class="ch"><canvas id="chartFinPacking"></canvas></div></div>
+      <div class="card"><div class="title"><i data-lucide="tractor"></i> Produção Campo (Carrocões/dia)</div><div class="ch"><canvas id="chartFinCampo"></canvas></div></div>
     </div>
     <div class="cgrid">
-      <div class="card"><div class="title">📈 Evolução de Gastos por Data</div><div class="ch"><canvas id="chartFinHourly"></canvas></div></div>
-      <div class="card"><div class="title">👥 Custo por Colaborador</div><div class="ch"><canvas id="chartFinCollab"></canvas></div></div>
+      <div class="card"><div class="title"><i data-lucide="trending-up"></i> Evolução de Gastos por Data</div><div class="ch"><canvas id="chartFinHourly"></canvas></div></div>
+      <div class="card"><div class="title"><i data-lucide="users"></i> Custo por Colaborador</div><div class="ch"><canvas id="chartFinCollab"></canvas></div></div>
     </div>
     <div class="card">
-      <div class="title">📄 Detalhamento por Funcionário</div>
+      <div class="title"><i data-lucide="file-spreadsheet"></i> Detalhamento por Funcionário</div>
       <table id="finTable"><thead><tr><th>Período</th><th>Colaborador</th><th>Função</th><th>Qtd (cx/carr)</th><th>Valor/un</th><th>Assiduidade</th><th>Bônus Assid.</th><th>Total Líquido</th></tr></thead><tbody></tbody></table>
     </div>
   </div>
 
   <!-- ═══ FINALIZAR DIA ═══ -->
   <div id="tab-finalize" class="tab">
-    <h1 class="ptitle">✅ Finalizar Produção</h1>
+    <h1 class="ptitle"><i data-lucide="check-circle-2"></i> Finalizar Produção</h1>
     <div class="card" style="max-width:700px">
-      <div class="title">📤 Enviar Relatórios</div>
+      <div class="title"><i data-lucide="send"></i> Enviar Relatórios</div>
       <p style="color:var(--muted);font-size:13px;margin-bottom:18px;line-height:1.7">Ao finalizar: salva resumo no banco • envia desempenho individual via WhatsApp • envia relatório completo ao gestor • gera PDF</p>
       <div style="margin-bottom:14px"><label class="flabel">Data</label><input type="date" id="finalizeDate"/></div>
       <div id="finalizePreview" style="background:rgba(0,0,0,.25);border-radius:10px;padding:14px;margin-bottom:18px;border:1px solid var(--border);min-height:60px">
         <span style="color:var(--muted);font-size:13px">Clique em "Pré-visualizar" para ver o resumo.</span>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="sec" onclick="previewFinalize()">👁 Pré-visualizar</button>
-        <button class="sec" onclick="exportProducaoPDF()">📄 Baixar PDF</button>
-        <button id="finalizeBtn" onclick="doFinalize()" class="green">📤 Finalizar e Enviar WhatsApp</button>
+        <button class="sec" onclick="previewFinalize()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="eye"></i> Pré-visualizar</button>
+        <button class="sec" onclick="exportProducaoPDF()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-down"></i> Baixar PDF</button>
+        <button id="finalizeBtn" onclick="doFinalize()" class="green" style="display:inline-flex; align-items:center; gap:8px"><i data-lucide="send" style="width:16px; height:16px"></i> Finalizar e Enviar WhatsApp</button>
       </div>
       <div id="finalizeStatus" style="margin-top:12px;font-size:13px;color:var(--muted)"></div>
     </div>
     <div class="card" style="max-width:700px">
-      <div class="title">👤 Gestores que recebem relatório</div>
+      <div class="title"><i data-lucide="users"></i> Gestores que recebem relatório</div>
       <table id="managersTable"><thead><tr><th>Papel</th><th>WhatsApp</th></tr></thead><tbody></tbody></table>
     </div>
   </div>
 
   <!-- ═══ VENDAS A GRANEL / REFUGO ═══ -->
   <div id="tab-bulk" class="tab">
-    <h1 class="ptitle">🗑️ Refugo / Descarte (Fruta Solta sem NF)</h1>
+    <h1 class="ptitle"><i data-lucide="trash-2"></i> Refugo / Descarte (Fruta Solta sem NF)</h1>
     <div class="card">
-      <div class="title">➕ Lançar Venda a Granel / Refugo</div>
+      <div class="title"><i data-lucide="plus-circle"></i> Lançar Venda a Granel / Refugo</div>
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1.5fr 1fr 1fr 1fr auto; gap:10px; align-items:end">
         <div><label class="flabel">Data</label><input type="date" id="bulkDate"/></div>
         <div><label class="flabel">Fruta</label>
           <select id="bulkFruitSelect">
-            <option value="MELAO">🍈 Melão</option>
-            <option value="MELANCIA">🍉 Melancia</option>
+            <option value="MELAO">Melão</option>
+            <option value="MELANCIA">Melancia</option>
           </select>
         </div>
         <div><label class="flabel">Parcela</label><select id="bulkParcel"></select></div>
@@ -723,17 +757,17 @@
         <div><label class="flabel">Valor (R$)</label><input type="number" id="bulkValue" placeholder="0.00"/></div>
         <div><label class="flabel">Status Pagamento</label>
           <select id="bulkPaid">
-            <option value="false">🔴 Pendente</option>
-            <option value="true">🟢 Pago</option>
+            <option value="false">Pendente</option>
+            <option value="true">Pago</option>
           </select>
         </div>
         <div><label class="flabel">Status Recebimento</label>
           <select id="bulkReceived">
-            <option value="false">🔴 Pendente</option>
-            <option value="true">🟢 Recebido</option>
+            <option value="false">Pendente</option>
+            <option value="true">Recebido</option>
           </select>
         </div>
-        <button onclick="saveBulk()" style="background:var(--green)">Salvar</button>
+        <button onclick="saveBulk()" style="background:var(--green); display:inline-flex; align-items:center; gap:6px"><i data-lucide="check" style="width:14px; height:14px"></i> Salvar</button>
       </div>
       <div style="margin-top:12px; display:flex; align-items:center; gap:8px">
         <input type="checkbox" id="bulkIsWaste" style="width:16px; height:16px">
@@ -741,19 +775,19 @@
       </div>
     </div>
     <div class="card">
-      <div class="title">📋 Histórico de Vendas / Refugo</div>
+      <div class="title"><i data-lucide="history"></i> Histórico de Vendas / Refugo</div>
       <table id="bulkTable"><thead><tr><th>Data</th><th>Parcela</th><th>Fruta</th><th>Cliente/Destino</th><th>NF</th><th>Peso</th><th>Valor</th><th>Financeiro</th><th>Status</th></tr></thead><tbody></tbody></table>
     </div>
   </div>
 
   <!-- ═══ LOGS ═══ -->
   <div id="tab-logs" class="tab">
-    <h1 class="ptitle">📋 Logs de Produção</h1>
+    <h1 class="ptitle"><i data-lucide="history"></i> Logs de Produção</h1>
     <div class="fbar">
       <div class="f"><label class="flabel">Início</label><input type="date" id="logStart"/></div>
       <div class="f"><label class="flabel">Fim</label><input type="date" id="logEnd"/></div>
       <div class="f"><label class="flabel">Colaborador</label><select id="logEmp"><option value="">Todos</option></select></div>
-      <button onclick="refreshLogs()">Carregar Logs</button>
+      <button onclick="refreshLogs()"><i data-lucide="refresh-cw" class="btn-i"></i> Carregar Logs</button>
     </div>
     <div class="card">
       <table id="logsTable">
@@ -765,48 +799,48 @@
 
   <!-- ═══ PARADAS GERAIS ═══ -->
   <div id="tab-stops" class="tab">
-    <h1 class="ptitle">🛑 Registro de Paradas Gerais</h1>
+    <h1 class="ptitle"><i data-lucide="ban"></i> Registro de Paradas Gerais</h1>
     <div class="fbar">
       <div class="f"><label class="flabel">Início da Parada</label><input type="datetime-local" id="stopStart"/></div>
       <div class="f"><label class="flabel">Motivo / Descrição</label><input type="text" id="stopReason" placeholder="Ex: Queda de Energia"/></div>
-      <button onclick="saveStop()">Registrar Parada</button>
+      <button onclick="saveStop()"><i data-lucide="ban" class="btn-i"></i> Registrar Parada</button>
     </div>
     <div class="card">
-      <div class="title">Histórico Recente de Ocorrências</div>
+      <div class="title"><i data-lucide="clock" class="btn-i"></i> Histórico Recente de Ocorrências</div>
       <div id="stopList" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px"></div>
     </div>
   </div>
 
   <!-- ═══ AUDITORIA DE QUALIDADE ═══ -->
   <div id="tab-quality" class="tab">
-    <h1 class="ptitle">🕵️ Auditoria de Qualidade</h1>
+    <h1 class="ptitle"><i data-lucide="clipboard-check"></i> Auditoria de Qualidade</h1>
     <div class="fbar">
       <div class="f"><label class="flabel">Início</label><input type="date" id="qaStart"/></div>
       <div class="f"><label class="flabel">Fim</label><input type="date" id="qaEnd"/></div>
-      <button onclick="refreshQuality()">🔍 Filtrar</button>
+      <button onclick="refreshQuality()"><i data-lucide="search" class="btn-i"></i> Filtrar</button>
     </div>
     <div class="cgrid">
-      <div class="card"><div class="title">📊 Distribuição de Defeitos</div><div class="ch"><canvas id="chartQA"></canvas></div></div>
+      <div class="card"><div class="title"><i data-lucide="pie-chart" class="btn-i"></i> Distribuição de Defeitos</div><div class="ch"><canvas id="chartQA"></canvas></div></div>
       <div class="card">
-        <div class="title">📉 Maiores Ofensores (Penalidades)</div>
+        <div class="title"><i data-lucide="trending-down" class="btn-i"></i> Maiores Ofensores (Penalidades)</div>
         <div id="qaPenaltyList" class="list"></div>
       </div>
     </div>
     <div class="card">
-      <div class="title">📋 Registros de Auditoria</div>
+      <div class="title"><i data-lucide="list-checks" class="btn-i"></i> Registros de Auditoria</div>
       <table id="qaTable"><thead><tr><th>Data/Hora</th><th>Colaborador</th><th>Defeito</th><th>Caixas Desc.</th><th>Motivo</th></tr></thead><tbody></tbody></table>
     </div>
   </div>
 
   <!-- ═══ DEFEITOS (CONFIG) ═══ -->
   <div id="tab-quality_issues" class="tab">
-    <h1 class="ptitle">🚫 Gerenciar Tipos de Defeitos</h1>
+    <h1 class="ptitle"><i data-lucide="alert-triangle"></i> Gerenciar Tipos de Defeitos</h1>
     <div class="card">
-      <div class="title">⚙️ Cadastrar Novo Defeito</div>
+      <div class="title"><i data-lucide="plus-circle" class="btn-i"></i> Cadastrar Novo Defeito</div>
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <input id="newIssueName" placeholder="Novo defeito (ex: Podridão)"/>
-        <input id="newIssueIcon" placeholder="Ícone (EMOJI)" style="width:80px"/>
-        <button onclick="addQualityIssue()">+</button>
+        <input id="newIssueIcon" placeholder="Ícone ou Emoji" style="width:120px"/>
+        <button onclick="addQualityIssue()"><i data-lucide="plus" style="width:16px;height:16px"></i></button>
       </div>
       <div id="issueManageList" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));gap:8px"></div>
     </div>
@@ -814,9 +848,9 @@
 
   <!-- ═══ FUNCIONÁRIOS ═══ -->
   <div id="tab-employees" class="tab">
-    <h1 class="ptitle">👥 Funcionários</h1>
+    <h1 class="ptitle"><i data-lucide="users"></i> Funcionários</h1>
     <div class="card">
-      <div class="title">➕ Novo Funcionário</div>
+      <div class="title"><i data-lucide="user-plus" class="btn-i"></i> Novo Funcionário</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
         <div><label class="flabel">Barcode</label><input id="empBarcode"/></div>
         <div><label class="flabel">Nome</label><input id="empName"/></div>
@@ -844,14 +878,14 @@
         <div><label class="flabel">WhatsApp</label><input id="empWhatsapp" placeholder="5511999999999"/></div>
         <div>
           <label class="flabel">Foto do Colaborador</label>
-          <input type="file" id="empPhotoFile" accept="image/*" style="display:none" onchange="$('empPhotoBtn').textContent='✅ Foto Selecionada'">
-          <button id="empPhotoBtn" onclick="$('empPhotoFile').click()" style="width:100%; padding:11px; background:rgba(59,130,246,0.1); color:var(--blue); border:1px dashed var(--blue); border-radius:10px; font-size:12px; font-weight:700">📁 CARREGAR FOTO</button>
+          <input type="file" id="empPhotoFile" accept="image/*" style="display:none" onchange="$('empPhotoBtn').textContent='Foto Selecionada'">
+          <button id="empPhotoBtn" onclick="$('empPhotoFile').click()" style="width:100%; padding:11px; background:rgba(59,130,246,0.1); color:var(--blue); border:1px dashed var(--blue); border-radius:10px; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px"><i data-lucide="upload" style="width:16px;height:16px"></i> CARREGAR FOTO</button>
         </div>
-        <button onclick="addEmp()" style="background:var(--blue); font-weight:800">Salvar</button>
+        <button onclick="addEmp()" style="background:var(--blue); font-weight:800; display:flex; align-items:center; gap:6px"><i data-lucide="save" style="width:16px;height:16px"></i> Salvar</button>
       </div>
     </div>
     <div class="card">
-      <div class="title">📋 Lista de Funcionários</div>
+      <div class="title"><i data-lucide="contact" class="btn-i"></i> Lista de Funcionários</div>
       <table id="empTable">
         <thead><tr><th>Barcode</th><th>Nome</th><th>Setor</th><th>Função</th><th>Status</th><th>Ações</th></tr></thead>
         <tbody></tbody>
@@ -861,13 +895,13 @@
 
   <!-- ═══ PESOS ═══ -->
   <div id="tab-weights" class="tab">
-    <h1 class="ptitle">📦 Pesos de Caixa</h1>
+    <h1 class="ptitle"><i data-lucide="scale"></i> Pesos de Caixa</h1>
     <div class="card">
-      <div class="title">➕ Nova Caixa</div>
+      <div class="title"><i data-lucide="plus-circle" class="btn-i"></i> Nova Caixa</div>
       <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:end">
         <div><label class="flabel">Nome (ex: 7,5kg ou CAIXA P)</label><input id="wName"/></div>
         <div><label class="flabel">Peso (kg)</label><input id="wKg" type="number" step="0.1"/></div>
-        <button onclick="addWeight()">Adicionar</button>
+        <button onclick="addWeight()" style="display:flex; align-items:center; gap:6px"><i data-lucide="plus" style="width:16px;height:16px"></i> Adicionar</button>
       </div>
     </div>
     <div class="card">
@@ -880,15 +914,15 @@
 
   <!-- ═══ MAPEAMENTO ═══ -->
   <div id="tab-mapping" class="tab">
-    <h1 class="ptitle">🔗 Mapeamento de Etiquetas</h1>
+    <h1 class="ptitle"><i data-lucide="qr-code"></i> Mapeamento de Etiquetas</h1>
     <p style="color:var(--muted);font-size:13px;margin-bottom:18px">Vincule um código de barras combinado a um funcionário + tipo de caixa (ex: código 0201 → Embalador 02, Caixa 7.5kg)</p>
     <div class="card">
-      <div class="title">➕ Novo Mapeamento</div>
+      <div class="title"><i data-lucide="plus-circle" class="btn-i"></i> Novo Mapeamento</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end">
         <div><label class="flabel">Barcode</label><input id="mapBarcode" placeholder="Bipie a etiqueta"/></div>
         <div><label class="flabel">Funcionário</label><select id="mapEmployee"></select></div>
         <div><label class="flabel">Peso/Caixa</label><select id="mapWeight"></select></div>
-        <button onclick="addMapping()">Mapear</button>
+        <button onclick="addMapping()" style="display:flex; align-items:center; gap:6px"><i data-lucide="link" style="width:16px;height:16px"></i> Mapear</button>
       </div>
     </div>
     <div class="card">
@@ -902,28 +936,28 @@
   <!-- ═══ RASTREABILIDADE ═══ -->
   <!-- ═══ CADASTROS GERAIS ═══ -->
   <div id="tab-registers" class="tab">
-    <h1 class="ptitle">📁 Cadastros Operacionais</h1>
+    <h1 class="ptitle"><i data-lucide="folder-tree"></i> Cadastros Operacionais</h1>
     <p style="color:var(--muted); font-size:12px; margin-bottom:20px">Personalize setores, funções, carrocões, máquinas e operações da sua fazenda. Cada item é customizável por empresa.</p>
     
     <div class="grid3">
       <!-- SETORES -->
       <div class="card">
-        <div class="title">🏢 Setores</div>
+        <div class="title"><i data-lucide="building-2" class="btn-i"></i> Setores</div>
         <div style="display:flex; gap:8px; margin-bottom:12px">
           <input id="regSectorName" placeholder="Novo Setor (ex: Estufa)"/>
-          <button onclick="addSector()">+</button>
+          <button onclick="addSector()"><i data-lucide="plus" style="width:16px;height:16px"></i></button>
         </div>
         <div id="regSectorList" class="card-list" style="max-height:300px; overflow-y:auto"></div>
       </div>
 
       <!-- FUNÇÕES (ROLES) com meta e valor -->
       <div class="card">
-        <div class="title">👥 Funções / Cargos</div>
+        <div class="title"><i data-lucide="contact-2" class="btn-i"></i> Funções / Cargos</div>
         <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px">
           <select id="regRoleSector"><option value="">— Vincular a Setor (Opcional) —</option></select>
           <div style="display:flex; gap:8px">
             <input id="regRoleName" placeholder="Nova Função (ex: Embalador)" style="flex:1"/>
-            <button onclick="addRole()">+</button>
+            <button onclick="addRole()"><i data-lucide="plus" style="width:16px;height:16px"></i></button>
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px">
             <input id="regRoleTarget" type="number" step="1" placeholder="Meta/hora (cx)" style="font-size:11px; padding:8px"/>
@@ -935,11 +969,11 @@
 
       <!-- CARROCÕES com capacidade -->
       <div class="card">
-        <div class="title">🚜 Carrocões</div>
+        <div class="title"><i data-lucide="truck" class="btn-i"></i> Carrocões</div>
         <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px">
           <div style="display:flex; gap:8px">
             <input id="regCarriageCode" placeholder="Código (ex: ABJ23)" style="flex:1; text-transform:uppercase"/>
-            <button onclick="addCarriage()">+</button>
+            <button onclick="addCarriage()"><i data-lucide="plus" style="width:16px;height:16px"></i></button>
           </div>
           <div style="display:grid; grid-template-columns:2fr 1fr; gap:6px">
             <input id="regCarriageName" placeholder="Descrição (opcional)"/>
@@ -951,11 +985,11 @@
 
       <!-- MÁQUINAS (NOVO) -->
       <div class="card">
-        <div class="title">⚙️ Máquinas</div>
+        <div class="title"><i data-lucide="cpu" class="btn-i"></i> Máquinas</div>
         <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px">
           <div style="display:flex; gap:8px">
             <input id="regMachineCode" placeholder="Código (ex: COL-01)" style="flex:1; text-transform:uppercase"/>
-            <button onclick="addMachine()">+</button>
+            <button onclick="addMachine()"><i data-lucide="plus" style="width:16px;height:16px"></i></button>
           </div>
           <div style="display:grid; grid-template-columns:2fr 1fr; gap:6px">
             <input id="regMachineName" placeholder="Nome/Descrição"/>
@@ -972,12 +1006,12 @@
 
       <!-- OPERAÇÕES / SERVIÇOS -->
       <div class="card">
-        <div class="title">🌱 Operações / Serviços de Campo</div>
+        <div class="title"><i data-lucide="sprout" class="btn-i"></i> Operações / Serviços de Campo</div>
         <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px">
           <select id="regOpSector"><option value="">— Vincular a Setor (Opcional) —</option></select>
           <div style="display:flex; gap:8px">
             <input id="regOpName" placeholder="Novo Serviço (ex: Capina Manual)" style="flex:1"/>
-            <button onclick="addOperation()">+</button>
+            <button onclick="addOperation()"><i data-lucide="plus" style="width:16px;height:16px"></i></button>
           </div>
         </div>
         <div id="regOpList" class="card-list" style="max-height:300px; overflow-y:auto"></div>
@@ -986,43 +1020,43 @@
   </div>
 
   <div id="tab-trace" class="tab">
-    <h1 class="ptitle">🌿 Rastreabilidade</h1>
+    <h1 class="ptitle"><i data-lucide="leaf"></i> Rastreabilidade</h1>
     <div class="grid3">
       <div class="card">
-        <div class="title">🍈 Frutas</div>
+        <div class="title"><i data-lucide="apple" class="btn-i"></i> Frutas</div>
         <div style="display:flex;gap:8px;margin-bottom:10px">
           <input id="fruitName" placeholder="Nova fruta" style="flex:2"/>
           <input id="fruitPrice" placeholder="R$ Carrocão" style="flex:1" type="number" step="0.01"/>
-          <button onclick="addFruit()" style="padding:9px 14px">+</button>
+          <button onclick="addFruit()" style="padding:9px 14px"><i data-lucide="plus" style="width:16px;height:16px"></i></button>
         </div>
         <div id="fruitList" class="card-list"></div>
       </div>
       <div class="card">
-        <div class="title">🌱 Variedades</div>
+        <div class="title"><i data-lucide="dna" class="btn-i"></i> Variedades</div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
           <input id="varName" placeholder="Nome da Variedade (Ex: Jadeal)"/>
           <select id="varFruit"></select>
-          <button onclick="addVariety()" style="padding:9px 14px">Adicionar Variedade</button>
+          <button onclick="addVariety()" style="padding:9px 14px; display:flex; align-items:center; justify-content:center; gap:6px"><i data-lucide="plus" style="width:16px;height:16px"></i> Adicionar Variedade</button>
         </div>
         <div id="varList" class="card-list"></div>
       </div>
       <div class="card">
-        <div class="title">🚜 Parcelas</div>
+        <div class="title"><i data-lucide="map" class="btn-i"></i> Parcelas</div>
         <div style="display:flex;gap:8px;margin-bottom:10px">
           <input id="parcelCode" placeholder="Código (ex: P1)" style="flex:1"/>
           <input id="parcelPCode" placeholder="Cód. UP" style="width:100px"/>
-          <button onclick="addParcel()" style="padding:9px 14px">+</button>
+          <button onclick="addParcel()" style="padding:9px 14px"><i data-lucide="plus" style="width:16px;height:16px"></i></button>
         </div>
         <div id="parcelList" class="card-list"></div>
       </div>
     </div>
     <div class="card">
-      <div class="title">🔗 Vincular Parcela → Fruta → Variedade</div>
+      <div class="title"><i data-lucide="link" class="btn-i"></i> Vincular Parcela &rarr; Fruta &rarr; Variedade</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end">
         <div><label class="flabel">Parcela</label><select id="linkParcel"></select></div>
         <div><label class="flabel">Fruta</label><select id="linkFruit" onchange="filterVarietiesByFruit(this.value)"></select></div>
         <div><label class="flabel">Variedade</label><select id="linkVariety"></select></div>
-        <button onclick="addLink()">Vincular</button>
+        <button onclick="addLink()" style="display:flex; align-items:center; gap:6px"><i data-lucide="link" style="width:16px;height:16px"></i> Vincular</button>
       </div>
       <div id="linkList" class="card-list" style="margin-top:12px"></div>
     </div>
@@ -1030,34 +1064,34 @@
 
   <!-- ═══ INTEGRAÇÕES ═══ -->
   <div id="tab-integrations" class="tab">
-    <h1 class="ptitle">🔌 Integrações Externas</h1>
+    <h1 class="ptitle"><i data-lucide="webhook"></i> Integrações Externas</h1>
     <div class="grid2">
       <div class="card">
-        <div class="title">📄 Importação TOTVS (Excel/XML)</div>
+        <div class="title"><i data-lucide="file-spreadsheet" class="btn-i"></i> Importação TOTVS (Excel/XML)</div>
         <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Importe relatórios do TOTVS para alimentar a rastreabilidade e balanço de massa.</p>
         <div style="border:2px dashed var(--border);padding:30px;text-align:center;border-radius:14px;cursor:pointer">
-          <span style="font-size:24px">📤</span>
+          <i data-lucide="upload-cloud" style="width:36px; height:36px; color:var(--blue); margin: 0 auto 10px; display:block"></i>
           <div style="font-size:13px;margin-top:10px">Arraste seu relatório TOTVS ou clique para buscar</div>
           <input type="file" id="totvsFile" style="display:none" onchange="importTotvs(this)"/>
         </div>
       </div>
       <div class="card">
-        <div class="title">🍓 Conexão PariPassu</div>
+        <div class="title"><i data-lucide="activity" class="btn-i"></i> Conexão PariPassu</div>
         <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Sincronize sua Pallet List da PariPassu para controle automático de rastreabilidade.</p>
         <div class="field-group">
           <label class="flabel">API Token PariPassu</label>
           <input type="password" placeholder="Insira o token de acesso"/>
         </div>
-        <button class="blue btn-full" style="margin-top:10px">🔗 Testar Conexão</button>
+        <button class="blue btn-full" style="margin-top:10px; display:flex; align-items:center; justify-content:center; gap:6px"><i data-lucide="link-2" style="width:16px;height:16px"></i> Testar Conexão</button>
       </div>
     </div>
   </div>
 
   <!-- ═══ ROMANEIO ═══ -->
   <div id="tab-romaneio" class="tab">
-    <h1 class="ptitle">📑 Romaneio e Expedição (Copi Frutas)</h1>
+    <h1 class="ptitle"><i data-lucide="package"></i> Romaneio e Expedição (Copi Frutas)</h1>
     <div class="card">
-      <div class="title">➕ Novo Romaneio / Lote</div>
+      <div class="title"><i data-lucide="plus-circle" class="btn-i"></i> Novo Romaneio / Lote</div>
       <form id="formRomaneio" onsubmit="event.preventDefault(); saveRomaneio();">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin-bottom:15px">
           <div><label class="flabel">Cliente / Destino</label><input id="romCliente" placeholder="Ex: Supermercado BH" required/></div>
@@ -1065,7 +1099,7 @@
           <div><label class="flabel">Fazenda de Origem</label><input id="romFazenda" placeholder="Ex: Fazenda Copi" required/></div>
         </div>
         <div style="background:rgba(255,255,255,0.03); padding:15px; border-radius:10px; border:1px dashed var(--border); margin-bottom:15px">
-          <div style="font-size:12px; font-weight:700; margin-bottom:10px; color:var(--blue)">📦 ADICIONAR ITENS (PALLETS/VARIEDADES)</div>
+          <div style="font-size:12px; font-weight:700; margin-bottom:10px; color:var(--blue); display:flex; align-items:center; gap:6px"><i data-lucide="package-open" style="width:16px;height:16px"></i> ADICIONAR ITENS (PALLETS/VARIEDADES)</div>
           <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:10px;align-items:end;margin-bottom:10px;">
             <div><label class="flabel">Variedade</label><input id="itemVariedade" placeholder="Ex: Melão Amarelo"/></div>
             <div><label class="flabel">Lote/Julian</label><input id="itemLote" placeholder="Ex: 4021001"/></div>
@@ -1083,12 +1117,12 @@
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;align-items:end">
           <div><label class="flabel">Total Quilos (Líquido)</label><input id="romKg" type="number" step="0.01" placeholder="Calculado automaticamente" readonly style="background:rgba(0,0,0,0.2); cursor:not-allowed"/></div>
-          <button id="btnSaveRomaneio" type="submit" style="height:38px">Salvar Romaneio Completo</button>
+          <button id="btnSaveRomaneio" type="submit" style="height:38px; display:flex; align-items:center; justify-content:center; gap:6px"><i data-lucide="save" style="width:16px;height:16px"></i> Salvar Romaneio Completo</button>
         </div>
       </form>
     </div>
     <div class="card">
-      <div class="title">📋 Romaneios Cadastrados</div>
+      <div class="title"><i data-lucide="list-collapse" class="btn-i"></i> Romaneios Cadastrados</div>
       <table id="romaneioTable">
         <thead>
           <tr>
@@ -1108,17 +1142,17 @@
   </div>
 
   <div id="tab-settings" class="tab">
-    <h1 class="ptitle">⚙️ Configurações do Tenant</h1>
+    <h1 class="ptitle"><i data-lucide="sliders"></i> Configurações do Tenant</h1>
     <div class="grid2">
       <div class="card">
-        <div class="title">🏢 Dados da Empresa</div>
+        <div class="title"><i data-lucide="building" class="btn-i"></i> Dados da Empresa</div>
         <div style="margin-bottom:12px"><label class="flabel">Nome da Empresa</label><input id="cfgName" placeholder="Ex: Fazenda Santa Maria"/></div>
         <div style="margin-bottom:12px"><label class="flabel">Tipo de Cultura</label>
           <select id="cfgCulture"><option value="MAMAO">Mamão</option><option value="MELAO">Melão/Melancia (com rastreabilidade)</option><option value="OUTRO">Outro</option></select>
         </div>
       </div>
       <div class="card">
-        <div class="title">🎯 Metas de Produção</div>
+        <div class="title"><i data-lucide="target" class="btn-i"></i> Metas de Produção</div>
         <div class="grid2" style="gap:10px">
           <div><label class="flabel">Meta Packer (cx/h)</label><input id="cfgMetaPacker" type="number" placeholder="Ex: 50"/></div>
           <div><label class="flabel">Meta Stacker (cx/h)</label><input id="cfgMetaStacker" type="number" placeholder="Ex: 200"/></div>
@@ -1136,7 +1170,7 @@
         </div>
       </div>
       <div class="card" style="border-left:3px solid var(--yellow)">
-        <div class="title">🕐 Carga Horária</div>
+        <div class="title"><i data-lucide="clock" class="btn-i"></i> Carga Horária</div>
         <p style="font-size:11px; color:var(--muted); margin-bottom:12px">Configure o expediente e intervalo de almoço. Scans fora do horário não contam como ociosidade.</p>
         <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px">
           <div><label class="flabel">Início Expediente</label><input type="time" id="cfgWorkStart" value="07:00"/></div>
@@ -1146,13 +1180,13 @@
         </div>
       </div>
       <div class="card">
-        <div class="title">📱 Evolution API (WhatsApp)</div>
+        <div class="title"><i data-lucide="message-square" class="btn-i"></i> Evolution API (WhatsApp)</div>
         <div style="margin-bottom:10px"><label class="flabel">URL da API</label><input id="cfgEvoUrl" placeholder="https://sua-evolution-api.com"/></div>
         <div style="margin-bottom:10px"><label class="flabel">API Key</label><input id="cfgEvoKey" type="password" placeholder="sua-chave"/></div>
         <div style="margin-bottom:10px"><label class="flabel">Instância</label><input id="cfgEvoInstance" placeholder="nome-da-instancia"/></div>
       </div>
       <div class="card" style="grid-column: span 2">
-        <div class="title">💬 Templates de Mensagem (WhatsApp)</div>
+        <div class="title"><i data-lucide="message-circle" class="btn-i"></i> Templates de Mensagem (WhatsApp)</div>
         <p style="font-size:12px; color:var(--muted); margin-bottom:15px">Use {nome}, {data}, {caixas}, {peso}, {ranking} para personalizar as mensagens.</p>
         <div class="grid2" style="gap:20px">
           <div>
@@ -1166,28 +1200,28 @@
         </div>
       </div>
       <div class="card">
-        <div class="title">👥 Usuários com acesso ao painel</div>
+        <div class="title"><i data-lucide="users" class="btn-i"></i> Usuários com acesso ao painel</div>
         <table id="usersTable"><thead><tr><th>Usuário</th><th>Papel</th><th>WhatsApp</th></tr></thead><tbody></tbody></table>
       </div>
     </div>
-    <button id="cfgSaveBtn" onclick="saveSettings()" style="margin-top:4px">💾 Salvar Configurações</button>
+    <button id="cfgSaveBtn" onclick="saveSettings()" style="margin-top:20px; display:flex; align-items:center; justify-content:center; gap:6px"><i data-lucide="save" style="width:16px;height:16px"></i> Salvar Configurações</button>
     <div id="cfgStatus" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>
   </div>
 
   <div id="tab-users_mgmt" class="tab">
-    <h1 class="ptitle">🔑 Gestão Administrativa</h1>
+    <h1 class="ptitle"><i data-lucide="shield-check"></i> Gestão Administrativa</h1>
     <div class="grid2">
       <div class="card">
-        <div class="title">🏢 Gerenciar Empresas (Tenants)</div>
+        <div class="title"><i data-lucide="building-2" class="btn-i"></i> Gerenciar Empresas (Tenants)</div>
         <div style="display:flex; gap:8px; margin-bottom:12px">
           <input id="newTenantName" placeholder="Nome da Fazenda/Empresa"/>
           <input id="newTenantSlug" placeholder="SLUG (ex: fazenda1)" style="width:140px"/>
-          <button onclick="addTenant()">+</button>
+          <button onclick="addTenant()"><i data-lucide="plus" style="width:16px;height:16px"></i></button>
         </div>
         <div id="tenantListMgmt" style="max-height:400px; overflow-y:auto"></div>
       </div>
       <div class="card">
-        <div class="title">👤 Vincular Usuário a Empresa</div>
+        <div class="title"><i data-lucide="user-cog" class="btn-i"></i> Vincular Usuário a Empresa</div>
         <div style="margin-bottom:12px"><label class="flabel">E-mail do Usuário</label><input id="linkUserEmail" placeholder="usuario@email.com"/></div>
         <div style="margin-bottom:12px">
           <label class="flabel">Empresa</label>
@@ -1203,11 +1237,11 @@
             <option value="COLHEDOR">Colhedor</option>
           </select>
         </div>
-        <button onclick="linkUser()" style="width:100%">Vincular Usuário</button>
+        <button onclick="linkUser()" style="width:100%; display:flex; align-items:center; justify-content:center; gap:6px"><i data-lucide="link" style="width:16px;height:16px"></i> Vincular Usuário</button>
       </div>
     </div>
     <div class="card">
-      <div class="title">📋 Usuários Cadastrados no Sistema</div>
+      <div class="title"><i data-lucide="users-2" class="btn-i"></i> Usuários Cadastrados no Sistema</div>
       <table id="globalUsersTable">
         <thead><tr><th>E-mail</th><th>Empresa</th><th>Papel</th><th>Ações</th></tr></thead>
         <tbody></tbody>
@@ -1337,6 +1371,7 @@ async function afterLogin(user){
 
   await Promise.all([loadEmpSelectAll(), loadWeightSelectAll(), loadEmps(), loadStops()]);
   await refreshDash();
+  if (window.lucide) lucide.createIcons();
   setInterval(()=>{ if($('tab-dash').classList.contains('active')) refreshDash(); },20000);
 }
 
@@ -1371,6 +1406,7 @@ function showTab(n,el){
     registers:loadRegisters
   };
   if(fns[n]) fns[n]();
+  setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 150);
 }
 
 async function loadRegisters() {
@@ -1615,9 +1651,10 @@ async function loadWeights(){
     <tr>
       <td><b>${w.name}</b></td>
       <td>${w.weight_kg} kg</td>
-      <td><button class="sec" onclick="deleteWeight('${w.id}')">🗑️</button></td>
+      <td><button class="sec" onclick="deleteWeight('${w.id}')" style="display:inline-flex; align-items:center; justify-content:center; padding:6px;"><i data-lucide="trash-2" style="width:14px;height:14px;color:var(--red)"></i></button></td>
     </tr>
   `).join('')||'<tr><td colspan="3" style="text-align:center">Nenhum peso.</td></tr>';
+  if(window.lucide) lucide.createIcons();
 }
 
 async function refreshRanking(){
@@ -2118,10 +2155,11 @@ async function loadBulk(){
       <td>${b.parcels?.code||'—'}</td>
       <td>${b.weight_kg} kg</td>
       <td>${BRL(b.total_value)}</td>
-      <td>${b.is_paid?'✅':'⏳'}</td>
-      <td><button class="sec" onclick="deleteBulk('${b.id}')">🗑️</button></td>
+      <td>${b.is_paid?'<span style="color:var(--green);font-weight:700;display:inline-flex;align-items:center;gap:4px"><i data-lucide="check-circle" style="width:14px;height:14px"></i> Pago</span>':'<span style="color:var(--yellow);font-weight:700;display:inline-flex;align-items:center;gap:4px"><i data-lucide="clock" style="width:14px;height:14px"></i> Pendente</span>'}</td>
+      <td><button class="sec" onclick="deleteBulk('${b.id}')" style="display:inline-flex; align-items:center; justify-content:center; padding:6px;"><i data-lucide="trash-2" style="width:14px;height:14px;color:var(--red)"></i></button></td>
     </tr>
   `).join('');
+  if(window.lucide) lucide.createIcons();
 }
 
 async function loadFieldSessions(s,e,p){
@@ -3269,13 +3307,14 @@ async function loadStops() {
   $('stopList').innerHTML = (data||[]).map(s => `
     <div class="rcard pbi-card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center">
       <div>
-        <div style="font-weight:800; color:var(--red)">🛑 ${s.reason}</div>
+        <div style="font-weight:800; color:var(--red); display:flex; align-items:center; gap:6px"><i data-lucide="ban" style="width:16px; height:16px;"></i> ${s.reason}</div>
         <div style="font-size:11px; color:var(--muted)">Início: ${new Date(s.start_ts).toLocaleString('pt-BR')}</div>
         <div style="font-size:11px; color:var(--muted)">Fim: ${s.end_ts ? new Date(s.end_ts).toLocaleString('pt-BR') : '<span style="color:var(--green)">EM ANDAMENTO</span>'}</div>
       </div>
       ${!s.end_ts ? `<button onclick="endStop('${s.id}')" class="sec">Encerrar Parada</button>` : ''}
     </div>
   `).join('') || '<div style="padding:20px; color:var(--muted)">Nenhuma parada registrada.</div>';
+  if(window.lucide) lucide.createIcons();
 }
 
 async function saveStop() {
@@ -3307,11 +3346,12 @@ function updateStopBanner() {
   let banner = $('stopBanner');
   if(ongoing) {
     if(!banner) {
-       document.body.insertAdjacentHTML('afterbegin', `<div id="stopBanner" style="background:var(--red); color:#fff; padding:12px; text-align:center; font-weight:800; animation: blink 1.5s infinite; position:sticky; top:0; z-index:3000; cursor:pointer; font-size:14px; border-bottom:3px solid rgba(0,0,0,0.2)" onclick="showTab('stops')">🛑 ALERTA: PARADA GERAL EM ANDAMENTO (${ongoing.reason.toUpperCase()}) - CLIQUE PARA ENCERRAR</div>`);
+       document.body.insertAdjacentHTML('afterbegin', `<div id="stopBanner" style="background:var(--red); color:#fff; padding:12px; text-align:center; font-weight:800; animation: blink 1.5s infinite; position:sticky; top:0; z-index:3000; cursor:pointer; font-size:14px; border-bottom:3px solid rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; gap:8px" onclick="showTab('stops')"><i data-lucide="ban" style="width:16px; height:16px"></i> ALERTA: PARADA GERAL EM ANDAMENTO (${ongoing.reason.toUpperCase()}) - CLIQUE PARA ENCERRAR</div>`);
     } else {
        banner.style.display = 'block';
-       banner.textContent = `🛑 ALERTA: PARADA GERAL EM ANDAMENTO (${ongoing.reason.toUpperCase()}) - CLIQUE PARA ENCERRAR`;
+       banner.innerHTML = `<i data-lucide="ban" style="width:16px; height:16px; vertical-align:middle; display:inline-block; margin-right:6px"></i> ALERTA: PARADA GERAL EM ANDAMENTO (${ongoing.reason.toUpperCase()}) - CLIQUE PARA ENCERRAR`;
     }
+    if(window.lucide) lucide.createIcons();
   } else if(banner) {
     banner.style.display = 'none';
   }

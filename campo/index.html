@@ -9,11 +9,12 @@
 <meta name="apple-mobile-web-app-title" content="ProdTech Campo">
 <meta name="theme-color" content="#030712">
 <title>ProdTech Campo</title>
-<link rel="icon" type="image/png" href="favicon.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22C12 22 20 18 20 12V4L12 2L4 4V12C4 18 12 22 12 22Z'/%3E%3Cpath d='M12 8v8' stroke='%233b82f6'/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="logo.png">
 <link rel="manifest" href="manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -91,7 +92,27 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 .module-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--grad,linear-gradient(90deg,var(--green),#059669))}
 .module-card.orange::before{background:linear-gradient(90deg,var(--orange),#ea580c)}
 .module-card:active{transform:scale(.98);border-color:var(--border2)}
-.module-icon{font-size:44px;margin-bottom:14px;display:block}
+.module-icon{
+  font-size:44px;
+  margin-bottom:12px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:44px;
+  height:44px;
+  color:var(--green);
+}
+.module-icon svg{
+  width:38px;
+  height:38px;
+  stroke-width:1.8px;
+}
+.module-card.orange .module-icon{
+  color:var(--orange);
+}
+.module-card[style*="--grad"] .module-icon{
+  color:var(--blue);
+}
 .module-name{font-size:19px;font-weight:800;margin-bottom:4px}
 .module-desc{font-size:13px;color:var(--muted2);line-height:1.5}
 .module-arrow{position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:22px;color:var(--muted)}
@@ -217,7 +238,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 <!-- ══════════════ LOGIN ══════════════ -->
 <div id="screenLogin" class="screen active">
   <div class="login-card">
-    <div class="login-logo">🌿</div>
+    <div class="login-logo" style="display:flex; align-items:center; justify-content:center; margin-bottom:8px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:48px; height:48px; color:var(--green); flex-shrink:0;">
+        <path d="M12 22C12 22 20 18 20 12V4L12 2L4 4V12C4 18 12 22 12 22Z" stroke="var(--green)"/>
+        <path d="M12 8v8" stroke="var(--blue)"/>
+        <path d="M9 12h6" stroke="var(--blue)" stroke-width="1.75"/>
+      </svg>
+    </div>
     <div class="login-title">ProdTech Campo</div>
     <div class="login-sub">Qualidade · Colheita</div>
     <div id="loginErr" class="err-msg"></div>
@@ -236,7 +263,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 <!-- ══════════════ HOME ══════════════ -->
 <div id="screenHome" class="screen">
   <div class="home-header">
-    <div class="home-logo">🌿</div>
+    <div class="home-logo" style="display:flex; align-items:center; justify-content:center; margin-bottom:8px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:48px; height:48px; color:var(--green); flex-shrink:0;">
+        <path d="M12 22C12 22 20 18 20 12V4L12 2L4 4V12C4 18 12 22 12 22Z" stroke="var(--green)"/>
+        <path d="M12 8v8" stroke="var(--blue)"/>
+        <path d="M9 12h6" stroke="var(--blue)" stroke-width="1.75"/>
+      </svg>
+    </div>
     <div class="home-title">ProdTech Campo</div>
     <div id="homeTenant" class="home-tenant">Carregando...</div>
     <div id="loggedAs" style="font-size:11px;color:var(--muted2);margin-top:4px"></div>
@@ -244,37 +277,37 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 
   <div class="home-modules">
     <div class="module-card" style="--grad:linear-gradient(90deg,#f59e0b,#ef4444)" onclick="showScreen('bulk')">
-      <span class="module-icon">⚖️</span>
+      <span class="module-icon"><i data-lucide="scale"></i></span>
       <div class="module-name">Venda a Granel</div>
       <div class="module-desc">Lançamento de caixas por peso com assinatura do comprador</div>
       <div class="module-arrow">›</div>
     </div>
     <div class="module-card" onclick="showScreen('quality')">
-      <span class="module-icon">🔍</span>
+      <span class="module-icon"><i data-lucide="check-square"></i></span>
       <div class="module-name">Auditoria de Qualidade</div>
       <div class="module-desc">Registre defeitos de embalagem com assinatura digital</div>
       <div class="module-arrow">›</div>
     </div>
     <div class="module-card orange" onclick="showScreen('carrao')">
-      <span class="module-icon">🚜</span>
+      <span class="module-icon"><i data-lucide="tractor"></i></span>
       <div class="module-name">Carrocões de Colheita</div>
       <div class="module-desc">Lance carrocões por turno e calcule o rateio entre colhedores</div>
       <div class="module-arrow">›</div>
     </div>
     <div class="module-card" style="--grad:linear-gradient(90deg,var(--blue),var(--purple))" onclick="showScreen('carrao'); showCTab('ph')">
-      <span class="module-icon">🏢</span>
+      <span class="module-icon"><i data-lucide="building-2"></i></span>
       <div class="module-name">Validação Packing</div>
       <div class="module-desc">Confirme a chegada dos carrões no Packing House</div>
       <div class="module-arrow">›</div>
     </div>
     <div class="module-card" style="--grad:linear-gradient(90deg,var(--red),var(--orange))" onclick="showScreen('stops')">
-      <span class="module-icon">🛑</span>
+      <span class="module-icon"><i data-lucide="ban"></i></span>
       <div class="module-name">Paradas Gerais</div>
       <div class="module-desc">Registre manutenções ou quedas de energia</div>
       <div class="module-arrow">›</div>
     </div>
     <div class="module-card" style="--grad:linear-gradient(90deg,#10b981,#047857)" onclick="showScreen('fieldOp')">
-      <span class="module-icon">📝</span>
+      <span class="module-icon"><i data-lucide="clipboard-list"></i></span>
       <div class="module-name">Apontamento de Campo</div>
       <div class="module-desc">Registre capina, estufa e serviços gerais com rateio de custos</div>
       <div class="module-arrow">›</div>
@@ -283,12 +316,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 
   <div style="padding:0 16px">
     <div id="syncBadge" onclick="syncQueue()" style="display:none" class="sync-badge">
-      ⚠️ <span id="syncCount">0</span> registro(s) offline pendente(s) — Toque para sincronizar
+      <i data-lucide="alert-triangle" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i> <span id="syncCount">0</span> registro(s) offline pendente(s) — Toque para sincronizar
     </div>
   </div>
 
   <div style="padding:16px">
-    <button class="btn btn-sec btn-full" style="font-size:13px" onclick="doLogout()">↩ Sair</button>
+    <button class="btn btn-sec btn-full" style="font-size:13px; display:flex; align-items:center; justify-content:center; gap:6px" onclick="doLogout()"><i data-lucide="log-out" style="width:16px;height:16px"></i> Sair</button>
   </div>
 </div>
 
@@ -297,7 +330,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 <div id="screenBulk" class="screen">
   <div class="header">
     <div class="back-btn" onclick="showScreen('home')">‹</div>
-    <div class="header-title">⚖️ Venda a Granel</div>
+    <div class="header-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="scale" style="width:20px;height:20px"></i> Venda a Granel</div>
     <div class="online-dot"></div>
   </div>
 
@@ -306,8 +339,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       <div class="form-field">
         <label class="field-label">Fruta</label>
         <select id="bulkFruit">
-          <option value="MELAO">🍈 Melão</option>
-          <option value="MELANCIA">🍉 Melancia</option>
+          <option value="MELAO">Melão</option>
+          <option value="MELANCIA">Melancia</option>
         </select>
       </div>
       <div class="form-field">
@@ -330,7 +363,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
           <input id="bulkWeightInput" type="number" inputmode="decimal" placeholder="0.0" onkeydown="if(event.key==='Enter') addBulkWeight()">
         </div>
       </div>
-      <button class="btn btn-primary btn-full" onclick="addBulkWeight()">➕ Lançar Peso</button>
+      <button class="btn btn-primary btn-full" onclick="addBulkWeight()" style="display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="plus-circle" style="width:18px;height:18px"></i> Lançar Peso</button>
     </div>
   </div>
 
@@ -362,31 +395,31 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
     <div class="card">
       <div class="sig-wrap">
         <canvas id="sigBulkCanvas" class="sig-canvas" width="800" height="240"></canvas>
-        <div class="sig-clear" onclick="clearSig('sigBulkCanvas')">🗑 Limpar</div>
+        <div class="sig-clear" onclick="clearSig('sigBulkCanvas')" style="display:flex;align-items:center;gap:4px"><i data-lucide="trash-2" style="width:14px;height:14px"></i> Limpar</div>
       </div>
       <p class="sig-hint">O comprador deve assinar acima para confirmar o carregamento</p>
     </div>
   </div>
 
   <div class="section" style="padding-top:10px">
-    <button class="btn btn-primary btn-full" id="btnSaveBulk" onclick="saveBulkSale()">✅ Finalizar e Salvar</button>
+    <button class="btn btn-primary btn-full" id="btnSaveBulk" onclick="saveBulkSale()" style="display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="check" style="width:18px;height:18px"></i> Finalizar e Salvar</button>
   </div>
 </div>
 
 <div id="screenQuality" class="screen">
   <div class="header">
     <div class="back-btn" onclick="showScreen('home')">‹</div>
-    <div class="header-title">🔍 Lançar Defeitos</div>
+    <div class="header-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="alert-triangle" style="width:20px;height:20px"></i> Lançar Defeitos</div>
     <div id="qOnlineDot" class="online-dot"></div>
   </div>
   <div class="tab-bar">
-    <div class="tab-btn on" id="qTabNewBtn" onclick="showQTab('new')">+ Novo Defeito</div>
-    <div class="tab-btn" id="qTabHistBtn" onclick="showQTab('hist')">📋 Lista Defeitos</div>
-    <div class="tab-btn" id="qTabMgmtBtn" onclick="showQTab('mgmt')">⚙️ Tipos</div>
+    <div class="tab-btn on" id="qTabNewBtn" onclick="showQTab('new')" style="display:inline-flex;align-items:center;justify-content:center;gap:4px"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> Novo Defeito</div>
+    <div class="tab-btn" id="qTabHistBtn" onclick="showQTab('hist')" style="display:inline-flex;align-items:center;justify-content:center;gap:4px"><i data-lucide="list" style="width:14px;height:14px"></i> Lista Defeitos</div>
+    <div class="tab-btn" id="qTabMgmtBtn" onclick="showQTab('mgmt')" style="display:inline-flex;align-items:center;justify-content:center;gap:4px"><i data-lucide="settings" style="width:14px;height:14px"></i> Tipos</div>
   </div>
 
   <div style="padding:10px 16px 0">
-    <button class="btn btn-sec btn-full" style="padding:10px;font-size:12px" onclick="openClosure()">✍️ Finalizar & Assinar</button>
+    <button class="btn btn-sec btn-full" style="padding:10px;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="openClosure()"><i data-lucide="pen-tool" style="width:14px;height:14px"></i> Finalizar & Assinar</button>
   </div>
 
   <!-- Tab: Novo Defeito (Rápido) -->
@@ -412,11 +445,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
     <div class="section"><div class="section-title">Funcionário (Bip da Caixa ou Seleção)</div></div>
     <div style="padding:0 16px 8px">
       <div class="emp-search" style="margin-bottom:8px; border:2px solid var(--blue); padding-right:8px">
-        <span style="font-size:20px">📟</span>
+        <span style="display:inline-flex;align-items:center;justify-content:center;padding:0 4px;color:var(--blue)"><i data-lucide="qr-code" style="width:20px;height:20px"></i></span>
         <input id="qBarcode" placeholder="BIP DO CÓDIGO DA CAIXA..." autocomplete="off" onkeydown="if(event.key==='Enter') handleQBarcode(this.value)">
-        <button onclick="startQScanner()" style="background:var(--blue); color:white; border:none; padding:8px 12px; border-radius:8px; font-weight:700; font-size:12px">📷 CÂMERA</button>
+        <button onclick="startQScanner()" style="background:var(--blue); color:white; border:none; padding:8px 12px; border-radius:8px; font-weight:700; font-size:12px; display:flex; align-items:center; gap:4px"><i data-lucide="camera" style="width:14px;height:14px"></i> CÂMERA</button>
       </div>
-      <div class="emp-search"><span>🔎</span><input id="qEmpSearch" oninput="filterQEmp()" placeholder="Buscar embalador manualmente..." autocomplete="off"></div>
+      <div class="emp-search"><span style="display:inline-flex;align-items:center;justify-content:center;padding:0 4px;color:var(--muted)"><i data-lucide="search" style="width:16px;height:16px"></i></span><input id="qEmpSearch" oninput="filterQEmp()" placeholder="Buscar embalador manualmente..." autocomplete="off"></div>
       <div class="emp-list" id="qEmpList" style="max-height:180px;overflow-y:auto">
         <div class="loading"><div class="spinner"></div>Carregando...</div>
       </div>
@@ -438,7 +471,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
     </div>
 
     <div style="padding:16px">
-      <button class="btn btn-primary btn-full" id="qSubmitBtn" onclick="submitQuality()">✅ Registrar Defeito</button>
+      <button class="btn btn-primary btn-full" id="qSubmitBtn" onclick="submitQuality()" style="display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="check-circle" style="width:18px;height:18px"></i> Registrar Defeito</button>
     </div>
   </div>
 
@@ -452,7 +485,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
     <div style="padding:16px 16px 0">
       <div class="section"><div class="section-title">Adicionar Novo Tipo</div></div>
       <div style="display:flex;gap:8px;margin-bottom:16px">
-        <input id="newDefectEmoji" placeholder="🦠" style="width:50px;text-align:center;" maxlength="2">
+        <input id="newDefectEmoji" placeholder="⚠️" style="width:50px;text-align:center;" maxlength="2">
         <input id="newDefectName" placeholder="Nome do defeito (ex: Podridão)" style="flex:1">
         <button class="btn btn-primary" onclick="addDefectType()" style="padding:12px 16px">+</button>
       </div>
@@ -465,13 +498,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 <div id="screenCarrao" class="screen">
   <div class="header">
     <div class="back-btn" onclick="showScreen('home')">‹</div>
-    <div class="header-title">🚜 Carrocões de Colheita</div>
+    <div class="header-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="tractor" style="width:20px;height:20px"></i> Carrocões de Colheita</div>
     <div id="cOnlineDot" class="online-dot"></div>
   </div>
   <div class="tab-bar">
-    <div class="tab-btn on" id="cTabNewBtn" onclick="showCTab('new')">+ Novo Carrocão</div>
-    <div class="tab-btn" id="cTabHistBtn" onclick="showCTab('hist')">📋 Histórico</div>
-    <div class="tab-btn" id="cTabPhBtn" onclick="showCTab('ph')">🏢 Packing House</div>
+    <div class="tab-btn on" id="cTabNewBtn" onclick="showCTab('new')" style="display:inline-flex;align-items:center;justify-content:center;gap:4px"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> Novo Carrocão</div>
+    <div class="tab-btn" id="cTabHistBtn" onclick="showCTab('hist')" style="display:inline-flex;align-items:center;justify-content:center;gap:4px"><i data-lucide="history" style="width:14px;height:14px"></i> Histórico</div>
+    <div class="tab-btn" id="cTabPhBtn" onclick="showCTab('ph')" style="display:inline-flex;align-items:center;justify-content:center;gap:4px"><i data-lucide="building-2" style="width:14px;height:14px"></i> Packing House</div>
   </div>
 
   <!-- Tab: Novo Carrocão -->
@@ -486,10 +519,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
     <div style="padding:0 16px">
       <div class="toggle-group cols2">
         <div class="toggle-opt on" data-type="MANHA" onclick="setShift('MANHA')">
-          <span class="icon">🌅</span>Manhã
+          <span class="icon" style="display:flex;justify-content:center;margin-bottom:6px"><i data-lucide="sun" style="width:24px;height:24px"></i></span>Manhã
         </div>
         <div class="toggle-opt" data-type="TARDE" onclick="setShift('TARDE')">
-          <span class="icon">🌇</span>Tarde
+          <span class="icon" style="display:flex;justify-content:center;margin-bottom:6px"><i data-lucide="sunset" style="width:24px;height:24px"></i></span>Tarde
         </div>
       </div>
     </div>
@@ -532,14 +565,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       </select>
     </div>
 
-    <div class="section"><div class="section-title">🚜 Número do Carrocão</div></div>
+    <div class="section"><div class="section-title" style="display:flex;align-items:center;gap:4px"><i data-lucide="truck" style="width:12px;height:12px"></i> Número do Carrocão</div></div>
     <div style="padding:0 16px">
       <select id="cCarriage" onchange="cState.carriageCode=this.options[this.selectedIndex].text; cState.carriageId=this.value;">
         <option value="">— Selecionar Carrocão —</option>
       </select>
     </div>
 
-    <div class="section"><div class="section-title">⚙️ Máquina de Colheita</div></div>
+    <div class="section"><div class="section-title" style="display:flex;align-items:center;gap:4px"><i data-lucide="cpu" style="width:12px;height:12px"></i> Máquina de Colheita</div></div>
     <div style="padding:0 16px">
       <select id="cMachine" onchange="cState.machineId=this.value; cState.machineCode=this.options[this.selectedIndex].text;" style="margin-bottom:8px">
         <option value="">— Selecionar Máquina (Opcional) —</option>
@@ -559,7 +592,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 
     <div class="section">
       <div class="section-title">Funcionários do Turno</div>
-      <div class="emp-search" style="margin-top:10px"><span>🔎</span><input id="cEmpSearch" oninput="filterCEmp()" placeholder="Buscar funcionário..." autocomplete="off"></div>
+      <div class="emp-search" style="margin-top:10px"><span style="display:inline-flex;align-items:center;justify-content:center;padding:0 4px;color:var(--muted)"><i data-lucide="search" style="width:16px;height:16px"></i></span><input id="cEmpSearch" oninput="filterCEmp()" placeholder="Buscar funcionário..." autocomplete="off"></div>
       <div id="cEmpSelectAll" class="emp-select-all" onclick="toggleAllCEmp()">
         <span>Selecionar todos</span><span id="cEmpCount">0 selecionados</span>
       </div>
@@ -595,7 +628,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
     </div>
 
     <div style="padding:16px">
-      <button class="btn btn-orange btn-full" id="cSubmitBtn" onclick="submitCarrao()">🚜 Registrar Carrocões</button>
+      <button class="btn btn-orange btn-full" id="cSubmitBtn" onclick="submitCarrao()" style="display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="tractor" style="width:18px;height:18px"></i> Registrar Carrocões</button>
     </div>
   </div>
 
@@ -622,7 +655,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       </div>
 
       <div id="phSignArea" style="display:none; text-align:center; padding-top:10px">
-        <button class="btn btn-primary btn-full" onclick="showScreen('phSign')">✍️ Assinar e Finalizar Validação</button>
+        <button class="btn btn-primary btn-full" onclick="showScreen('phSign')" style="display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="pen-tool" style="width:18px;height:18px"></i> Assinar e Finalizar Validação</button>
         <div style="font-size:11px; color:var(--muted2); margin-top:10px">Total de carrocões pendentes carregados.</div>
       </div>
     </div>
@@ -634,7 +667,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 <div id="screenPhSign" class="screen">
   <div class="header">
     <div class="back-btn" onclick="showScreen('carrao')">‹</div>
-    <div class="header-title">✍️ Assinatura Packing House</div>
+    <div class="header-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="pen-tool" style="width:20px;height:20px"></i> Assinatura Packing House</div>
   </div>
 
   <div style="padding:24px 20px">
@@ -651,11 +684,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
     <div class="section-title">Assinatura Digital</div>
     <div class="sig-wrap">
       <canvas id="phSigCanvas" class="sig-canvas" width="800" height="240"></canvas>
-      <button class="sig-clear" onclick="clearPhSig()">🗑 Limpar</button>
+      <button class="sig-clear" onclick="clearPhSig()" style="display:flex;align-items:center;gap:4px"><i data-lucide="trash-2" style="width:14px;height:14px"></i> Limpar</button>
     </div>
     <div class="sig-hint" style="margin-bottom:24px">Assine acima com o dedo ou caneta</div>
 
-    <button class="btn btn-primary btn-full" id="btnSavePhSig" onclick="savePhSignature()">✅ Confirmar Recebimento</button>
+    <button class="btn btn-primary btn-full" id="btnSavePhSig" onclick="savePhSignature()" style="display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="check" style="width:18px;height:18px"></i> Confirmar Recebimento</button>
   </div>
 </div>
 
@@ -663,7 +696,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 <div id="screenClosure" class="screen" style="z-index:200;background:rgba(3,7,18,0.97);backdrop-filter:blur(12px)">
   <div class="header">
     <div class="back-btn" onclick="showScreen('home')">‹</div>
-    <div class="header-title">✍️ Fechamento de Sessão</div>
+    <div class="header-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="lock" style="width:20px;height:20px"></i> Fechamento de Sessão</div>
   </div>
   <div style="padding:24px 20px">
     <div class="card" style="margin-bottom:20px;border-color:var(--green)">
@@ -677,10 +710,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
     <div class="section-title">Assinatura Digital</div>
     <div class="sig-wrap">
       <canvas id="closureSigCanvas" class="sig-canvas" width="800" height="240"></canvas>
-      <button class="sig-clear" onclick="clearClosureSig()">🗑 Limpar</button>
+      <button class="sig-clear" onclick="clearClosureSig()" style="display:flex;align-items:center;gap:4px"><i data-lucide="trash-2" style="width:14px;height:14px"></i> Limpar</button>
     </div>
     <div class="sig-hint" style="margin-bottom:24px">Assine acima com o dedo ou caneta</div>
-    <button class="btn btn-primary btn-full" onclick="saveClosure()">✅ Confirmar e Finalizar</button>
+    <button class="btn btn-primary btn-full" onclick="saveClosure()" style="display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="check" style="width:18px;height:18px"></i> Confirmar e Finalizar</button>
     <button class="btn btn-sec btn-full" style="margin-top:12px" onclick="showScreen('home')">Cancelar</button>
   </div>
 </div>
@@ -689,7 +722,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 <div id="screenStops" class="screen">
   <div class="header">
     <div class="back-btn" onclick="showScreen('home')">‹</div>
-    <div class="header-title">🛑 Paradas Gerais</div>
+    <div class="header-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="ban" style="width:20px;height:20px"></i> Paradas Gerais</div>
   </div>
 
   <div class="section">
@@ -699,7 +732,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
         <label class="field-label">Motivo da Parada</label>
         <input id="stopReason" placeholder="Ex: Manutenção, Falta de Energia...">
       </div>
-      <button class="btn btn-danger btn-full" onclick="saveStop()">🛑 Iniciar Parada Agora</button>
+      <button class="btn btn-danger btn-full" onclick="saveStop()" style="display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="ban" style="width:18px;height:18px"></i> Iniciar Parada Agora</button>
     </div>
   </div>
 
@@ -715,12 +748,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 <div id="screenFieldOp" class="screen">
   <div class="header">
     <div class="back-btn" onclick="showScreen('home')">‹</div>
-    <div class="header-title">📝 Apontamento de Campo</div>
+    <div class="header-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="clipboard-list" style="width:20px;height:20px"></i> Apontamento de Campo</div>
     <div id="fOnlineDot" class="online-dot"></div>
   </div>
   <div class="tab-bar">
-    <div class="tab-btn on" id="fTabNewBtn" onclick="showFTab('new')">+ Novo Registro</div>
-    <div class="tab-btn" id="fTabHistBtn" onclick="showFTab('hist')">📋 Histórico</div>
+    <div class="tab-btn on" id="fTabNewBtn" onclick="showFTab('new')" style="display:inline-flex;align-items:center;justify-content:center;gap:4px"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> Novo Registro</div>
+    <div class="tab-btn" id="fTabHistBtn" onclick="showFTab('hist')" style="display:inline-flex;align-items:center;justify-content:center;gap:4px"><i data-lucide="history" style="width:14px;height:14px"></i> Histórico</div>
   </div>
 
   <!-- Tab: Novo Registro -->
@@ -777,7 +810,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 
     <div class="section">
       <div class="section-title">Funcionários do Serviço</div>
-      <div class="emp-search" style="margin-top:10px"><span>🔎</span><input id="fEmpSearch" oninput="filterFEmp()" placeholder="Buscar funcionário..." autocomplete="off"></div>
+      <div class="emp-search" style="margin-top:10px"><span style="display:inline-flex;align-items:center;justify-content:center;padding:0 4px;color:var(--muted)"><i data-lucide="search" style="width:16px;height:16px"></i></span><input id="fEmpSearch" oninput="filterFEmp()" placeholder="Buscar funcionário..." autocomplete="off"></div>
       <div id="fEmpSelectAll" class="emp-select-all" onclick="toggleAllFEmp()">
         <span>Selecionar todos</span><span id="fEmpCount">0 selecionados</span>
       </div>
@@ -827,7 +860,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
     </div>
 
     <div style="padding:16px">
-      <button class="btn btn-primary btn-full" id="fSubmitBtn" onclick="submitFieldOp()">📝 Salvar Apontamento</button>
+      <button class="btn btn-primary btn-full" id="fSubmitBtn" onclick="submitFieldOp()" style="display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="save" style="width:18px;height:18px"></i> Salvar Apontamento</button>
     </div>
   </div>
 
@@ -905,7 +938,7 @@ function showScreen(name) {
   if (name === 'stops') loadStops();
   if (name === 'fieldOp') loadFieldOpSelects();
 
-
+  if (window.lucide) lucide.createIcons();
 }
 
 function showQTab(tab) {
@@ -916,6 +949,7 @@ function showQTab(tab) {
   $('qTabHistBtn').className = 'tab-btn'  + (tab==='hist' ?' on':'');
   $('qTabMgmtBtn').className = 'tab-btn'  + (tab==='mgmt' ?' on':'');
   if (tab === 'hist') loadQHistory();
+  if (window.lucide) lucide.createIcons();
 }
 function showCTab(tab) {
   $('cTabNew').className    = 'tab-pane' + (tab==='new' ?' on':'');
@@ -929,6 +963,7 @@ function showCTab(tab) {
     loadPhParcelas();
     loadPhPending();
   }
+  if (window.lucide) lucide.createIcons();
 }
 
 function updateOnlineDots() {
@@ -1096,7 +1131,7 @@ async function afterLogin(u) {
       document.body.insertAdjacentHTML('beforeend', `
         <div id="tenantSelectModal" style="position:fixed; inset:0; background:rgba(15, 23, 42, 0.9); display:flex; justify-content:center; align-items:center; z-index:99999; backdrop-filter:blur(8px); padding:20px; font-family:inherit;">
           <div style="background:#1e293b; border:1px solid #334155; border-radius:24px; padding:28px; width:100%; max-width:400px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); text-align:center; box-sizing:border-box;">
-            <div style="font-size:36px; margin-bottom:12px;">🏢</div>
+            <div style="display:flex; justify-content:center; margin-bottom:16px; color:#3b82f6;"><i data-lucide="building-2" style="width:40px;height:40px"></i></div>
             <h3 style="margin:0 0 8px 0; color:#f8fafc; font-size:20px; font-weight:700;">Selecionar Empresa</h3>
             <p style="margin:0 0 24px 0; color:#94a3b8; font-size:14px; line-height:1.4;">Você está vinculado a múltiplas empresas. Escolha uma para acessar:</p>
             <div id="tenantOptionsContainer" style="display:flex; flex-direction:column; gap:12px; max-height:250px; overflow-y:auto; padding-right:4px;"></div>
@@ -1104,6 +1139,7 @@ async function afterLogin(u) {
         </div>
       `);
       modal = document.getElementById('tenantSelectModal');
+      if (window.lucide) lucide.createIcons();
     }
     
     const container = document.getElementById('tenantOptionsContainer');
@@ -1463,7 +1499,7 @@ async function submitQuality() {
   if (!qState.issue)  { toast('Selecione o tipo de defeito', 'err'); return; }
 
   const btn = $('qSubmitBtn');
-  btn.disabled = true; btn.textContent = '⏳ Salvando...';
+  btn.disabled = true; btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:6px;display:inline-block;vertical-align:middle;"></div> Salvando...';
 
   const defect = defectTypes.find(d => d.id === qState.issue);
   const issueLabelText = defect ? defect.name : qState.issue;
@@ -1499,7 +1535,8 @@ async function submitQuality() {
       toast('Falha: ' + e.message, 'err');
     }
   } finally {
-    btn.disabled = false; btn.textContent = '✅ Registrar Defeito';
+    btn.disabled = false; btn.innerHTML = '<i data-lucide="check-circle" style="width:18px;height:18px"></i> Registrar Defeito';
+    if(window.lucide) lucide.createIcons();
   }
 }
 
@@ -1595,7 +1632,7 @@ async function loadQHistory() {
     .eq('tenant_id', tenantId)
     .order('ts', { ascending: false })
     .limit(50);
-  if (error || !data?.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>Nenhuma auditoria registrada</div>'; return; }
+  if (error || !data?.length) { el.innerHTML = '<div class="empty"><div class="empty-icon" style="display:flex;justify-content:center;margin-bottom:8px;color:var(--muted)"><i data-lucide="clipboard-list" style="width:36px;height:36px"></i></div>Nenhuma auditoria registrada</div>'; if(window.lucide) lucide.createIcons(); return; }
   el.innerHTML = data.map(a => {
     const emp = employees.find(e => e.barcode == a.employee_barcode);
     const empName = emp ? emp.name : (a.employee_barcode || '—');
@@ -1614,6 +1651,7 @@ async function loadQHistory() {
       ${a.reason ? `<div style="font-size:12px;color:var(--muted2);margin-top:6px">${a.reason}</div>` : ''}
     </div>`;
   }).join('');
+  if (window.lucide) lucide.createIcons();
 }
 
 function issueLabel(id) {
@@ -1642,12 +1680,15 @@ function renderCFruitList(list) {
   if (!list.length) { el.innerHTML = '<div class="empty">Nenhuma fruta encontrada</div>'; return; }
   el.innerHTML = list.map((f, i) => `
     <div class="toggle-opt ${i===0?'on':''}" data-id="${f.id}" onclick="setFruit('${f.id}')">
-      <span class="icon">${f.name.toLowerCase().includes('melancia')?'🍉':'🍈'}</span>
+      <span class="icon" style="display:flex;justify-content:center;margin-bottom:6px">
+        <i data-lucide="${f.name.toLowerCase().includes('melancia') ? 'leaf' : 'citrus'}" style="width:24px;height:24px"></i>
+      </span>
       ${f.name}
       <div class="price">R$ ${f.value_per_carrao || 0} / carrocão</div>
     </div>
   `).join('');
   if (list.length > 0) setFruit(list[0].id);
+  if (window.lucide) lucide.createIcons();
 }
 
 function renderCEmpList(list) {
@@ -1824,7 +1865,9 @@ async function submitCarrao() {
       toast('Erro: ' + e.message, 'err');
     }
   } finally {
-    btn.disabled = false; btn.textContent = '🚜 Registrar Carrões';
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="tractor" style="width:18px;height:18px"></i> Registrar Carrocões';
+    if (window.lucide) lucide.createIcons();
   }
 }
 
@@ -1845,7 +1888,7 @@ function showOrdemColheita(list) {
     const parcelaCode = parcela?.code || '—';
     const varietyName = variety?.name || '—';
     const shiftLabel = session.shift === 'MANHA' ? 'Manhã' : 'Tarde';
-    const fruitIcon  = session.fruit_type === 'MELANCIA' ? '🍉 Melancia' : '🍈 Melão';
+    const fruitIcon  = session.fruit_type === 'MELANCIA' ? 'Melancia' : 'Melão';
     const seqNum = (() => {
       const carriageObj = carriages.find(c => c.id == session.carriage_id);
       return carriageObj ? carriageObj.code : (session.carrao_seq || session.qty_carrocoes || '—');
@@ -1861,7 +1904,7 @@ function showOrdemColheita(list) {
     pagesHtml += `
       <div style="${pageBreak} padding:24px; font-family:Arial,sans-serif; color:#111;">
         <div style="text-align:center;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:16px">
-          <h1 style="margin:0;font-size:22px">📋 Ordem de Colheita</h1>
+          <h1 style="margin:0;font-size:22px">Ordem de Colheita</h1>
           <p style="margin:4px 0;font-size:12px;color:#555">${tenantName} — Emitida em ${dateStr} às ${timeStr}</p>
         </div>
         
@@ -2004,7 +2047,8 @@ async function loadPhPending() {
 
   const { data, error } = await query.limit(20);
   if (error || !data?.length) {
-    el.innerHTML = '<div class="empty">✅ Nenhum carrocão pendente de validação</div>';
+    el.innerHTML = '<div class="empty" style="display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--green)"><i data-lucide="check-circle" style="width:24px;height:24px"></i> Nenhum carrocão pendente de validação</div>';
+    if (window.lucide) lucide.createIcons();
     return;
   }
 
@@ -2315,7 +2359,9 @@ async function saveBulkSale() {
     toast('Erro: ' + e.message, 'err');
     console.error('Bulk sale error:', e);
   } finally {
-    btn.disabled = false; btn.textContent = '✅ Finalizar e Salvar';
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="check" style="width:18px;height:18px"></i> Finalizar e Salvar';
+    if (window.lucide) lucide.createIcons();
   }
 }
 
@@ -2373,16 +2419,16 @@ async function loadCHistory() {
     .eq('tenant_id', tenantId)
     .order('ts', { ascending: false })
     .limit(40);
-  if (error || !data?.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🚜</div>Nenhum carrocão registrado</div>'; return; }
+  if (error || !data?.length) { el.innerHTML = '<div class="empty"><div class="empty-icon" style="display:flex;justify-content:center;margin-bottom:8px;color:var(--muted)"><i data-lucide="tractor" style="width:36px;height:36px"></i></div>Nenhum carrocão registrado</div>'; if(window.lucide) lucide.createIcons(); return; }
   el.innerHTML = data.map(s => {
     const emps = (s.field_carrao_employees||[]).map(e => e.employee_name).join(', ');
-    const shiftLabel = s.shift === 'MANHA' ? '🌅 Manhã' : '🌇 Tarde';
-    const fruitIcon  = s.fruit_type === 'MELANCIA' ? '🍉' : '🍈';
+    const shiftLabel = s.shift === 'MANHA' ? 'Manhã' : 'Tarde';
+    const fruitIcon  = s.fruit_type === 'MELANCIA' ? '<i data-lucide="leaf" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"></i>' : '<i data-lucide="citrus" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"></i>';
     return `
       <div class="hist-item orange">
         <div class="hist-top">
           <div>
-            <div class="hist-name">${fruitIcon} ${s.qty_carrocoes} carrocão(ões) — ${shiftLabel}</div>
+            <div class="hist-name" style="display:flex;align-items:center;gap:4px">${fruitIcon} ${s.qty_carrocoes} carrocão(ões) — ${shiftLabel}</div>
             <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.date} ${s.carrao_seq ? `(Seq: ${s.carrao_seq})` : ''}</div>
           </div>
           <div class="hist-time" style="text-align:right">
@@ -2396,11 +2442,12 @@ async function loadCHistory() {
         </div>
         ${s.registered_by ? `<div style="font-size:11px;color:var(--muted);margin-top:6px">Registrado por: ${s.registered_by}</div>` : ''}
         <div style="margin-top:8px;text-align:right">
-          <button class="btn btn-primary" style="padding:6px 12px;font-size:11px" onclick='showOrdemColheita([{session: ${JSON.stringify(s).replace(/'/g, "&#39;")}, workers: ${JSON.stringify(s.field_carrao_employees || []).replace(/'/g, "&#39;")}}])'>🖨 Imprimir</button>
+          <button class="btn btn-primary" style="padding:6px 12px;font-size:11px;display:inline-flex;align-items:center;gap:4px" onclick='showOrdemColheita([{session: ${JSON.stringify(s).replace(/'/g, "&#39;")}, workers: ${JSON.stringify(s.field_carrao_employees || []).replace(/'/g, "&#39;")}}])'><i data-lucide="printer" style="width:12px;height:12px"></i> Imprimir</button>
         </div>
       </div>
     `;
   }).join('');
+  if (window.lucide) lucide.createIcons();
 }
 
 // ═══════════════════════════════════════════
@@ -2425,14 +2472,15 @@ async function loadStops() {
           <div style="font-size:11px; color:var(--muted); margin-top:4px">
             Início: ${new Date(s.start_ts).toLocaleString('pt-BR')}
           </div>
-          <div style="font-size:11px; color:${s.end_ts ? 'var(--muted)' : 'var(--green)'}; font-weight:700">
-            Status: ${s.end_ts ? 'Encerrada' : 'EM ANDAMENTO ⚠️'}
+          <div style="font-size:11px; color:${s.end_ts ? 'var(--muted)' : 'var(--green)'}; font-weight:700; display:inline-flex; align-items:center; gap:4px">
+            Status: ${s.end_ts ? 'Encerrada' : 'EM ANDAMENTO <i data-lucide="alert-triangle" style="width:14px;height:14px;color:var(--orange)"></i>'}
           </div>
         </div>
         ${!s.end_ts ? `<button class="btn btn-danger" style="padding:8px 12px; font-size:11px" onclick="endStop('${s.id}')">Encerrar</button>` : ''}
       </div>
     </div>
   `).join('') || '<div class="empty">Nenhuma parada registrada.</div>';
+  if (window.lucide) lucide.createIcons();
 }
 
 async function saveStop() {
@@ -2487,6 +2535,7 @@ function showFTab(tab) {
   $('fTabNewBtn').className = 'tab-btn'  + (tab==='new' ?' on':'');
   $('fTabHistBtn').className= 'tab-btn'  + (tab==='hist'?' on':'');
   if (tab === 'hist') loadFieldOpHistory();
+  if (window.lucide) lucide.createIcons();
 }
 
 function fUpdateOperations() {
@@ -2691,7 +2740,9 @@ async function submitFieldOp() {
   } catch(e) {
     toast('Erro: ' + e.message, 'err');
   } finally {
-    btn.disabled = false; btn.textContent = '📝 Salvar Apontamento';
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="save" style="width:18px;height:18px"></i> Salvar Apontamento';
+    if (window.lucide) lucide.createIcons();
   }
 }
 
@@ -2742,6 +2793,7 @@ async function loadFieldOpHistory() {
       </div>
     `;
   }).join('');
+  if (window.lucide) lucide.createIcons();
 }
 document.addEventListener('DOMContentLoaded', async () => {
   await initApp();

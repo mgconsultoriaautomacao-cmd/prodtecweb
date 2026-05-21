@@ -183,7 +183,7 @@ async function submitFieldOp() {
   }));
 
   const btn = $('fSubmitBtn');
-  btn.disabled = true; btn.textContent = '⏳ Salvando...';
+  btn.disabled = true; btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:6px;display:inline-block;vertical-align:middle;"></div> Salvando...';
 
   try {
     if (!isOnline) {
@@ -207,7 +207,9 @@ async function submitFieldOp() {
   } catch(e) {
     toast('Erro: ' + e.message, 'err');
   } finally {
-    btn.disabled = false; btn.textContent = '📝 Salvar Apontamento';
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="save" style="width:18px;height:18px"></i> Salvar Apontamento';
+    if (window.lucide) lucide.createIcons();
   }
 }
 
