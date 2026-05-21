@@ -1859,8 +1859,10 @@ async function refreshFin(){
     if (selectedRole && x.role !== selectedRole) return;
     if (targetBarcode && x.employee_barcode !== targetBarcode) return;
 
-    const empRecord   = _employees.find(em => em.barcode === x.employee_barcode)
-                     || _employees.find(em => em.id === x.employee_id);
+    const normName  = (str) => (str||'').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const empRecord  = _employees.find(em => em.barcode === x.employee_barcode)
+                    || _employees.find(em => em.id === x.employee_id)
+                    || (x.employee_name ? _employees.find(em => normName(em.name) === normName(x.employee_name)) : null);
     const barcode     = empRecord?.barcode || x.employee_barcode || null;
     const displayName = empRecord?.name || x.employee_name || barcode || 'Desconhecido';
     const key         = resolveCanonicalKey(empRecord, barcode, displayName, x.employee_id);
