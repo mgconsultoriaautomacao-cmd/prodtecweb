@@ -2220,7 +2220,8 @@ async function refreshDash(){
   // Dados de Campo (Carrocões) - incluindo parcela e variedade
   const {data:harvest} = await sb.from('field_carrao_sessions').select('*, parcels(code), varieties(name)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
 
-  const packerScans = scans.filter(s=>s.role==='PACKER');
+  const safeScans = scans || [];
+  const packerScans = safeScans.filter(s=>s.role==='PACKER');
   const kg = packerScans.reduce((a,x)=>a+(x.weight_kg||0),0);
 
   $('kpiTotalDia').textContent = packerScans.length;
@@ -2238,8 +2239,8 @@ async function refreshDash(){
     $('kpiMediaHora').textContent = avgGap>0?Math.round(3600/avgGap):'--';
   }
 
-  buildRankingGrid(scans, 'collabDetailList');
-  buildDashCharts(scans, packerScans, s, e, prevScans, harvest);
+  buildRankingGrid(safeScans, 'collabDetailList');
+  buildDashCharts(safeScans, packerScans, s, e, prevScans, harvest);
   buildWeightDetail(packerScans);
 
   const eb = {};
