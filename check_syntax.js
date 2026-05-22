@@ -15,25 +15,25 @@ function checkFile(filename) {
       scriptCount++;
       const jsCode = match[1];
       if (jsCode.trim().length === 0) continue;
-      
+
       try {
         new vm.Script(jsCode);
       } catch (err) {
         hasErrors = true;
         console.error(`SYNTAX ERROR FOUND IN SCRIPT #${scriptCount} (length: ${jsCode.length} chars):`);
         console.error(err.message);
-        
+
         const errorStack = err.stack;
         const lineMatch = errorStack.match(/evalmachine\.<anonymous>:(\d+)/);
         if (lineMatch) {
           const jsLineNumber = parseInt(lineMatch[1], 10);
           console.log(`Error is at JS line: ${jsLineNumber}`);
-          
+
           const htmlLines = html.split('\n');
           const htmlLinesBeforeScript = html.substring(0, match.index).split('\n');
           const scriptStartLine = htmlLinesBeforeScript.length;
           const targetHtmlLine = scriptStartLine + jsLineNumber - 1;
-          
+
           console.log(`This corresponds to ${filename} line: ${targetHtmlLine}`);
           console.log("Snippet around error line:");
           for (let i = Math.max(0, targetHtmlLine - 10); i < Math.min(htmlLines.length, targetHtmlLine + 10); i++) {
