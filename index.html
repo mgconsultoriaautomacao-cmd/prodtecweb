@@ -2269,79 +2269,83 @@ async function refreshDash(){
 }
 
 function buildDashCharts(scans, packerScans, s, e, prevScans, harvest){
-  const hrs={}; for(let i=5;i<=22;i++) hrs[i]=0;
-  packerScans.forEach(x=>{const h=new Date(x.ts).getHours();if(h in hrs)hrs[h]++;});
-  mkChart('chartProdHora',{type:'bar',data:{labels:Object.keys(hrs).map(h=>h+'h'),datasets:[{data:Object.values(hrs),backgroundColor:'rgba(59,130,246,.65)',borderRadius:5,barThickness:16}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b'}},x:{grid:{display:false},ticks:{color:'#64748b',font:{size:10}}}},plugins:{legend:{display:false},tooltip:TOPTS}}});
+  try {
+    const hrs={}; for(let i=5;i<=22;i++) hrs[i]=0;
+    packerScans.forEach(x=>{const h=new Date(x.ts).getHours();if(h in hrs)hrs[h]++;});
+    mkChart('chartProdHora',{type:'bar',data:{labels:Object.keys(hrs).map(h=>h+'h'),datasets:[{data:Object.values(hrs),backgroundColor:'rgba(59,130,246,.65)',borderRadius:5,barThickness:16}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b'}},x:{grid:{display:false},ticks:{color:'#64748b',font:{size:10}}}},plugins:{legend:{display:false},tooltip:TOPTS}}});
 
-  const wG={};
-  packerScans.forEach(x=>{const l=x.weight_name||'S/PESO';wG[l]=(wG[l]||0)+1;});
-  const wL=Object.keys(wG),wD=Object.values(wG);
-  mkChart('chartWeightDist',{type:'doughnut',data:{labels:wL,datasets:[{data:wD,backgroundColor:COLS.slice(0,wL.length),borderWidth:0,spacing:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false},tooltip:TOPTS}}});
+    const wG={};
+    packerScans.forEach(x=>{const l=x.weight_name||'S/PESO';wG[l]=(wG[l]||0)+1;});
+    const wL=Object.keys(wG),wD=Object.values(wG);
+    mkChart('chartWeightDist',{type:'doughnut',data:{labels:wL,datasets:[{data:wD,backgroundColor:COLS.slice(0,wL.length),borderWidth:0,spacing:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false},tooltip:TOPTS}}});
 
-  const empStats = {};
-  packerScans.forEach(x => { 
-    let name = x.employee_name;
-    if(!name || name.includes('-')) {
-       const emp = _employees.find(e => e.barcode === x.employee_barcode);
-       if(emp) name = emp.name;
-    }
-    if(!name) name = x.employee_barcode || 'Desconhecido';
-    empStats[name] = (empStats[name] || 0) + 1; 
-  });
-  const sortedEmps = Object.entries(empStats).sort((a,b) => b[1] - a[1]).slice(0, 10);
-  mkChart('chartCollab', {
-    type: 'bar',
-    data: {
-      labels: sortedEmps.map(e => e[0].split(' ')[0]),
-      datasets: [{ label: 'Caixas', data: sortedEmps.map(e => e[1]), backgroundColor: 'rgba(16, 185, 129, 0.7)', borderRadius: 6 }]
-    },
-    options: { indexAxis: 'y', plugins: { legend: { display: false } } }
-  });
+    const empStats = {};
+    packerScans.forEach(x => { 
+      let name = x.employee_name;
+      if(!name || name.includes('-')) {
+         const emp = _employees.find(e => e.barcode === x.employee_barcode);
+         if(emp) name = emp.name;
+      }
+      if(!name) name = x.employee_barcode || 'Desconhecido';
+      empStats[name] = (empStats[name] || 0) + 1; 
+    });
+    const sortedEmps = Object.entries(empStats).sort((a,b) => b[1] - a[1]).slice(0, 10);
+    mkChart('chartCollab', {
+      type: 'bar',
+      data: {
+        labels: sortedEmps.map(e => e[0].split(' ')[0]),
+        datasets: [{ label: 'Caixas', data: sortedEmps.map(e => e[1]), backgroundColor: 'rgba(16, 185, 129, 0.7)', borderRadius: 6 }]
+      },
+      options: { indexAxis: 'y', plugins: { legend: { display: false } } }
+    });
 
-  const curTotal = packerScans.length;
-  const prevTotal = (prevScans || []).filter(x => x.role === 'PACKER').length;
-  mkChart('chartComparison', {
-    type: 'bar',
-    data: {
-      labels: ['Anterior', 'Atual'],
-      datasets: [{ data: [prevTotal, curTotal], backgroundColor: ['rgba(148, 163, 184, 0.5)', 'rgba(59, 130, 246, 0.8)'], borderRadius: 8, barThickness: 40 }]
-    },
-    options: { plugins: { legend: { display: false } } }
-  });
+    const curTotal = packerScans.length;
+    const prevTotal = (prevScans || []).filter(x => x.role === 'PACKER').length;
+    mkChart('chartComparison', {
+      type: 'bar',
+      data: {
+        labels: ['Anterior', 'Atual'],
+        datasets: [{ data: [prevTotal, curTotal], backgroundColor: ['rgba(148, 163, 184, 0.5)', 'rgba(59, 130, 246, 0.8)'], borderRadius: 8, barThickness: 40 }]
+      },
+      options: { plugins: { legend: { display: false } } }
+    });
 
-  const harvByDay = {};
-  (harvest || []).forEach(h => { harvByDay[h.date] = (harvByDay[h.date] || 0) + h.qty_carrocoes; });
-  const hLabels = Object.keys(harvByDay).sort();
-  mkChart('chartFieldProd', {
-    type: 'line',
-    data: {
-      labels: hLabels.map(l => l.split('-').reverse().slice(0,2).join('/')),
-      datasets: [{ label: 'Carroções', data: hLabels.map(l => harvByDay[l]), borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', fill: true, tension: 0.4 }]
-    },
-    options: { plugins: { legend: { display: false } } }
-  });
+    const harvByDay = {};
+    (harvest || []).forEach(h => { harvByDay[h.date] = (harvByDay[h.date] || 0) + h.qty_carrocoes; });
+    const hLabels = Object.keys(harvByDay).sort();
+    mkChart('chartFieldProd', {
+      type: 'line',
+      data: {
+        labels: hLabels.map(l => l.split('-').reverse().slice(0,2).join('/')),
+        datasets: [{ label: 'Carroções', data: hLabels.map(l => harvByDay[l]), borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', fill: true, tension: 0.4 }]
+      },
+      options: { plugins: { legend: { display: false } } }
+    });
 
-  const varG = {};
-  (harvest || []).forEach(h => { 
-    const v = h.varieties?.name || h.variety_name || 'Indet.'; 
-    varG[v] = (varG[v] || 0) + (h.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300));
-  });
-  mkChart('chartVarietiesHarvest', {
-    type: 'pie',
-    data: { labels: Object.keys(varG), datasets: [{ data: Object.values(varG), backgroundColor: COLS }] },
-    options: { plugins: { legend: { position: 'right' } } }
-  });
+    const varG = {};
+    (harvest || []).forEach(h => { 
+      const v = h.varieties?.name || h.variety_name || 'Indet.'; 
+      varG[v] = (varG[v] || 0) + (h.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300));
+    });
+    mkChart('chartVarietiesHarvest', {
+      type: 'pie',
+      data: { labels: Object.keys(varG), datasets: [{ data: Object.values(varG), backgroundColor: COLS }] },
+      options: { plugins: { legend: { position: 'right' } } }
+    });
 
-  const harvestKg = (harvest||[]).reduce((a,b) => a + (b.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300)), 0);
-  const packedKg = packerScans.reduce((a,b) => a + (b.weight_kg || 0), 0);
-  mkChart('chartHarvestVsPacked', {
-    type: 'bar',
-    data: {
-      labels: ['Colhido (Campo)', 'Embalado (Packing)'],
-      datasets: [{ data: [harvestKg, packedKg], backgroundColor: ['#f97316', '#3b82f6'], borderRadius: 8 }]
-    },
-    options: { plugins: { legend: { display: false } } }
-  });
+    const harvestKg = (harvest||[]).reduce((a,b) => a + (b.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300)), 0);
+    const packedKg = packerScans.reduce((a,b) => a + (b.weight_kg || 0), 0);
+    mkChart('chartHarvestVsPacked', {
+      type: 'bar',
+      data: {
+        labels: ['Colhido (Campo)', 'Embalado (Packing)'],
+        datasets: [{ data: [harvestKg, packedKg], backgroundColor: ['#f97316', '#3b82f6'], borderRadius: 8 }]
+      },
+      options: { plugins: { legend: { display: false } } }
+    });
+  } catch (error) {
+    console.error("Erro ao desenhar gráficos do Dashboard:", error);
+  }
 }
 
 function buildWeightDetail(scans){
