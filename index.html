@@ -1744,7 +1744,7 @@ async function refreshRanking(){
       if (selectedRole && srv.sector !== selectedRole) return;
       
       (srv.field_service_employees || []).forEach(emp => {
-        const displayName = emp.employee_name;
+        const displayName = emp.employee_name || 'Desconhecido';
         
         // Find employee details (barcode, photo, role)
         const cleanName = displayName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
