@@ -2273,17 +2273,21 @@ function buildDashCharts(scans, packerScans, s, e, prevScans, harvest){
     const hrs={}; for(let i=5;i<=22;i++) hrs[i]=0;
     packerScans.forEach(x=>{const h=new Date(x.ts).getHours();if(h in hrs)hrs[h]++;});
     mkChart('chartProdHora',{type:'bar',data:{labels:Object.keys(hrs).map(h=>h+'h'),datasets:[{data:Object.values(hrs),backgroundColor:'rgba(59,130,246,.65)',borderRadius:5,barThickness:16}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b'}},x:{grid:{display:false},ticks:{color:'#64748b',font:{size:10}}}},plugins:{legend:{display:false},tooltip:TOPTS}}});
+  } catch(e) { console.error("Erro chartProdHora", e); }
 
+  try {
     const wG={};
     packerScans.forEach(x=>{const l=x.weight_name||'S/PESO';wG[l]=(wG[l]||0)+1;});
     const wL=Object.keys(wG),wD=Object.values(wG);
     mkChart('chartWeightDist',{type:'doughnut',data:{labels:wL,datasets:[{data:wD,backgroundColor:COLS.slice(0,wL.length),borderWidth:0,spacing:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false},tooltip:TOPTS}}});
+  } catch(e) { console.error("Erro chartWeightDist", e); }
 
+  try {
     const empStats = {};
     packerScans.forEach(x => { 
       let name = x.employee_name;
       if(!name || name.includes('-')) {
-         const emp = _employees.find(e => e.barcode === x.employee_barcode);
+         const emp = window._employees ? window._employees.find(e => e.barcode === x.employee_barcode) : null;
          if(emp) name = emp.name;
       }
       if(!name) name = x.employee_barcode || 'Desconhecido';
@@ -2298,7 +2302,9 @@ function buildDashCharts(scans, packerScans, s, e, prevScans, harvest){
       },
       options: { indexAxis: 'y', plugins: { legend: { display: false } } }
     });
+  } catch(e) { console.error("Erro chartCollab", e); }
 
+  try {
     const curTotal = packerScans.length;
     const prevTotal = (prevScans || []).filter(x => x.role === 'PACKER').length;
     mkChart('chartComparison', {
@@ -2309,7 +2315,9 @@ function buildDashCharts(scans, packerScans, s, e, prevScans, harvest){
       },
       options: { plugins: { legend: { display: false } } }
     });
+  } catch(e) { console.error("Erro chartComparison", e); }
 
+  try {
     const harvByDay = {};
     (harvest || []).forEach(h => { harvByDay[h.date] = (harvByDay[h.date] || 0) + h.qty_carrocoes; });
     const hLabels = Object.keys(harvByDay).sort();
@@ -2321,19 +2329,23 @@ function buildDashCharts(scans, packerScans, s, e, prevScans, harvest){
       },
       options: { plugins: { legend: { display: false } } }
     });
+  } catch(e) { console.error("Erro chartFieldProd", e); }
 
+  try {
     const varG = {};
     (harvest || []).forEach(h => { 
       const v = h.varieties?.name || h.variety_name || 'Indet.'; 
-      varG[v] = (varG[v] || 0) + (h.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300));
+      varG[v] = (varG[v] || 0) + (h.qty_carrocoes * (tenantConfig?.harvest_carrao_weight_kg || 300));
     });
     mkChart('chartVarietiesHarvest', {
       type: 'pie',
       data: { labels: Object.keys(varG), datasets: [{ data: Object.values(varG), backgroundColor: COLS }] },
       options: { plugins: { legend: { position: 'right' } } }
     });
+  } catch(e) { console.error("Erro chartVarietiesHarvest", e); }
 
-    const harvestKg = (harvest||[]).reduce((a,b) => a + (b.qty_carrocoes * (tenantConfig.harvest_carrao_weight_kg || 300)), 0);
+  try {
+    const harvestKg = (harvest||[]).reduce((a,b) => a + (b.qty_carrocoes * (tenantConfig?.harvest_carrao_weight_kg || 300)), 0);
     const packedKg = packerScans.reduce((a,b) => a + (b.weight_kg || 0), 0);
     mkChart('chartHarvestVsPacked', {
       type: 'bar',
@@ -2343,9 +2355,7 @@ function buildDashCharts(scans, packerScans, s, e, prevScans, harvest){
       },
       options: { plugins: { legend: { display: false } } }
     });
-  } catch (error) {
-    console.error("Erro ao desenhar gráficos do Dashboard:", error);
-  }
+  } catch(e) { console.error("Erro chartHarvestVsPacked", e); }
 }
 
 function buildWeightDetail(scans){
