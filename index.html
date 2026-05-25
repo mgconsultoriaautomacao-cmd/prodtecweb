@@ -520,6 +520,7 @@
     <div class="cgrid">
       <div class="card"><div class="title"><i data-lucide="users"></i> Produção por Colaborador (Top 10)</div><div class="ch"><canvas id="chartCollab"></canvas></div></div>
       <div class="card"><div class="title"><i data-lucide="layout-dashboard"></i> Comparativo Período Atual vs Anterior</div><div class="ch"><canvas id="chartComparison"></canvas></div></div>
+      <div class="card"><div class="title"><i data-lucide="layers"></i> Caixas por Parcela</div><div class="ch"><canvas id="chartCaixasPorParcela"></canvas></div></div>
     </div>
     <div class="card"><div class="title"><i data-lucide="trophy"></i> Ranking Detalhado</div><div id="collabDetailList" class="rgrid" style="margin-top:12px"></div></div>
     
@@ -2221,7 +2222,7 @@ async function refreshDash(){
   const {data:harvest} = await sb.from('field_carrao_sessions').select('*, parcels(code), varieties(name)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
 
   const safeScans = scans || [];
-  const packerScans = safeScans.filter(s=>s.role==='PACKER');
+  const packerScans = safeScans.filter(s=>s.role==='PACKER' || s.role==='EMBALADOR');
   const kg = packerScans.reduce((a,x)=>a+(x.weight_kg||0),0);
 
   $('kpiTotalDia').textContent = packerScans.length;
@@ -2306,7 +2307,7 @@ function buildDashCharts(scans, packerScans, s, e, prevScans, harvest){
 
   try {
     const curTotal = packerScans.length;
-    const prevTotal = (prevScans || []).filter(x => x.role === 'PACKER').length;
+    const prevTotal = (prevScans || []).filter(x => x.role === 'PACKER' || x.role === 'EMBALADOR').length;
     mkChart('chartComparison', {
       type: 'bar',
       data: {
@@ -2356,6 +2357,23 @@ function buildDashCharts(scans, packerScans, s, e, prevScans, harvest){
       options: { plugins: { legend: { display: false } } }
     });
   } catch(e) { console.error("Erro chartHarvestVsPacked", e); }
+
+  try {
+    const pG = {};
+    packerScans.forEach(x => {
+      const p = x.parcel_code || 'Sem Parcela';
+      pG[p] = (pG[p] || 0) + 1;
+    });
+    const sortedP = Object.entries(pG).sort((a,b) => b[1] - a[1]).slice(0, 10);
+    mkChart('chartCaixasPorParcela', {
+      type: 'bar',
+      data: {
+        labels: sortedP.map(e => e[0]),
+        datasets: [{ label: 'Caixas', data: sortedP.map(e => e[1]), backgroundColor: 'rgba(16, 185, 129, 0.7)', borderRadius: 6 }]
+      },
+      options: { indexAxis: 'y', plugins: { legend: { display: false } } }
+    });
+  } catch(e) { console.error("Erro chartCaixasPorParcela", e); }
 }
 
 function buildWeightDetail(scans){
