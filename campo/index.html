@@ -16,6 +16,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
+<script src="infoParcelasData.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -31,6 +32,15 @@
   --safe-bottom:env(safe-area-inset-bottom,0px);
 }
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,sans-serif;overflow:hidden;touch-action:manipulation}
+.detail-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.detail-label{color:var(--muted2);font-size:13px}
+.detail-value{color:var(--text);font-size:13px;font-weight:600;text-align:right}
+.ip-card{background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:16px;cursor:pointer;transition:all .15s}
+.ip-card:active{transform:scale(.98);background:var(--card2)}
+.ip-badge{padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;text-transform:uppercase}
+.ip-badge-melon{background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.2)}
+.ip-badge-watermelon{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.2)}
+.ip-badge-papaya{background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.2)}
 
 /* ── SCREENS ── */
 .screen{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--bg);transform:translateX(110%);transition:transform .28s cubic-bezier(.4,0,.2,1);will-change:transform;padding-bottom:calc(84px + var(--safe-bottom))}
@@ -310,6 +320,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       <span class="module-icon"><i data-lucide="clipboard-list"></i></span>
       <div class="module-name">Apontamento de Campo</div>
       <div class="module-desc">Registre capina, estufa e serviços gerais com rateio de custos</div>
+      <div class="module-arrow">›</div>
+    </div>
+    <div class="module-card" style="--grad:linear-gradient(90deg,#06b6d4,#2563eb)" onclick="showScreen('infoParcelas')">
+      <span class="module-icon"><i data-lucide="info"></i></span>
+      <div class="module-name">Info Parcelas</div>
+      <div class="module-desc">Consulta de sementes, plantios e previsões de colheita</div>
       <div class="module-arrow">›</div>
     </div>
   </div>
@@ -870,6 +886,78 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   </div>
 </div>
 
+<!-- ══════════════ INFO PARCELAS ══════════════ -->
+<div id="screenInfoParcelas" class="screen">
+  <div class="header">
+    <div class="back-btn" onclick="showScreen('home')">‹</div>
+    <div class="header-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="info" style="width:20px;height:20px"></i> Info Parcelas</div>
+  </div>
+  
+  <div style="padding:16px">
+    <div class="card" style="margin-bottom:16px; border-color:var(--blue)">
+      <div style="font-weight:800; font-size:16px; color:var(--blue); margin-bottom:4px">Visualização de Parcelas</div>
+      <div style="font-size:12px; color:var(--muted2)">Consulte informações de plantio, sementes e previsões de colheita.</div>
+    </div>
+    
+    <!-- Search / Filter inputs -->
+    <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px; margin-bottom:12px">
+      <div class="emp-search" style="margin:0"><span style="display:inline-flex;align-items:center;justify-content:center;padding:0 4px;color:var(--muted)"><i data-lucide="search" style="width:16px;height:16px"></i></span><input id="ipSearch" oninput="filterInfoParcelas()" placeholder="Buscar variedade/parcela..." autocomplete="off"></div>
+      <select id="ipCultura" onchange="filterInfoParcelas()" style="font-size:13px; height: 100%; padding: 10px 8px;">
+        <option value="">Cultura</option>
+        <option value="MELÃO">Melão</option>
+        <option value="MELANCIA">Melancia</option>
+        <option value="MAMÃO">Mamão</option>
+      </select>
+    </div>
+
+    <!-- Active List -->
+    <div id="ipList" style="margin-bottom:20px; display:flex; flex-direction:column; gap:12px;">
+      <!-- Will be populated dynamically -->
+    </div>
+  </div>
+</div>
+
+<!-- INFO PARCELAS DETAIL MODAL -->
+<div id="ipDetailModal" style="display:none; position:fixed; inset:0; background:rgba(3,7,18,0.95); backdrop-filter:blur(8px); z-index:1000; padding:20px; overflow-y:auto;">
+  <div style="background:var(--card); border:1px solid var(--border2); border-radius:24px; padding:24px; width:100%; max-width:500px; margin:40px auto; position:relative; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); box-sizing:border-box;">
+    <div style="position:absolute; top:20px; right:20px; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:700; font-size:16px;" onclick="closeIpDetail()">✕</div>
+    
+    <div id="ipDetailHeader" style="margin-bottom:20px">
+      <!-- Title, Cultivar, etc -->
+    </div>
+    
+    <!-- Tab system inside Modal -->
+    <div class="tab-bar" style="margin-bottom:16px; position:static; padding:0; background:transparent;">
+      <div class="tab-btn on" id="ipTab1Btn" onclick="showIpDetailTab(1)" style="font-size:12px; padding:8px 0">1. Parcela</div>
+      <div class="tab-btn" id="ipTab2Btn" onclick="showIpDetailTab(2)" style="font-size:12px; padding:8px 0">2. Semente</div>
+      <div class="tab-btn" id="ipTab3Btn" onclick="showIpDetailTab(3)" style="font-size:12px; padding:8px 0">3. Semeio</div>
+    </div>
+    
+    <!-- Tab 1 content: Parcela -->
+    <div id="ipTab1" class="tab-pane on" style="padding:0">
+      <div style="display:flex; flex-direction:column; gap:12px" id="ipTab1Content">
+        <!-- Parcela, Letra, Cultura, Variedade, Area, Linhas, Quantidade, Plantio, Previsao -->
+      </div>
+    </div>
+    
+    <!-- Tab 2 content: Semente -->
+    <div id="ipTab2" class="tab-pane" style="padding:0">
+      <div style="display:flex; flex-direction:column; gap:12px" id="ipTab2Content">
+        <!-- NF, Emissao, Lote, Fornecedor -->
+      </div>
+    </div>
+    
+    <!-- Tab 3 content: Semeio -->
+    <div id="ipTab3" class="tab-pane" style="padding:0">
+      <div style="display:flex; flex-direction:column; gap:12px" id="ipTab3Content">
+        <!-- Semeadura, NF2, Fornecedor2, Lote2, Emissao NF2, Quantidade2, Termo, Defensivos, Data Aplicacao, Obs -->
+      </div>
+    </div>
+    
+    <button class="btn btn-sec btn-full" style="margin-top:24px; width:100%;" onclick="closeIpDetail()">Fechar</button>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -925,7 +1013,8 @@ function showScreen(name) {
   const screens = { 
     login:'screenLogin', home:'screenHome', quality:'screenQuality', 
     carrao:'screenCarrao', closure:'screenClosure', bulk:'screenBulk',
-    phSign:'screenPhSign', stops:'screenStops', fieldOp:'screenFieldOp'
+    phSign:'screenPhSign', stops:'screenStops', fieldOp:'screenFieldOp',
+    infoParcelas:'screenInfoParcelas'
   };
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active','behind'));
   const active = $(screens[name]);
@@ -937,6 +1026,7 @@ function showScreen(name) {
   if (name === 'closure') setTimeout(initQualitySig, 300);
   if (name === 'stops') loadStops();
   if (name === 'fieldOp') loadFieldOpSelects();
+  if (name === 'infoParcelas') renderInfoParcelas();
 
   if (window.lucide) lucide.createIcons();
 }
@@ -2795,6 +2885,138 @@ async function loadFieldOpHistory() {
   }).join('');
   if (window.lucide) lucide.createIcons();
 }
+
+// ═══════════════════════════════════════════
+// INFO PARCELAS MODULE
+// ═══════════════════════════════════════════
+function renderInfoParcelas(data = infoParcelasData) {
+  const container = document.getElementById('ipList');
+  if (!container) return;
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div class="empty">Nenhuma parcela encontrada</div>';
+    return;
+  }
+  
+  container.innerHTML = data.map((item, idx) => {
+    let badgeClass = 'ip-badge-melon';
+    if (item.cultura === 'MELANCIA') badgeClass = 'ip-badge-watermelon';
+    if (item.cultura === 'MAMÃO') badgeClass = 'ip-badge-papaya';
+    
+    const originalIndex = infoParcelasData.findIndex(x => x.id === item.id);
+    
+    return `
+      <div class="ip-card" onclick="openIpDetail(${originalIndex})">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+          <span class="ip-badge ${badgeClass}">${item.cultura || 'OUTROS'}</span>
+          <span style="font-size:11px; color:var(--muted2)">Previsão: ${item.previsao_colheita || '—'}</span>
+        </div>
+        <div style="font-weight:700; font-size:15px; margin-bottom:4px">${item.variedade || 'Variedade não informada'}</div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--muted2)">
+          <span>Parcela: <strong>${item.parcela2 || item.parcela || '—'}</strong></span>
+          <span>Área: ${item.area ? item.area + ' ha' : '—'}</span>
+          <span>Sementes: ${item.quantidade ? Number(item.quantidade).toLocaleString() : '—'}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  if (window.lucide) lucide.createIcons();
+}
+
+function filterInfoParcelas() {
+  const query = document.getElementById('ipSearch').value.toLowerCase().trim();
+  const cultura = document.getElementById('ipCultura').value;
+  
+  const filtered = infoParcelasData.filter(item => {
+    const matchesSearch = !query || 
+      (item.variedade && item.variedade.toLowerCase().includes(query)) ||
+      (item.parcela && item.parcela.toLowerCase().includes(query)) ||
+      (item.parcela2 && item.parcela2.toLowerCase().includes(query)) ||
+      (item.lote && item.lote.toLowerCase().includes(query)) ||
+      (item.fornecedor && item.fornecedor.toLowerCase().includes(query));
+      
+    const matchesCultura = !cultura || item.cultura === cultura;
+    
+    return matchesSearch && matchesCultura;
+  });
+  
+  renderInfoParcelas(filtered);
+}
+
+function openIpDetail(idx) {
+  const item = infoParcelasData[idx];
+  if (!item) return;
+  
+  const header = document.getElementById('ipDetailHeader');
+  let badgeClass = 'ip-badge-melon';
+  if (item.cultura === 'MELANCIA') badgeClass = 'ip-badge-watermelon';
+  if (item.cultura === 'MAMÃO') badgeClass = 'ip-badge-papaya';
+  
+  header.innerHTML = `
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+      <span class="ip-badge ${badgeClass}">${item.cultura || 'OUTROS'}</span>
+      <span style="font-size:12px; color:var(--muted)">ID: ${item.id}</span>
+    </div>
+    <h2 style="font-size:20px; font-weight:800; color:var(--text); letter-spacing:-0.5px">${item.variedade || 'Variedade Sem Nome'}</h2>
+    <div style="font-size:13px; color:var(--muted2); margin-top:4px">Detalhes da Parcela e Semente</div>
+  `;
+  
+  // Tab 1: Parcela
+  document.getElementById('ipTab1Content').innerHTML = `
+    <div class="detail-row"><span class="detail-label">Código Parcela</span><span class="detail-value">${item.parcela2 || item.parcela || '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Letra da Linha</span><span class="detail-value">${item.letra || '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Cultura</span><span class="detail-value">${item.cultura || '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Variedade Semente</span><span class="detail-value">${item.variedade || '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Área (ha)</span><span class="detail-value">${item.area || '—'} ha</span></div>
+    <div class="detail-row"><span class="detail-label">Linhas</span><span class="detail-value">${item.linhas || '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Quantidade Sementes</span><span class="detail-value">${item.quantidade ? Number(item.quantidade).toLocaleString() : '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Data de Plantio</span><span class="detail-value">${item.plantio || '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Previsão de Colheita</span><span class="detail-value" style="color:var(--yellow)">${item.previsao_colheita || '—'}</span></div>
+  `;
+  
+  // Tab 2: Semente
+  document.getElementById('ipTab2Content').innerHTML = `
+    <div class="detail-row"><span class="detail-label">Nota Fiscal</span><span class="detail-value">${item.nf || '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Emissão NF</span><span class="detail-value">${item.emissao_nf || '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Número do Lote</span><span class="detail-value">${item.lote || '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Fornecedor</span><span class="detail-value">${item.fornecedor || '—'}</span></div>
+  `;
+  
+  // Tab 3: Semeio
+  document.getElementById('ipTab3Content').innerHTML = `
+    <div class="detail-row"><span class="detail-label">Data de Semeadura</span><span class="detail-value">${item.semeadura || '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Nota Fiscal (Semeio)</span><span class="detail-value">${item.nf2 || '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Fornecedor (Semeio)</span><span class="detail-value">${item.fornecedor2 || '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Lote (Semeio)</span><span class="detail-value">${item.lote2 || '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Emissão NF (Semeio)</span><span class="detail-value">${item.emissao_nf2 || '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Quantidade Semeada</span><span class="detail-value">${item.quantidade2 ? Number(item.quantidade2).toLocaleString() : '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Termo</span><span class="detail-value">${item.termo || '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Defensivo Usado</span><span class="detail-value">${item.defensivo1 || '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Defensivo Alternativo</span><span class="detail-value">${item.defensivo2 || '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Data de Aplicação</span><span class="detail-value">${item.data_aplicacao || '—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Observações</span><span class="detail-value">${item.obs || 'Nenhuma'}</span></div>
+  `;
+  
+  showIpDetailTab(1);
+  document.getElementById('ipDetailModal').style.display = 'block';
+}
+
+defDefensiveName = name => name || '—';
+
+function closeIpDetail() {
+  document.getElementById('ipDetailModal').style.display = 'none';
+}
+
+function showIpDetailTab(idx) {
+  document.getElementById('ipTab1').classList.toggle('on', idx === 1);
+  document.getElementById('ipTab2').classList.toggle('on', idx === 2);
+  document.getElementById('ipTab3').classList.toggle('on', idx === 3);
+  
+  document.getElementById('ipTab1Btn').classList.toggle('on', idx === 1);
+  document.getElementById('ipTab2Btn').classList.toggle('on', idx === 2);
+  document.getElementById('ipTab3Btn').classList.toggle('on', idx === 3);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   await initApp();
   // Listener de redimensionamento removido para evitar ReferenceError (sigCanvas)

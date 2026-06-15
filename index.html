@@ -39,6 +39,7 @@
     flex-direction: column;
     z-index: 100;
     overflow-y: auto;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   /* AUTH SCREEN FIX */
@@ -141,7 +142,7 @@
   }
 
   /* MAIN */
-  .main { margin-left: 260px; padding: 40px 48px; max-width: 1440px; }
+  .main { margin-left: 260px; padding: 40px 48px; max-width: 100%; transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
   .ptitle { font-size: 28px; font-weight: 900; letter-spacing: -1px; margin-bottom: 32px; display: flex; align-items: center; gap: 12px; }
   .ptitle svg, .ptitle i { width: 28px; height: 28px; color: var(--blue); stroke-width: 2.2px; flex-shrink: 0; }
 
@@ -263,7 +264,7 @@
   .menu-toggle { display: none; position: fixed; top: 15px; left: 15px; z-index: 1100; background: var(--blue); color: #fff; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; }
   @media(max-width:1024px) {
     .sidebar { transform: translateX(-260px); transition: transform 0.3s ease; width: 260px; }
-    .sidebar.active { transform: translateX(0); }
+    .sidebar.active, .sidebar.open { transform: translateX(0); box-shadow: 10px 0 35px rgba(0,0,0,0.5); }
     .main { margin-left: 0 !important; padding: 20px !important; padding-top: 80px !important; width: 100% !important; }
     .menu-toggle { display: block; }
     .cgrid { grid-template-columns: 1fr !important; }
@@ -310,6 +311,29 @@
   .prod-log-entry .time { color:var(--blue); font-weight:700; font-family:monospace; min-width:50px; }
   .prod-log-entry .gap-warn { color:var(--yellow); font-size:10px; font-weight:700; }
   .prod-log-entry .gap-danger { color:var(--red); font-size:10px; font-weight:700; }
+
+  /* SIDEBAR COLLAPSE ON DESKTOP */
+  @media(min-width: 1025px) {
+    body.sidebar-collapsed .sidebar {
+      transform: translateX(-260px);
+    }
+    body.sidebar-collapsed .main {
+      margin-left: 0;
+    }
+    body.sidebar-collapsed .menu-toggle {
+      display: block !important;
+      position: fixed;
+      top: 15px;
+      left: 15px;
+      z-index: 1100;
+    }
+  }
+
+  @media(max-width: 1024px) {
+    .sidebar-collapse-btn {
+      display: none !important;
+    }
+  }
   </style>
 </head>
 <body>
@@ -336,17 +360,21 @@
   </div>
 </div>
 
-<!-- SIDEBAR -->
 <nav class="sidebar">
-  <div class="brand">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:24px; height:24px; color:var(--blue); flex-shrink:0;">
-      <path d="M12 22C12 22 20 18 20 12V4L12 2L4 4V12C4 18 12 22 12 22Z" stroke="var(--blue)"/>
-      <path d="M12 8v8" stroke="var(--green)"/>
-      <path d="M9 12h6" stroke="var(--green)" stroke-width="1.75"/>
-    </svg>
-    PRODTECH
+  <div class="brand" style="display:flex; justify-content:space-between; align-items:center; width:100%">
+    <div style="display:flex; align-items:center; gap:8px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:24px; height:24px; color:var(--blue); flex-shrink:0;">
+        <path d="M12 22C12 22 20 18 20 12V4L12 2L4 4V12C4 18 12 22 12 22Z" stroke="var(--blue)"/>
+        <path d="M12 8v8" stroke="var(--green)"/>
+        <path d="M9 12h6" stroke="var(--green)" stroke-width="1.75"/>
+      </svg>
+      <span>PRODTECH</span>
+    </div>
+    <button class="sidebar-collapse-btn" onclick="toggleSidebar()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text); cursor:pointer; padding:6px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center;" title="Recolher Menu">
+      <i data-lucide="chevron-left" style="width:14px; height:14px"></i>
+    </button>
   </div>
-  <div class="brand-sub">v3.0</div>
+  <div class="brand-sub" style="margin-top: 4px;">v3.0</div>
   <div id="tenantBadge" class="tenant-badge">...</div>
 
 
@@ -361,6 +389,7 @@
   <div class="nav" onclick="showTab('finance',this)"><span class="nav-icon"><i data-lucide="dollar-sign"></i></span> Gestão Financeira</div>
 
   <div class="nav-group">Operações & Campo</div>
+  <div class="nav" onclick="showTab('estoque3d',this)"><span class="nav-icon"><i data-lucide="warehouse"></i></span> Estoque Virtual 3D</div>
   <div class="nav" onclick="showTab('mass',this)"><span class="nav-icon"><i data-lucide="scale"></i></span> Balanço de Massa</div>
   <div class="nav" onclick="showTab('logs',this)"><span class="nav-icon"><i data-lucide="file-spreadsheet"></i></span> Logs de Produção</div>
   <div class="nav" onclick="showTab('quality',this)"><span class="nav-icon"><i data-lucide="check-square"></i></span> Auditoria & Qualidade</div>
@@ -1132,9 +1161,9 @@
             <th>Variedade</th>
             <th>Pallets</th>
             <th>Peso Total</th>
-            <th>Lote</th>
+            <th>Lote / Juliano</th>
             <th>Fazenda</th>
-            <th style="text-align:right">Etiqueta</th>
+            <th style="text-align:right">Etiquetas</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -1252,6 +1281,475 @@
 
 </div><!-- /main -->
 
+  <div id="tab-estoque3d" class="tab">
+  <style>
+    /* ── ESTOQUE 3D STYLES ── */
+    #e3d-root { display:grid; grid-template-columns:1fr 340px; gap:24px; min-height:80vh; }
+    @media(max-width:1440px){ #e3d-root{ grid-template-columns:1fr 280px; gap:16px; } }
+    @media(max-width:1200px){ #e3d-root{ grid-template-columns:1fr; } } /* Switch to 1 column below 1200px */
+
+    #e3d-zones-wrap {
+      display: flex; 
+      gap: 24px; 
+      min-height: 600px; 
+      padding: 24px; 
+      background: linear-gradient(135deg, #020810 0%, #0a1628 40%, #060d1c 100%); 
+      border-radius: 20px; 
+      border: 1px solid rgba(59,130,246,0.2); 
+      box-shadow: 0 0 60px rgba(59,130,246,0.08);
+      flex-wrap: wrap; /* Allows stacking on smaller screens */
+    }
+    
+    .e3d-zone {
+      flex: 1; 
+      min-width: 300px; /* Forces stacking if screen is too narrow */
+      display: flex; 
+      flex-direction: column; 
+      background: rgba(0,0,0,0.25); 
+      border-radius: 16px; 
+      padding: 20px;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.4);
+      transition: all 0.3s ease;
+    }
+    
+    #e3d-grid-packing, #e3d-grid-cold {
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
+      grid-auto-rows: minmax(110px, auto); 
+      gap: 12px; 
+      flex: 1;
+    }
+
+    @media(max-width:768px) {
+      #e3d-zones-wrap { padding: 12px; gap: 16px; min-height: auto; }
+      .e3d-zone { padding: 12px; min-width: 100%; }
+      #e3d-grid-packing, #e3d-grid-cold { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+    }
+
+    /* AI Camera panel */
+    #e3d-camera-card { background:rgba(15,23,42,.9); border-radius:16px; border:1px solid rgba(59,130,246,.15); padding:20px; margin-bottom:16px; }
+    #e3d-camera-feed { width:100%; aspect-ratio:4/3; background:#000; border-radius:12px; overflow:hidden; border:1px solid rgba(59,130,246,.2); position:relative; display:flex; align-items:center; justify-content:center; }
+    #e3d-camera-feed img { width:100%; height:100%; object-fit:cover; display:none; }
+    #e3d-cam-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#334155; font-size:13px; font-weight:600; height:100%; }
+    #e3d-cam-placeholder svg { width:40px; height:40px; opacity:.3; }
+    .e3d-ai-badge {
+      position:absolute; top:10px; right:10px; padding:3px 10px; border-radius:99px;
+      font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:1px;
+    }
+    .e3d-ai-badge.sim { background:rgba(245,158,11,.15); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
+    .e3d-ai-badge.live { background:rgba(16,185,129,.15); color:#10b981; border:1px solid rgba(16,185,129,.3); animation:blink 2s infinite; }
+
+    /* Count cards */
+    #e3d-count-area { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+    .e3d-count-card {
+      background:rgba(15,23,42,.95); border-radius:12px; border:1px solid rgba(255,255,255,.05);
+      padding:14px; text-align:center;
+    }
+    .e3d-count-num { font-size:28px; font-weight:900; line-height:1; margin-bottom:4px; }
+    .e3d-count-lbl { font-size:10px; color:#64748b; text-transform:uppercase; letter-spacing:1px; font-weight:700; }
+
+    /* Config card */
+    #e3d-cfg-card {
+      background:rgba(15,23,42,.9); border-radius:16px; border:1px solid rgba(255,255,255,.06);
+      padding:20px; margin-bottom:16px;
+    }
+    #e3d-cfg-card .cfg-title { font-size:12px; font-weight:800; color:var(--blue); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+
+    /* Pallet detail modal */
+    #e3d-pallet-modal {
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:3000;
+      align-items:center; justify-content:center; backdrop-filter:blur(6px);
+    }
+    #e3d-pallet-modal.open { display:flex; }
+    #e3d-pallet-inner {
+      background:linear-gradient(135deg, #0f1c33 0%, #0a1220 100%);
+      border:1px solid rgba(59,130,246,.25); border-radius:24px; padding:32px;
+      width:520px; max-width:95%; box-shadow:0 40px 100px rgba(0,0,0,.8);
+      animation: slideUp .3s ease;
+    }
+    @keyframes slideUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+    #e3d-pallet-inner h3 { font-size:18px; font-weight:900; margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+
+    /* Queue list */
+    #e3d-queue { background:rgba(15,23,42,.9); border-radius:16px; border:1px solid rgba(255,255,255,.06); padding:20px; }
+    #e3d-queue .q-title { font-size:12px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px; }
+    .e3d-queue-item {
+      display:flex; align-items:center; gap:12px; padding:10px 12px;
+      background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.05); border-radius:10px; margin-bottom:8px;
+    }
+    .e3d-queue-icon { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+    .e3d-queue-info { flex:1; min-width:0; }
+    .e3d-queue-name { font-size:13px; font-weight:700; }
+    .e3d-queue-meta { font-size:11px; color:#64748b; margin-top:2px; }
+    .e3d-queue-progress { width:100%; height:5px; background:rgba(255,255,255,.06); border-radius:99px; overflow:hidden; margin-top:6px; }
+    .e3d-queue-fill { height:100%; border-radius:99px; transition:width .5s ease; background:linear-gradient(90deg,#3b82f6,#10b981); }
+
+    /* progress ring */
+    .e3d-pbar { position:absolute; bottom:20px; right:20px; }
+    .e3d-pbar-ring { transform:rotate(-90deg); }
+
+    /* ── Visual 3D de Pallet Empilhado ─────────────────────────── */
+    .pallet-3d-wrap {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end;
+      position: relative; gap: 2px;
+    }
+    .pallet-base {
+      width: 85%; height: 8px;
+      background: linear-gradient(90deg, #78350f, #92400e, #78350f);
+      border-radius: 2px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.6);
+      position: relative;
+    }
+    .pallet-base::before {
+      content: '';
+      position: absolute; top: -3px; left: 10%; width: 80%; height: 3px;
+      background: #a16207; border-radius: 1px;
+    }
+    .pallet-stack {
+      width: 85%;
+      display: flex; flex-direction: column;
+      gap: 2px; align-items: center;
+    }
+    .pallet-row {
+      width: 100%; display: flex; gap: 2px;
+    }
+    .pallet-box {
+      flex: 1; height: 16px; border-radius: 2px;
+      position: relative;
+      box-shadow: inset 0 -2px 4px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4);
+      transition: all 0.3s ease;
+    }
+    .pallet-box::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: rgba(255,255,255,0.15); border-radius: 2px 2px 0 0;
+    }
+    /* ── Card do Pallet: Layout sem sobreposição ─────────────── */
+    .pallet-card {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      gap: 0; overflow: hidden; border-radius: 10px;
+    }
+    /* Zona de informações (topo) */
+    .pallet-card-header {
+      flex-shrink: 0;
+      padding: 6px 7px 5px;
+      background: rgba(0,0,0,0.35);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .pallet-card-num {
+      font-size: 14px; font-weight: 900; color: #fff;
+      line-height: 1; letter-spacing: -0.5px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .pallet-card-status-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    }
+    .pallet-card-variety {
+      font-size: 9.5px; font-weight: 700; color: #cbd5e1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-top: 3px;
+    }
+    .pallet-card-meta {
+      display: flex; gap: 5px; align-items: center;
+      margin-top: 3px; flex-wrap: wrap;
+    }
+    .pallet-card-chip {
+      font-size: 8px; font-weight: 700;
+      padding: 1px 5px; border-radius: 4px;
+      background: rgba(255,255,255,0.08);
+      color: #94a3b8;
+    }
+    .pallet-card-chip.accent { background: rgba(6,182,212,0.15); color: #22d3ee; font-family: monospace; }
+    /* Zona da pilha 3D (rodapé) */
+    .pallet-card-stack {
+      flex: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end;
+      padding: 4px 6px 6px;
+      position: relative;
+    }
+    /* Badge de caixas (canto sup. direito do card inteiro) */
+    .pallet-cx-badge {
+      position: absolute; top: -9px; right: -9px;
+      font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px; color: #fff;
+      z-index: 10; box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+    /* Badge de idade (canto sup. esquerdo do card inteiro) */
+    .pallet-age-badge {
+      position: absolute; top: -9px; left: -9px;
+      display: flex; align-items: center; gap: 3px;
+      background: rgba(5,15,30,0.95); border-radius: 10px;
+      font-size: 8px; font-weight: 700; color: #fff;
+      padding: 2px 5px; z-index: 10;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+    .pallet-stack {
+      width: 85%;
+      display: flex; flex-direction: column;
+      gap: 2px; align-items: center;
+    }
+    .pallet-row {
+      width: 100%; display: flex; gap: 2px;
+    }
+    .pallet-box {
+      flex: 1; height: 12px; border-radius: 2px;
+      position: relative;
+      box-shadow: inset 0 -2px 4px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4);
+    }
+    .pallet-box::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: rgba(255,255,255,0.18); border-radius: 2px 2px 0 0;
+    }
+    .pallet-base {
+      width: 85%; height: 6px;
+      background: linear-gradient(90deg, #78350f, #92400e, #78350f);
+      border-radius: 2px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.6);
+      position: relative; margin-top: 2px;
+    }
+    .pallet-base::before {
+      content: '';
+      position: absolute; top: -3px; left: 10%; width: 80%; height: 3px;
+      background: #a16207; border-radius: 1px;
+    }
+    /* Barra de progresso no rodapé da pilha */
+    .pallet-card-bar {
+      width: 85%; height: 3px; border-radius: 2px;
+      background: rgba(255,255,255,0.08); margin-top: 5px; overflow: hidden;
+    }
+    .pallet-card-bar-fill {
+      height: 100%; border-radius: 2px; transition: width 0.5s ease;
+    }
+
+
+    /* ── Modo Seleção em Lote ─────────────────────────────────── */
+    .slot-selectable:hover { cursor: pointer; filter: brightness(1.3); }
+    .slot-selected {
+      outline: 2.5px solid #22d3ee !important;
+      box-shadow: 0 0 20px rgba(34,211,238,0.5), inset 0 0 20px rgba(34,211,238,0.1) !important;
+    }
+    .slot-selected .selection-check {
+      display: flex !important;
+    }
+    .selection-check {
+      display: none;
+      position: absolute; top: 4px; right: 4px;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #22d3ee; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 900; color: #000; z-index: 20;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+    #e3d-selection-banner {
+      display: none; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 10px 16px; border-radius: 10px;
+      background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.3);
+      margin-bottom: 12px; flex-wrap: wrap;
+    }
+    #e3d-selection-banner.visible { display: flex; }
+    #e3d-batch-panel {
+      display: none; background: rgba(15,23,42,0.95);
+      border: 1px solid rgba(34,211,238,0.3); border-radius: 14px; padding: 16px;
+    }
+    #e3d-batch-panel.visible { display: block; }
+    .batch-field { margin-bottom: 10px; }
+    .batch-field label { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px; }
+    .batch-field input, .batch-field select { width: 100%; padding: 7px 10px; border-radius: 7px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 12px; }
+
+    /* ── Botão modo seleção ──────────────────────────────────── */
+    #e3d-select-mode-btn.active {
+      background: rgba(34,211,238,0.15) !important;
+      border-color: #22d3ee !important;
+      color: #22d3ee !important;
+    }
+  </style>
+
+  <h1 class="ptitle"><i data-lucide="warehouse"></i> Estoque Virtual 3D</h1>
+  <p style="color:var(--muted);font-size:13px;margin-bottom:24px">
+    Acompanhe em tempo real o crescimento dos pallets no estoque. A IA identifica automaticamente o tipo de caixa e calibre de cada fruto e fecha pallets quando atingem a capacidade configurada.
+  </p>
+
+  <!-- KPI bar -->
+  <div class="kgrid" id="e3d-kpi-bar" style="margin-bottom:24px">
+    <div class="kcard">
+      <div class="klabel">Pallets no Estoque</div>
+      <div id="e3d-kpi-pallets" class="kval blue">0</div>
+      <div class="ksub">posições ocupadas</div>
+    </div>
+    <div class="kcard green">
+      <div class="klabel">Caixas Acumuladas</div>
+      <div id="e3d-kpi-caixas" class="kval green">0</div>
+      <div class="ksub">desde o início da sessão</div>
+    </div>
+    <div class="kcard yellow">
+      <div class="klabel">Capacidade do Armazém</div>
+      <div id="e3d-kpi-cap" class="kval yellow">0%</div>
+      <div class="ksub">pallets vs. capacidade máx.</div>
+    </div>
+    <div class="kcard orange">
+      <div class="klabel">Pallet em Formação</div>
+      <div id="e3d-kpi-forming" class="kval orange">0 cx</div>
+      <div class="ksub">aguardando fechamento</div>
+    </div>
+  </div>
+
+  <div id="e3d-root">
+
+    <!-- 3D Canvas -->
+    <!-- 2D Grid UI -->
+    <div id="e3d-zones-wrap">
+      
+      <!-- Zone 1: Packing House -->
+      <div class="e3d-zone" style="border: 1px dashed rgba(245,158,11,0.3);">
+        <div style="font-size: 15px; font-weight: 900; color: #f59e0b; margin-bottom: 14px; letter-spacing: 1px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span style="display:flex;align-items:center;gap:8px;"><i data-lucide="warehouse" style="width:16px;height:16px"></i> ZONE 1 — PACKING HOUSE</span>
+          <button id="e3d-select-mode-btn" onclick="e3dToggleSelectionMode()" style="margin-left:auto; font-size:10px; font-weight:800; padding:5px 12px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.2s;">
+            <i data-lucide="check-square" style="width:13px;height:13px"></i> Seleção em Lote
+          </button>
+        </div>
+        <!-- Banner de seleção -->
+        <div id="e3d-selection-banner">
+          <span style="font-size:12px; font-weight:700; color:#22d3ee;" id="e3d-selection-count">0 pallets selecionados</span>
+          <div style="display:flex;gap:8px;">
+            <button onclick="e3dClearSelection()" style="font-size:11px; padding:5px 10px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer;">Limpar</button>
+            <button onclick="e3dToggleBatchPanel()" style="font-size:11px; padding:5px 12px; border-radius:6px; background:rgba(34,211,238,0.15); border:1px solid #22d3ee; color:#22d3ee; cursor:pointer; font-weight:700;">✈️ Expedir Selecionados</button>
+          </div>
+        </div>
+        <div id="e3d-grid-packing">
+          <!-- slots rendered via JS -->
+        </div>
+      </div>
+
+      <!-- Zone 2: Câmara Fria -->
+      <div class="e3d-zone" style="border: 1px dashed rgba(6,182,212,0.3);">
+        <div style="font-size: 15px; font-weight: 900; color: #06b6d4; margin-bottom: 20px; letter-spacing: 1px; display:flex; align-items:center; gap:8px;">
+          <i data-lucide="snowflake" style="width:16px;height:16px"></i> ZONE 2 — CÂMARA FRIA
+        </div>
+        <div id="e3d-grid-cold">
+          <!-- slots rendered via JS -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Panel -->
+    <div id="e3d-right-panel" style="display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:85vh">
+      <!-- Painel de Expedição em Lote -->
+      <div id="e3d-batch-panel">
+        <div style="font-size:11px; font-weight:800; color:#22d3ee; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; display:flex;align-items:center;gap:6px;">
+          <i data-lucide="send" style="width:14px;height:14px"></i> Expedição em Lote
+        </div>
+        <div id="e3d-batch-summary" style="font-size:11px; color:#94a3b8; margin-bottom:12px; padding:8px 10px; background:rgba(34,211,238,0.05); border-radius:6px; border:1px solid rgba(34,211,238,0.1);"></div>
+        <div class="batch-field">
+          <label>Cliente / Destinatário</label>
+          <input id="e3d-batch-cliente" placeholder="Ex: Supermercado BH" list="e3d-clientes-list">
+          <datalist id="e3d-clientes-list"></datalist>
+        </div>
+        <div class="batch-field">
+          <label>Fazenda de Origem</label>
+          <input id="e3d-batch-fazenda" placeholder="Ex: Fazenda Copi">
+        </div>
+        <div class="batch-field">
+          <label>Tipo de Mercado</label>
+          <select id="e3d-batch-market">
+            <option value="Mercado Interno">🇧🇷 Mercado Interno</option>
+            <option value="Exportação USA">🇺🇸 Exportação USA</option>
+            <option value="Exportação Europa">🇪🇺 Exportação Europa</option>
+            <option value="Exportação Argentina">🇦🇷 Exportação Argentina</option>
+          </select>
+        </div>
+        <button onclick="e3dConfirmBatchDispatch()" style="width:100%; padding:10px; border-radius:8px; background:linear-gradient(135deg,#0ea5e9,#06b6d4); border:none; color:#fff; font-size:12px; font-weight:800; cursor:pointer; display:flex;align-items:center;justify-content:center;gap:6px; transition:all 0.2s;">
+          <i data-lucide="send" style="width:14px;height:14px"></i> Confirmar Expedição e Gerar Romaneio
+        </button>
+      </div>
+
+      <!-- Queue list -->
+      <div id="e3d-queue" style="background:rgba(15,23,42,.9);border-radius:14px;border:1px solid rgba(255,255,255,.06);padding:16px;">
+        <div class="q-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="package-open" style="width:18px;height:18px"></i> Pallets Ativos</div>
+        <div id="e3d-queue-list"></div>
+      </div>
+
+      <!-- WMS Config Panel -->
+      <div id="e3d-config-panel" style="background:rgba(15,23,42,.9);border-radius:14px;border:1px solid rgba(255,255,255,.06);padding:16px;">
+        <div class="q-title" style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
+          <i data-lucide="settings" style="width:18px;height:18px"></i> Configurações WMS
+        </div>
+        
+        <!-- Tabs for config panel -->
+        <div style="display:flex; gap:8px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:12px;">
+          <button id="e3d-cfg-tab-cap-btn" onclick="e3dSwitchCfgTab('cap')" style="background:none; border:none; color:#3b82f6; font-size:11px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:4px; transition:all 0.2s;">Capacidades</button>
+          <button id="e3d-cfg-tab-labels-btn" onclick="e3dSwitchCfgTab('labels')" style="background:none; border:none; color:#64748b; font-size:11px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:4px; transition:all 0.2s;">Etiquetas</button>
+        </div>
+
+        <!-- Tab 1: Capacidades -->
+        <div id="e3d-cfg-tab-cap" style="display:block;">
+          <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+              <select id="e3d-add-cap-variety" style="padding:6px; border-radius:6px; background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; width:100%"></select>
+              <input type="number" id="e3d-add-cap-caliber" placeholder="Calibre" style="padding:6px; border-radius:6px; background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; width:100%">
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+              <input type="text" id="e3d-add-cap-boxmodel" placeholder="Ex: Samba, Forro" style="padding:6px; border-radius:6px; background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; width:100%">
+              <input type="number" id="e3d-add-cap-limit" placeholder="Qtd Caixas" style="padding:6px; border-radius:6px; background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; width:100%">
+            </div>
+            <button class="btn blue" onclick="e3dAddCapRule()" style="padding:6px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer">Adicionar Regra</button>
+          </div>
+          <div id="e3d-cap-rules-list" style="max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding-right:4px;">
+            <!-- list of capacity rules -->
+          </div>
+        </div>
+
+        <!-- Tab 2: Etiquetas -->
+        <div id="e3d-cfg-tab-labels" style="display:none;">
+          <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+              <input type="text" id="e3d-add-label-key" placeholder="Chave (Ex: EXP_CHINA)" style="padding:6px; border-radius:6px; background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; width:100%">
+              <input type="text" id="e3d-add-label-name" placeholder="Nome (Ex: 🇨🇳 China)" style="padding:6px; border-radius:6px; background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; width:100%">
+            </div>
+            <button class="btn blue" onclick="e3dAddLabel()" style="padding:6px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer">Cadastrar Etiqueta</button>
+          </div>
+          <div id="e3d-labels-list" style="max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding-right:4px;">
+            <!-- list of custom labels -->
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /right panel -->
+  </div><!-- /e3d-root -->
+
+  <div id="e3d-view-cold" class="e3d-view">
+    <div style="background:rgba(15,23,42,.9);border-radius:16px;border:1px solid rgba(255,255,255,.06);padding:20px;min-height:60vh;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <h3 style="color:var(--blue);display:flex;align-items:center;gap:8px"><i data-lucide="snowflake"></i> Pallets na Câmara Fria</h3>
+        <button class="btn" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--text);padding:6px 12px;font-size:12px;border-radius:6px;cursor:pointer" onclick="e3dLoadColdRoom()">Atualizar</button>
+      </div>
+      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
+        <table style="width:100%;border-collapse:collapse;text-align:left;font-size:13px">
+          <thead>
+            <tr style="border-bottom:1px solid rgba(255,255,255,.1);color:var(--muted)">
+              <th style="padding:10px">Pallet #</th>
+              <th style="padding:10px">Variedade</th>
+              <th style="padding:10px">Parcela</th>
+              <th style="padding:10px">Calibre</th>
+              <th style="padding:10px">Tipo Caixa</th>
+              <th style="padding:10px">Qtd</th>
+              <th style="padding:10px">Etiqueta</th>
+              <th style="padding:10px">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="e3d-cold-tbody">
+            <!-- preenchido via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /e3d-view-cold -->
+
+</div><!-- /tab-estoque3d -->
+</div><!-- /appMain -->
 <script>
 // ══════════════════════════════════════
 // CONFIG
@@ -1397,6 +1895,15 @@ function showTab(n,el){
   const targetId = 'tab-'+n;
   if($(targetId)) $(targetId).classList.add('active');
   if(el)el.classList.add('active');
+
+  // Close sidebar on mobile/tablet after clicking a menu item
+  if (window.innerWidth <= 1024) {
+    const sb = document.querySelector('.sidebar');
+    if (sb) {
+      sb.classList.remove('open');
+      sb.classList.remove('active');
+    }
+  }
   const fns={
     dash:refreshDash, employees:loadEmps, weights:loadWeights, stops:loadStops,
     mapping:()=>{loadMappings();loadMapSelects();},
@@ -1404,7 +1911,8 @@ function showTab(n,el){
     finance:refreshFin, ranking:refreshRanking, quality:refreshQuality,
     mass:refreshMass, bulk:loadBulk, finalize:loadManagers, romaneio:loadRomaneios,
     trace:()=>{loadFruits();loadVarieties();loadParcels();loadLinks();},
-    registers:loadRegisters
+    registers:loadRegisters,
+    estoque3d:initEstoque3D
   };
   if(fns[n]) fns[n]();
   setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 150);
@@ -5017,7 +5525,11 @@ async function refreshMassBalance() {
 
 function toggleSidebar() {
   const sb = document.querySelector('.sidebar');
-  sb.classList.toggle('open');
+  if (window.innerWidth > 1024) {
+    document.body.classList.toggle('sidebar-collapsed');
+  } else {
+    sb.classList.toggle('open');
+  }
 }
 
 // ══════════════════════════════════════
@@ -5112,8 +5624,9 @@ async function loadRomaneios() {
         <td>${r.total_quilos} kg</td>
         <td><span class="badge packer">${r.lote}</span></td>
         <td>${r.fazenda}</td>
-        <td style="text-align:right">
-          <button class="sec" onclick="printRomaneioLabel('${r.id}', \`${r.variedade}\`, \`${r.fazenda}\`, '${r.lote}', '${r.quantidade_pallets}', \`${r.tipo_caixa||''}\`, '${r.peso_caixa||''}', '${r.caixas_pallet||''}', '${r.data_expedicao}')" title="Gerar Etiqueta 35x60">🏷️ Etiqueta</button>
+        <td style="text-align:right; display:flex; gap:6px; justify-content:flex-end;">
+          <button class="sec" onclick="printRomaneioLabel('${r.id}', \`${r.variedade}\`, \`${r.fazenda}\`, '${r.lote}', '${r.quantidade_pallets}', \`${r.tipo_caixa||''}\`, '${r.peso_caixa||''}', '${r.caixas_pallet||''}', '${r.data_expedicao}')" title="Gerar Etiqueta de Pallet 35x60">🏷️ Pallet</button>
+          <button class="btn" onclick="printBoxLabels('${r.id}', \`${r.variedade}\`, \`${r.fazenda}\`, '${r.lote}', '${r.quantidade_pallets}', '${r.caixas_pallet||54}', '${r.calibre||''}', '${r.tipo_caixa||''}', '${r.peso_caixa||13}', '${r.data_expedicao}')" title="Imprimir etiquetas individuais de caixa" style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:#10b981;font-size:11px;">📦 Caixas</button>
         </td>
       </tr>
     `);
@@ -5159,6 +5672,268 @@ async function saveRomaneio() {
     renderRomaneioItems();
     loadRomaneios();
   }
+}
+
+// ── Código de Lote do Calendário Juliano ──────────────────────
+function e3dGetJulianCode(date) {
+  const d = date ? new Date(date) : new Date();
+  const start = new Date(d.getFullYear(), 0, 0);
+  const diff = d - start;
+  const oneDay = 1000 * 60 * 60 * 24;
+  const dayOfYear = Math.floor(diff / oneDay);
+  const yy = String(d.getFullYear()).slice(-2);
+  const ddd = String(dayOfYear).padStart(3, '0');
+  return `${yy}${ddd}`;
+}
+
+// ── Impressão de Etiquetas Individuais de Caixa ────────────────
+function printBoxLabels(id, variedade, fazenda, lote, quantPallets, caixasPallet, calibre, tipoCaixa, pesoCaixa, dataExp) {
+  const numPallets = parseInt(quantPallets) || 1;
+  const numCaixas = parseInt(caixasPallet) || 54;
+  const totalCaixas = numPallets * numCaixas;
+  const julianCode = e3dGetJulianCode(dataExp ? new Date(dataExp + 'T12:00:00') : new Date());
+  const dataStr = dataExp ? new Date(dataExp + 'T12:00:00').toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
+  const varName = (variedade || 'MELÃO').toUpperCase();
+  const fazendaStr = (fazenda || 'FAZENDA COPI').toUpperCase();
+  const calStr = calibre ? `Cal.${calibre}` : '';
+  const caixaName = tipoCaixa ? ('CAIXA ' + tipoCaixa.toUpperCase()) : 'CAIXA SAMBA';
+  const pesoStr = (pesoCaixa || 13) + 'kg';
+  const traceBaseUrl = `https://copifrutas-trace.vercel.app/info?id=${id}&date=${dataExp}&farm=${encodeURIComponent(fazenda)}&variety=${encodeURIComponent(variedade)}&cal=${calibre}&lote=${julianCode}`;
+
+  const printWindow = window.open('', '_blank', 'width=600,height=500');
+  let html = `<html><head><title>Etiquetas de Caixa — ${totalCaixas} unidades</title>
+  <script src='https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js'><\/script>
+  <style>
+    @page { size: 60mm 35mm; margin: 0; }
+    body { font-family: 'Helvetica', 'Arial', sans-serif; margin: 0; padding: 0; width: 60mm; background: #fff; }
+    .page { width: 60mm; height: 35mm; padding: 2mm; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; page-break-after: always; }
+    .header { text-align: center; font-size: 8.5pt; font-weight: bold; margin-bottom: 1mm; }
+    .sub-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1mm; }
+    .caixa { font-size: 7pt; font-weight: bold; }
+    .peso { font-size: 13pt; font-weight: bold; }
+    .main-row { display: flex; justify-content: space-between; flex-grow: 1; }
+    .info { font-size: 4.8pt; line-height: 1.4; flex-grow: 1; padding-right: 2mm; display: flex; flex-direction: column; justify-content: center; font-weight: bold; }
+    .qr-container { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 15mm; }
+    .qrcode-box { width: 14mm; height: 14mm; flex-shrink: 0; }
+    .qrcode-box img { width: 100%; height: 100%; }
+    .julian { color: #0891b2; font-weight: 900; font-size: 5pt; }
+  </style></head><body>`;
+
+  for (let i = 1; i <= totalCaixas; i++) {
+    const palletNum = Math.ceil(i / numCaixas);
+    const boxNum = ((i - 1) % numCaixas) + 1;
+    const boxUrl = `${traceBaseUrl}&pallet=${palletNum}&cx=${boxNum}`;
+    html += `<div class='page'>
+      <div class='header'>${varName} ${calStr}</div>
+      <div class='sub-header'><div class='caixa'>${caixaName}</div><div class='peso'>${pesoStr}</div></div>
+      <div class='main-row'>
+        <div class='info'>
+          PALLET: ${String(palletNum).padStart(2,'0')} | CAIXA: ${String(boxNum).padStart(2,'0')} / ${numCaixas}<br>
+          DATA EXPEDIÇÃO: ${dataStr}<br>
+          <span class='julian'>LOTE JULIANO: ${julianCode}</span><br>
+          ORIGEM: BRASIL | FAZENDA: ${fazendaStr}<br>
+          RASTREIE: COPIFRUTAS-TRACE.VERCEL.APP
+        </div>
+        <div class='qr-container'><div class='qrcode-box' id='qrb_${i}'></div></div>
+      </div>
+    </div>`;
+  }
+
+  html += `<script>
+    var total = ${totalCaixas};
+    for(var j=1; j<=total; j++) {
+      var url = \`${traceBaseUrl}&pallet=\` + Math.ceil(j/${numCaixas}) + \`&cx=\` + (((j-1)%${numCaixas})+1);
+      new QRCode(document.getElementById('qrb_'+j), { text: url, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M });
+    }
+    setTimeout(function(){ window.print(); window.close(); }, 1200);
+  <\/script></body></html>`;
+
+  printWindow.document.write(html);
+  printWindow.document.close();
+}
+
+// ── Modo Seleção em Lote de Pallets ───────────────────────────
+let e3dSelectedSlots = [];
+let e3dSelectionMode = false;
+
+function e3dToggleSelectionMode() {
+  e3dSelectionMode = !e3dSelectionMode;
+  const btn = $('e3d-select-mode-btn');
+  if (btn) {
+    btn.classList.toggle('active', e3dSelectionMode);
+    btn.innerHTML = e3dSelectionMode
+      ? '<i data-lucide="x-square" style="width:13px;height:13px"></i> Cancelar Seleção'
+      : '<i data-lucide="check-square" style="width:13px;height:13px"></i> Seleção em Lote';
+    if (window.lucide) lucide.createIcons();
+  }
+  if (!e3dSelectionMode) {
+    e3dClearSelection();
+    const panel = $('e3d-batch-panel');
+    if (panel) panel.classList.remove('visible');
+  }
+  e3dRenderGrid();
+}
+
+function e3dToggleSelectPallet(idx, gridName) {
+  if (!e3dSelectionMode) return;
+  const key = `${gridName}_${idx}`;
+  const pos = e3dSelectedSlots.findIndex(s => s.key === key);
+  if (pos === -1) {
+    const grid = gridName === 'packing' ? e3d.grid : e3d.coldGrid;
+    const slot = grid[idx];
+    if (!slot || slot.status === E3D_STATUS.EMPTY) return;
+    e3dSelectedSlots.push({ key, idx, gridName, slot });
+  } else {
+    e3dSelectedSlots.splice(pos, 1);
+  }
+  e3dUpdateSelectionBanner();
+  e3dRenderGrid();
+}
+
+function e3dClearSelection() {
+  e3dSelectedSlots = [];
+  e3dUpdateSelectionBanner();
+  e3dRenderGrid();
+}
+
+function e3dUpdateSelectionBanner() {
+  const banner = $('e3d-selection-banner');
+  const countEl = $('e3d-selection-count');
+  const n = e3dSelectedSlots.length;
+  if (banner) banner.classList.toggle('visible', e3dSelectionMode && n > 0);
+  if (countEl) {
+    const totalCx = e3dSelectedSlots.reduce((sum, s) => sum + (s.slot.boxes || 0), 0);
+    countEl.textContent = `${n} pallet${n !== 1 ? 's' : ''} selecionado${n !== 1 ? 's' : ''} — ${totalCx} caixas no total`;
+  }
+}
+
+function e3dToggleBatchPanel() {
+  const panel = $('e3d-batch-panel');
+  if (!panel) return;
+  const isVisible = panel.classList.contains('visible');
+  panel.classList.toggle('visible', !isVisible);
+  if (!isVisible) {
+    const totalCx = e3dSelectedSlots.reduce((sum, s) => sum + (s.slot.boxes || 0), 0);
+    const n = e3dSelectedSlots.length;
+    const summary = $('e3d-batch-summary');
+    if (summary) {
+      const lines = e3dSelectedSlots.map(s => `P${String(s.slot.palletNum).padStart(2,'0')} · ${s.slot.boxType} Cal.${s.slot.caliber||'?'} · ${s.slot.boxes}cx`).join('<br>');
+      summary.innerHTML = `<b style="color:#22d3ee">${n} pallets / ${totalCx} caixas</b><br><span style="font-size:10px;opacity:0.7">${lines}</span>`;
+    }
+    // Pre-preenche fazenda com o último valor salvo
+    const fazInput = $('e3d-batch-fazenda');
+    if (fazInput && !fazInput.value) fazInput.value = localStorage.getItem('e3d_last_fazenda') || '';
+    // Carregar lista de clientes dos romaneios anteriores
+    e3dLoadClientesSuggestions();
+  }
+}
+
+async function e3dLoadClientesSuggestions() {
+  try {
+    const { data } = await sb.from('romaneios').select('cliente').eq('tenant_id', tenantId);
+    const dl = $('e3d-clientes-list');
+    if (dl && data) {
+      const unique = [...new Set(data.map(r => r.cliente).filter(Boolean))];
+      dl.innerHTML = unique.map(c => `<option value="${c}">`).join('');
+    }
+  } catch(e) { /* silencioso */ }
+}
+
+async function e3dConfirmBatchDispatch() {
+  if (e3dSelectedSlots.length === 0) {
+    toast('Nenhum pallet selecionado!', 'warning');
+    return;
+  }
+  const cliente = $('e3d-batch-cliente')?.value?.trim();
+  const fazenda = $('e3d-batch-fazenda')?.value?.trim();
+  const market = $('e3d-batch-market')?.value || 'Mercado Interno';
+  if (!cliente) { toast('⚠️ Informe o cliente/destinatário!', 'warning'); return; }
+  if (!fazenda) { toast('⚠️ Informe a fazenda de origem!', 'warning'); return; }
+
+  localStorage.setItem('e3d_last_fazenda', fazenda);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const julianCode = e3dGetJulianCode(new Date());
+
+  // Montar romaneios agrupados por variedade/calibre/modelo de caixa
+  const groups = {};
+  for (const s of e3dSelectedSlots) {
+    const slot = s.slot;
+    const key = `${slot.boxType}|${slot.caliber}|${slot.boxModel}`;
+    if (!groups[key]) {
+      groups[key] = {
+        variety: slot.boxType,
+        caliber: slot.caliber,
+        boxModel: slot.boxModel,
+        pallets: [],
+        totalBoxes: 0
+      };
+    }
+    groups[key].pallets.push(slot);
+    groups[key].totalBoxes += slot.boxes || 0;
+  }
+
+  // Atualizar pallets para DISPATCHED
+  const ids = e3dSelectedSlots.map(s => s.slot.id).filter(Boolean);
+  if (ids.length > 0) {
+    const { error: dispErr } = await sb.from('pallets')
+      .update({ location: 'DISPATCHED' })
+      .in('id', ids);
+    if (dispErr) {
+      toast('Erro ao expedir pallets: ' + dispErr.message, 'danger');
+      return;
+    }
+  }
+
+  // Criar romaneios para cada grupo
+  const romaneiosDocs = Object.values(groups).map(g => {
+    const limit = e3dGetPalletLimit(g.variety, g.caliber, g.boxModel);
+    const pesoCaixa = 13;
+    const totalKg = g.totalBoxes * pesoCaixa;
+    return {
+      tenant_id: tenantId,
+      cliente: `${cliente} — ${market}`,
+      data_expedicao: today,
+      fazenda,
+      variedade: g.variety,
+      calibre: g.caliber,
+      lote: julianCode,
+      quantidade_pallets: g.pallets.length,
+      tipo_caixa: g.boxModel || 'Padrão',
+      peso_caixa: pesoCaixa,
+      caixas_pallet: limit,
+      total_quilos: parseFloat(totalKg.toFixed(2))
+    };
+  });
+
+  const { error: romErr } = await sb.from('romaneios').insert(romaneiosDocs);
+  if (romErr) {
+    toast('Aviso: pallets expedidos mas erro ao gerar romaneio: ' + romErr.message, 'warning');
+  } else {
+    toast(`✅ ${e3dSelectedSlots.length} pallets expedidos! Romaneio gerado com Lote Juliano ${julianCode}.`, 'success');
+  }
+
+  // Reset seleção e painel
+  e3dSelectionMode = false;
+  e3dSelectedSlots = [];
+  const selectBtn = $('e3d-select-mode-btn');
+  if (selectBtn) {
+    selectBtn.classList.remove('active');
+    selectBtn.innerHTML = '<i data-lucide="check-square" style="width:13px;height:13px"></i> Seleção em Lote';
+  }
+  const panel = $('e3d-batch-panel');
+  if (panel) panel.classList.remove('visible');
+  e3dUpdateSelectionBanner();
+
+  await e3dLoadGridState();
+  if (window.lucide) lucide.createIcons();
+
+  // Mudar para aba de Romaneio após 800ms
+  setTimeout(() => {
+    showTab('romaneio', document.querySelector('.nav[onclick*=\'romaneio\']'));
+    loadRomaneios();
+    toast('📋 Romaneio gerado! Imprima as etiquetas de caixa abaixo.', 'success');
+  }, 900);
 }
 
 function printRomaneioLabel(id, variedade, fazenda, lote, pallets, tipoCaixa, pesoCaixa, caixasPallet, dataExp) {
@@ -5335,6 +6110,1132 @@ async function exportEmpDossierPDF() {
 }
 
 initApp();
+// ══════════════════════════════════════════════════════════════
+// ███████╗███████╗████████╗ ██████╗  ██████╗ ██╗   ██╗███████╗
+// ██╔════╝██╔════╝╚══██╔══╝██╔═══██╗██╔═══██╗██║   ██║██╔════╝
+// █████╗  ███████╗   ██║   ██║   ██║██║   ██║██║   ██║█████╗  
+// ██╔══╝  ╚════██║   ██║   ██║   ██║██║▄▄ ██║██║   ██║██╔══╝  
+// ███████╗███████║   ██║   ╚██████╔╝╚██████╔╝╚██████╔╝███████╗
+// ╚══════╝╚══════╝   ╚═╝    ╚═════╝  ╚══▀▀═╝  ╚═════╝ ╚══════╝
+//  3D VIRTUAL STOCK WMS ENGINE — PACKINGHOUSE WEB
+// ══════════════════════════════════════════════════════════════
+
+// ── State ──────────────────────────────────────────────────────
+let e3d = {
+  grid: [],           // flat array of Packing House slot objects
+  coldGrid: [],       // flat array of Cold Room slot objects
+  rows: 4,
+  cols: 5,
+  coldRows: 3,
+  coldCols: 4,
+  maxPallets: 20,
+  cxPerPallet: 54,
+  boxType: 'SAMBA 13kg',
+  totalBoxes: 0,
+  palletCounter: 0,
+  cvConnected: false,
+  cvPollInterval: null,
+  selectedSlot: -1,
+  selectedGrid: 'packing',
+  animFrame: null,
+  palletTypes: [],    // variety configurations
+  activeLot: { variety: '', parcel: '' },
+  drag: {
+    active: false,
+    slotIndex: -1,
+    sourceGrid: null,
+    startX: 0,
+    startY: 0,
+    currentX: 0,
+    currentY: 0
+  }
+};
+
+const E3D_STATUS = { EMPTY:'empty', FORMING:'forming', CLOSED:'closed', LABELED:'labeled', DISPATCHING:'dispatching' };
+let E3D_LABEL_NAMES = {
+  '': '—',
+  MERCADO_INTERNO: '🇧🇷 Mercado Interno',
+  EXPORTACAO_USA: '🇺🇸 Exportação USA',
+  EXPORTACAO_EUR: '🇪🇺 Exportação Europa',
+  EXPORTACAO_AR: '🇦🇷 Exportação Argentina',
+  SEGUNDA: '⚠️ 2ª Qualidade',
+  BONIFICACAO: '🎁 Bonificação',
+};
+
+// ── WMS Dynamic Configurations ──────────────────
+function e3dLoadLabels() {
+  try {
+    const raw = localStorage.getItem('packinghouse_e3d_labels');
+    if (raw) {
+      E3D_LABEL_NAMES = JSON.parse(raw);
+    }
+  } catch (e) {
+    console.error("Erro ao carregar etiquetas:", e);
+  }
+}
+
+// ── Init ────────────────────────────────────────────────────────
+async function initEstoque3D() {
+  e3dLoadLabels();
+  e3dLoadPalletTypes();
+  await e3dLoadGridState();
+  await e3dLoadActiveLotData();
+  e3dInitConfigPanel();
+  
+  // Inject modal into HTML body if not exists
+  if (!document.getElementById('e3d-pallet-modal')) {
+    const modalHTML = `
+      <div id="e3d-pallet-modal">
+        <div id="e3d-pallet-inner">
+          <h3 id="e3d-modal-title">Detalhes do Pallet</h3>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+            <div>
+              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Variedade/Caixa</label>
+              <div id="e3d-modal-boxtype" style="font-weight:700; font-size:13px; margin-top:4px">—</div>
+            </div>
+            <div>
+              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Parcela</label>
+              <div id="e3d-modal-parcel" style="font-weight:700; font-size:13px; margin-top:4px">—</div>
+            </div>
+            <div>
+              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Posição</label>
+              <div id="e3d-modal-pos" style="font-weight:700; font-size:13px; margin-top:4px">—</div>
+            </div>
+            <div>
+              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Status</label>
+              <div style="margin-top:4px"><span id="e3d-modal-badge" class="badge" style="background:#3b82f6; font-size:10px; padding:2px 8px; border-radius:4px">—</span></div>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px;">
+            <div>
+              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Idade do Pallet</label>
+              <div id="e3d-modal-age" style="font-weight:700; font-size:13px; margin-top:4px; display:flex; align-items:center; gap:6px">—</div>
+            </div>
+            <div>
+              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Rastreabilidade</label>
+              <div id="e3d-modal-trace" style="font-weight:700; font-size:11px; margin-top:4px; color:#94a3b8; word-break:break-all; font-family:monospace">—</div>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px;">
+            <div>
+              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:6px">Qtd Caixas</label>
+              <input type="number" id="e3d-modal-caixas" class="inp" style="width:100%; padding:8px; border-radius:8px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff">
+            </div>
+            <div>
+              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:6px">Etiqueta de Destino</label>
+              <select id="e3d-modal-label" class="inp" style="width:100%; padding:8px; border-radius:8px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff">
+                <option value="">— Sem Etiqueta —</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 24px;">
+            <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:6px">Observações</label>
+            <textarea id="e3d-modal-obs" class="inp" rows="2" style="width:100%; padding:8px; border-radius:8px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff; resize:none"></textarea>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; gap:12px">
+            <button class="btn sec" onclick="e3dClosePalletModal()" style="padding:10px 16px; border-radius:8px">Fechar</button>
+            <div style="display:flex; gap:12px">
+              <button class="btn purple" id="e3d-modal-dispatch-btn" onclick="e3dModalDispatchPallet()" style="padding:10px 16px; border-radius:8px">✈️ Expedir</button>
+              <button class="btn blue" onclick="e3dSavePalletChanges()" style="padding:10px 16px; border-radius:8px; font-weight:bold">Salvar Alterações</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    const div = document.createElement('div');
+    div.innerHTML = modalHTML;
+    document.body.appendChild(div.firstElementChild);
+  }
+
+  e3dRenderGrid();
+  e3dSubscribeSupabase();
+  e3dUpdateKPIs();
+  e3dRenderQueue();
+  setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 200);
+}
+
+function e3dApplyCfg() {
+  const mp = e3d.maxPallets;
+  const cols = Math.ceil(Math.sqrt(mp));
+  const rows = Math.ceil(mp / cols);
+  e3d.rows = rows;
+  e3d.cols = cols;
+  e3dLoadGridState();
+}
+
+function e3dLoadPalletTypes() {
+  try {
+    const raw = localStorage.getItem('packinghouse_e3d_types');
+    e3d.palletTypes = raw ? JSON.parse(raw) : [];
+  } catch(e) {
+    e3d.palletTypes = [];
+  }
+}
+
+function e3dSavePalletTypes() {
+  localStorage.setItem('packinghouse_e3d_types', JSON.stringify(e3d.palletTypes));
+}
+
+// ── WMS Dynamic Limits Lookup ──────────────────
+function e3dGetPalletLimit(boxType, caliber, boxModel) {
+  const caliberNum = parseInt(caliber) || null;
+  const rules = e3d.palletTypes || [];
+  
+  // 1. Match exact: variety, caliber, boxModel
+  let rule = rules.find(r => 
+    r.variety === boxType && 
+    parseInt(r.caliber) === caliberNum && 
+    String(r.boxModel || '').trim().toLowerCase() === String(boxModel || '').trim().toLowerCase()
+  );
+  if (rule) return rule.cxPerPallet;
+
+  // 2. Match: variety & caliber (with empty or any boxModel)
+  rule = rules.find(r => 
+    r.variety === boxType && 
+    parseInt(r.caliber) === caliberNum && 
+    !r.boxModel
+  );
+  if (rule) return rule.cxPerPallet;
+
+  // 3. Match: variety & boxModel (with empty/any caliber)
+  rule = rules.find(r => 
+    r.variety === boxType && 
+    !r.caliber && 
+    String(r.boxModel || '').trim().toLowerCase() === String(boxModel || '').trim().toLowerCase()
+  );
+  if (rule) return rule.cxPerPallet;
+
+  // 4. Fallback to standard
+  return e3d.cxPerPallet || 54;
+}
+
+function e3dGetPalletAge(createdAt) {
+  if (!createdAt) return 0;
+  const createdDate = new Date(createdAt);
+  const diffTime = Math.max(0, new Date() - createdDate);
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+}
+
+// ── WMS Config Panel Javascript ──────────────────
+function e3dSwitchCfgTab(tab) {
+  const capTab = $('e3d-cfg-tab-cap');
+  const labelsTab = $('e3d-cfg-tab-labels');
+  const capBtn = $('e3d-cfg-tab-cap-btn');
+  const labelsBtn = $('e3d-cfg-tab-labels-btn');
+  if (!capTab || !labelsTab || !capBtn || !labelsBtn) return;
+  
+  if (tab === 'cap') {
+    capTab.style.display = 'block';
+    labelsTab.style.display = 'none';
+    capBtn.style.color = '#3b82f6';
+    labelsBtn.style.color = '#64748b';
+  } else {
+    capTab.style.display = 'none';
+    labelsTab.style.display = 'block';
+    capBtn.style.color = '#64748b';
+    labelsBtn.style.color = '#3b82f6';
+  }
+}
+
+function e3dInitConfigPanel() {
+  const varSelect = $('e3d-add-cap-variety');
+  if (varSelect) {
+    const vars = window._e3dVarieties || [];
+    varSelect.innerHTML = '<option value="">-- Variedade --</option>' + 
+      vars.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+  }
+  e3dRenderConfigLists();
+}
+
+function e3dRenderConfigLists() {
+  const capList = $('e3d-cap-rules-list');
+  if (capList) {
+    const rules = e3d.palletTypes || [];
+    if (!rules.length) {
+      capList.innerHTML = '<div style="color:#475569;font-size:10px;text-align:center;padding:8px">Nenhuma regra cadastrada.</div>';
+    } else {
+      capList.innerHTML = rules.map((r, i) => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.04); font-size:11px;">
+          <div>
+            <span style="font-weight:700; color:#fff">${r.variety}</span>
+            <span style="color:#64748b"> · Cal.${r.caliber || 'Qualquer'} · ${r.boxModel || 'Qualquer'}</span>
+            <span style="display:block; font-size:9px; color:#10b981; font-weight:700; margin-top:2px;">Limite: ${r.cxPerPallet} cx</span>
+          </div>
+          <button onclick="e3dDeleteCapRule(${i})" style="background:none; border:none; color:#ef4444; font-size:14px; cursor:pointer; padding:2px 6px;">×</button>
+        </div>
+      `).join('');
+    }
+  }
+
+  const labelsList = $('e3d-labels-list');
+  if (labelsList) {
+    const customLabelEntries = Object.entries(E3D_LABEL_NAMES).filter(([k]) => k !== '');
+    if (!customLabelEntries.length) {
+      labelsList.innerHTML = '<div style="color:#475569;font-size:10px;text-align:center;padding:8px">Nenhuma etiqueta cadastrada.</div>';
+    } else {
+      labelsList.innerHTML = customLabelEntries.map(([key, name]) => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.04); font-size:11px;">
+          <div>
+            <span style="font-weight:700; color:#fff">${name}</span>
+            <span style="color:#64748b; font-size:9px; display:block;">Chave: ${key}</span>
+          </div>
+          <button onclick="e3dDeleteLabel('${key}')" style="background:none; border:none; color:#ef4444; font-size:14px; cursor:pointer; padding:2px 6px;">×</button>
+        </div>
+      `).join('');
+    }
+  }
+}
+
+function e3dAddCapRule() {
+  const variety = $('e3d-add-cap-variety').value;
+  const caliberInput = $('e3d-add-cap-caliber').value;
+  const boxModel = $('e3d-add-cap-boxmodel').value.trim();
+  const limitInput = $('e3d-add-cap-limit').value;
+
+  if (!variety) {
+    toast('⚠️ Selecione uma variedade!', 'warning');
+    return;
+  }
+  const limit = parseInt(limitInput);
+  if (!limit || limit <= 0) {
+    toast('⚠️ Insira um limite válido de caixas!', 'warning');
+    return;
+  }
+
+  const caliber = caliberInput ? parseInt(caliberInput) : null;
+  const existingIdx = e3d.palletTypes.findIndex(r => 
+    r.variety === variety && 
+    r.caliber === caliber && 
+    String(r.boxModel || '').trim().toLowerCase() === boxModel.toLowerCase()
+  );
+
+  const rule = {
+    variety,
+    caliber,
+    boxModel: boxModel || null,
+    cxPerPallet: limit
+  };
+
+  if (existingIdx > -1) {
+    e3d.palletTypes[existingIdx] = rule;
+  } else {
+    e3d.palletTypes.push(rule);
+  }
+
+  e3dSavePalletTypes();
+  e3dRenderConfigLists();
+  e3dLoadGridState();
+  toast('✓ Regra de capacidade adicionada!', 'success');
+  
+  $('e3d-add-cap-caliber').value = '';
+  $('e3d-add-cap-boxmodel').value = '';
+  $('e3d-add-cap-limit').value = '';
+}
+
+function e3dDeleteCapRule(idx) {
+  if (idx > -1 && idx < e3d.palletTypes.length) {
+    e3d.palletTypes.splice(idx, 1);
+    e3dSavePalletTypes();
+    e3dRenderConfigLists();
+    e3dLoadGridState();
+    toast('✓ Regra removida!', 'success');
+  }
+}
+
+function e3dAddLabel() {
+  const key = $('e3d-add-label-key').value.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '');
+  const name = $('e3d-add-label-name').value.trim();
+
+  if (!key) {
+    toast('⚠️ Insira uma chave válida (somente letras, números e underline)!', 'warning');
+    return;
+  }
+  if (!name) {
+    toast('⚠️ Insira um nome para a etiqueta!', 'warning');
+    return;
+  }
+
+  E3D_LABEL_NAMES[key] = name;
+  localStorage.setItem('packinghouse_e3d_labels', JSON.stringify(E3D_LABEL_NAMES));
+  
+  e3dRenderConfigLists();
+  e3dRenderGrid();
+  e3dRenderQueue();
+  e3dRenderColdTable();
+  toast('✓ Etiqueta cadastrada com sucesso!', 'success');
+
+  $('e3d-add-label-key').value = '';
+  $('e3d-add-label-name').value = '';
+}
+
+function e3dDeleteLabel(key) {
+  if (confirm(`Deseja excluir a etiqueta "${E3D_LABEL_NAMES[key]}"?`)) {
+    delete E3D_LABEL_NAMES[key];
+    localStorage.setItem('packinghouse_e3d_labels', JSON.stringify(E3D_LABEL_NAMES));
+    e3dRenderConfigLists();
+    e3dRenderGrid();
+    e3dRenderQueue();
+    e3dRenderColdTable();
+    toast('✓ Etiqueta removida!', 'success');
+  }
+}
+
+let e3dLoading = false;
+async function e3dLoadGridState() {
+  if (e3dLoading) return;
+  e3dLoading = true;
+
+  try {
+    e3d.grid = Array.from({ length: 20 }, () => ({
+      status: E3D_STATUS.EMPTY, boxes: 0, caliber: null, boxType: '', boxModel: '', parcel: '', label: '', obs: '', palletNum: 0, closedAt: null
+    }));
+    
+    e3d.coldGrid = Array.from({ length: 12 }, () => ({
+      status: E3D_STATUS.EMPTY, boxes: 0, caliber: null, boxType: '', boxModel: '', parcel: '', label: '', obs: '', palletNum: 0, closedAt: null
+    }));
+
+    const { data: dbPallets, error } = await sb.from('pallets')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .in('location', ['PACKING_HOUSE', 'COLD_ROOM'])
+      .order('created_at', { ascending: true });
+      
+    if (error) {
+      console.error("Erro ao carregar pallets do Supabase:", error);
+      return;
+    }
+
+    e3d.totalBoxes = 0;
+    let packingIdx = 0;
+    let coldIdx = 0;
+
+    for (const p of (dbPallets || [])) {
+      let status = E3D_STATUS.FORMING;
+      const limit = e3dGetPalletLimit(p.variety_name, p.caliber, p.box_type);
+      if (p.box_count >= limit) status = E3D_STATUS.CLOSED;
+      if (p.label) status = E3D_STATUS.LABELED;
+
+      const slotObj = {
+        id: p.id,
+        status: status,
+        palletNum: parseInt(p.pallet_number) || 0,
+        caliber: p.caliber,
+        boxType: p.variety_name,
+        boxModel: p.box_type,
+        parcel: p.parcel_code,
+        boxes: p.box_count || 0,
+        label: p.label || '',
+        obs: p.obs || '',
+        closedAt: p.updated_at,
+        createdAt: p.created_at
+      };
+
+      e3d.totalBoxes += slotObj.boxes;
+
+      if (p.location === 'PACKING_HOUSE') {
+        if (packingIdx < 20) {
+          e3d.grid[packingIdx] = slotObj;
+          packingIdx++;
+        }
+      } else if (p.location === 'COLD_ROOM') {
+        if (coldIdx < 12) {
+          e3d.coldGrid[coldIdx] = slotObj;
+          coldIdx++;
+        }
+      }
+    }
+
+    // Restore max pallet counter
+    const { data: maxP } = await sb.from('pallets')
+      .select('pallet_number')
+      .eq('tenant_id', tenantId)
+      .order('pallet_number', { ascending: false })
+      .limit(1);
+    if (maxP && maxP.length > 0 && maxP[0].pallet_number) {
+      e3d.palletCounter = Math.max(e3d.palletCounter, parseInt(maxP[0].pallet_number) || 0);
+    }
+
+    // ── Reconcile with production_scans ──
+    const todayIso = toISO(today());
+    const [scansRes, palletsRes] = await Promise.all([
+      sb.from('production_scans').select('variety_name, caliber, parcel_code, weight_name').eq('tenant_id', tenantId).gte('ts', todayIso),
+      sb.from('pallets').select('variety_name, caliber, parcel_code, box_count').eq('tenant_id', tenantId).gte('created_at', todayIso)
+    ]);
+
+    if (!scansRes.error && !palletsRes.error) {
+      const scanGroups = {};
+      for (const s of (scansRes.data || [])) {
+        if (!s.variety_name || !s.caliber) continue;
+        const caliberStr = String(s.caliber).trim();
+        const key = `${s.variety_name.trim()}|${caliberStr}|${(s.parcel_code || '—').trim()}`;
+        if (!scanGroups[key]) {
+          scanGroups[key] = { count: 0, variety_name: s.variety_name, caliber: s.caliber, parcel_code: s.parcel_code, weight_name: s.weight_name };
+        }
+        scanGroups[key].count++;
+      }
+
+      const palletGroups = {};
+      for (const p of (palletsRes.data || [])) {
+        if (!p.variety_name || !p.caliber) continue;
+        const caliberStr = String(p.caliber).trim();
+        const key = `${p.variety_name.trim()}|${caliberStr}|${(p.parcel_code || '—').trim()}`;
+        if (!palletGroups[key]) {
+          palletGroups[key] = 0;
+        }
+        palletGroups[key] += p.box_count || 0;
+      }
+
+      let reconciledAny = false;
+      for (const key of Object.keys(scanGroups)) {
+        const sGroup = scanGroups[key];
+        const pCount = palletGroups[key] || 0;
+        const missing = sGroup.count - pCount;
+        if (missing > 0) {
+          console.log(`[WMS Reconcile] Reconciliando ${missing} caixas para:`, key);
+          reconciledAny = true;
+          await e3dRegisterBox(sGroup.caliber, sGroup.variety_name, sGroup.weight_name || 'Caixa', sGroup.parcel_code || '—', missing);
+        }
+      }
+      
+      if (reconciledAny) {
+        e3dLoading = false;
+        await e3dLoadGridState();
+        return;
+      }
+    }
+
+    e3dUpdateKPIs();
+    e3dRenderQueue();
+    e3dRenderColdTable();
+    e3dRenderGrid();
+  } catch(e) {
+    console.error("Erro em e3dLoadGridState:", e);
+  } finally {
+    e3dLoading = false;
+  }
+}
+
+function e3dRenderColdTable() {
+  const tbody = $('e3d-cold-tbody');
+  if (!tbody) return;
+  const activeCold = e3d.coldGrid.filter(s => s.status !== E3D_STATUS.EMPTY);
+  if (!activeCold.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Nenhum pallet na Câmara Fria.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = activeCold.map((slot, index) => {
+    const limit = e3dGetPalletLimit(slot.boxType, slot.caliber, slot.boxModel);
+    const labelText = slot.label ? (E3D_LABEL_NAMES[slot.label] || slot.label) : '—';
+    return `
+      <tr style="border-bottom:1px solid rgba(255,255,255,.05)">
+        <td style="padding:10px;font-weight:700">P${String(slot.palletNum).padStart(2,'0')}</td>
+        <td style="padding:10px">${slot.boxType}</td>
+        <td style="padding:10px"><span class="badge packer">${slot.parcel}</span></td>
+        <td style="padding:10px">Cal.${slot.caliber || '—'}</td>
+        <td style="padding:10px"><small>${slot.boxModel || 'Padrão'}</small></td>
+        <td style="padding:10px">${slot.boxes}/${limit} cx</td>
+        <td style="padding:10px">${labelText}</td>
+        <td style="padding:10px">
+          <button class="btn green" style="padding:4px 8px;font-size:11px;border-radius:4px" onclick="e3dDispatchColdPallet('${slot.id}')">✈️ Expedir</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+
+async function e3dDispatchColdPallet(id) {
+  if (!confirm('Deseja expedir este pallet?')) return;
+  const { error } = await sb.from('pallets').update({ location: 'DISPATCHED' }).eq('id', id);
+  if (error) {
+    toast('Erro ao expedir pallet: ' + error.message, 'danger');
+  } else {
+    toast('✈️ Pallet expedido com sucesso!', 'success');
+    e3dLoadGridState();
+  }
+}
+
+async function e3dLoadColdRoom() {
+  await e3dLoadGridState();
+}
+
+function e3dSaveGridState() {
+  localStorage.setItem('packinghouse_e3d_grid', JSON.stringify(e3d.grid));
+  localStorage.setItem('packinghouse_e3d_cold_grid', JSON.stringify(e3d.coldGrid));
+  localStorage.setItem('packinghouse_e3d_pallet_counter', e3d.palletCounter);
+  localStorage.setItem('packinghouse_e3d_total_boxes', e3d.totalBoxes);
+}
+
+// ── Drawing engine (HTML Grid com visual 3D) ──────────────────────
+function e3dRenderGrid() {
+  const pGrid = $('e3d-grid-packing');
+  const cGrid = $('e3d-grid-cold');
+  if (!pGrid || !cGrid) return;
+  
+  const renderSlots = (gridArray, container, gridName) => {
+    container.innerHTML = '';
+    gridArray.forEach((slot, idx) => {
+      const isOccupied = slot.status !== E3D_STATUS.EMPTY;
+      const el = document.createElement('div');
+      el.style.borderRadius = '12px';
+      el.style.padding = '6px';
+      el.style.display = 'flex';
+      el.style.flexDirection = 'column';
+      el.style.alignItems = 'center';
+      el.style.justifyContent = 'flex-end';
+      el.style.cursor = isOccupied ? 'pointer' : 'default';
+      el.style.position = 'relative';
+      el.style.transition = 'all 0.2s';
+      el.style.minHeight = '110px';
+      
+      if (!isOccupied) {
+        el.style.background = 'rgba(255,255,255,0.02)';
+        el.style.border = '1px dashed rgba(255,255,255,0.1)';
+        el.innerHTML = `<div style="color:rgba(255,255,255,0.08);font-size:22px;margin-bottom:4px;">📦</div><div style="font-size:9px;color:rgba(255,255,255,0.1);font-weight:600;">VAZIO</div>`;
+      } else {
+        // Verificar se está selecionado no modo lote
+        const selKey = `${gridName}_${idx}`;
+        const isSelected = e3dSelectedSlots.some(s => s.key === selKey);
+        
+        if (e3dSelectionMode) {
+          el.classList.add('slot-selectable');
+          el.onclick = () => e3dToggleSelectPallet(idx, gridName);
+        } else {
+          el.draggable = true;
+          el.ondragstart = (e) => e3dHandleDragStart(e, idx, gridName);
+          el.onclick = () => e3dOpenPalletModal(idx, gridName);
+        }
+        if (isSelected) el.classList.add('slot-selected');
+        
+        el.onmouseenter = () => { if(!isSelected) { el.style.transform = 'translateY(-3px)'; el.style.filter = 'brightness(1.2)'; } };
+        el.onmouseleave = () => { el.style.transform = 'none'; el.style.filter = 'none'; };
+        
+        let bg, border, badgeColor;
+        if (slot.status === E3D_STATUS.FORMING) { bg = 'rgba(59,130,246,0.12)'; border = '1px solid rgba(59,130,246,0.4)'; badgeColor = '#3b82f6'; }
+        else if (slot.status === E3D_STATUS.CLOSED) { bg = 'rgba(16,185,129,0.12)'; border = '1px solid rgba(16,185,129,0.4)'; badgeColor = '#10b981'; }
+        else if (slot.status === E3D_STATUS.LABELED) { bg = 'rgba(245,158,11,0.12)'; border = '1px solid rgba(245,158,11,0.4)'; badgeColor = '#f59e0b'; }
+        else { bg = 'rgba(139,92,246,0.12)'; border = '1px solid rgba(139,92,246,0.4)'; badgeColor = '#8b5cf6'; }
+        
+        el.style.background = bg;
+        el.style.border = border;
+        el.style.boxShadow = `0 6px 20px ${bg.replace('0.12','0.3')}`;
+        
+        const limit = e3dGetPalletLimit(slot.boxType, slot.caliber, slot.boxModel);
+        const pct = Math.min(100, Math.round((slot.boxes / limit) * 100));
+        const julianCode = e3dGetJulianCode(slot.createdAt ? new Date(slot.createdAt) : new Date());
+        
+        // Calcular camadas 3D da pilha (1 a 3 camadas, 4 caixas por camada)
+        const layers = pct < 33 ? 1 : pct < 66 ? 2 : 3;
+        let stackHTML = '<div class="pallet-stack">';
+        for (let l = 0; l < layers; l++) {
+          stackHTML += '<div class="pallet-row">';
+          for (let b = 0; b < 4; b++) {
+            stackHTML += `<div class="pallet-box" style="background:${badgeColor};opacity:${0.55 + l*0.15}"></div>`;
+          }
+          stackHTML += '</div>';
+        }
+        stackHTML += '</div><div class="pallet-base"></div>';
+        
+        // Badge de idade
+        const days = e3dGetPalletAge(slot.createdAt);
+        let ageDotColor = '#10b981';
+        let ageText = days === 0 ? 'hoje' : (days === 1 ? '1d' : `${days}d`);
+        if (days > 5 && days <= 10) ageDotColor = '#f59e0b';
+        else if (days > 10) ageDotColor = '#ef4444';
+        
+        const labelText = slot.label ? (E3D_LABEL_NAMES[slot.label] || slot.label) : '';
+        
+        el.innerHTML = `
+          <!-- Badges flutuantes (fora do card) -->
+          <div class="selection-check">✓</div>
+          <div class="pallet-age-badge" style="border:1px solid ${ageDotColor};">
+            <span style="width:5px;height:5px;background:${ageDotColor};border-radius:50%;display:inline-block;"></span>
+            ${ageText}
+          </div>
+          <div class="pallet-cx-badge" style="background:${badgeColor};">${slot.boxes}cx</div>
+
+          <!-- Card com duas zonas limpas (sem sobreposição) -->
+          <div class="pallet-card">
+            <!-- Zona 1: Informações legíveis no topo -->
+            <div class="pallet-card-header">
+              <div class="pallet-card-num">
+                <span>P${String(slot.palletNum).padStart(2,'0')}</span>
+                <span class="pallet-card-status-dot" style="background:${badgeColor};"></span>
+              </div>
+              <div class="pallet-card-variety">${slot.boxType || 'Melão'} ${slot.caliber ? `Cal.${slot.caliber}` : ''}</div>
+              <div class="pallet-card-meta">
+                <span class="pallet-card-chip">${slot.boxModel || 'Padrão'}</span>
+                <span class="pallet-card-chip">Par.${slot.parcel || '?'}</span>
+                <span class="pallet-card-chip accent">J${julianCode}</span>
+              </div>
+              ${labelText ? `<div style="font-size:7.5px;color:#f59e0b;font-weight:800;margin-top:3px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🏷️ ${labelText}</div>` : ''}
+            </div>
+            <!-- Zona 2: Pilha 3D visual -->
+            <div class="pallet-card-stack">
+              ${stackHTML}
+              <div class="pallet-card-bar">
+                <div class="pallet-card-bar-fill" style="width:${pct}%;background:${badgeColor};"></div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      
+      el.ondragover = (e) => { e.preventDefault(); el.style.filter = 'brightness(1.5)'; el.style.border = '1px solid #fff'; };
+      el.ondragleave = (e) => { el.style.filter = 'none'; el.style.border = isOccupied ? el.style.border : '1px dashed rgba(255,255,255,0.1)'; };
+      el.ondrop = (e) => { e.preventDefault(); el.style.filter = 'none'; e3dHandleDrop(e, idx, gridName); };
+      
+      container.appendChild(el);
+    });
+  };
+  renderSlots(e3d.grid, pGrid, 'packing');
+  renderSlots(e3d.coldGrid, cGrid, 'cold');
+}
+
+
+function e3dHandleDragStart(e, idx, gridName) {
+
+  e.dataTransfer.setData('text/plain', JSON.stringify({ idx, gridName }));
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+async function e3dHandleDrop(e, targetIdx, targetGridName) {
+  e.preventDefault();
+  try {
+    const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+    const sourceIdx = data.idx;
+    const sourceGridName = data.gridName;
+
+    const sourceGrid = sourceGridName === 'packing' ? e3d.grid : e3d.coldGrid;
+    const targetGrid = targetGridName === 'packing' ? e3d.grid : e3d.coldGrid;
+
+    const pallet = sourceGrid[sourceIdx];
+    if (!pallet || pallet.status === E3D_STATUS.EMPTY) return;
+
+    const targetPallet = targetGrid[targetIdx];
+    
+    // Case 1: Move from packing to cold room
+    if (sourceGridName === 'packing' && targetGridName === 'cold') {
+      if (targetPallet.status !== E3D_STATUS.EMPTY) {
+        toast('⚠️ Posição de destino ocupada!', 'warning');
+        return;
+      }
+      
+      // Update DB
+      if (pallet.id) {
+        const { error } = await sb.from('pallets').update({ location: 'COLD_ROOM' }).eq('id', pallet.id);
+        if (error) {
+          toast('Erro ao mover pallet no banco: ' + error.message, 'danger');
+          return;
+        }
+      }
+      
+      targetGrid[targetIdx] = { ...pallet };
+      sourceGrid[sourceIdx] = { status: E3D_STATUS.EMPTY, boxes: 0, caliber: null, boxType: '', boxModel: '', parcel: '', label: '', obs: '', palletNum: 0, closedAt: null };
+      
+      toast(`❄️ Pallet P${String(pallet.palletNum).padStart(2,'0')} movido para a Câmara Fria!`, 'success');
+    }
+    // Case 2: Move from cold room to packing house
+    else if (sourceGridName === 'cold' && targetGridName === 'packing') {
+      if (targetPallet.status !== E3D_STATUS.EMPTY) {
+        toast('⚠️ Posição de destino ocupada!', 'warning');
+        return;
+      }
+      
+      // Update DB
+      if (pallet.id) {
+        const { error } = await sb.from('pallets').update({ location: 'PACKING_HOUSE' }).eq('id', pallet.id);
+        if (error) {
+          toast('Erro ao mover pallet no banco: ' + error.message, 'danger');
+          return;
+        }
+      }
+      
+      targetGrid[targetIdx] = { ...pallet };
+      sourceGrid[sourceIdx] = { status: E3D_STATUS.EMPTY, boxes: 0, caliber: null, boxType: '', boxModel: '', parcel: '', label: '', obs: '', palletNum: 0, closedAt: null };
+      
+      toast(`🏢 Pallet P${String(pallet.palletNum).padStart(2,'0')} movido para o Packing House!`, 'success');
+    }
+    // Case 3: Move within same grid (swapping positions)
+    else if (sourceGridName === targetGridName) {
+      if (sourceIdx === targetIdx) return;
+      
+      targetGrid[targetIdx] = { ...pallet };
+      sourceGrid[sourceIdx] = { ...targetPallet };
+      
+      toast('Pallets reorganizados com sucesso!', 'success');
+    }
+
+    e3dSaveGridState();
+    e3dRenderGrid();
+    e3dRenderQueue();
+    e3dUpdateKPIs();
+    e3dRenderColdTable();
+  } catch (err) {
+    console.error('Erro no drag and drop:', err);
+  }
+}
+
+function e3dOpenPalletModal(idx, gridName = 'packing') {
+  e3d.selectedSlot = idx;
+  e3d.selectedGrid = gridName;
+  const slot = gridName === 'packing' ? e3d.grid[idx] : e3d.coldGrid[idx];
+  if (!slot || slot.status === E3D_STATUS.EMPTY) return;
+
+  const row = Math.floor(idx / (gridName === 'packing' ? e3d.cols : e3d.coldCols));
+  const col = idx % (gridName === 'packing' ? e3d.cols : e3d.coldCols);
+
+  if ($('e3d-modal-title')) $('e3d-modal-title').textContent = `Pallet P${String(slot.palletNum).padStart(2,'0')}`;
+  if ($('e3d-modal-boxtype')) $('e3d-modal-boxtype').textContent = `${slot.boxType || 'Melão'} (${slot.boxModel || e3d.boxType})`;
+  if ($('e3d-modal-parcel')) $('e3d-modal-parcel').textContent = slot.parcel || '—';
+  if ($('e3d-modal-pos')) $('e3d-modal-pos').textContent = `${gridName === 'packing' ? 'Packing House' : 'Câmara Fria'} (F${row} / C${col})`;
+  
+  // Dynamic labels selection
+  const labelSel = $('e3d-modal-label');
+  if (labelSel) {
+    labelSel.innerHTML = '<option value="">— Sem Etiqueta —</option>';
+    for (const [k, v] of Object.entries(E3D_LABEL_NAMES)) {
+      if (k === '') continue;
+      labelSel.innerHTML += `<option value="${k}">${v}</option>`;
+    }
+    labelSel.value = slot.label || '';
+  }
+
+  if ($('e3d-modal-obs')) $('e3d-modal-obs').value = slot.obs || '';
+  if ($('e3d-modal-caixas')) $('e3d-modal-caixas').value = slot.boxes || 0;
+  
+  if ($('e3d-modal-trace')) {
+    $('e3d-modal-trace').textContent = slot.id || 'Sem ID (Local)';
+  }
+
+  if ($('e3d-modal-age')) {
+    const days = e3dGetPalletAge(slot.createdAt);
+    let ageDotColor = '#10b981'; // Green
+    let ageText = days === 0 ? 'Criado hoje' : (days === 1 ? '1 dia de vida' : `${days} dias de vida`);
+    if (days > 5 && days <= 10) {
+      ageDotColor = '#f59e0b'; // Yellow
+    } else if (days > 10) {
+      ageDotColor = '#ef4444'; // Red
+    }
+    $('e3d-modal-age').innerHTML = `<span style="width:8px; height:8px; background:${ageDotColor}; border-radius:50%; display:inline-block; box-shadow: 0 0 4px ${ageDotColor}"></span>${ageText}`;
+  }
+
+  const badge = $('e3d-modal-badge');
+  if (badge) {
+    const colors = { forming:'#3b82f6', closed:'#10b981', labeled:'#f59e0b', dispatching:'#8b5cf6' };
+    const statusNames = { forming:'Em Formação', closed:'Fechado', labeled:'Etiquetado', dispatching:'Expedindo' };
+    badge.textContent = statusNames[slot.status] || slot.status;
+    badge.style.background = colors[slot.status] || '#3b82f6';
+  }
+
+  const modal = $('e3d-pallet-modal');
+  if (modal) modal.classList.add('open');
+}
+
+function e3dClosePalletModal() {
+  const modal = $('e3d-pallet-modal');
+  if (modal) modal.classList.remove('open');
+  e3d.selectedSlot = -1;
+}
+
+async function e3dSavePalletChanges() {
+  const idx = e3d.selectedSlot;
+  const gridName = e3d.selectedGrid;
+  if (idx === -1) return;
+
+  const slot = gridName === 'packing' ? e3d.grid[idx] : e3d.coldGrid[idx];
+  if (!slot) return;
+
+  const label = $('e3d-modal-label').value;
+  const obs = $('e3d-modal-obs').value;
+  const newBoxes = parseInt($('e3d-modal-caixas').value) || 0;
+
+  slot.label = label;
+  slot.obs = obs;
+  slot.boxes = newBoxes;
+
+  // Recalculate status based on boxes and limit
+  const limit = e3dGetPalletLimit(slot.boxType, slot.caliber, slot.boxModel);
+  if (newBoxes >= limit) {
+    if (label) {
+      slot.status = E3D_STATUS.LABELED;
+    } else {
+      slot.status = E3D_STATUS.CLOSED;
+    }
+  } else {
+    slot.status = E3D_STATUS.FORMING;
+  }
+
+  if (slot.id) {
+    const { error } = await sb.from('pallets')
+      .update({ label, obs, box_count: newBoxes })
+      .eq('id', slot.id);
+      
+    if (error) {
+      toast('Erro ao salvar no Supabase: ' + error.message, 'danger');
+    } else {
+      toast('✓ Alterações salvas com sucesso!', 'success');
+      e3dClosePalletModal();
+      e3dLoadGridState();
+    }
+  } else {
+    e3dClosePalletModal();
+    e3dSaveGridState();
+    e3dUpdateKPIs();
+    e3dRenderQueue();
+    e3dRenderGrid();
+  }
+}
+
+async function e3dModalDispatchPallet() {
+  const idx = e3d.selectedSlot;
+  const gridName = e3d.selectedGrid;
+  if (idx === -1) return;
+
+  const slot = gridName === 'packing' ? e3d.grid[idx] : e3d.coldGrid[idx];
+  if (!slot) return;
+
+  if (confirm(`Deseja expedir o pallet P${String(slot.palletNum).padStart(2,'0')}?`)) {
+    if (slot.id) {
+      const { error } = await sb.from('pallets').update({ location: 'DISPATCHED' }).eq('id', slot.id);
+      if (error) {
+        toast('Erro ao expedir pallet: ' + error.message, 'danger');
+      } else {
+        toast(`✈️ Pallet P${String(slot.palletNum).padStart(2,'0')} expedido com sucesso!`, 'success');
+        e3dClosePalletModal();
+        e3dLoadGridState();
+      }
+    } else {
+      if (gridName === 'packing') {
+        e3d.grid[idx] = { status: E3D_STATUS.EMPTY, boxes: 0, caliber: null, boxType: '', boxModel: '', parcel: '', label: '', obs: '', palletNum: 0, closedAt: null };
+      } else {
+        e3d.coldGrid[idx] = { status: E3D_STATUS.EMPTY, boxes: 0, caliber: null, boxType: '', boxModel: '', parcel: '', label: '', obs: '', palletNum: 0, closedAt: null };
+      }
+      e3dClosePalletModal();
+      e3dSaveGridState();
+      e3dUpdateKPIs();
+      e3dRenderQueue();
+    }
+  }
+}
+
+// ── Supabase Lote / Produção loader ──────────────────────────────
+async function e3dLoadActiveLotData() {
+  try {
+    const { data: fruits, error: fe } = await sb.from('fruits').select('*').eq('tenant_id', tenantId).eq('active', true).order('name');
+    if (fe) throw fe;
+    const fruitSel = $('e3d-prod-fruit');
+    if (fruitSel) {
+      fruitSel.innerHTML = '<option value="">-- Selecione Fruta --</option>' + (fruits || []).map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+    }
+
+    const { data: varieties, error: ve } = await sb.from('varieties').select('*').eq('tenant_id', tenantId).eq('active', true).order('name');
+    if (ve) throw ve;
+    window._e3dVarieties = varieties || [];
+    e3dRenderProdVarieties();
+
+    const { data: parcels, error: pe } = await sb.from('parcels').select('*').eq('tenant_id', tenantId).eq('active', true).order('code');
+    if (pe) throw pe;
+    const parcelSel = $('e3d-prod-parcel');
+    if (parcelSel) {
+      parcelSel.innerHTML = '<option value="">-- Parcela --</option>' + (parcels || []).map(p => `<option value="${p.code}">${p.code}</option>`).join('');
+    }
+
+    const savedVariety = localStorage.getItem('e3d_selected_variety');
+    const savedParcel  = localStorage.getItem('e3d_selected_parcel');
+    if (savedVariety && $('e3d-prod-variety')) $('e3d-prod-variety').value = savedVariety;
+    if (savedParcel  && parcelSel)             parcelSel.value = savedParcel;
+
+    e3dSetActiveLot();
+  } catch (err) {
+    console.error("Erro ao carregar dados do lote ativo para Estoque 3D:", err);
+  }
+}
+
+function e3dRenderProdVarieties() {
+  const fruitId = $('e3d-prod-fruit')?.value;
+  const filtered = window._e3dVarieties ? window._e3dVarieties.filter(v => !fruitId || v.fruit_id === fruitId) : [];
+  const varSel = $('e3d-prod-variety');
+  if (varSel) {
+    varSel.innerHTML = '<option value="">-- Selecione Variedade --</option>' + filtered.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+  }
+}
+
+function e3dSetActiveLot() {
+  const variety = $('e3d-prod-variety')?.value || '';
+  const parcel = $('e3d-prod-parcel')?.value || '';
+  e3d.activeLot = { variety, parcel };
+  localStorage.setItem('e3d_selected_variety', variety);
+  localStorage.setItem('e3d_selected_parcel', parcel);
+}
+
+function e3dChangeActiveFruit() {
+  e3dRenderProdVarieties();
+  e3dSetActiveLot();
+}
+
+async function e3dRegisterBox(caliber, variety, boxType, parcel, qty = 1) {
+  const limit = e3dGetPalletLimit(variety, caliber, boxType);
+
+  for (let i = 0; i < qty; i++) {
+    let formingIdx = e3d.grid.findIndex(s => s.status === E3D_STATUS.FORMING && s.boxType === variety && s.caliber === caliber && s.parcel === parcel);
+
+    let isNew = false;
+    if (formingIdx === -1) {
+      formingIdx = e3d.grid.findIndex(s => s.status === E3D_STATUS.EMPTY);
+      if (formingIdx === -1) {
+        toast('⚠️ Packing House lotado! Nenhum slot disponível.', 'danger');
+        break;
+      }
+      e3d.palletCounter++;
+      e3d.grid[formingIdx] = {
+        id: null,
+        status: E3D_STATUS.FORMING,
+        palletNum: e3d.palletCounter,
+        caliber: caliber,
+        boxType: variety,
+        boxModel: boxType,
+        parcel: parcel,
+        boxes: 0,
+        label: '',
+        obs: '',
+        closedAt: null,
+        createdAt: new Date().toISOString()
+      };
+      isNew = true;
+    }
+
+    e3d.grid[formingIdx].boxes++;
+    const slot = e3d.grid[formingIdx];
+    
+    if (isNew) {
+      const { data, error } = await sb.from('pallets').insert({
+        tenant_id: tenantId,
+        pallet_number: slot.palletNum.toString(),
+        location: 'PACKING_HOUSE',
+        variety_name: variety,
+        parcel_code: parcel,
+        caliber: caliber,
+        box_type: boxType,
+        box_count: slot.boxes
+      }).select('id').single();
+      if(!error && data) slot.id = data.id;
+    } else {
+      if (slot.id) {
+        await sb.from('pallets').update({ box_count: slot.boxes }).eq('id', slot.id);
+      }
+    }
+
+    if (slot.boxes >= limit) {
+      e3dClosePallet(formingIdx);
+    }
+  }
+
+  e3dSaveGridState();
+  e3dUpdateKPIs();
+  e3dRenderQueue();
+  e3dRenderGrid();
+}
+
+function e3dClosePallet(idx) {
+  const slot = e3d.grid[idx];
+  slot.status = E3D_STATUS.CLOSED;
+  slot.closedAt = new Date().toISOString();
+  const pNum = slot.palletNum;
+  toast(`🎉 Pallet P${String(pNum).padStart(2,'0')} fechado! ${slot.boxes} cx ${slot.boxType} Cal.${slot.caliber}`, 'success');
+
+  e3dSaveGridState();
+  e3dUpdateKPIs();
+  e3dRenderQueue();
+  e3dRenderGrid();
+}
+
+let e3dRealtimeChannel = null;
+
+function e3dSubscribeSupabase() {
+  if (e3dRealtimeChannel) {
+    sb.removeChannel(e3dRealtimeChannel);
+  }
+
+  e3dRealtimeChannel = sb.channel('public:pallets_realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'pallets', filter: `tenant_id=eq.${tenantId}` }, payload => {
+      console.log("[WMS Realtime] Mudança detectada na tabela pallets:", payload);
+      e3dLoadGridState();
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'production_scans', filter: `tenant_id=eq.${tenantId}` }, payload => {
+      console.log("[WMS Realtime] Nova caixa via App Local:", payload.new);
+      const scan = payload.new;
+      if (scan && scan.variety_name && scan.caliber) {
+         e3dRegisterBox(scan.caliber, scan.variety_name, scan.weight_name || 'Caixa', scan.parcel_code || '—', 1);
+      }
+    })
+    .subscribe();
+}
+
+function e3dUpdateKPIs() {
+  const filled = e3d.grid.filter(s => s.status !== E3D_STATUS.EMPTY).length + e3d.coldGrid.filter(s => s.status !== E3D_STATUS.EMPTY).length;
+  const forming = e3d.grid.find(s => s.status === E3D_STATUS.FORMING);
+  const totalSlots = e3d.grid.length + e3d.coldGrid.length;
+  const pct = Math.round(filled / Math.max(1, totalSlots) * 100);
+  if ($('e3d-kpi-pallets')) $('e3d-kpi-pallets').textContent = filled;
+  if ($('e3d-kpi-caixas')) $('e3d-kpi-caixas').textContent = e3d.totalBoxes;
+  if ($('e3d-kpi-cap')) $('e3d-kpi-cap').textContent = pct + '%';
+  if ($('e3d-kpi-forming')) $('e3d-kpi-forming').textContent = forming ? (forming.boxes + ' cx') : '0 cx';
+}
+
+function e3dRenderQueue() {
+  const el = $('e3d-queue-list');
+  if (!el) return;
+  const active = [
+    ...e3d.grid.filter(s => s.status === E3D_STATUS.FORMING || s.status === E3D_STATUS.CLOSED || s.status === E3D_STATUS.LABELED),
+    ...e3d.coldGrid.filter(s => s.status === E3D_STATUS.FORMING || s.status === E3D_STATUS.CLOSED || s.status === E3D_STATUS.LABELED)
+  ];
+  if (!active.length) {
+    el.innerHTML = '<div style="color:#475569;font-size:12px;text-align:center;padding:16px">Nenhum pallet ativo no estoque.</div>';
+    return;
+  }
+  el.innerHTML = active.slice(0, 6).map(slot => {
+    const limit = e3dGetPalletLimit(slot.boxType, slot.caliber, slot.boxModel);
+    const pct = Math.min(100, Math.round(slot.boxes / limit * 100));
+    const icons = { forming: '🔵', closed: '🟢', labeled: '🟡', dispatching: '🟣' };
+    const statusText = { forming: 'Formando', closed: 'Fechado', labeled: 'Etiquetado', dispatching: 'Expedindo' };
+    const labelText = slot.label ? (E3D_LABEL_NAMES[slot.label] || slot.label) : '';
+    return `<div class="e3d-queue-item">
+      <div class="e3d-queue-icon" style="background:rgba(59,130,246,.1)">${icons[slot.status] || '⬜'}</div>
+      <div class="e3d-queue-info">
+        <div class="e3d-queue-name">Pallet P${String(slot.palletNum).padStart(2,'0')} — Cal.${slot.caliber || '?'}</div>
+        <div class="e3d-queue-meta">${slot.boxes}/${limit} cx · ${slot.boxType} (${slot.parcel || '—'}) · ${statusText[slot.status] || slot.status}${labelText ? ' · ' + labelText : ''}</div>
+        <div class="e3d-queue-progress"><div class="e3d-queue-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div style="font-size:11px;font-weight:800;color:${pct>=100?'#10b981':'#3b82f6'}">${pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+// Listen for ESC key to close modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') e3dClosePalletModal();
+});
+
+// Close modal when clicking outside the dialog content
+document.addEventListener('click', (e) => {
+  if (e.target === $('e3d-pallet-modal')) e3dClosePalletModal();
+  
+  // Close sidebar on click outside on mobile/tablet
+  if (window.innerWidth <= 1024) {
+    const sb = document.querySelector('.sidebar');
+    const toggle = document.querySelector('.menu-toggle');
+    if (sb && (sb.classList.contains('open') || sb.classList.contains('active')) && !sb.contains(e.target) && (!toggle || !toggle.contains(e.target))) {
+      sb.classList.remove('open');
+      sb.classList.remove('active');
+    }
+  }
+});
 </script><!-- DRAWER DE DESEMPENHO DO COLABORADOR -->
 <div id="empDrawer" class="drawer">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:32px">
@@ -5349,20 +7250,31 @@ initApp();
     <div id="drAvatar" class="avatar-ring" style="width:140px; height:140px; margin:0 auto; font-size:48px; border-width:4px; box-shadow:0 10px 40px rgba(0,0,0,.4)"></div>
   </div>
 
-  <div class="section">
-    <div class="section-title" style="display:flex; align-items:center; gap:8px">
-      <i data-lucide="trending-up" style="width:18px; height:18px; color:var(--blue)"></i>
-      Desempenho do colaborador
+  <div class="section"><div class="section-title">📊 KPIs de Desempenho (Power BI)</div></div>
+  
+  <div class="pbi-card" style="margin-bottom:20px">
+    <div style="display:flex; justify-content:space-between; align-items:end">
+      <div class="klabel">Produtividade vs Meta</div>
+      <div id="drProdVal" class="kpi-value-pbi" style="color:var(--green)">0%</div>
     </div>
+    <div class="pbi-gauge-bg"><div id="drProdFill" class="pbi-gauge-fill" style="width:0%"></div></div>
+    <p style="font-size:10px; color:var(--muted)">Baseado na meta média de 150 cx/dia</p>
   </div>
 
-  <div id="drTotals" style="display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:12px"></div>
+  <div class="pbi-card" style="margin-bottom:20px">
+    <div style="display:flex; justify-content:space-between; align-items:end">
+      <div class="klabel">Tempo Interrompido (Ocioso)</div>
+      <div id="drIdleVal" class="kpi-value-pbi" style="color:var(--orange)">0 min</div>
+    </div>
+    <div class="pbi-gauge-bg"><div id="drIdleFill" class="pbi-gauge-fill" style="width:0%; background:var(--orange)"></div></div>
+    <p style="font-size:10px; color:var(--muted)">Protocolo: Soma de intervalos > 10 min entre bipes</p>
+  </div>
+
+  <div id="drTotals" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px"></div>
   <div id="drAbsences" style="display:grid; grid-template-columns:1fr; gap:12px"></div>
 
   <div style="margin-top:32px">
-     <button id="drPdfBtn" class="blue btn-full" onclick="exportEmpDossierPDF()" style="display:flex; align-items:center; justify-content:center; gap:6px">
-       <i data-lucide="file-text" style="width:16px; height:16px"></i> Gerar Dossiê PDF
-     </button>
+     <button id="drPdfBtn" class="blue btn-full" onclick="exportEmpDossierPDF()">📄 Gerar Dossiê PDF</button>
   </div>
 </div>
 

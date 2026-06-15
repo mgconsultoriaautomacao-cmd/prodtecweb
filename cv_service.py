@@ -1,82 +1,148 @@
 import cv2
 import mediapipe as mp
-from flask import Flask, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
+import threading
+import time
 
 app = Flask(__name__)
-CORS(app)
+CORS(app) # Libera acesso para o Electron
 
-# Inicializa o MediaPipe para detecção de mãos
+# Inicializa o Mediapipe para reconhecimento de mãos
 mp_hands = mp.solutions.hands
+mp_drawing = mp.solutions.drawing_utils
 hands = mp_hands.Hands(
     static_image_mode=False, 
-    max_num_hands=2, 
-    min_detection_confidence=0.5,
+    max_num_hands=1, 
+    min_detection_confidence=0.7,
     min_tracking_confidence=0.5
 )
 
-# Abre a câmera nativa do Mac (0)
-cap = cv2.VideoCapture(0)
+current_count = 0
+current_frame = None
+lock = threading.Lock()
 
-def count_fingers(hand_landmarks, hand_label):
-    # Índices dos dedos: Indicador, Médio, Anelar, Mínimo
+def count_fingers(results, frame):
+    if not results.multi_hand_landmarks:
+        # Se não detectar mãos, limpa a tela de info
+        cv2.putText(frame, "AGUARDANDO MAO...", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        return 0, frame
+    
+    landmarks = results.multi_hand_landmarks[0].landmark
+    fingers = []
+    
+    # Lógica para o Polegar
+    if landmarks[4].x < landmarks[3].x:
+        fingers.append(1)
+    else:
+        fingers.append(0)
+        
+    # Lógica para os outros 4 dedos
     tips = [8, 12, 16, 20]
     pips = [6, 10, 14, 18]
-    count = 0
+    for tip, pip in zip(tips, pips):
+        if landmarks[tip].y < landmarks[pip].y:
+            fingers.append(1)
+        else:
+            fingers.append(0)
+            
+    count = sum(fingers)
     
-    # Verifica os 4 dedos (se a ponta está acima da junta)
-    for i in range(4):
-        if hand_landmarks.landmark[tips[i]].y < hand_landmarks.landmark[pips[i]].y:
-            count += 1
-            
-    # Lógica simples para o dedão dependendo se é mão esquerda ou direita
-    if hand_label == "Right":
-        if hand_landmarks.landmark[4].x < hand_landmarks.landmark[3].x:
-            count += 1
-    else:
-        if hand_landmarks.landmark[4].x > hand_landmarks.landmark[3].x:
-            count += 1
-            
-    return count
+    # Desenhar esqueleto e o resultado na imagem
+    mp_drawing.draw_landmarks(frame, results.multi_hand_landmarks[0], mp_hands.HAND_CONNECTIONS)
+    
+    # Cria uma caixa de fundo para o texto
+    cv2.rectangle(frame, (5, 10), (350, 70), (0, 0, 0), -1)
+    cv2.putText(frame, f"CALIBRE: {count}", (15, 55), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
+    
+    return count, frame
 
-@app.route('/caliber', methods=['GET'])
-def get_caliber():
+def video_loop():
+    global current_count, current_frame
+    
+    # Abre a câmera (0 é a padrão do Mac)
+    cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        return jsonify({"error": "Câmera não encontrada"}), 500
-        
-    # Limpa o buffer para pegar a foto mais recente e não uma antiga presa na memória
-    for _ in range(5):
-        cap.read()
-        
-    success, image = cap.read()
-    if not success:
-        return jsonify({"error": "Falha ao ler a câmera"}), 500
-        
-    # O OpenCV usa BGR, mas o MediaPipe precisa de RGB
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    results = hands.process(image_rgb)
+        print("❌ ERRO: Não foi possível abrir a câmera. Verifique se ela está sendo usada por outro app ou se as permissões foram concedidas ao Terminal.")
+        return
+
+    print("✅ Câmera aberta com sucesso!")
     
-    total_fingers = 0
+    # Define uma resolução leve para não pesar
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     
-    if results.multi_hand_landmarks and results.multi_handedness:
-        for hand_landmarks, handedness in zip(results.multi_hand_landmarks, results.multi_handedness):
-            label = handedness.classification[0].label
-            total_fingers += count_fingers(hand_landmarks, label)
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("⚠️ Falha ao capturar frame (câmera ocupada?)")
+            time.sleep(0.5)
+            continue
             
-    # Se levantou 5 dedos ou mais, simulamos uma caixa Grande, senão Média ou Pequena
-    box_type = "Pequena"
-    if total_fingers >= 5:
-        box_type = "Grande"
-    elif total_fingers >= 3:
-        box_type = "Média"
+        # Converte para RGB para o Mediapipe
+        img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = hands.process(img_rgb)
+        
+        # Pega a contagem e desenha no frame
+        count, annotated_frame = count_fingers(results, frame)
+        
+        with lock:
+            current_count = count
+            current_frame = annotated_frame.copy()
             
+        time.sleep(0.03) # Limita a ~30 fps para não usar muita CPU
+
+@app.route('/analyze', methods=['POST'])
+def analyze():
+    with lock:
+        count = current_count
+        
+    print(f"✅ Análise solicitada. Retornando calibre atual: {count}")
+    
     return jsonify({
-        "caliber": total_fingers,
-        "box_type": box_type,
-        "success": True
+        "ok": True,
+        "caliber": f"CALIBRE {count}" if count > 0 else "NÃO IDENTIF.",
+        "count": count,
+        "confidence": 0.95 if count > 0 else 0.0
     })
 
+def generate_frames():
+    while True:
+        with lock:
+            frame = current_frame
+            
+        if frame is None:
+            time.sleep(0.1)
+            continue
+            
+        # Codifica o frame como JPEG
+        ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
+        if not ret:
+            continue
+            
+        frame_bytes = buffer.tobytes()
+        
+        # Formato multipart para o navegador renderizar como vídeo contínuo
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+               
+        time.sleep(0.05) # Limita stream da web para ~20 fps
+
+@app.route('/video_feed')
+def video_feed():
+    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
 if __name__ == '__main__':
-    print("🤖 Serviço de Visão Computacional Rodando na Porta 5000!")
-    print("Mostre os dedos para a câmera do Mac e acesse a integração via Web.")
-    app.run(port=5000, debug=False)
+    print("\n" + "="*50)
+    print("🤖 SERVIÇO DE VISÃO COMPUTACIONAL ATIVO (MODO STREAMING)")
+    print("📡 Aguardando comandos em: http://localhost:5000/analyze")
+    print("🎥 Stream visual em: http://localhost:5000/video_feed")
+    print("="*50 + "\n")
+    
+    # Inicia a API Flask em uma thread separada
+    api_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False), daemon=True)
+    api_thread.start()
+    
+    # O macOS exige que o acesso à câmera (cv2.VideoCapture) seja feito na MAIN THREAD
+    # Portanto, rodamos o video_loop no fluxo principal do script.
+    video_loop()
