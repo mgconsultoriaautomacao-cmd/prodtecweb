@@ -1119,14 +1119,14 @@
 
   <!-- ═══ ROMANEIO ═══ -->
   <div id="tab-romaneio" class="tab">
-    <h1 class="ptitle"><i data-lucide="package"></i> Romaneio e Expedição (Copi Frutas)</h1>
+    <h1 class="ptitle"><i data-lucide="package"></i> Romaneio e Expedição (Coopyfrutas)</h1>
     <div class="card">
       <div class="title"><i data-lucide="plus-circle" class="btn-i"></i> Novo Romaneio / Lote</div>
       <form id="formRomaneio" onsubmit="event.preventDefault(); saveRomaneio();">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin-bottom:15px">
           <div><label class="flabel">Cliente / Destino</label><input id="romCliente" placeholder="Ex: Supermercado BH" required/></div>
           <div><label class="flabel">Data Expedição</label><input id="romData" type="date" required/></div>
-          <div><label class="flabel">Fazenda de Origem</label><input id="romFazenda" placeholder="Ex: Fazenda Copi" required/></div>
+          <div><label class="flabel">Fazenda de Origem</label><input id="romFazenda" placeholder="Ex: Fazenda Coopyfrutas" required/></div>
         </div>
         <div style="background:rgba(255,255,255,0.03); padding:15px; border-radius:10px; border:1px dashed var(--border); margin-bottom:15px">
           <div style="font-size:12px; font-weight:700; margin-bottom:10px; color:var(--blue); display:flex; align-items:center; gap:6px"><i data-lucide="package-open" style="width:16px;height:16px"></i> ADICIONAR ITENS (PALLETS/VARIEDADES)</div>
@@ -1650,7 +1650,7 @@
         </div>
         <div class="batch-field">
           <label>Fazenda de Origem</label>
-          <input id="e3d-batch-fazenda" placeholder="Ex: Fazenda Copi">
+          <input id="e3d-batch-fazenda" placeholder="Ex: Fazenda Coopyfrutas">
         </div>
         <div class="batch-field">
           <label>Tipo de Mercado</label>
@@ -1682,6 +1682,7 @@
         <div style="display:flex; gap:8px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:12px;">
           <button id="e3d-cfg-tab-cap-btn" onclick="e3dSwitchCfgTab('cap')" style="background:none; border:none; color:#3b82f6; font-size:11px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:4px; transition:all 0.2s;">Capacidades</button>
           <button id="e3d-cfg-tab-labels-btn" onclick="e3dSwitchCfgTab('labels')" style="background:none; border:none; color:#64748b; font-size:11px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:4px; transition:all 0.2s;">Etiquetas</button>
+          <button id="e3d-cfg-tab-galpao-btn" onclick="e3dSwitchCfgTab('galpao')" style="background:none; border:none; color:#64748b; font-size:11px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:4px; transition:all 0.2s;">Galpão</button>
         </div>
 
         <!-- Tab 1: Capacidades -->
@@ -1713,6 +1714,21 @@
           </div>
           <div id="e3d-labels-list" style="max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding-right:4px;">
             <!-- list of custom labels -->
+          </div>
+        </div>
+
+        <!-- Tab 3: Galpão -->
+        <div id="e3d-cfg-tab-galpao" style="display:none;">
+          <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:12px;">
+            <div>
+              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Posições Packing House (Zone 1)</label>
+              <input type="number" id="e3d-cfg-packing-cap" style="padding:6px; border-radius:6px; background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; width:100%">
+            </div>
+            <div>
+              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Posições Câmara Fria (Zone 2)</label>
+              <input type="number" id="e3d-cfg-cold-cap" style="padding:6px; border-radius:6px; background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; width:100%">
+            </div>
+            <button class="btn blue" onclick="e3dSaveGalpaoCapacities()" style="padding:8px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer">Salvar Capacidades</button>
           </div>
         </div>
       </div>
@@ -5533,7 +5549,7 @@ function toggleSidebar() {
 }
 
 // ══════════════════════════════════════
-// ROMANEIO - COPI FRUTAS
+// ROMANEIO - COOPYFRUTAS
 // ══════════════════════════════════════
 let _romaneioItems = [];
 
@@ -5694,11 +5710,11 @@ function printBoxLabels(id, variedade, fazenda, lote, quantPallets, caixasPallet
   const julianCode = e3dGetJulianCode(dataExp ? new Date(dataExp + 'T12:00:00') : new Date());
   const dataStr = dataExp ? new Date(dataExp + 'T12:00:00').toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
   const varName = (variedade || 'MELÃO').toUpperCase();
-  const fazendaStr = (fazenda || 'FAZENDA COPI').toUpperCase();
+  const fazendaStr = (fazenda || 'FAZENDA COOPYFRUTAS').toUpperCase();
   const calStr = calibre ? `Cal.${calibre}` : '';
   const caixaName = tipoCaixa ? ('CAIXA ' + tipoCaixa.toUpperCase()) : 'CAIXA SAMBA';
   const pesoStr = (pesoCaixa || 13) + 'kg';
-  const traceBaseUrl = `https://copifrutas-trace.vercel.app/info?id=${id}&date=${dataExp}&farm=${encodeURIComponent(fazenda)}&variety=${encodeURIComponent(variedade)}&cal=${calibre}&lote=${julianCode}`;
+  const traceBaseUrl = `${window.location.origin}/info?id=${id}&date=${dataExp}&farm=${encodeURIComponent(fazenda)}&variety=${encodeURIComponent(variedade)}&cal=${calibre}&lote=${julianCode}`;
 
   const printWindow = window.open('', '_blank', 'width=600,height=500');
   let html = `<html><head><title>Etiquetas de Caixa — ${totalCaixas} unidades</title>
@@ -5732,7 +5748,7 @@ function printBoxLabels(id, variedade, fazenda, lote, quantPallets, caixasPallet
           DATA EXPEDIÇÃO: ${dataStr}<br>
           <span class='julian'>LOTE JULIANO: ${julianCode}</span><br>
           ORIGEM: BRASIL | FAZENDA: ${fazendaStr}<br>
-          RASTREIE: COPIFRUTAS-TRACE.VERCEL.APP
+          RASTREIE COM QR CODE
         </div>
         <div class='qr-container'><div class='qrcode-box' id='qrb_${i}'></div></div>
       </div>
@@ -5937,7 +5953,7 @@ async function e3dConfirmBatchDispatch() {
 }
 
 function printRomaneioLabel(id, variedade, fazenda, lote, pallets, tipoCaixa, pesoCaixa, caixasPallet, dataExp) {
-  var traceUrl = "https://copifrutas-trace.vercel.app/info?id=" + id;
+  var traceUrl = window.location.origin + "/info?id=" + id;
   var printWindow = window.open('', '_blank', 'width=500,height=400');
   
   // Trata os valores da nova interface
@@ -5945,7 +5961,7 @@ function printRomaneioLabel(id, variedade, fazenda, lote, pallets, tipoCaixa, pe
   var caixaName = tipoCaixa ? 'CAIXA ' + tipoCaixa.toUpperCase() : 'CAIXA SAMBA';
   var pesoStr = pesoCaixa ? pesoCaixa + 'kg' : '13kg';
   var dataStr = dataExp ? new Date(dataExp + 'T12:00:00').toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
-  var origemStr = fazenda ? fazenda.toUpperCase() : 'FAZENDA COPI';
+  var origemStr = fazenda ? fazenda.toUpperCase() : 'FAZENDA COOPYFRUTAS';
   var loteStr = lote || id.toString().slice(-6).toUpperCase();
   var trackCode = "ASXQY4F" + id.toString().slice(-4).toUpperCase();
   
@@ -6325,21 +6341,19 @@ function e3dGetPalletAge(createdAt) {
 function e3dSwitchCfgTab(tab) {
   const capTab = $('e3d-cfg-tab-cap');
   const labelsTab = $('e3d-cfg-tab-labels');
+  const galpaoTab = $('e3d-cfg-tab-galpao');
   const capBtn = $('e3d-cfg-tab-cap-btn');
   const labelsBtn = $('e3d-cfg-tab-labels-btn');
-  if (!capTab || !labelsTab || !capBtn || !labelsBtn) return;
+  const galpaoBtn = $('e3d-cfg-tab-galpao-btn');
+  if (!capTab || !labelsTab || !galpaoTab || !capBtn || !labelsBtn || !galpaoBtn) return;
   
-  if (tab === 'cap') {
-    capTab.style.display = 'block';
-    labelsTab.style.display = 'none';
-    capBtn.style.color = '#3b82f6';
-    labelsBtn.style.color = '#64748b';
-  } else {
-    capTab.style.display = 'none';
-    labelsTab.style.display = 'block';
-    capBtn.style.color = '#64748b';
-    labelsBtn.style.color = '#3b82f6';
-  }
+  capTab.style.display = tab === 'cap' ? 'block' : 'none';
+  labelsTab.style.display = tab === 'labels' ? 'block' : 'none';
+  galpaoTab.style.display = tab === 'galpao' ? 'block' : 'none';
+  
+  capBtn.style.color = tab === 'cap' ? '#3b82f6' : '#64748b';
+  labelsBtn.style.color = tab === 'labels' ? '#3b82f6' : '#64748b';
+  galpaoBtn.style.color = tab === 'galpao' ? '#3b82f6' : '#64748b';
 }
 
 function e3dInitConfigPanel() {
@@ -6349,7 +6363,47 @@ function e3dInitConfigPanel() {
     varSelect.innerHTML = '<option value="">-- Variedade --</option>' + 
       vars.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
   }
+  
+  const pCapInput = $('e3d-cfg-packing-cap');
+  const cCapInput = $('e3d-cfg-cold-cap');
+  if (pCapInput) pCapInput.value = tenantConfig.packing_capacity || 20;
+  if (cCapInput) cCapInput.value = tenantConfig.cold_room_capacity || 12;
+  
   e3dRenderConfigLists();
+}
+
+async function e3dSaveGalpaoCapacities() {
+  const pCap = parseInt($('e3d-cfg-packing-cap').value);
+  const cCap = parseInt($('e3d-cfg-cold-cap').value);
+  
+  if (!pCap || pCap <= 0 || !cCap || cCap <= 0) {
+    toast('⚠️ Insira valores válidos e maiores que zero!', 'warning');
+    return;
+  }
+  
+  try {
+    const { error } = await sb.from('tenants')
+      .update({
+        packing_capacity: pCap,
+        cold_room_capacity: cCap
+      })
+      .eq('id', tenantId);
+      
+    if (error) {
+      console.error("Erro ao salvar capacidades no Supabase:", error);
+      toast('❌ Erro ao salvar capacidades no banco de dados.', 'danger');
+      return;
+    }
+    
+    tenantConfig.packing_capacity = pCap;
+    tenantConfig.cold_room_capacity = cCap;
+    
+    toast('✓ Capacidades do galpão salvas com sucesso!', 'success');
+    await e3dLoadGridState();
+  } catch (err) {
+    console.error("Erro em e3dSaveGalpaoCapacities:", err);
+    toast('❌ Ocorreu um erro inesperado.', 'danger');
+  }
 }
 
 function e3dRenderConfigLists() {
@@ -6491,11 +6545,16 @@ async function e3dLoadGridState() {
   e3dLoading = true;
 
   try {
-    e3d.grid = Array.from({ length: 20 }, () => ({
+    const maxPH = parseInt(tenantConfig.packing_capacity) || 20;
+    const maxCR = parseInt(tenantConfig.cold_room_capacity) || 12;
+    e3d.maxPallets = maxPH;
+    e3d.maxColdPallets = maxCR;
+
+    e3d.grid = Array.from({ length: maxPH }, () => ({
       status: E3D_STATUS.EMPTY, boxes: 0, caliber: null, boxType: '', boxModel: '', parcel: '', label: '', obs: '', palletNum: 0, closedAt: null
     }));
     
-    e3d.coldGrid = Array.from({ length: 12 }, () => ({
+    e3d.coldGrid = Array.from({ length: maxCR }, () => ({
       status: E3D_STATUS.EMPTY, boxes: 0, caliber: null, boxType: '', boxModel: '', parcel: '', label: '', obs: '', palletNum: 0, closedAt: null
     }));
 
@@ -6538,12 +6597,12 @@ async function e3dLoadGridState() {
       e3d.totalBoxes += slotObj.boxes;
 
       if (p.location === 'PACKING_HOUSE') {
-        if (packingIdx < 20) {
+        if (packingIdx < maxPH) {
           e3d.grid[packingIdx] = slotObj;
           packingIdx++;
         }
       } else if (p.location === 'COLD_ROOM') {
-        if (coldIdx < 12) {
+        if (coldIdx < maxCR) {
           e3d.coldGrid[coldIdx] = slotObj;
           coldIdx++;
         }
