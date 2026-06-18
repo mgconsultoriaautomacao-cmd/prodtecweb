@@ -14,6 +14,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+  <script src="campo/infoParcelasData.js"></script>
   <style>  :root{--bg:#030712;--card:#0f172a;--text:#f8fafc;--muted:#94a3b8;--border:rgba(255,255,255,.065);--blue:#3b82f6;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--accent:#6366f1;--purple:#8b5cf6;--orange:#f97316;--r:16px; --glass:blur(20px); }
   
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1090,6 +1091,50 @@
       </div>
       <div id="linkList" class="card-list" style="margin-top:12px"></div>
     </div>
+    
+    <!-- SEÇÃO: CADASTRO DETALHADO (INFO PARCELAS) -->
+    <div class="card" style="margin-top:20px; border-top: 3px solid var(--blue)">
+      <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px">
+        <div style="display:flex; align-items:center; gap:6px"><i data-lucide="info" class="btn-i"></i> Detalhamento de Parcelas (Info Parcelas)</div>
+        <div style="display:flex; gap:10px">
+          <button id="btnImportStaticInfoParcelas" onclick="importStaticInfoParcelas()" class="sec" style="font-size:11px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="upload-cloud" style="width:14px; height:14px"></i> Importar Dados Padrão</button>
+          <button onclick="openInfoParcelaModal()" class="green" style="font-size:11px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="plus-circle" style="width:14px; height:14px"></i> Cadastrar Ciclo</button>
+        </div>
+      </div>
+      <p style="color:var(--muted); font-size:12px; margin-bottom:15px; line-height:1.5">Consulte e gerencie as informações detalhadas de plantio, variedades de sementes, áreas e estimativas de colheitas de cada parcela. Cada registro representa um ciclo de cultivo.</p>
+      
+      <!-- Filtros locais -->
+      <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px; margin-bottom:15px">
+        <input id="infoP_search" oninput="filterInfoParcelasTable()" placeholder="Buscar por parcela, variedade, fornecedor ou lote..." style="font-size:12px; padding:8px 12px"/>
+        <select id="infoP_filterCultura" onchange="filterInfoParcelasTable()" style="font-size:12px; padding:8px 12px">
+          <option value="">Todas as Culturas</option>
+          <option value="MELÃO">Melão</option>
+          <option value="MELANCIA">Melancia</option>
+          <option value="MAMÃO">Mamão</option>
+        </select>
+      </div>
+
+      <div style="overflow-x:auto">
+        <table id="infoParcelasTable" style="width:100%; border-collapse:collapse">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border)">
+              <th style="text-align:left; padding:10px 8px; font-size:12px; color:var(--muted)">Parcela</th>
+              <th style="text-align:left; padding:10px 8px; font-size:12px; color:var(--muted)">Cultura / Variedade</th>
+              <th style="text-align:left; padding:10px 8px; font-size:12px; color:var(--muted)">Área / Linhas</th>
+              <th style="text-align:left; padding:10px 8px; font-size:12px; color:var(--muted)">Data Plantio</th>
+              <th style="text-align:left; padding:10px 8px; font-size:12px; color:var(--muted)">Prev. Colheita</th>
+              <th style="text-align:left; padding:10px 8px; font-size:12px; color:var(--muted)">Fornecedor / Lote</th>
+              <th style="text-align:right; padding:10px 8px; font-size:12px; color:var(--muted)">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="infoParcelasTableBody">
+            <tr>
+              <td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Buscando ciclos cadastrados...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- ═══ INTEGRAÇÕES ═══ -->
@@ -1926,7 +1971,7 @@ function showTab(n,el){
     users_mgmt:loadAdminData, settings:loadSettings,
     finance:refreshFin, ranking:refreshRanking, quality:refreshQuality,
     mass:refreshMass, bulk:loadBulk, finalize:loadManagers, romaneio:loadRomaneios,
-    trace:()=>{loadFruits();loadVarieties();loadParcels();loadLinks();},
+    trace:()=>{loadFruits();loadVarieties();loadParcels();loadLinks();loadInfoParcelas();},
     registers:loadRegisters,
     estoque3d:initEstoque3D
   };
@@ -4309,6 +4354,7 @@ async function loadParcels() {
     const { data, error } = await sb.from('parcels').select('*').eq('tenant_id', tenantId).eq('active',true).order('code');
     if (error) throw error;
     const items = data || [];
+    window._parcels = items; // Cache global
     $('parcelList').innerHTML = items.map(p => `
       <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
         <div>
@@ -7295,6 +7341,359 @@ document.addEventListener('click', (e) => {
     }
   }
 });
+// ═══════════════════════════════════════════
+// INFO PARCELAS (CROP CYCLES) GESTÃO
+// ═══════════════════════════════════════════
+let _infoParcelas = [];
+
+async function loadInfoParcelas() {
+  try {
+    const { data, error } = await sb.from('info_parcelas').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
+    if (error) throw error;
+    _infoParcelas = data || [];
+    renderInfoParcelasTable(_infoParcelas);
+  } catch (e) {
+    console.error('Erro ao carregar info_parcelas:', e);
+  }
+}
+
+function renderInfoParcelasTable(list) {
+  const tbody = document.getElementById('infoParcelasTableBody');
+  if (!tbody) return;
+  
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Nenhum ciclo de parcela cadastrado.</td></tr>`;
+    return;
+  }
+  
+  tbody.innerHTML = list.map(item => {
+    return `
+      <tr style="border-bottom: 1px solid var(--border); font-size:13px">
+        <td style="padding:10px 8px">
+          <strong>${item.parcela2 || item.parcela || '—'}</strong>
+        </td>
+        <td style="padding:10px 8px">
+          <span class="badge" style="background:rgba(59,130,246,0.1); color:var(--blue); font-size:10px">${item.cultura || '—'}</span>
+          <div style="font-weight:600; margin-top:2px">${item.variedade || '—'}</div>
+        </td>
+        <td style="padding:10px 8px">
+          ${item.area ? item.area + ' ha' : '—'}<br/>
+          <small style="color:var(--muted)">${item.linhas ? item.linhas + ' linhas' : '—'}</small>
+        </td>
+        <td style="padding:10px 8px">${item.plantio || '—'}</td>
+        <td style="padding:10px 8px; color:var(--yellow); font-weight:600">${item.previsao_colheita || '—'}</td>
+        <td style="padding:10px 8px">
+          <div style="font-size:11px">${item.fornecedor || '—'}</div>
+          <small style="color:var(--muted)">Lote: ${item.lote || '—'}</small>
+        </td>
+        <td style="padding:10px 8px; text-align:right">
+          <button class="sec" style="padding:3px 8px; margin-right:4px" onclick="openInfoParcelaModal('${item.id}')">✏️</button>
+          <button class="danger" style="padding:3px 8px" onclick="deleteInfoParcela('${item.id}')">×</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function filterInfoParcelasTable() {
+  const query = document.getElementById('infoP_search').value.toLowerCase().trim();
+  const cultura = document.getElementById('infoP_filterCultura').value;
+  
+  const filtered = _infoParcelas.filter(item => {
+    const matchesSearch = !query ||
+      (item.variedade && item.variedade.toLowerCase().includes(query)) ||
+      (item.parcela && item.parcela.toLowerCase().includes(query)) ||
+      (item.parcela2 && item.parcela2.toLowerCase().includes(query)) ||
+      (item.fornecedor && item.fornecedor.toLowerCase().includes(query)) ||
+      (item.lote && item.lote.toLowerCase().includes(query));
+      
+    const matchesCultura = !cultura || item.cultura === cultura;
+    
+    return matchesSearch && matchesCultura;
+  });
+  
+  renderInfoParcelasTable(filtered);
+}
+
+function openInfoParcelaModal(id = '') {
+  const modal = document.getElementById('infoParcelaModal');
+  const modalTitle = document.getElementById('infoParcelaModalTitle');
+  if (!modal) return;
+  
+  // Popula o select de parcelas
+  const selParcel = document.getElementById('infoP_parcelId');
+  if (selParcel && window._parcels) {
+    selParcel.innerHTML = '<option value="">-- Selecione a Parcela --</option>' + 
+      window._parcels.map(p => `<option value="${p.id}">${p.code}</option>`).join('');
+  }
+  
+  // Limpa/Configura abas do modal
+  showModalIpTab(1);
+  
+  if (id) {
+    modalTitle.textContent = 'Editar Ciclo de Parcela';
+    const item = _infoParcelas.find(x => x.id === id);
+    if (!item) return;
+    
+    document.getElementById('infoP_id').value = item.id;
+    document.getElementById('infoP_parcelId').value = item.parcel_id || '';
+    document.getElementById('infoP_letra').value = item.letra || '';
+    document.getElementById('infoP_cultura').value = item.cultura || 'MELÃO';
+    document.getElementById('infoP_variedade').value = item.variedade || '';
+    document.getElementById('infoP_area').value = item.area || '';
+    document.getElementById('infoP_linhas').value = item.linhas || '';
+    document.getElementById('infoP_quantidade').value = item.quantidade || '';
+    document.getElementById('infoP_plantio').value = item.plantio || '';
+    document.getElementById('infoP_previsao_colheita').value = item.previsao_colheita || '';
+    document.getElementById('infoP_nf').value = item.nf || '';
+    document.getElementById('infoP_emissao_nf').value = item.emissao_nf || '';
+    document.getElementById('infoP_lote').value = item.lote || '';
+    document.getElementById('infoP_fornecedor').value = item.fornecedor || '';
+    document.getElementById('infoP_semeadura').value = item.semeadura || '';
+    document.getElementById('infoP_nf2').value = item.nf2 || '';
+    document.getElementById('infoP_fornecedor2').value = item.fornecedor2 || '';
+    document.getElementById('infoP_lote2').value = item.lote2 || '';
+    document.getElementById('infoP_emissao_nf2').value = item.emissao_nf2 || '';
+    document.getElementById('infoP_quantidade2').value = item.quantidade2 || '';
+    document.getElementById('infoP_termo').value = item.termo || '';
+    document.getElementById('infoP_data_aplicacao').value = item.data_aplicacao || '';
+    document.getElementById('infoP_defensivo1').value = item.defensivo1 || '';
+    document.getElementById('infoP_defensivo2').value = item.defensivo2 || '';
+    document.getElementById('infoP_obs').value = item.obs || '';
+  } else {
+    modalTitle.textContent = 'Cadastrar Ciclo de Parcela';
+    document.getElementById('infoP_id').value = '';
+    document.getElementById('infoP_parcelId').value = '';
+    document.getElementById('infoP_letra').value = '';
+    document.getElementById('infoP_cultura').value = 'MELÃO';
+    document.getElementById('infoP_variedade').value = '';
+    document.getElementById('infoP_area').value = '';
+    document.getElementById('infoP_linhas').value = '';
+    document.getElementById('infoP_quantidade').value = '';
+    document.getElementById('infoP_plantio').value = '';
+    document.getElementById('infoP_previsao_colheita').value = '';
+    document.getElementById('infoP_nf').value = '';
+    document.getElementById('infoP_emissao_nf').value = '';
+    document.getElementById('infoP_lote').value = '';
+    document.getElementById('infoP_fornecedor').value = '';
+    document.getElementById('infoP_semeadura').value = '';
+    document.getElementById('infoP_nf2').value = '';
+    document.getElementById('infoP_fornecedor2').value = '';
+    document.getElementById('infoP_lote2').value = '';
+    document.getElementById('infoP_emissao_nf2').value = '';
+    document.getElementById('infoP_quantidade2').value = '';
+    document.getElementById('infoP_termo').value = '';
+    document.getElementById('infoP_data_aplicacao').value = '';
+    document.getElementById('infoP_defensivo1').value = '';
+    document.getElementById('infoP_defensivo2').value = '';
+    document.getElementById('infoP_obs').value = '';
+  }
+  
+  modal.style.display = 'flex';
+}
+
+function closeInfoParcelaModal() {
+  document.getElementById('infoParcelaModal').style.display = 'none';
+}
+
+function showModalIpTab(tab) {
+  document.getElementById('modalIpTab1').classList.toggle('on', tab === 1);
+  document.getElementById('modalIpTab2').classList.toggle('on', tab === 2);
+  document.getElementById('modalIpTab3').classList.toggle('on', tab === 3);
+  
+  document.getElementById('modalIpTab1Btn').classList.toggle('on', tab === 1);
+  document.getElementById('modalIpTab2Btn').classList.toggle('on', tab === 2);
+  document.getElementById('modalIpTab3Btn').classList.toggle('on', tab === 3);
+}
+
+function onModalParcelSelect() {
+}
+
+async function saveInfoParcela() {
+  const id = document.getElementById('infoP_id').value;
+  const parcelId = document.getElementById('infoP_parcelId').value;
+  const letra = document.getElementById('infoP_letra').value.trim();
+  const cultura = document.getElementById('infoP_cultura').value;
+  const variedade = document.getElementById('infoP_variedade').value.trim();
+  const area = document.getElementById('infoP_area').value ? parseFloat(document.getElementById('infoP_area').value) : null;
+  const linhas = document.getElementById('infoP_linhas').value ? parseInt(document.getElementById('infoP_linhas').value) : null;
+  const quantidade = document.getElementById('infoP_quantidade').value ? parseInt(document.getElementById('infoP_quantidade').value) : null;
+  const plantio = document.getElementById('infoP_plantio').value || null;
+  const previsao_colheita = document.getElementById('infoP_previsao_colheita').value || null;
+  const nf = document.getElementById('infoP_nf').value.trim();
+  const emissao_nf = document.getElementById('infoP_emissao_nf').value || null;
+  const lote = document.getElementById('infoP_lote').value.trim();
+  const fornecedor = document.getElementById('infoP_fornecedor').value.trim();
+  const semeadura = document.getElementById('infoP_semeadura').value || null;
+  const nf2 = document.getElementById('infoP_nf2').value.trim();
+  const fornecedor2 = document.getElementById('infoP_fornecedor2').value.trim();
+  const lote2 = document.getElementById('infoP_lote2').value.trim();
+  const emissao_nf2 = document.getElementById('infoP_emissao_nf2').value || null;
+  const quantidade2 = document.getElementById('infoP_quantidade2').value ? parseInt(document.getElementById('infoP_quantidade2').value) : null;
+  const termo = document.getElementById('infoP_termo').value.trim();
+  const data_aplicacao = document.getElementById('infoP_data_aplicacao').value || null;
+  const defensivo1 = document.getElementById('infoP_defensivo1').value.trim();
+  const defensivo2 = document.getElementById('infoP_defensivo2').value.trim();
+  const obs = document.getElementById('infoP_obs').value.trim();
+  
+  if (!parcelId) return alert('Selecione uma Parcela.');
+  
+  const pObj = window._parcels.find(p => p.id === parcelId);
+  const parcela = pObj ? pObj.code : '';
+  const parcela2 = letra ? `${parcela} ${letra}` : parcela;
+  
+  const payload = {
+    tenant_id: tenantId,
+    parcel_id: parcelId,
+    parcela,
+    letra,
+    parcela2,
+    variedade,
+    cultura,
+    quantidade,
+    linhas,
+    plantio,
+    previsao_colheita,
+    area,
+    nf,
+    emissao_nf,
+    lote,
+    fornecedor,
+    semeadura,
+    nf2,
+    fornecedor2,
+    lote2,
+    emissao_nf2,
+    quantidade2,
+    termo,
+    data_aplicacao,
+    defensivo1,
+    defensivo2,
+    obs
+  };
+  
+  try {
+    let error;
+    if (id) {
+      const { error: err } = await sb.from('info_parcelas').update(payload).eq('id', id);
+      error = err;
+    } else {
+      const { error: err } = await sb.from('info_parcelas').insert([payload]);
+      error = err;
+    }
+    
+    if (error) throw error;
+    
+    toast('✓ Ciclo de Parcela salvo com sucesso!', 'ok');
+    closeInfoParcelaModal();
+    loadInfoParcelas();
+  } catch (e) {
+    alert('Erro ao salvar ciclo de parcela: ' + e.message);
+  }
+}
+
+async function deleteInfoParcela(id) {
+  if (!confirm('Deseja realmente excluir este ciclo de parcela? Isso removerá as informações de plantio e semente.')) return;
+  try {
+    const { error } = await sb.from('info_parcelas').delete().eq('id', id);
+    if (error) throw error;
+    toast('✓ Registro excluído.', 'ok');
+    loadInfoParcelas();
+  } catch (e) {
+    alert('Erro ao excluir: ' + e.message);
+  }
+}
+
+async function importStaticInfoParcelas() {
+  if (!window.infoParcelasData || window.infoParcelasData.length === 0) {
+    return alert('Arquivo infoParcelasData.js não carregou ou está vazio.');
+  }
+  
+  if (!confirm(`Importar ${window.infoParcelasData.length} registros padrão do arquivo infoParcelasData.js para a sua empresa?`)) return;
+  
+  const btn = document.getElementById('btnImportStaticInfoParcelas');
+  btn.disabled = true;
+  btn.textContent = 'Importando...';
+  
+  const { data: dbParcels } = await sb.from('parcels').select('id, code').eq('tenant_id', tenantId);
+  const parcelMap = {};
+  if (dbParcels) {
+    dbParcels.forEach(p => { parcelMap[p.code] = p.id; });
+  }
+  
+  const parseDate = (dStr) => {
+    if (!dStr) return null;
+    const parts = dStr.split('/');
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return null;
+  };
+  
+  const records = [];
+  for (const item of window.infoParcelasData) {
+    let pId = parcelMap[item.parcela] || parcelMap[item.parcela2] || null;
+    
+    if (!pId && item.parcela) {
+      try {
+        const { data: newP, error } = await sb.from('parcels').insert([{ code: item.parcela, active: true, tenant_id: tenantId }]).select('id');
+        if (!error && newP && newP[0]) {
+          pId = newP[0].id;
+          parcelMap[item.parcela] = pId;
+        }
+      } catch (e) {}
+    }
+    
+    records.push({
+      tenant_id: tenantId,
+      parcel_id: pId,
+      parcela: item.parcela || '',
+      letra: item.letra || '',
+      parcela2: item.parcela2 || '',
+      variedade: item.variedade || '',
+      cultura: item.cultura || '',
+      quantidade: item.quantidade ? parseInt(item.quantidade) : null,
+      linhas: item.linhas ? parseInt(item.linhas) : null,
+      plantio: parseDate(item.plantio),
+      previsao_colheita: parseDate(item.previsao_colheita),
+      area: item.area ? parseFloat(item.area) : null,
+      nf: item.nf ? String(item.nf) : '',
+      emissao_nf: parseDate(item.emissao_nf),
+      lote: item.lote ? String(item.lote) : '',
+      fornecedor: item.fornecedor || '',
+      semeadura: parseDate(item.semeadura),
+      nf2: item.nf2 ? String(item.nf2) : '',
+      fornecedor2: item.fornecedor2 || '',
+      lote2: item.lote2 ? String(item.lote2) : '',
+      emissao_nf2: parseDate(item.emissao_nf2),
+      quantidade2: item.quantidade2 ? parseInt(item.quantidade2) : null,
+      termo: item.termo ? String(item.termo) : '',
+      defensivo1: item.defensivo1 || '',
+      defensivo2: item.defensivo2 || '',
+      data_aplicacao: parseDate(item.data_aplicacao),
+      obs: item.obs || ''
+    });
+  }
+  
+  let successCount = 0;
+  const batchSize = 100;
+  for (let i = 0; i < records.length; i += batchSize) {
+    const batch = records.slice(i, i + batchSize);
+    try {
+      const { error } = await sb.from('info_parcelas').insert(batch);
+      if (error) throw error;
+      successCount += batch.length;
+    } catch (e) {
+      console.error('Erro ao importar lote:', e);
+    }
+  }
+  
+  toast(`✓ Importados ${successCount} de ${records.length} registros com sucesso!`, 'ok');
+  btn.disabled = false;
+  btn.textContent = 'Importar Dados Padrão';
+  loadInfoParcelas();
+  loadParcels();
+}
 </script><!-- DRAWER DE DESEMPENHO DO COLABORADOR -->
 <div id="empDrawer" class="drawer">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:32px">
@@ -7334,6 +7733,151 @@ document.addEventListener('click', (e) => {
 
   <div style="margin-top:32px">
      <button id="drPdfBtn" class="blue btn-full" onclick="exportEmpDossierPDF()">📄 Gerar Dossiê PDF</button>
+  </div>
+</div>
+
+<!-- MODAL CADASTRO/EDIÇÃO INFO PARCELA -->
+<div id="infoParcelaModal" style="display:none; position:fixed; inset:0; background:rgba(3,7,18,0.95); backdrop-filter:blur(8px); z-index:1000; padding:20px; overflow-y:auto; align-items:center; justify-content:center;">
+  <div style="background:var(--card); border:1px solid var(--border2); border-radius:24px; padding:24px; width:100%; max-width:650px; margin:auto; position:relative; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); box-sizing:border-box;">
+    <div style="position:absolute; top:20px; right:20px; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:700; font-size:16px;" onclick="closeInfoParcelaModal()">✕</div>
+    
+    <div style="margin-bottom:20px">
+      <h2 id="infoParcelaModalTitle" style="font-size:20px; font-weight:800; color:var(--text); letter-spacing:-0.5px">Cadastrar Ciclo de Parcela</h2>
+      <div style="font-size:13px; color:var(--muted2); margin-top:4px">Insira os detalhes operacionais e de rastreabilidade</div>
+    </div>
+    
+    <!-- Tab system inside Modal -->
+    <div class="tab-bar" style="margin-bottom:16px; position:static; padding:0; background:transparent; display:flex; gap:10px">
+      <button class="tab-btn on" id="modalIpTab1Btn" onclick="showModalIpTab(1)" style="flex:1; padding:8px 0; font-size:12px">1. Cultivo</button>
+      <button class="tab-btn" id="modalIpTab2Btn" onclick="showModalIpTab(2)" style="flex:1; padding:8px 0; font-size:12px">2. Semente</button>
+      <button class="tab-btn" id="modalIpTab3Btn" onclick="showModalIpTab(3)" style="flex:1; padding:8px 0; font-size:12px">3. Semeio/Manejo</button>
+    </div>
+    
+    <input type="hidden" id="infoP_id" />
+    
+    <!-- Tab 1: Cultivo -->
+    <div id="modalIpTab1" class="tab-pane on" style="padding:0">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+        <div>
+          <label class="flabel">Parcela base</label>
+          <select id="infoP_parcelId" onchange="onModalParcelSelect()" required></select>
+        </div>
+        <div>
+          <label class="flabel">Letra/Subdivisão (opcional)</label>
+          <input type="text" id="infoP_letra" placeholder="Ex: G"/>
+        </div>
+        <div>
+          <label class="flabel">Cultura</label>
+          <select id="infoP_cultura">
+            <option value="MELÃO">Melão</option>
+            <option value="MELANCIA">Melancia</option>
+            <option value="MAMÃO">Mamão</option>
+            <option value="OUTRA">Outra</option>
+          </select>
+        </div>
+        <div>
+          <label class="flabel">Variedade</label>
+          <input type="text" id="infoP_variedade" placeholder="Ex: GOLDMINE"/>
+        </div>
+        <div>
+          <label class="flabel">Área (ha)</label>
+          <input type="number" id="infoP_area" step="0.01" placeholder="Ex: 1.92"/>
+        </div>
+        <div>
+          <label class="flabel">Linhas</label>
+          <input type="number" id="infoP_linhas" step="1" placeholder="Ex: 48"/>
+        </div>
+        <div>
+          <label class="flabel">Qtd. Sementes</label>
+          <input type="number" id="infoP_quantidade" step="1" placeholder="Ex: 25000"/>
+        </div>
+        <div>
+          <label class="flabel">Data Plantio</label>
+          <input type="date" id="infoP_plantio"/>
+        </div>
+        <div style="grid-column: span 2">
+          <label class="flabel">Previsão Colheita</label>
+          <input type="date" id="infoP_previsao_colheita"/>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tab 2: Semente -->
+    <div id="modalIpTab2" class="tab-pane" style="padding:0">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+        <div>
+          <label class="flabel">Nota Fiscal Semente</label>
+          <input type="text" id="infoP_nf" placeholder="Ex: 14738"/>
+        </div>
+        <div>
+          <label class="flabel">Emissão NF Semente</label>
+          <input type="date" id="infoP_emissao_nf"/>
+        </div>
+        <div>
+          <label class="flabel">Lote Semente</label>
+          <input type="text" id="infoP_lote" placeholder="Ex: 150339498"/>
+        </div>
+        <div>
+          <label class="flabel">Fornecedor Semente</label>
+          <input type="text" id="infoP_fornecedor" placeholder="Ex: SYNGENTA SEEDS"/>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tab 3: Semeio/Manejo -->
+    <div id="modalIpTab3" class="tab-pane" style="padding:0">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+        <div>
+          <label class="flabel">Data Semeadura</label>
+          <input type="date" id="infoP_semeadura"/>
+        </div>
+        <div>
+          <label class="flabel">NF Mudas</label>
+          <input type="text" id="infoP_nf2" placeholder="Ex: 20987"/>
+        </div>
+        <div>
+          <label class="flabel">Fornecedor Mudas</label>
+          <input type="text" id="infoP_fornecedor2" placeholder="Ex: TOP PLANT"/>
+        </div>
+        <div>
+          <label class="flabel">Lote Mudas</label>
+          <input type="text" id="infoP_lote2" placeholder="Ex: 95720"/>
+        </div>
+        <div>
+          <label class="flabel">Emissão NF Mudas</label>
+          <input type="date" id="infoP_emissao_nf2"/>
+        </div>
+        <div>
+          <label class="flabel">Qtd. Mudas</label>
+          <input type="number" id="infoP_quantidade2" step="1" placeholder="Ex: 15000"/>
+        </div>
+        <div>
+          <label class="flabel">Termo Conformidade</label>
+          <input type="text" id="infoP_termo" placeholder="Ex: 51374"/>
+        </div>
+        <div>
+          <label class="flabel">Data Aplicação Defensivo</label>
+          <input type="date" id="infoP_data_aplicacao"/>
+        </div>
+        <div>
+          <label class="flabel">Defensivo 1</label>
+          <input type="text" id="infoP_defensivo1" placeholder="Ex: Premio"/>
+        </div>
+        <div>
+          <label class="flabel">Defensivo 2</label>
+          <input type="text" id="infoP_defensivo2" placeholder="Ex: Score"/>
+        </div>
+        <div style="grid-column: span 2">
+          <label class="flabel">Observações</label>
+          <textarea id="infoP_obs" rows="3" placeholder="Insira notas adicionais..."></textarea>
+        </div>
+      </div>
+    </div>
+    
+    <div style="display:flex; gap:12px; margin-top:24px">
+      <button class="btn btn-sec" style="flex:1" onclick="closeInfoParcelaModal()">Cancelar</button>
+      <button class="btn btn-primary" style="flex:2" onclick="saveInfoParcela()">Salvar Alterações</button>
+    </div>
   </div>
 </div>
 

@@ -267,6 +267,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password">
     </div>
     <button class="btn btn-primary btn-full" id="loginBtn" onclick="doLogin()">Entrar</button>
+    <button class="btn btn-sec btn-full" id="loginOfflineBtn" style="margin-top:12px; display:none; border-color:var(--orange); color:var(--orange)" onclick="doOfflineLogin()">Entrar Offline (Usar Cache)</button>
   </div>
 </div>
 
@@ -322,17 +323,15 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       <div class="module-desc">Registre capina, estufa e serviços gerais com rateio de custos</div>
       <div class="module-arrow">›</div>
     </div>
-    <div class="module-card" style="--grad:linear-gradient(90deg,#06b6d4,#2563eb)" onclick="showScreen('infoParcelas')">
-      <span class="module-icon"><i data-lucide="info"></i></span>
-      <div class="module-name">Info Parcelas</div>
-      <div class="module-desc">Consulta de sementes, plantios e previsões de colheita</div>
-      <div class="module-arrow">›</div>
-    </div>
   </div>
 
   <div style="padding:0 16px">
-    <div id="syncBadge" onclick="syncQueue()" style="display:none" class="sync-badge">
-      <i data-lucide="alert-triangle" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i> <span id="syncCount">0</span> registro(s) offline pendente(s) — Toque para sincronizar
+    <div id="syncBadge" style="display:none; align-items:center; justify-content:space-between;" class="sync-badge">
+      <span onclick="syncQueue()" style="cursor:pointer; display:inline-flex; align-items:center; flex:1">
+        <i data-lucide="alert-triangle" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i> 
+        <span id="syncCount">0</span> registro(s) offline pendente(s) — Toque para sincronizar
+      </span>
+      <button onclick="clearSyncQueue(event)" style="background:var(--red); color:#fff; border:none; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:700; cursor:pointer; margin-left:10px">Limpar</button>
     </div>
   </div>
 
@@ -582,10 +581,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
     </div>
 
     <div class="section"><div class="section-title" style="display:flex;align-items:center;gap:4px"><i data-lucide="truck" style="width:12px;height:12px"></i> Número do Carrocão</div></div>
-    <div style="padding:0 16px">
-      <select id="cCarriage" onchange="cState.carriageCode=this.options[this.selectedIndex].text; cState.carriageId=this.value;">
-        <option value="">— Selecionar Carrocão —</option>
-      </select>
+    <div style="padding:0 16px" id="cCarriageContainer">
+      <!-- Will be populated dynamically based on quantity -->
     </div>
 
     <div class="section"><div class="section-title" style="display:flex;align-items:center;gap:4px"><i data-lucide="cpu" style="width:12px;height:12px"></i> Máquina de Colheita</div></div>
@@ -1086,11 +1083,7 @@ async function loadCustomRegisters() {
 }
 
 async function loadCarraoSelects() {
-  const cSel = $('cCarriage');
-  if(cSel) {
-    cSel.innerHTML = '<option value="">— Selecionar Carrocão —</option>' + 
-      carriages.map(c => `<option value="${c.id}">${c.code} ${c.name ? '- '+c.name : ''}</option>`).join('');
-  }
+  renderCarriageSelectors();
   const mSel = $('cMachine');
   if(mSel) {
     mSel.innerHTML = '<option value="">— Selecionar Máquina (Opcional) —</option>' + 
@@ -1155,17 +1148,24 @@ async function syncQueue() {
   if (!items.length) return;
   toast(`Sincronizando ${items.length} registro(s)...`, 'ok');
   let ok = 0;
+  let errors = [];
   for (const item of items) {
     try {
       if (item.type === 'quality') await pushQuality(item.data);
-      if (item.type === 'carrao')  await pushCarrao(item.data);
+      if (item.type === 'carrao')  await pushCarrao({ session: item.data.session, workers: item.data.workers, carriageIds: item.data.carriageIds || [] });
       if (item.type === 'field_service') await pushFieldService(item.data);
       await idbDelete(item.id);
       ok++;
-    } catch(e) { console.warn('Sync fail', e); }
+    } catch(e) { 
+      console.warn('Sync fail', e); 
+      errors.push(e.message || JSON.stringify(e));
+    }
   }
   await updateSyncBadge();
   if (ok > 0) toast(`✓ ${ok} registro(s) sincronizado(s)!`, 'ok');
+  if (errors.length > 0) {
+    alert(`Alguns registros falharam na sincronização. Detalhes:\n- ${errors.slice(0, 3).join('\n- ')}\n\nSe os erros persistirem devido a dados antigos ou inválidos, você pode usar o botão 'Limpar' para remover a fila offline.`);
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -1183,6 +1183,7 @@ async function initApp() {
     await afterLogin(session.user);
   } else {
     showScreen('login');
+    checkOfflineLoginAvailability();
   }
 }
 
@@ -1203,46 +1204,92 @@ async function doLogin() {
   await afterLogin(data.user);
 }
 
+function checkOfflineLoginAvailability() {
+  const cachedTenantId = localStorage.getItem('prodtech_tenant_id');
+  const cachedUser = localStorage.getItem('prodtech_user');
+  const btn = $('loginOfflineBtn');
+  if (btn) {
+    if (cachedTenantId && cachedUser) {
+      btn.style.display = 'block';
+    } else {
+      btn.style.display = 'none';
+    }
+  }
+}
+
+async function doOfflineLogin() {
+  const cachedTenantId = localStorage.getItem('prodtech_tenant_id');
+  const cachedUser = localStorage.getItem('prodtech_user');
+  if (cachedTenantId && cachedUser) {
+    await selectTenantAndContinueOffline();
+  } else {
+    toast('Sem dados em cache para login offline.', 'err');
+  }
+}
+
 async function afterLogin(u) {
   user = u;
-  const { data: tuList, error: tuErr } = await sb.from('tenant_users')
-    .select('tenant_id, tenants(*)')
-    .eq('user_id', u.id);
+  localStorage.setItem('prodtech_user', JSON.stringify(u));
   
-  if (tuErr) { console.error('Erro ao buscar tenant:', tuErr); }
-  if (!tuList || tuList.length === 0) { alert('Usuário não vinculado a uma empresa.'); await sb.auth.signOut(); return; }
-
-  if (tuList.length === 1) {
-    await selectTenantAndContinue(tuList[0]);
-  } else {
-    // Render custom elegant modal for tenant selection to avoid browser prompt suppression
-    let modal = document.getElementById('tenantSelectModal');
-    if (!modal) {
-      document.body.insertAdjacentHTML('beforeend', `
-        <div id="tenantSelectModal" style="position:fixed; inset:0; background:rgba(15, 23, 42, 0.9); display:flex; justify-content:center; align-items:center; z-index:99999; backdrop-filter:blur(8px); padding:20px; font-family:inherit;">
-          <div style="background:#1e293b; border:1px solid #334155; border-radius:24px; padding:28px; width:100%; max-width:400px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); text-align:center; box-sizing:border-box;">
-            <div style="display:flex; justify-content:center; margin-bottom:16px; color:#3b82f6;"><i data-lucide="building-2" style="width:40px;height:40px"></i></div>
-            <h3 style="margin:0 0 8px 0; color:#f8fafc; font-size:20px; font-weight:700;">Selecionar Empresa</h3>
-            <p style="margin:0 0 24px 0; color:#94a3b8; font-size:14px; line-height:1.4;">Você está vinculado a múltiplas empresas. Escolha uma para acessar:</p>
-            <div id="tenantOptionsContainer" style="display:flex; flex-direction:column; gap:12px; max-height:250px; overflow-y:auto; padding-right:4px;"></div>
-          </div>
-        </div>
-      `);
-      modal = document.getElementById('tenantSelectModal');
-      if (window.lucide) lucide.createIcons();
+  if (!isOnline) {
+    const cachedTenantId = localStorage.getItem('prodtech_tenant_id');
+    if (cachedTenantId) {
+      await selectTenantAndContinueOffline();
+      return;
     }
+  }
+
+  try {
+    const { data: tuList, error: tuErr } = await sb.from('tenant_users')
+      .select('tenant_id, tenants(*)')
+      .eq('user_id', u.id);
     
-    const container = document.getElementById('tenantOptionsContainer');
-    container.innerHTML = tuList.map((tu, idx) => `
-      <button class="btn btn-primary btn-full" style="background:#3b82f6; border:none; padding:16px; border-radius:14px; font-weight:600; font-size:15px; text-align:left; display:flex; justify-content:space-between; align-items:center; cursor:pointer; color:#ffffff; width:100%; box-shadow:0 4px 6px -1px rgba(59,130,246,0.2); transition:transform 0.1s ease;" onclick="chooseTenantByIndex(${idx})">
-        <span>${tu.tenants?.name || 'Empresa'}</span>
-        <span style="font-size:12px; opacity:0.8;">Selecionar ›</span>
-      </button>
-    `).join('');
-    
-    // Save tuList to window context
-    window._tempTuList = tuList;
-    modal.style.display = 'flex';
+    if (tuErr) throw tuErr;
+    if (!tuList || tuList.length === 0) {
+      alert('Usuário não vinculado a uma empresa.');
+      await sb.auth.signOut();
+      return;
+    }
+
+    if (tuList.length === 1) {
+      await selectTenantAndContinue(tuList[0]);
+    } else {
+      let modal = document.getElementById('tenantSelectModal');
+      if (!modal) {
+        document.body.insertAdjacentHTML('beforeend', `
+          <div id="tenantSelectModal" style="position:fixed; inset:0; background:rgba(15, 23, 42, 0.9); display:flex; justify-content:center; align-items:center; z-index:99999; backdrop-filter:blur(8px); padding:20px; font-family:inherit;">
+            <div style="background:#1e293b; border:1px solid #334155; border-radius:24px; padding:28px; width:100%; max-width:400px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); text-align:center; box-sizing:border-box;">
+              <div style="display:flex; justify-content:center; margin-bottom:16px; color:#3b82f6;"><i data-lucide="building-2" style="width:40px;height:40px"></i></div>
+              <h3 style="margin:0 0 8px 0; color:#f8fafc; font-size:20px; font-weight:700;">Selecionar Empresa</h3>
+              <p style="margin:0 0 24px 0; color:#94a3b8; font-size:14px; line-height:1.4;">Você está vinculado a múltiplas empresas. Escolha uma para acessar:</p>
+              <div id="tenantOptionsContainer" style="display:flex; flex-direction:column; gap:12px; max-height:250px; overflow-y:auto; padding-right:4px;"></div>
+            </div>
+          </div>
+        `);
+        modal = document.getElementById('tenantSelectModal');
+        if (window.lucide) lucide.createIcons();
+      }
+      
+      const container = document.getElementById('tenantOptionsContainer');
+      container.innerHTML = tuList.map((tu, idx) => `
+        <button class="btn btn-primary btn-full" style="background:#3b82f6; border:none; padding:16px; border-radius:14px; font-weight:600; font-size:15px; text-align:left; display:flex; justify-content:space-between; align-items:center; cursor:pointer; color:#ffffff; width:100%; box-shadow:0 4px 6px -1px rgba(59,130,246,0.2); transition:transform 0.1s ease;" onclick="chooseTenantByIndex(${idx})">
+          <span>${tu.tenants?.name || 'Empresa'}</span>
+          <span style="font-size:12px; opacity:0.8;">Selecionar ›</span>
+        </button>
+      `).join('');
+      
+      window._tempTuList = tuList;
+      modal.style.display = 'flex';
+    }
+  } catch (e) {
+    console.error('Erro ao buscar tenant online, buscando cache:', e);
+    const cachedTenantId = localStorage.getItem('prodtech_tenant_id');
+    if (cachedTenantId) {
+      await selectTenantAndContinueOffline();
+    } else {
+      alert('Conexão necessária para o primeiro login.');
+      await sb.auth.signOut();
+    }
   }
 }
 
@@ -1259,6 +1306,11 @@ async function selectTenantAndContinue(tu) {
   window.farmCode = tu.tenants?.farm_code || '4';
   window.pricePerCarrao = parseFloat(tu.tenants?.value_per_carrao || 2.00);
 
+  localStorage.setItem('prodtech_tenant_id', tenantId);
+  localStorage.setItem('prodtech_tenant_name', tenantName);
+  localStorage.setItem('prodtech_farm_code', window.farmCode);
+  localStorage.setItem('prodtech_price_per_carrao', window.pricePerCarrao);
+
   window.currentInspector = user.email.split('@')[0];
   $('homeTenant').textContent = tenantName;
   $('loggedAs').textContent   = user.email;
@@ -1268,6 +1320,10 @@ async function selectTenantAndContinue(tu) {
   await loadVarieties();
   await loadFruits();
   await loadCustomRegisters();
+  
+  // Salva no cache offline
+  cacheOfflineData();
+
   await loadFieldOpSelects();
   await loadCarraoSelects();
   await initQualityForm();
@@ -1275,7 +1331,6 @@ async function selectTenantAndContinue(tu) {
   loadPhParcelas();
   loadQualitySelects();
   
-  // Inicializa assinaturas
   setTimeout(() => {
     initBulkSig();
     initQualitySig();
@@ -1283,6 +1338,9 @@ async function selectTenantAndContinue(tu) {
   }, 500);
 
   await updateSyncBadge();
+  if (isOnline) {
+    syncQueue();
+  }
 
   showScreen('home');
   if ('serviceWorker' in navigator) {
@@ -1290,8 +1348,104 @@ async function selectTenantAndContinue(tu) {
   }
 }
 
+async function selectTenantAndContinueOffline() {
+  tenantId = localStorage.getItem('prodtech_tenant_id');
+  tenantName = localStorage.getItem('prodtech_tenant_name') || 'Empresa';
+  window.farmCode = localStorage.getItem('prodtech_farm_code') || '4';
+  window.pricePerCarrao = parseFloat(localStorage.getItem('prodtech_price_per_carrao') || 2.00);
+
+  const cachedUser = localStorage.getItem('prodtech_user');
+  if (cachedUser) {
+    user = JSON.parse(cachedUser);
+    window.currentInspector = user.email.split('@')[0];
+    $('loggedAs').textContent = user.email;
+  }
+
+  $('homeTenant').textContent = tenantName;
+
+  // Carrega arrays do cache
+  employees = JSON.parse(localStorage.getItem('prodtech_employees') || '[]');
+  parcelas = JSON.parse(localStorage.getItem('prodtech_parcelas') || '[]');
+  parcelLinks = JSON.parse(localStorage.getItem('prodtech_parcel_links') || '[]');
+  fruits = JSON.parse(localStorage.getItem('prodtech_fruits') || '[]');
+  varieties = JSON.parse(localStorage.getItem('prodtech_varieties') || '[]');
+  sectors = JSON.parse(localStorage.getItem('prodtech_sectors') || '[]');
+  roles = JSON.parse(localStorage.getItem('prodtech_roles') || '[]');
+  carriages = JSON.parse(localStorage.getItem('prodtech_carriages') || '[]');
+  operations = JSON.parse(localStorage.getItem('prodtech_operations') || '[]');
+  machines = JSON.parse(localStorage.getItem('prodtech_machines') || '[]');
+
+  await loadFieldOpSelects();
+  await loadCarraoSelects();
+  await initQualityForm();
+  initCarraoForm();
+  loadPhParcelas();
+  loadQualitySelects();
+
+  setTimeout(() => {
+    initBulkSig();
+    initQualitySig();
+    initPhSig();
+  }, 500);
+
+  await updateSyncBadge();
+  showScreen('home');
+  toast('⚡ Modo Offline Ativo (cache local)', 'ok');
+}
+
+function cacheOfflineData() {
+  if (!tenantId) return;
+  try {
+    localStorage.setItem('prodtech_employees', JSON.stringify(employees || []));
+    localStorage.setItem('prodtech_parcelas', JSON.stringify(parcelas || []));
+    localStorage.setItem('prodtech_parcel_links', JSON.stringify(parcelLinks || []));
+    localStorage.setItem('prodtech_fruits', JSON.stringify(fruits || []));
+    localStorage.setItem('prodtech_varieties', JSON.stringify(varieties || []));
+    localStorage.setItem('prodtech_sectors', JSON.stringify(sectors || []));
+    localStorage.setItem('prodtech_roles', JSON.stringify(roles || []));
+    localStorage.setItem('prodtech_carriages', JSON.stringify(carriages || []));
+    localStorage.setItem('prodtech_operations', JSON.stringify(operations || []));
+    localStorage.setItem('prodtech_machines', JSON.stringify(machines || []));
+  } catch(e) {
+    console.error('Erro ao cachear offline:', e);
+  }
+}
+
+async function clearSyncQueue(e) {
+  if (e) e.stopPropagation();
+  if (!confirm('Limpar fila de sincronização offline? Registros pendentes serão perdidos permanentemente.')) return;
+  try {
+    const tx = idb.transaction('queue', 'readwrite');
+    const store = tx.objectStore('queue');
+    const req = store.clear();
+    req.onsuccess = async () => {
+      toast('Fila offline limpa!', 'ok');
+      await updateSyncBadge();
+    };
+  } catch (err) {
+    console.error('Erro ao limpar IDB:', err);
+  }
+}
+
 async function doLogout() {
-  await sb.auth.signOut();
+  try {
+    await sb.auth.signOut();
+  } catch(e) {}
+  localStorage.removeItem('prodtech_user');
+  localStorage.removeItem('prodtech_tenant_id');
+  localStorage.removeItem('prodtech_tenant_name');
+  localStorage.removeItem('prodtech_farm_code');
+  localStorage.removeItem('prodtech_price_per_carrao');
+  localStorage.removeItem('prodtech_employees');
+  localStorage.removeItem('prodtech_parcelas');
+  localStorage.removeItem('prodtech_parcel_links');
+  localStorage.removeItem('prodtech_fruits');
+  localStorage.removeItem('prodtech_varieties');
+  localStorage.removeItem('prodtech_sectors');
+  localStorage.removeItem('prodtech_roles');
+  localStorage.removeItem('prodtech_carriages');
+  localStorage.removeItem('prodtech_operations');
+  localStorage.removeItem('prodtech_machines');
   location.reload();
 }
 
@@ -1851,10 +2005,33 @@ function setFruit(id) {
 }
 
 let cQty = 1;
+
+function renderCarriageSelectors() {
+  const container = $('cCarriageContainer');
+  if (!container) return;
+  
+  let html = '';
+  const optionsHtml = (carriages || []).map(c => `<option value="${c.id}">${c.code} ${c.name ? '- '+c.name : ''}</option>`).join('');
+  
+  for (let i = 0; i < cQty; i++) {
+    html += `
+      <div style="margin-bottom: 8px">
+        <label class="flabel" style="font-size: 11px; margin-bottom: 4px; display: block; color: var(--muted)">Carrocão ${i + 1}</label>
+        <select class="c-carriage-select" style="width: 100%; font-size: 13px" required>
+          <option value="">— Selecionar Carrocão —</option>
+          ${optionsHtml}
+        </select>
+      </div>
+    `;
+  }
+  container.innerHTML = html;
+}
+
 function cQtyChange(d) {
   cQty = Math.max(1, cQty + d);
   $('cQtyVal').textContent = cQty;
   updateCalcPreview();
+  renderCarriageSelectors();
 }
 
 function updateCalcPreview() {
@@ -1878,6 +2055,11 @@ async function submitCarrao() {
   if (!date)              { toast('Informe a data', 'err'); return; }
   if (!regBy)             { toast('Informe quem está registrando', 'err'); return; }
   if (cState.workers.size === 0) { toast('Selecione ao menos 1 funcionário', 'err'); return; }
+
+  const carriageSelects = document.querySelectorAll('.c-carriage-select');
+  const carriageIds = Array.from(carriageSelects).map(sel => sel.value).filter(Boolean);
+  
+  if (carriageIds.length < cQty) { toast('Selecione todos os carrocões', 'err'); return; }
 
   const price    = window.pricePerCarrao || 2.00;
   const total    = cQty * price;
@@ -1920,7 +2102,7 @@ async function submitCarrao() {
     registered_by     : regBy,
     julian_lot        : julianLot,
     synced            : true,
-    carriage_id       : cState.carriageId || null,
+    carriage_id       : carriageIds[0] || null,
   };
 
 
@@ -1932,7 +2114,7 @@ async function submitCarrao() {
   btn.disabled = true; btn.textContent = '⏳ Salvando...';
 
   try {
-    const savedList = await pushCarrao({ session, workers: workersArr });
+    const savedList = await pushCarrao({ session, workers: workersArr, carriageIds: carriageIds });
     showOrdemColheita(savedList);
     toast('✓ Carrões registrados!', 'ok');
     resetCForm();
@@ -1941,13 +2123,13 @@ async function submitCarrao() {
       const mockList = [];
       for (let i = 0; i < cQty; i++) {
         mockList.push({
-          session: { ...session, qty_carrocoes: 1, carrao_seq: 'OFFLINE' },
+          session: { ...session, qty_carrocoes: 1, carrao_seq: 'OFFLINE', carriage_id: carriageIds[i] || null },
           workers: workersArr
         });
       }
       showOrdemColheita(mockList);
 
-      await idbAdd({ type: 'carrao', data: { session: { ...session, synced: false }, workers: workersArr } });
+      await idbAdd({ type: 'carrao', data: { session: { ...session, synced: false }, workers: workersArr, carriageIds: carriageIds } });
       await updateSyncBadge();
       toast('📥 Salvo offline — sincronizará quando online', 'ok');
       resetCForm();
@@ -2048,7 +2230,7 @@ function showOrdemColheita(list) {
   else toast('Permita pop-ups para imprimir a ordem', 'err');
 }
 
-async function pushCarrao({ session, workers }) {
+async function pushCarrao({ session, workers, carriageIds = [] }) {
   // Busca o último seq para este tenant (independente da data, para ser sequencial global)
   let nextSeq = 1;
   try {
@@ -2076,7 +2258,8 @@ async function pushCarrao({ session, workers }) {
       qty_carrocoes: 1, 
       total_value: session.price_per_carrao, 
       value_per_employee: session.price_per_carrao / session.employee_count,
-      carrao_seq: nextSeq + i
+      carrao_seq: nextSeq + i,
+      carriage_id: carriageIds[i] || session.carriage_id || null
     };
     sessionsToInsert.push(sObj);
 
@@ -2110,6 +2293,7 @@ function resetCForm() {
   // Somente COLHEDOR no reset
   renderCEmpList(employees.filter(e => e.role === 'COLHEDOR'));
   updateCalcPreview();
+  renderCarriageSelectors();
 }
 
 // ── Packing House Logic ──
