@@ -16,7 +16,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
-<script src="infoParcelasData.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -972,6 +971,7 @@ const BRL = v => 'R$ ' + Number(v||0).toFixed(2).replace('.',',');
 let sb, user, tenantId, tenantName;
 let employees  = [];   // [{id, name, role, barcode}]
 let parcelas   = [];   // [{id, code}]
+let infoParcelasData = [];
 let isOnline   = navigator.onLine;
 
 const qState = { empId: null, empBarcode: null, empName: '', issue: null, varietyId: null, parcelId: null };
@@ -1178,22 +1178,64 @@ async function initApp() {
   window.addEventListener('offline', () => { isOnline = false; updateOnlineDots(); });
   updateOnlineDots();
 
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    await afterLogin(session.user);
+  const cachedUser = localStorage.getItem('prodtech_user');
+  const cachedTenantId = localStorage.getItem('prodtech_tenant_id');
+
+  if (cachedUser && cachedTenantId) {
+    // Auto-login imediato usando dados locais cacheados
+    await selectTenantAndContinueOffline();
+    
+    // Se estiver online, revalida a sessão em segundo plano silenciosamente
+    if (isOnline) {
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) {
+          user = session.user;
+          localStorage.setItem('prodtech_user', JSON.stringify(session.user));
+          // Atualiza dados de suporte em segundo plano
+          Promise.all([
+            loadEmployees(),
+            loadParcelas(),
+            loadParcelLinks(),
+            loadVarieties(),
+            loadFruits(),
+            loadCustomRegisters(),
+            loadInfoParcelas()
+          ]).then(cacheOfflineData).catch(e => console.warn('Erro ao atualizar cache:', e));
+        }
+      } catch (e) {
+        console.warn('Erro ao atualizar dados em segundo plano:', e);
+      }
+    }
   } else {
-    showScreen('login');
-    checkOfflineLoginAvailability();
+    // Caso contrário, tenta login online padrão
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        await afterLogin(session.user);
+      } else {
+        showScreen('login');
+        checkOfflineLoginAvailability();
+      }
+    } catch(e) {
+      showScreen('login');
+      checkOfflineLoginAvailability();
+    }
   }
 }
 
 async function doLogin() {
-  const email = $('loginEmail').value.trim();
+  let email = $('loginEmail').value.trim();
   const pass  = $('loginPass').value;
   const btn   = $('loginBtn');
   const err   = $('loginErr');
   err.style.display = 'none';
   btn.disabled = true; btn.textContent = 'Entrando...';
+  
+  if (email && !email.includes('@')) {
+    email = email + '@coopyfrutas.com';
+  }
+  
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
   if (error) {
     err.textContent = 'Email ou senha incorretos.';
@@ -1320,6 +1362,7 @@ async function selectTenantAndContinue(tu) {
   await loadVarieties();
   await loadFruits();
   await loadCustomRegisters();
+  await loadInfoParcelas();
   
   // Salva no cache offline
   cacheOfflineData();
@@ -1374,6 +1417,7 @@ async function selectTenantAndContinueOffline() {
   carriages = JSON.parse(localStorage.getItem('prodtech_carriages') || '[]');
   operations = JSON.parse(localStorage.getItem('prodtech_operations') || '[]');
   machines = JSON.parse(localStorage.getItem('prodtech_machines') || '[]');
+  infoParcelasData = JSON.parse(localStorage.getItem('prodtech_info_parcelas') || '[]');
 
   await loadFieldOpSelects();
   await loadCarraoSelects();
@@ -1406,6 +1450,7 @@ function cacheOfflineData() {
     localStorage.setItem('prodtech_carriages', JSON.stringify(carriages || []));
     localStorage.setItem('prodtech_operations', JSON.stringify(operations || []));
     localStorage.setItem('prodtech_machines', JSON.stringify(machines || []));
+    localStorage.setItem('prodtech_info_parcelas', JSON.stringify(infoParcelasData || []));
   } catch(e) {
     console.error('Erro ao cachear offline:', e);
   }
@@ -1528,19 +1573,27 @@ async function loadFruits() {
 }
 
 let varieties = [];
-async function loadVarieties() {
-  const { data } = await sb.from('varieties')
-    .select('id, name, track_code, fruit_id')
-    .eq('tenant_id', tenantId)
-    .eq('active', true)
-    .order('name');
-  varieties = data || [];
-  const sel = $('cVariety');
-  if(sel) {
-    sel.innerHTML = '<option value="">— Variedade —</option>';
-    varieties.forEach(v => sel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
+  async function loadVarieties() {
+    const { data } = await sb.from('varieties')
+      .select('id, name, track_code, fruit_id')
+      .eq('tenant_id', tenantId)
+      .eq('active', true)
+      .order('name');
+    varieties = data || [];
+    const sel = $('cVariety');
+    if(sel) {
+      sel.innerHTML = '<option value="">— Variedade —</option>';
+      varieties.forEach(v => sel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
+    }
   }
-}
+
+  async function loadInfoParcelas() {
+    const { data } = await sb.from('info_parcelas')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false });
+    infoParcelasData = data || [];
+  }
 
 // ═══════════════════════════════════════════
 // ──── MÓDULO QUALIDADE ────

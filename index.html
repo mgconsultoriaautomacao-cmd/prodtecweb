@@ -1278,6 +1278,36 @@
         <div class="title"><i data-lucide="users" class="btn-i"></i> Usuários com acesso ao painel</div>
         <table id="usersTable"><thead><tr><th>Usuário</th><th>Papel</th><th>WhatsApp</th></tr></thead><tbody></tbody></table>
       </div>
+      <div class="card">
+        <div class="title"><i data-lucide="user-plus" class="btn-i"></i> Cadastrar Novo Usuário</div>
+        <div style="font-size:12px; color:var(--muted); margin-bottom:15px">Cadastre novas credenciais de login para a sua empresa.</div>
+        <form id="formNewUser" onsubmit="event.preventDefault(); registerNewUser();">
+          <div style="margin-bottom:10px">
+            <label class="flabel">Nome de Usuário (Username)</label>
+            <input id="newUsrName" placeholder="Ex: joao" required style="width:100%; box-sizing:border-box;" oninput="const val = this.value.trim().toLowerCase(); document.getElementById('newUsrEmailPreview').textContent = val ? (val.includes('@') ? val : val + '@coopyfrutas.com') : '...';"/>
+            <small style="color:var(--muted2); font-size:10px;">Login gerado: <span id="newUsrEmailPreview" style="color:var(--blue); font-weight:bold;">...</span></small>
+          </div>
+          <div style="margin-bottom:10px">
+            <label class="flabel">Senha</label>
+            <input id="newUsrPass" type="password" placeholder="Mínimo 6 caracteres" required style="width:100%; box-sizing:border-box;"/>
+          </div>
+          <div style="margin-bottom:10px">
+            <label class="flabel">Papel (Role)</label>
+            <select id="newUsrRole" style="width:100%; box-sizing:border-box; padding:8px; border-radius:8px; background:var(--bg); border:1px solid var(--border); color:var(--text); font-family:inherit;">
+              <option value="ADMIN">Administrador</option>
+              <option value="MANAGER">Gerente</option>
+              <option value="PACKING">Operador Packing</option>
+              <option value="FIELD">Operador Campo</option>
+              <option value="COLHEDOR">Colhedor</option>
+            </select>
+          </div>
+          <div style="margin-bottom:15px">
+            <label class="flabel">WhatsApp (Opcional)</label>
+            <input id="newUsrWhatsapp" placeholder="Ex: 5511999999999" style="width:100%; box-sizing:border-box;"/>
+          </div>
+          <button id="btnRegisterNewUser" type="submit" style="width:100%; display:flex; align-items:center; justify-content:center; gap:6px; background:linear-gradient(135deg,#10b981,#059669); border:none; color:#fff; font-weight:bold; height:38px; border-radius:10px; cursor:pointer;"><i data-lucide="user-plus" style="width:16px;height:16px"></i> Cadastrar Usuário</button>
+        </form>
+      </div>
     </div>
     <button id="cfgSaveBtn" onclick="saveSettings()" style="margin-top:20px; display:flex; align-items:center; justify-content:center; gap:6px"><i data-lucide="save" style="width:16px;height:16px"></i> Salvar Configurações</button>
     <div id="cfgStatus" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>
@@ -1650,7 +1680,7 @@
       <!-- Zone 1: Packing House -->
       <div class="e3d-zone" style="border: 1px dashed rgba(245,158,11,0.3);">
         <div style="font-size: 15px; font-weight: 900; color: #f59e0b; margin-bottom: 14px; letter-spacing: 1px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <span style="display:flex;align-items:center;gap:8px;"><i data-lucide="warehouse" style="width:16px;height:16px"></i> ZONE 1 — PACKING HOUSE</span>
+          <span style="display:flex;align-items:center;gap:8px;"><i data-lucide="warehouse" style="width:16px;height:16px"></i> PACKING HOUSE</span>
           <button id="e3d-select-mode-btn" onclick="e3dToggleSelectionMode()" style="margin-left:auto; font-size:10px; font-weight:800; padding:5px 12px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.2s;">
             <i data-lucide="check-square" style="width:13px;height:13px"></i> Seleção em Lote
           </button>
@@ -1671,7 +1701,7 @@
       <!-- Zone 2: Câmara Fria -->
       <div class="e3d-zone" style="border: 1px dashed rgba(6,182,212,0.3);">
         <div style="font-size: 15px; font-weight: 900; color: #06b6d4; margin-bottom: 20px; letter-spacing: 1px; display:flex; align-items:center; gap:8px;">
-          <i data-lucide="snowflake" style="width:16px;height:16px"></i> ZONE 2 — CÂMARA FRIA
+          <i data-lucide="snowflake" style="width:16px;height:16px"></i> CÂMARA FRIA
         </div>
         <div id="e3d-grid-cold">
           <!-- slots rendered via JS -->
@@ -1766,11 +1796,11 @@
         <div id="e3d-cfg-tab-galpao" style="display:none;">
           <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:12px;">
             <div>
-              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Posições Packing House (Zone 1)</label>
+              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Posições Packing House</label>
               <input type="number" id="e3d-cfg-packing-cap" style="padding:6px; border-radius:6px; background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; width:100%">
             </div>
             <div>
-              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Posições Câmara Fria (Zone 2)</label>
+              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Posições Câmara Fria</label>
               <input type="number" id="e3d-cfg-cold-cap" style="padding:6px; border-radius:6px; background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; width:100%">
             </div>
             <button class="btn blue" onclick="e3dSaveGalpaoCapacities()" style="padding:8px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer">Salvar Capacidades</button>
@@ -1888,9 +1918,14 @@ async function initApp(){
 }
 
 async function doLogin(){
-  const email=$('authEmail').value.trim(), pass=$('authPass').value;
+  let email=$('authEmail').value.trim(), pass=$('authPass').value;
   const btn=$('authBtn'), err=$('authErr');
   err.style.display='none'; btn.disabled=true; btn.textContent='Entrando...';
+  
+  if (email && !email.includes('@')) {
+    email = email + '@coopyfrutas.com';
+  }
+  
   const {data,error} = await sb.auth.signInWithPassword({email,password:pass});
   if(error){err.textContent='Email ou senha incorretos.';err.style.display='block';btn.disabled=false;btn.textContent='Entrar';return;}
   await afterLogin(data.user);
@@ -4874,8 +4909,14 @@ async function loadSettings(){
   if($('cfgLunchStart')) $('cfgLunchStart').value=data.lunch_start_time||'11:30';
   if($('cfgLunchEnd')) $('cfgLunchEnd').value=data.lunch_end_time||'13:00';
 
-  const {data:users}=await sb.from('tenant_users').select('role,whatsapp').eq('tenant_id',tenantId);
-  $('usersTable').querySelector('tbody').innerHTML=(users||[]).map(u=>`<tr><td><span class="badge packer">${u.role}</span></td><td>${u.whatsapp||'—'}</td></tr>`).join('');
+  const {data:users}=await sb.from('tenant_users').select('email,role,whatsapp').eq('tenant_id',tenantId);
+  $('usersTable').querySelector('tbody').innerHTML=(users||[]).map(u=>`
+    <tr>
+      <td><b>${u.email || '—'}</b></td>
+      <td><span class="badge packer">${u.role}</span></td>
+      <td>${u.whatsapp||'—'}</td>
+    </tr>
+  `).join('');
 }
 
 async function saveSettings(){
@@ -4919,6 +4960,51 @@ async function saveSettings(){
     btn.disabled=false;
     console.error('Save Settings Exception:', e);
     st.innerHTML=`<span style="color:var(--red)">Erro inesperado: ${e.message}</span>`;
+  }
+}
+
+async function registerNewUser() {
+  const username = $('newUsrName').value.trim().toLowerCase();
+  const password = $('newUsrPass').value;
+  const role     = $('newUsrRole').value;
+  const whatsapp = $('newUsrWhatsapp').value.trim();
+  const btn      = $('btnRegisterNewUser');
+
+  if (!username || !password) return;
+  if (password.length < 6) {
+    alert('A senha deve ter pelo menos 6 caracteres.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Cadastrando...';
+
+  const email = username.includes('@') ? username : username + '@coopyfrutas.com';
+
+  try {
+    const { data, error } = await sb.rpc('create_new_user', {
+      new_email: email,
+      new_password: password,
+      new_tenant_id: tenantId,
+      new_role: role,
+      new_whatsapp: whatsapp
+    });
+
+    if (error) {
+      alert('Erro ao cadastrar usuário: ' + error.message);
+    } else {
+      toast('✓ Usuário cadastrado e vinculado com sucesso!', 'ok');
+      $('formNewUser').reset();
+      document.getElementById('newUsrEmailPreview').textContent = '...';
+      await loadSettings();
+    }
+  } catch (e) {
+    console.error(e);
+    alert('Erro inesperado ao cadastrar usuário: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Cadastrar Usuário';
+    if (window.lucide) lucide.createIcons();
   }
 }
 
@@ -5689,6 +5775,7 @@ async function loadRomaneios() {
         <td style="text-align:right; display:flex; gap:6px; justify-content:flex-end;">
           <button class="sec" onclick="printRomaneioLabel('${r.id}', \`${r.variedade}\`, \`${r.fazenda}\`, '${r.lote}', '${r.quantidade_pallets}', \`${r.tipo_caixa||''}\`, '${r.peso_caixa||''}', '${r.caixas_pallet||''}', '${r.data_expedicao}')" title="Gerar Etiqueta de Pallet 35x60">🏷️ Pallet</button>
           <button class="btn" onclick="printBoxLabels('${r.id}', \`${r.variedade}\`, \`${r.fazenda}\`, '${r.lote}', '${r.quantidade_pallets}', '${r.caixas_pallet||54}', '${r.calibre||''}', '${r.tipo_caixa||''}', '${r.peso_caixa||13}', '${r.data_expedicao}')" title="Imprimir etiquetas individuais de caixa" style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:#10b981;font-size:11px;">📦 Caixas</button>
+          <button class="btn" onclick="printRomaneioReport('${r.id}')" title="Gerar Romaneio de Expedição em PDF" style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.4);color:#3b82f6;font-size:11px;">📄 PDF</button>
         </td>
       </tr>
     `);
@@ -5996,6 +6083,175 @@ async function e3dConfirmBatchDispatch() {
     loadRomaneios();
     toast('📋 Romaneio gerado! Imprima as etiquetas de caixa abaixo.', 'success');
   }, 900);
+}
+
+async function printRomaneioReport(id) {
+  toast('⏳ Carregando dados do Romaneio...', 'info');
+  try {
+    const { data: initialRecord, error: err1 } = await sb.from('romaneios').select('*').eq('id', id).single();
+    if (err1 || !initialRecord) {
+      alert('Erro ao carregar dados do romaneio principal: ' + (err1?.message || 'não encontrado'));
+      return;
+    }
+    
+    // Buscar todos os itens associados ao mesmo romaneio (mesmo cliente, data e lote juliano)
+    const { data: items, error: err2 } = await sb.from('romaneios')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('cliente', initialRecord.cliente)
+      .eq('data_expedicao', initialRecord.data_expedicao)
+      .eq('lote', initialRecord.lote);
+      
+    if (err2 || !items || items.length === 0) {
+      alert('Erro ao carregar os itens consolidados do romaneio.');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) {
+      alert('Por favor, permita pop-ups para visualizar o relatório em PDF.');
+      return;
+    }
+
+    const tenantLabel = tenantName || 'Coopyfrutas';
+    const dateFormatted = new Date(initialRecord.data_expedicao + 'T12:00:00').toLocaleDateString('pt-BR');
+    
+    // Agrupa e consolida totais
+    let totalPallets = 0;
+    let totalBoxes = 0;
+    let totalWeight = 0;
+
+    const tableRowsHtml = items.map(it => {
+      const pallets = parseInt(it.quantidade_pallets) || 0;
+      const boxesPerPallet = parseInt(it.caixas_pallet) || 0;
+      const totalBoxesItem = pallets * boxesPerPallet;
+      const weight = parseFloat(it.total_quilos) || 0;
+
+      totalPallets += pallets;
+      totalBoxes += totalBoxesItem;
+      totalWeight += weight;
+
+      return `
+        <tr>
+          <td style="padding:10px; border-bottom:1px solid #ddd;">\${it.variedade.toUpperCase()}</td>
+          <td style="padding:10px; border-bottom:1px solid #ddd; text-align:center;">\${it.calibre || '—'}</td>
+          <td style="padding:10px; border-bottom:1px solid #ddd; text-align:center;">\${(it.tipo_caixa || 'Padrão').toUpperCase()}</td>
+          <td style="padding:10px; border-bottom:1px solid #ddd; text-align:center; font-weight:bold;">\${pallets}</td>
+          <td style="padding:10px; border-bottom:1px solid #ddd; text-align:center;">\${boxesPerPallet}</td>
+          <td style="padding:10px; border-bottom:1px solid #ddd; text-align:center; font-weight:bold;">\${totalBoxesItem}</td>
+          <td style="padding:10px; border-bottom:1px solid #ddd; text-align:right;">\${weight.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} kg</td>
+        </tr>
+      `;
+    }).join('');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Romaneio de Expedição — \${initialRecord.lote}</title>
+        <style>
+          body { font-family: 'Arial', sans-serif; color: #333; padding: 20px; line-height: 1.4; margin: 0; }
+          .header-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+          .header-title { font-size: 24px; font-weight: 800; text-transform: uppercase; color: #111; letter-spacing: -0.5px; }
+          .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+          .meta-table td { padding: 8px 12px; border: 1px solid #ccc; font-size: 13px; }
+          .meta-label { font-weight: bold; background-color: #f5f5f5; width: 18%; }
+          .items-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
+          .items-table th { padding: 12px 10px; background-color: #333; color: #fff; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; }
+          .items-table th:first-child { text-align: left; }
+          .items-table th:last-child { text-align: right; }
+          .totals-row td { padding: 12px 10px; font-weight: 900; background-color: #f5f5f5; border-top: 2px solid #333; border-bottom: 2px solid #333; }
+          .signature-area { width: 100%; margin-top: 60px; page-break-inside: avoid; }
+          .signature-box { border-top: 1px solid #333; text-align: center; padding-top: 8px; font-size: 12px; font-weight: bold; width: 28%; }
+          @media print {
+            body { padding: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <table class="header-table">
+          <tr>
+            <td>
+              <div style="font-size: 18px; font-weight: 800; color: #555;">\${tenantLabel.toUpperCase()}</div>
+              <div style="font-size: 11px; color: #777; margin-top: 2px;">Sistema de Gestão WMS / Rastreabilidade ProdTec</div>
+            </td>
+            <td style="text-align: right; vertical-align: bottom;">
+              <div class="header-title">Romaneio de Expedição</div>
+              <div style="font-size: 14px; font-weight: bold; color: #3b82f6; margin-top: 4px;">LOTE: \${initialRecord.lote}</div>
+            </td>
+          </tr>
+        </table>
+
+        <table class="meta-table">
+          <tr>
+            <td class="meta-label">Cliente / Destinatário:</td>
+            <td><strong>\${initialRecord.cliente.toUpperCase()}</strong></td>
+            <td class="meta-label">Data de Saída:</td>
+            <td><strong>\${dateFormatted}</strong></td>
+          </tr>
+          <tr>
+            <td class="meta-label">Fazenda de Origem:</td>
+            <td>\${initialRecord.fazenda.toUpperCase()}</td>
+            <td class="meta-label">Tipo de Mercado:</td>
+            <td><span style="font-weight: bold; text-transform: uppercase;">\${(initialRecord.tipo_mercado || 'Mercado Interno').toUpperCase()}</span></td>
+          </tr>
+        </table>
+
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th style="text-align: left;">Variedade / Produto</th>
+              <th>Calibre</th>
+              <th>Modelo Caixa</th>
+              <th>Qtd Pallets</th>
+              <th>Caixas / Pallet</th>
+              <th>Total Caixas</th>
+              <th style="text-align: right;">Peso Líquido Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            \${tableRowsHtml}
+            <tr class="totals-row">
+              <td colspan="3" style="text-align: left;">TOTAL GERAL:</td>
+              <td style="text-align: center;">\${totalPallets}</td>
+              <td style="text-align: center;">—</td>
+              <td style="text-align: center;">\${totalBoxes}</td>
+              <td style="text-align: right;">\${totalWeight.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})} kg</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="font-size: 11px; color: #666; margin-bottom: 20px; line-height: 1.5; font-style: italic;">
+          * Este documento atesta a rastreabilidade e a procedência do lote expedido em conformidade com as diretrizes do caderno de campo e GlobalG.A.P. da Coopyfrutas.
+        </div>
+
+        <table class="signature-area" style="width: 100%;">
+          <tr>
+            <td style="width: 8%"></td>
+            <td class="signature-box">Responsável Expedição</td>
+            <td style="width: 28%"></td>
+            <td class="signature-box">Motorista / Transportador</td>
+            <td style="width: 8%"></td>
+          </tr>
+        </table>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() { window.print(); }, 500);
+          }
+        <\/script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  } catch (e) {
+    console.error(e);
+    alert('Erro crítico ao gerar PDF do romaneio.');
+  }
 }
 
 function printRomaneioLabel(id, variedade, fazenda, lote, pallets, tipoCaixa, pesoCaixa, caixasPallet, dataExp) {
