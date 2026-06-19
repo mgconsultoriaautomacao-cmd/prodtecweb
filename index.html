@@ -5840,7 +5840,7 @@ function printBoxLabels(id, variedade, fazenda, lote, quantPallets, caixasPallet
   const numPallets = parseInt(quantPallets) || 1;
   const numCaixas = parseInt(caixasPallet) || 54;
   const totalCaixas = numPallets * numCaixas;
-  const julianCode = e3dGetJulianCode(dataExp ? new Date(dataExp + 'T12:00:00') : new Date());
+  const julianCode = lote || e3dGetJulianCode(dataExp ? new Date(dataExp + 'T12:00:00') : new Date());
   const dataStr = dataExp ? new Date(dataExp + 'T12:00:00').toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
   const varName = (variedade || 'MELÃO').toUpperCase();
   const fazendaStr = (fazenda || 'FAZENDA COOPYFRUTAS').toUpperCase();
@@ -6255,9 +6255,6 @@ async function printRomaneioReport(id) {
 }
 
 function printRomaneioLabel(id, variedade, fazenda, lote, pallets, tipoCaixa, pesoCaixa, caixasPallet, dataExp) {
-  var traceUrl = window.location.origin + "/info?id=" + id;
-  var printWindow = window.open('', '_blank', 'width=500,height=400');
-  
   // Trata os valores da nova interface
   var varName = variedade ? variedade.toUpperCase() : 'MELÃO AMARELO';
   var caixaName = tipoCaixa ? 'CAIXA ' + tipoCaixa.toUpperCase() : 'CAIXA SAMBA';
@@ -6265,7 +6262,13 @@ function printRomaneioLabel(id, variedade, fazenda, lote, pallets, tipoCaixa, pe
   var dataStr = dataExp ? new Date(dataExp + 'T12:00:00').toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
   var origemStr = fazenda ? fazenda.toUpperCase() : 'FAZENDA COOPYFRUTAS';
   var loteStr = lote || id.toString().slice(-6).toUpperCase();
-  var trackCode = "ASXQY4F" + id.toString().slice(-4).toUpperCase();
+  var trackCode = loteStr;
+  var traceUrl = window.location.origin + "/info?id=" + id + 
+                 "&date=" + (dataExp || '') + 
+                 "&farm=" + encodeURIComponent(fazenda || '') + 
+                 "&variety=" + encodeURIComponent(variedade || '') + 
+                 "&lote=" + encodeURIComponent(loteStr);
+  var printWindow = window.open('', '_blank', 'width=500,height=400');
   
   // Caixas no pallet
   var totalCaixasStr = "";
