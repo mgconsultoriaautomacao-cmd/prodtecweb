@@ -1,20 +1,36 @@
-const CACHE_NAME = 'prodtech-campo-v10';
+const CACHE_NAME = 'prodtech-campo-v11';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
 ];
 
-// FETCH: Network-first para navegação, cache-first para assets estáticos
+// INSTALL: pre-caches the local assets
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+  );
+});
+
+// ACTIVATE: cleans up old caches
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+    )
+  );
+});
+
+// FETCH: Network-first for navigation, cache-first for static assets
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Supabase, googleapis, jsdelivr: NÃO interceptar — deixar o browser gerenciar
+  // Supabase, googleapis, jsdelivr: do NOT intercept — let browser handle it directly
   if (url.hostname.includes('supabase.co') || url.hostname.includes('googleapis') || url.hostname.includes('jsdelivr')) {
-    return; // Não chamar respondWith — request segue normalmente pelo browser
+    return;
   }
 
-  // Navegação: network-first com fallback para cache
+  // Navigation: network-first with cache fallback
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)

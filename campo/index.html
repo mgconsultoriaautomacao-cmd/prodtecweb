@@ -1224,6 +1224,14 @@ async function initApp() {
   }
 }
 
+async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
+
 async function doLogin() {
   let email = $('loginEmail').value.trim();
   const pass  = $('loginPass').value;
@@ -1236,13 +1244,47 @@ async function doLogin() {
     email = email + '@coopyfrutas.com';
   }
   
-  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  let data = null, error = null;
+  if (isOnline) {
+    try {
+      const res = await sb.auth.signInWithPassword({ email, password: pass });
+      data = res.data;
+      error = res.error;
+    } catch (e) {
+      error = e;
+    }
+  }
+
+  const isNetworkError = error && (error.message?.includes('fetch') || error.message?.includes('NetworkError') || error.status === 0 || !isOnline);
+  if (!isOnline || isNetworkError) {
+    const cachedUser = localStorage.getItem('prodtech_user');
+    const cachedHash = localStorage.getItem('prodtech_password_hash');
+    if (cachedUser && cachedHash) {
+      const u = JSON.parse(cachedUser);
+      const typedEmail = email.toLowerCase();
+      const typedHash = await sha256(pass);
+      const cachedEmail = u.email.toLowerCase();
+      if ((cachedEmail === typedEmail || cachedEmail.split('@')[0] === typedEmail.split('@')[0]) && typedHash === cachedHash) {
+        await selectTenantAndContinueOffline();
+        btn.disabled = false; btn.textContent = 'Entrar';
+        return;
+      }
+    }
+    err.textContent = isOnline ? 'Erro de rede. Verifique sua conexão ou tente novamente.' : 'Sem conexão. E-mail ou senha incorretos para login offline.';
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Entrar';
+    return;
+  }
+
   if (error) {
     err.textContent = 'Email ou senha incorretos.';
     err.style.display = 'block';
     btn.disabled = false; btn.textContent = 'Entrar';
     return;
   }
+  
+  const passHash = await sha256(pass);
+  localStorage.setItem('prodtech_password_hash', passHash);
   await afterLogin(data.user);
 }
 
@@ -1491,6 +1533,7 @@ async function doLogout() {
   localStorage.removeItem('prodtech_carriages');
   localStorage.removeItem('prodtech_operations');
   localStorage.removeItem('prodtech_machines');
+  localStorage.removeItem('prodtech_password_hash');
   location.reload();
 }
 
