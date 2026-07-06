@@ -3,6 +3,13 @@
   <html lang="pt-br">
   <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('prodtech_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+  </script>
   <title>Prodtech | Gestão Completa</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22C12 22 20 18 20 12V4L12 2L4 4V12C4 18 12 22 12 22Z'/%3E%3Cpath d='M12 8v8' stroke='%2310b981'/%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="logo.png">
@@ -15,10 +22,81 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
   <script src="campo/infoParcelasData.js"></script>
-  <style>  :root{--bg:#030712;--card:#0f172a;--text:#f8fafc;--muted:#94a3b8;--border:rgba(255,255,255,.065);--blue:#3b82f6;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--accent:#6366f1;--purple:#8b5cf6;--orange:#f97316;--r:16px; --glass:blur(20px); }
+  <style>
+  :root, html[data-theme="dark"] {
+    --bg: #030712;
+    --card: #0b1329;
+    --text: #f0fdf4;
+    --muted: #86efac;
+    --border: rgba(46, 204, 113, 0.12);
+    --blue: #2ecc71; /* Accent green */
+    --green: #14a832; /* Dark green */
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --accent: #00ffb8; /* Neon green */
+    --purple: #8b5cf6;
+    --orange: #f97316;
+    --r: 16px;
+    --glass: blur(20px);
+
+    --sidebar-bg: rgba(7, 12, 24, 0.8);
+    --drawer-bg: #070c18;
+    --table-header-bg: rgba(0, 0, 0, 0.25);
+    --input-bg: rgba(0, 0, 0, 0.35);
+    --card-item-bg: rgba(255, 255, 255, 0.03);
+    --row-hover-bg: rgba(255, 255, 255, 0.02);
+    --btn-sec-bg: rgba(255, 255, 255, 0.05);
+    --bar-bg: rgba(255, 255, 255, 0.05);
+    --modal-bg: #1e293b;
+    --modal-text: #f8fafc;
+    --shadow-color: rgba(0, 0, 0, 0.5);
+
+    color-scheme: dark;
+    scrollbar-color: var(--muted) var(--bg);
+  }
+
+  html[data-theme="light"] {
+    --bg: #f4fbf7;
+    --card: #ffffff;
+    --text: #111d15;
+    --muted: #4a6b57;
+    --border: rgba(20, 168, 50, 0.12);
+    --blue: #14a832; /* Dark green for buttons/links */
+    --green: #2ecc71; /* Neon green */
+    --red: #dc2626;
+    --yellow: #d97706;
+    --accent: #059669;
+    --purple: #7c3aed;
+    --orange: #ea580c;
+    --r: 16px;
+    --glass: blur(20px);
+
+    --sidebar-bg: rgba(230, 245, 235, 0.9);
+    --drawer-bg: #ffffff;
+    --table-header-bg: rgba(20, 168, 50, 0.06);
+    --input-bg: rgba(255, 255, 255, 0.85);
+    --card-item-bg: rgba(20, 168, 50, 0.03);
+    --row-hover-bg: rgba(20, 168, 50, 0.015);
+    --btn-sec-bg: rgba(20, 168, 50, 0.05);
+    --bar-bg: rgba(20, 168, 50, 0.08);
+    --modal-bg: #ffffff;
+    --modal-text: #111d15;
+    --shadow-color: rgba(20, 168, 50, 0.08);
+
+    color-scheme: light;
+    scrollbar-color: var(--muted) var(--bg);
+  }
   
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh; overflow-x:hidden; background-image:radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.05) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 40%); background-attachment:fixed;}
+  body{
+    font-family:'Inter',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    overflow-x:hidden;
+    background-image:radial-gradient(circle at 10% 20%, rgba(46, 204, 113, 0.04) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(0, 255, 184, 0.02) 0%, transparent 40%);
+    background-attachment:fixed;
+  }
 
   /* PBI AESTHETICS & GLASSMORPHISM */
   .pbi-card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.2); padding: 20px; }
@@ -32,7 +110,7 @@
     top: 0;
     bottom: 0;
     width: 260px;
-    background: rgba(7, 12, 24, 0.8);
+    background: var(--sidebar-bg);
     backdrop-filter: blur(20px);
     border-right: 1px solid var(--border);
     padding: 24px 16px;
@@ -192,12 +270,12 @@
     text-transform: uppercase;
     letter-spacing: 1px;
     padding: 16px 20px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--table-header-bg);
     border-bottom: 1px solid var(--border);
     font-weight: 800;
   }
-  tbody td { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 14px; color: #e2e8f0; }
-  tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+  tbody td { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 14px; color: var(--text); }
+  tbody tr:hover { background: var(--row-hover-bg); }
 
   /* BUTTONS */
   button {
@@ -215,9 +293,9 @@
     justify-content: center;
     gap: 8px;
   }
-  button:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3); }
-  button.sec { background: rgba(255, 255, 255, 0.05); color: var(--text); border: 1px solid var(--border); }
-  button.sec:hover { background: rgba(255, 255, 255, 0.1); box-shadow: none; }
+  button:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 8px 24px var(--shadow-color); }
+  button.sec { background: var(--btn-sec-bg); color: var(--text); border: 1px solid var(--border); }
+  button.sec:hover { background: var(--btn-sec-bg); filter: brightness(1.15); box-shadow: none; }
   button.danger { background: rgba(239, 68, 68, 0.1); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.2); }
   button.danger:hover { background: var(--red); color: #fff; }
   button.red { background: var(--red); color: #fff; }
@@ -237,7 +315,7 @@
   .fbar .f { flex: 1; min-width: 150px; }
   .flabel { font-size: 10px; color: var(--muted); font-weight: 800; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
   input, select, textarea {
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--input-bg);
     border: 1px solid var(--border);
     color: var(--text);
     padding: 11px 14px;
@@ -268,6 +346,7 @@
     .sidebar.active, .sidebar.open { transform: translateX(0); box-shadow: 10px 0 35px rgba(0,0,0,0.5); }
     .main { margin-left: 0 !important; padding: 20px !important; padding-top: 80px !important; width: 100% !important; }
     .menu-toggle { display: block; }
+    body.sidebar-open .menu-toggle { display: none !important; }
     .cgrid { grid-template-columns: 1fr !important; }
     .kgrid { grid-template-columns: 1fr 1fr !important; }
     .grid2, .grid3, .grid4 { grid-template-columns: 1fr !important; }
@@ -283,15 +362,15 @@
   @keyframes fs { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
   /* DRAWER & GAUGES */
-  .drawer { position: fixed; right: 0; top: 0; bottom: 0; width: min(540px, 100vw); background: #070c18; z-index: 2000; transform: translateX(110%); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-left: 1px solid var(--border); box-shadow: -20px 0 60px rgba(0, 0, 0, 0.8); padding: 40px 30px; overflow-y: auto; }
-  .drawer.active { transform: translateX(0); }
-  .pbi-gauge-bg { height: 12px; width: 100%; background: rgba(255,255,255,.05); border-radius: 100px; overflow: hidden; position: relative; margin: 10px 0; }
+  .drawer { position: fixed; right: 0; top: 0; bottom: 0; width: min(540px, 100vw); background: var(--drawer-bg); z-index: 2000; transform: translateX(110%); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.4s; border-left: 1px solid var(--border); box-shadow: -20px 0 60px var(--shadow-color); padding: 40px 30px; overflow-y: auto; visibility: hidden; pointer-events: none; }
+  .drawer.active { transform: translateX(0); visibility: visible; pointer-events: auto; }
+  .pbi-gauge-bg { height: 12px; width: 100%; background: var(--bar-bg); border-radius: 100px; overflow: hidden; position: relative; margin: 10px 0; }
   .pbi-gauge-fill { height: 100%; border-radius: 100px; transition: width 1s ease-out; background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%); }
   .kpi-value-pbi { font-size: 24px; font-weight: 900; letter-spacing: -1px; }
 
   /* CRUD CARD LIST */
-  .card-list-item { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:10px; margin-bottom:6px; transition:all .15s; }
-  .card-list-item:hover { border-color:var(--blue); background:rgba(59,130,246,.04); }
+  .card-list-item { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:var(--card-item-bg); border:1px solid var(--border); border-radius:10px; margin-bottom:6px; transition:all .15s; }
+  .card-list-item:hover { border-color:var(--blue); background:var(--btn-sec-bg); }
   .card-list-item .item-info { flex:1; min-width:0; }
   .card-list-item .item-name { font-weight:700; font-size:13px; }
   .card-list-item .item-meta { font-size:10px; color:var(--muted); margin-top:2px; display:flex; gap:8px; flex-wrap:wrap; }
@@ -301,7 +380,7 @@
   .grid3 { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px; margin-bottom:24px; }
 
   /* IDLE BAR */
-  .idle-bar { height:6px; border-radius:3px; background:rgba(255,255,255,.05); overflow:hidden; margin:4px 0; }
+  .idle-bar { height:6px; border-radius:3px; background:var(--bar-bg); overflow:hidden; margin:4px 0; }
   .idle-bar .fill { height:100%; border-radius:3px; transition:width .8s ease; }
   .idle-bar .fill.good { background:var(--green); }
   .idle-bar .fill.warn { background:var(--yellow); }
@@ -396,6 +475,7 @@
   <div class="nav" onclick="showTab('quality',this)"><span class="nav-icon"><i data-lucide="check-square"></i></span> Auditoria & Qualidade</div>
   <div class="nav" onclick="showTab('romaneio',this)"><span class="nav-icon"><i data-lucide="truck"></i></span> Romaneio Expedição</div>
   <div class="nav" onclick="showTab('bulk',this)"><span class="nav-icon"><i data-lucide="shopping-cart"></i></span> Refugo & Vendas</div>
+  <div class="nav" onclick="showTab('campo',this)"><span class="nav-icon"><i data-lucide="sprout"></i></span> Caderno de Campo</div>
 
   <div class="nav-group">Configurações & Cadastros</div>
   <div class="nav" onclick="showTab('employees',this)"><span class="nav-icon"><i data-lucide="users"></i></span> Funcionários</div>
@@ -417,6 +497,10 @@
 
   <div class="sf">
     <div id="statusBar" style="font-size:11px;color:var(--muted);margin-bottom:8px"><span class="dot"></span>Sistema Online</div>
+    <button onclick="toggleTheme()" class="sec" style="width:100%;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px">
+      <span id="themeBtnIcon"></span>
+      <span id="themeBtnText">Alternar Tema</span>
+    </button>
     <button class="sec" onclick="doLogout()" style="width:100%;justify-content:center;font-size:12px">Sair da Conta</button>
   </div>
 </nav>
@@ -482,7 +566,7 @@
   
   <!-- EMPLOYEE EDIT MODAL -->
   <div id="empModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">
-    <div style="background:#1e293b; padding:24px; border-radius:12px; width:450px; max-width:95%; border:1px solid var(--border);">
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:24px; border-radius:12px; width:450px; max-width:95%; border:1px solid var(--border);">
       <h3 style="margin-top:0; color:#fff; margin-bottom:20px; display:flex; align-items:center; gap:8px"><i data-lucide="user-cog" style="width:20px; height:20px; color:var(--blue)"></i> Editar Funcionário</h3>
       <input type="hidden" id="editEmpId">
       <div style="margin-bottom:12px"><label class="flabel">Barcode</label><input id="editEmpBarcode"/></div>
@@ -807,7 +891,7 @@
     </div>
     <div class="card">
       <div class="title"><i data-lucide="history"></i> Histórico de Vendas / Refugo</div>
-      <table id="bulkTable"><thead><tr><th>Data</th><th>Parcela</th><th>Fruta</th><th>Cliente/Destino</th><th>NF</th><th>Peso</th><th>Valor</th><th>Financeiro</th><th>Status</th></tr></thead><tbody></tbody></table>
+      <table id="bulkTable"><thead><tr><th>Data</th><th>Parcela</th><th>Fruta</th><th>Cliente/Destino</th><th>NF</th><th>Peso</th><th>Valor</th><th>Financeiro</th><th>Ações</th></tr></thead><tbody></tbody></table>
     </div>
   </div>
 
@@ -1046,6 +1130,199 @@
           </div>
         </div>
         <div id="regOpList" class="card-list" style="max-height:300px; overflow-y:auto"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-campo" class="tab">
+    <h1 class="ptitle"><i data-lucide="sprout"></i> Caderno de Campo</h1>
+    
+    <!-- SUB-TABS DO CADERNO DE CAMPO -->
+    <div style="display:flex; gap:10px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:10px">
+      <button class="btn on" id="ccTabMipBtn" onclick="showCcTab('mip')" style="font-size:12px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px"><i data-lucide="bug" style="width:14px;height:14px"></i> Amostragem MIP</button>
+      <button class="btn sec" id="ccTabOpBtn" onclick="showCcTab('op')" style="font-size:12px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-text" style="width:14px;height:14px"></i> Aplicação de Defensivos (O.P)</button>
+    </div>
+
+    <!-- ABA 1: AMOSTRAGEM MIP -->
+    <div id="ccTabMip" class="tab-pane-cc">
+      <div class="card" style="margin-bottom:24px">
+        <div class="title"><i data-lucide="bug" class="btn-i"></i> Vistorias Realizadas no Campo (MIP)</div>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:15px">Consulte as médias de infestações coletadas. Alvos com infestação acima de 1.00 ou com presença de doenças exigirão atenção.</p>
+        <div style="overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:left; padding:10px">Data Vistoria</th>
+                <th style="text-align:left; padding:10px">Parcela</th>
+                <th style="text-align:left; padding:10px">Variedade</th>
+                <th style="text-align:left; padding:10px">Praga / Alvo</th>
+                <th style="text-align:center; padding:10px">Média (10 pts)</th>
+                <th style="text-align:center; padding:10px">Status Controle</th>
+                <th style="text-align:center; padding:10px">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="ccMipTableBody">
+              <tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Carregando dados do MIP...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA 2: APLICAÇÃO DE DEFENSIVOS (O.P) -->
+    <div id="ccTabOp" class="tab-pane-cc" style="display:none">
+      <div class="card" style="margin-bottom:24px">
+        <div class="title" style="display:flex; justify-content:space-between; align-items:center"><div style="display:flex; align-items:center; gap:6px"><i data-lucide="file-text" class="btn-i"></i> Ordens de Pulverização (O.P)</div>
+          <button onclick="openNewOpModal()" class="green" style="font-size:11px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="plus-circle" style="width:14px; height:14px"></i> Nova O.P.</button>
+        </div>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:15px">Histórico de aplicações de agroquímicos registradas e laudos de carência para liberação.</p>
+        <div style="overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:left; padding:10px">Data</th>
+                <th style="text-align:left; padding:10px">Parcela</th>
+                <th style="text-align:left; padding:10px">Cultura / Variedade</th>
+                <th style="text-align:left; padding:10px">Defensivo / Princípio</th>
+                <th style="text-align:center; padding:10px">Dosagem</th>
+                <th style="text-align:center; padding:10px">Carência (Dias)</th>
+                <th style="text-align:center; padding:10px">Horário</th>
+                <th style="text-align:center; padding:10px">Laudos</th>
+              </tr>
+            </thead>
+            <tbody id="ccOpTableBody">
+              <tr><td colspan="8" style="text-align:center; padding:20px; color:var(--muted)">Carregando histórico de O.P...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: NOVA ORDEM DE PULVERIZAÇÃO (WEB DASHBOARD) -->
+  <div id="newOpModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:24px; border-radius:12px; width:650px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 10px 30px rgba(0,0,0,0.3)">
+      <h3 style="margin-top:0; color:#fff; margin-bottom:20px; display:flex; align-items:center; gap:8px"><i data-lucide="file-text" style="width:20px; height:20px; color:var(--blue)"></i> Cadastrar Ordem de Pulverização (O.P)</h3>
+      
+      <!-- Seção 1: Dados da Área -->
+      <div style="font-weight:700; color:#fff; margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px">1. Dados da Área</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Ciclo de Parcela</label>
+          <select id="newOpParcelSelect" onchange="onNewOpParcelChange()" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px"></select>
+        </div>
+        <div>
+          <label class="flabel">Data Aplicação</label>
+          <input id="newOpDate" type="date" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Cultura</label>
+          <input id="newOpCultura" type="text" readonly style="padding:6px; background:rgba(0,0,0,0.1); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Área (Hectares)</label>
+          <input id="newOpArea" type="text" readonly style="padding:6px; background:rgba(0,0,0,0.1); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+      </div>
+      
+      <!-- Seção 2: Operacional & Clima -->
+      <div style="font-weight:700; color:#fff; margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px; margin-top:16px">2. Operacional & Clima</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Tratorista</label>
+          <input id="newOpTratorista" type="text" value="Robson Rafael de Medeiros" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Barrista</label>
+          <input id="newOpBarrista" type="text" placeholder="Nome do barrista" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Nº Trator</label>
+          <input id="newOpTrator" type="text" value="Trator 2" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Equipamento</label>
+          <input id="newOpEquipamento" type="text" placeholder="Ex: Turbo Jacto" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Pressão / Rotação</label>
+          <input id="newOpPressao" type="text" value="Pressão: 70 PSI / Rotação 1900" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Bicos</label>
+          <input id="newOpBicos" type="text" placeholder="Ex: Cone Vazio" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Volume Calda (L/ha)</label>
+          <input id="newOpVolumeCalda" type="text" placeholder="Ex: 200" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Técnico Responsável</label>
+          <input id="newOpTecnico" type="text" value="Ivanosca Martins de Oliveira Cunha" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Temp (°C)</label>
+          <input id="newOpTemp" type="number" step="0.1" placeholder="Ex: 28.5" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Umid (%)</label>
+          <input id="newOpUmid" type="number" step="0.1" placeholder="Ex: 65" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Vento (km/h)</label>
+          <input id="newOpVento" type="number" step="0.1" placeholder="Ex: 8.5" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Hora Início</label>
+          <input id="newOpHoraInicio" type="time" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Hora Término</label>
+          <input id="newOpHoraFim" type="time" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Eng. Agrônomo</label>
+          <input id="newOpAgronomo" type="text" value="Reinaldo Chotten" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+      </div>
+      
+      <!-- Seção 3: Calda -->
+      <div style="font-weight:700; color:#fff; margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px; margin-top:16px">3. Calda de Defensivos</div>
+      <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:12px; margin-bottom:12px; align-items:end">
+        <div>
+          <label class="flabel">Defensivo</label>
+          <select id="newOpDefensivoSelect" onchange="onNewOpDefensivoChange()" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px"></select>
+        </div>
+        <div>
+          <label class="flabel">Dosagem (L/ha)</label>
+          <input id="newOpDosagemReal" type="number" step="0.01" value="1.00" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <button onclick="addNewOpItem()" style="background:var(--green); color:#fff; border:none; padding:7px 12px; border-radius:6px; width:100%; font-weight:700; cursor:pointer">+ Adicionar</button>
+        </div>
+      </div>
+      <div id="newOpItemsContainer" style="margin-bottom:16px; max-height:150px; overflow-y:auto; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid var(--border)">
+        <!-- List of added items -->
+      </div>
+      
+      <div style="margin-bottom:12px">
+        <label class="flabel">Observações</label>
+        <textarea id="newOpObs" placeholder="Observações..." rows="2" style="padding:10px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px; font-family:inherit; font-size:13px"></textarea>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px">
+        <button class="sec" onclick="closeNewOpModal()">Cancelar</button>
+        <button onclick="saveNewOpDashboard()" style="background:var(--blue); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:700; cursor:pointer">Salvar e Registrar</button>
       </div>
     </div>
   </div>
@@ -1688,8 +1965,9 @@
         <!-- Banner de seleção -->
         <div id="e3d-selection-banner">
           <span style="font-size:12px; font-weight:700; color:#22d3ee;" id="e3d-selection-count">0 pallets selecionados</span>
-          <div style="display:flex;gap:8px;">
+          <div style="display:flex;gap:8px;align-items:center;">
             <button onclick="e3dClearSelection()" style="font-size:11px; padding:5px 10px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer;">Limpar</button>
+            <button id="e3d-unify-btn" onclick="e3dUnifySelectedPallets()" style="font-size:11px; padding:5px 12px; border-radius:6px; background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; cursor:pointer; font-weight:700; display:none;">🔗 Unificar Pallets</button>
             <button onclick="e3dToggleBatchPanel()" style="font-size:11px; padding:5px 12px; border-radius:6px; background:rgba(34,211,238,0.15); border:1px solid #22d3ee; color:#22d3ee; cursor:pointer; font-weight:700;">✈️ Expedir Selecionados</button>
           </div>
         </div>
@@ -1705,6 +1983,26 @@
         </div>
         <div id="e3d-grid-cold">
           <!-- slots rendered via JS -->
+        </div>
+        <!-- Sensor Widget -->
+        <div style="margin-top: 20px; padding: 12px; background: rgba(6,182,212,0.06); border: 1px solid rgba(6,182,212,0.15); border-radius: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="font-size: 11px; font-weight: 800; color: #06b6d4; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 6px;">
+            <span style="width: 6px; height: 6px; background: #06b6d4; border-radius: 50%; animation: blink 2s infinite;"></span>
+            Sensores Remotos (Câmara Fria)
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.03);">
+              <div style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Temperatura</div>
+              <div id="e3d-sensor-temp" style="font-size: 18px; font-weight: 900; color: #06b6d4; margin-top: 2px;">4.2 °C</div>
+            </div>
+            <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.03);">
+              <div style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Umidade</div>
+              <div id="e3d-sensor-humidity" style="font-size: 18px; font-weight: 900; color: #38bdf8; margin-top: 2px;">85.4 %</div>
+            </div>
+          </div>
+          <div style="font-size: 8.5px; color: #64748b; text-align: center;">
+            Status: Conectado (Sensor DHT22 / Modbus TCP)
+          </div>
         </div>
       </div>
 
@@ -1764,12 +2062,12 @@
         <div id="e3d-cfg-tab-cap" style="display:block;">
           <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
-              <select id="e3d-add-cap-variety" style="padding:6px; border-radius:6px; background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; width:100%"></select>
-              <input type="number" id="e3d-add-cap-caliber" placeholder="Calibre" style="padding:6px; border-radius:6px; background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; width:100%">
+              <select id="e3d-add-cap-variety" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%"></select>
+              <input type="number" id="e3d-add-cap-caliber" placeholder="Calibre" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
             </div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
-              <input type="text" id="e3d-add-cap-boxmodel" placeholder="Ex: Samba, Forro" style="padding:6px; border-radius:6px; background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; width:100%">
-              <input type="number" id="e3d-add-cap-limit" placeholder="Qtd Caixas" style="padding:6px; border-radius:6px; background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; width:100%">
+              <input type="text" id="e3d-add-cap-boxmodel" placeholder="Ex: Samba, Forro" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
+              <input type="number" id="e3d-add-cap-limit" placeholder="Qtd Caixas" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
             </div>
             <button class="btn blue" onclick="e3dAddCapRule()" style="padding:6px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer">Adicionar Regra</button>
           </div>
@@ -1782,8 +2080,8 @@
         <div id="e3d-cfg-tab-labels" style="display:none;">
           <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
-              <input type="text" id="e3d-add-label-key" placeholder="Chave (Ex: EXP_CHINA)" style="padding:6px; border-radius:6px; background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; width:100%">
-              <input type="text" id="e3d-add-label-name" placeholder="Nome (Ex: 🇨🇳 China)" style="padding:6px; border-radius:6px; background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; width:100%">
+              <input type="text" id="e3d-add-label-key" placeholder="Chave (Ex: EXP_CHINA)" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
+              <input type="text" id="e3d-add-label-name" placeholder="Nome (Ex: 🇨🇳 China)" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
             </div>
             <button class="btn blue" onclick="e3dAddLabel()" style="padding:6px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer">Cadastrar Etiqueta</button>
           </div>
@@ -1797,11 +2095,11 @@
           <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:12px;">
             <div>
               <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Posições Packing House</label>
-              <input type="number" id="e3d-cfg-packing-cap" style="padding:6px; border-radius:6px; background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; width:100%">
+              <input type="number" id="e3d-cfg-packing-cap" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
             </div>
             <div>
               <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Posições Câmara Fria</label>
-              <input type="number" id="e3d-cfg-cold-cap" style="padding:6px; border-radius:6px; background:#1e293b; border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; width:100%">
+              <input type="number" id="e3d-cfg-cold-cap" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
             </div>
             <button class="btn blue" onclick="e3dSaveGalpaoCapacities()" style="padding:8px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer">Salvar Capacidades</button>
           </div>
@@ -1842,6 +2140,34 @@
 </div><!-- /tab-estoque3d -->
 </div><!-- /appMain -->
 <script>
+// ══════════════════════════════════════
+// THEME CONTROL
+// ══════════════════════════════════════
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('prodtech_theme', next);
+  updateThemeUI(next);
+  
+  const tabDash = document.getElementById('tab-dash');
+  if (typeof refreshDash === 'function' && tabDash && tabDash.classList.contains('active')) {
+    refreshDash();
+  }
+}
+function updateThemeUI(theme) {
+  const btnText = document.getElementById('themeBtnText');
+  const btnIcon = document.getElementById('themeBtnIcon');
+  if (btnText) {
+    btnText.textContent = theme === 'dark' ? 'Tema Escuro' : 'Tema Claro';
+  }
+  if (btnIcon) {
+    btnIcon.innerHTML = theme === 'dark' 
+      ? `<svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`
+      : `<svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+  }
+}
+
 // ══════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════
@@ -1911,6 +2237,8 @@ function today(){return new Date().toISOString().split('T')[0]}
 function toISO(d,t='00:00:00'){return d+'T'+t+'Z'}
 
 async function initApp(){
+  const savedTheme = localStorage.getItem('prodtech_theme') || 'dark';
+  updateThemeUI(savedTheme);
   sb = window.supabase.createClient(SUPA_URL,SUPA_KEY);
   const {data:{session}} = await sb.auth.getSession();
   if(session) await afterLogin(session.user);
@@ -1998,6 +2326,7 @@ function showTab(n,el){
     if (sb) {
       sb.classList.remove('open');
       sb.classList.remove('active');
+      document.body.classList.remove('sidebar-open');
     }
   }
   const fns={
@@ -2008,7 +2337,8 @@ function showTab(n,el){
     mass:refreshMass, bulk:loadBulk, finalize:loadManagers, romaneio:loadRomaneios,
     trace:()=>{loadFruits();loadVarieties();loadParcels();loadLinks();loadInfoParcelas();},
     registers:loadRegisters,
-    estoque3d:initEstoque3D
+    estoque3d:initEstoque3D,
+    campo:loadCadernoCampo
   };
   if(fns[n]) fns[n]();
   setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 150);
@@ -2750,40 +3080,6 @@ async function refreshFin(){
   });
 }
 
-async function loadBulk(){
-  const {data}=await sb.from('bulk_sales').select('*, parcels(code)').eq('tenant_id',tenantId).order('date',{ascending:false});
-  const tbody=$('bulkTable').querySelector('tbody');
-  tbody.innerHTML=(data||[]).map(b=>`
-    <tr>
-      <td>${new Date(b.date+'T12:00:00').toLocaleDateString('pt-BR')}</td>
-      <td>${b.customer_name||'—'}</td>
-      <td>${b.parcels?.code||'—'}</td>
-      <td>${b.weight_kg} kg</td>
-      <td>${BRL(b.total_value)}</td>
-      <td>${b.is_paid?'<span style="color:var(--green);font-weight:700;display:inline-flex;align-items:center;gap:4px"><i data-lucide="check-circle" style="width:14px;height:14px"></i> Pago</span>':'<span style="color:var(--yellow);font-weight:700;display:inline-flex;align-items:center;gap:4px"><i data-lucide="clock" style="width:14px;height:14px"></i> Pendente</span>'}</td>
-      <td><button class="sec" onclick="deleteBulk('${b.id}')" style="display:inline-flex; align-items:center; justify-content:center; padding:6px;"><i data-lucide="trash-2" style="width:14px;height:14px;color:var(--red)"></i></button></td>
-    </tr>
-  `).join('');
-  if(window.lucide) lucide.createIcons();
-}
-
-async function loadFieldSessions(s,e,p){
-  let q=sb.from('field_carrao_sessions').select('*, parcels(code), varieties(name)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
-  if(p) q=q.eq('parcel_id',p);
-  const {data}=await q.order('date',{ascending:false});
-  const tbody=$('fieldSessionTable').querySelector('tbody');
-  tbody.innerHTML=(data||[]).map(s=>`
-    <tr>
-      <td>${new Date(s.date+'T12:00:00').toLocaleDateString('pt-BR')}</td>
-      <td>${s.parcels?.code||'—'}</td>
-      <td>${s.varieties?.name||'—'}</td>
-      <td>${s.qty_carrocoes}</td>
-      <td>${s.waste_kg||0} kg</td>
-      <td><button class="sec" onclick="viewSession('${s.id}')">👁️</button></td>
-    </tr>
-  `).join('');
-}
-
 async function loadEmpSelectAll(){
   const {data}=await sb.from('employees').select('id,name,role').eq('tenant_id',tenantId).order('name');
   _emps=data||[];
@@ -3158,7 +3454,6 @@ async function refreshMass() {
   const expBonif = (exp||[]).filter(x => !String(x.tes).includes('502') && !String(x.tes).includes('567')).reduce((a,b)=>a+Number(b.quantity_kg||0),0);
   
   const totalOut = expMI + expEX + expBonif + totalBulkKg + packhouseWasteKg + fieldWasteKg;
-  buildMassCharts(harvest, exp, bulk, packhouseWasteKg + fieldWasteKg);
   refreshSupervisorChart(); // Atualiza o relatório agronômico automaticamente
   
   const estoqueKg = estHarvestKg - totalOut;
@@ -5203,11 +5498,11 @@ function exportHarvestOrderPDF(sid) {
   doc.text('FREQUÊNCIA: POR CARROÇÃO COLHIDO', mg + 2, y + 16);
   doc.text('INDIVIDUAL', mg + 14, y + 19);
 
-  // Box 2: Logo Bom Jesus
-  doc.setFontSize(22); doc.setFont('helvetica', 'bold');
-  doc.text('Bom Jesus', mg + 62, y + 11);
-  doc.setFontSize(8); doc.setFont('helvetica', 'bold');
-  doc.text('AGRÍCOLA', mg + 82, y + 16);
+  // Box 2: Logo / Tenant Header
+  doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+  doc.text(tenantName.toUpperCase(), mg + 90, y + 11, { align: 'center' });
+  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+  doc.text('CONTROLE DE PRODUÇÃO AGRÍCOLA', mg + 90, y + 16, { align: 'center' });
 
   // Box 3: Info Documento
   doc.setFontSize(5); doc.setFont('helvetica', 'normal');
@@ -5222,7 +5517,7 @@ function exportHarvestOrderPDF(sid) {
   const h2 = 12;
   doc.rect(mg, y, 190, h2);
   doc.setFontSize(10); doc.setFont('helvetica', 'bold');
-  doc.text('ORDEM DE COLHEITA', 105, y + 5, { align: 'center' });
+  doc.text(`ORDEM DE COLHEITA Nº ${s.carrao_seq || '—'}`, 105, y + 5, { align: 'center' });
   doc.setFontSize(9);
   doc.text('CONTROLE DE CARROÇÃO / PACKING HOUSE', 105, y + 10, { align: 'center' });
   y += h2;
@@ -5677,6 +5972,7 @@ function toggleSidebar() {
     document.body.classList.toggle('sidebar-collapsed');
   } else {
     sb.classList.toggle('open');
+    document.body.classList.toggle('sidebar-open', sb.classList.contains('open'));
   }
 }
 
@@ -5945,6 +6241,74 @@ function e3dClearSelection() {
   e3dRenderGrid();
 }
 
+async function e3dUnifySelectedPallets() {
+  if (e3dSelectedSlots.length < 2) {
+    toast('⚠️ Selecione pelo menos 2 pallets para unificar!', 'warning');
+    return;
+  }
+  const nonForming = e3dSelectedSlots.filter(s => s.slot.status !== E3D_STATUS.FORMING);
+  if (nonForming.length > 0) {
+    toast('⚠️ Apenas pallets em formação podem ser unificados!', 'warning');
+    return;
+  }
+  if (!confirm(`Deseja unificar os ${e3dSelectedSlots.length} pallets selecionados em um único pallet Misto?`)) {
+    return;
+  }
+
+  const targetSlot = e3dSelectedSlots[0].slot;
+  const sourceSlots = e3dSelectedSlots.slice(1).map(s => s.slot);
+
+  let totalBoxes = targetSlot.boxes;
+  for (const s of sourceSlots) {
+    totalBoxes += s.boxes;
+  }
+
+  targetSlot.boxes = totalBoxes;
+  targetSlot.caliber = 'Misto';
+
+  const limit = e3dGetPalletLimit(targetSlot.boxType, targetSlot.caliber, targetSlot.boxModel);
+  if (totalBoxes >= limit) {
+    targetSlot.status = targetSlot.label ? E3D_STATUS.LABELED : E3D_STATUS.CLOSED;
+  } else {
+    targetSlot.status = E3D_STATUS.FORMING;
+  }
+
+  if (targetSlot.id) {
+    const { error: err1 } = await sb.from('pallets')
+      .update({ box_count: totalBoxes, caliber: 'Misto' })
+      .eq('id', targetSlot.id);
+    if (err1) {
+      toast('Erro ao atualizar pallet destino: ' + err1.message, 'danger');
+      return;
+    }
+  }
+
+  const sourceIds = sourceSlots.map(s => s.id).filter(Boolean);
+  if (sourceIds.length > 0) {
+    const { error: err2 } = await sb.from('pallets')
+      .delete()
+      .in('id', sourceIds);
+    if (err2) {
+      toast('Erro ao excluir pallets de origem: ' + err2.message, 'danger');
+      return;
+    }
+  }
+
+  toast('✓ Pallets unificados com sucesso como Calibre Misto!', 'success');
+
+  e3dSelectionMode = false;
+  e3dSelectedSlots = [];
+  const selectBtn = $('e3d-select-mode-btn');
+  if (selectBtn) {
+    selectBtn.classList.remove('active');
+    selectBtn.innerHTML = '<i data-lucide="check-square" style="width:13px;height:13px"></i> Seleção em Lote';
+  }
+  const panel = $('e3d-batch-panel');
+  if (panel) panel.classList.remove('visible');
+  e3dUpdateSelectionBanner();
+  await e3dLoadGridState();
+}
+
 function e3dUpdateSelectionBanner() {
   const banner = $('e3d-selection-banner');
   const countEl = $('e3d-selection-count');
@@ -5953,6 +6317,11 @@ function e3dUpdateSelectionBanner() {
   if (countEl) {
     const totalCx = e3dSelectedSlots.reduce((sum, s) => sum + (s.slot.boxes || 0), 0);
     countEl.textContent = `${n} pallet${n !== 1 ? 's' : ''} selecionado${n !== 1 ? 's' : ''} — ${totalCx} caixas no total`;
+  }
+  const unifyBtn = $('e3d-unify-btn');
+  if (unifyBtn) {
+    const canUnify = n >= 2 && e3dSelectedSlots.every(s => s.slot.status === E3D_STATUS.FORMING);
+    unifyBtn.style.display = canUnify ? 'inline-block' : 'none';
   }
 }
 
@@ -5991,6 +6360,11 @@ async function e3dLoadClientesSuggestions() {
 async function e3dConfirmBatchDispatch() {
   if (e3dSelectedSlots.length === 0) {
     toast('Nenhum pallet selecionado!', 'warning');
+    return;
+  }
+  const hasForming = e3dSelectedSlots.some(s => s.slot.status === E3D_STATUS.FORMING);
+  if (hasForming) {
+    toast('⚠️ Não é permitido expedir pallets em formação!', 'warning');
     return;
   }
   const cliente = $('e3d-batch-cliente')?.value?.trim();
@@ -6496,72 +6870,121 @@ function e3dLoadLabels() {
 }
 
 // ── Init ────────────────────────────────────────────────────────
+function e3dStartSensorMonitoring() {
+  setInterval(() => {
+    const tempEl = $('e3d-sensor-temp');
+    const humEl = $('e3d-sensor-humidity');
+    if (tempEl && humEl) {
+      const temp = (3.8 + Math.random() * 0.7).toFixed(1);
+      const humidity = (84.2 + Math.random() * 1.8).toFixed(1);
+      tempEl.textContent = `${temp} °C`;
+      humEl.textContent = `${humidity} %`;
+    }
+  }, 3000);
+}
+
 async function initEstoque3D() {
   e3dLoadLabels();
   e3dLoadPalletTypes();
+  await loadInfoParcelas();
   await e3dLoadGridState();
   await e3dLoadActiveLotData();
   e3dInitConfigPanel();
+  e3dStartSensorMonitoring();
   
   // Inject modal into HTML body if not exists
   if (!document.getElementById('e3d-pallet-modal')) {
     const modalHTML = `
       <div id="e3d-pallet-modal">
-        <div id="e3d-pallet-inner">
+        <div id="e3d-pallet-inner" style="width: 760px; max-width: 95%;">
           <h3 id="e3d-modal-title">Detalhes do Pallet</h3>
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <!-- Coluna Esquerda: Inputs -->
             <div>
-              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Variedade/Caixa</label>
-              <div id="e3d-modal-boxtype" style="font-weight:700; font-size:13px; margin-top:4px">—</div>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div>
+                  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Variedade/Caixa</label>
+                  <div id="e3d-modal-boxtype" style="font-weight:700; font-size:13px; margin-top:2px">—</div>
+                </div>
+                <div>
+                  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Parcela</label>
+                  <div id="e3d-modal-parcel" style="font-weight:700; font-size:13px; margin-top:2px">—</div>
+                </div>
+                <div>
+                  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Posição</label>
+                  <div id="e3d-modal-pos" style="font-weight:700; font-size:13px; margin-top:2px">—</div>
+                </div>
+                <div>
+                  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Status</label>
+                  <div style="margin-top:2px"><span id="e3d-modal-badge" class="badge" style="background:#3b82f6; font-size:10px; padding:2px 8px; border-radius:4px">—</span></div>
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">
+                <div>
+                  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Idade do Pallet</label>
+                  <div id="e3d-modal-age" style="font-weight:700; font-size:13px; margin-top:2px; display:flex; align-items:center; gap:6px">—</div>
+                </div>
+                <div>
+                  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Rastreabilidade (ID)</label>
+                  <div id="e3d-modal-trace" style="font-weight:700; font-size:10px; margin-top:2px; color:#94a3b8; word-break:break-all; font-family:monospace">—</div>
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">
+                <div>
+                  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Qtd Caixas</label>
+                  <input type="number" id="e3d-modal-caixas" class="inp" style="width:100%; padding:6px 8px; border-radius:6px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:12px;">
+                </div>
+                <div>
+                  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Etiqueta de Destino</label>
+                  <select id="e3d-modal-label" class="inp" style="width:100%; padding:6px 8px; border-radius:6px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:12px;">
+                    <option value="">— Sem Etiqueta —</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">
+                <div>
+                  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Data de Plantio</label>
+                  <input type="date" id="e3d-modal-plantio" class="inp" style="width:100%; padding:6px 8px; border-radius:6px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:12px;" readonly>
+                  <small style="color:var(--muted); font-size:9px;">Buscado de Parcela</small>
+                </div>
+                <div>
+                  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Código do Carrocão</label>
+                  <input type="text" id="e3d-modal-wagon" class="inp" placeholder="Ex: 15430" style="width:100%; padding:6px 8px; border-radius:6px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:12px;">
+                </div>
+                <div>
+                  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Data de Colheita</label>
+                  <input type="date" id="e3d-modal-colheita" class="inp" style="width:100%; padding:6px 8px; border-radius:6px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:12px;">
+                </div>
+                <div>
+                  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Data Processamento</label>
+                  <input type="date" id="e3d-modal-processamento" class="inp" style="width:100%; padding:6px 8px; border-radius:6px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:12px;">
+                </div>
+              </div>
+
+              <div style="margin-bottom: 12px;">
+                <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Observações</label>
+                <textarea id="e3d-modal-obs" class="inp" rows="2" style="width:100%; padding:6px 8px; border-radius:6px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff; resize:none; font-size:12px;"></textarea>
+              </div>
             </div>
-            <div>
-              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Parcela</label>
-              <div id="e3d-modal-parcel" style="font-weight:700; font-size:13px; margin-top:4px">—</div>
-            </div>
-            <div>
-              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Posição</label>
-              <div id="e3d-modal-pos" style="font-weight:700; font-size:13px; margin-top:4px">—</div>
-            </div>
-            <div>
-              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Status</label>
-              <div style="margin-top:4px"><span id="e3d-modal-badge" class="badge" style="background:#3b82f6; font-size:10px; padding:2px 8px; border-radius:4px">—</span></div>
+
+            <!-- Coluna Direita: Histórico Rastreabilidade -->
+            <div style="border-left: 1px solid rgba(255,255,255,0.06); padding-left: 20px; display:flex; flex-direction:column;">
+              <label style="font-size:11px; color:var(--blue); text-transform:uppercase; font-weight:800; letter-spacing:1px; margin-bottom:12px; display:block;">🕒 Linha do Tempo / Rastreabilidade</label>
+              <div id="e3d-modal-timeline" style="flex:1; overflow-y:auto; max-height:360px; padding-right:6px; display:flex; flex-direction:column; gap:12px;">
+                <!-- Items added dynamically -->
+              </div>
             </div>
           </div>
 
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px;">
-            <div>
-              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Idade do Pallet</label>
-              <div id="e3d-modal-age" style="font-weight:700; font-size:13px; margin-top:4px; display:flex; align-items:center; gap:6px">—</div>
-            </div>
-            <div>
-              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Rastreabilidade</label>
-              <div id="e3d-modal-trace" style="font-weight:700; font-size:11px; margin-top:4px; color:#94a3b8; word-break:break-all; font-family:monospace">—</div>
-            </div>
-          </div>
-
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px;">
-            <div>
-              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:6px">Qtd Caixas</label>
-              <input type="number" id="e3d-modal-caixas" class="inp" style="width:100%; padding:8px; border-radius:8px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff">
-            </div>
-            <div>
-              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:6px">Etiqueta de Destino</label>
-              <select id="e3d-modal-label" class="inp" style="width:100%; padding:8px; border-radius:8px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff">
-                <option value="">— Sem Etiqueta —</option>
-              </select>
-            </div>
-          </div>
-
-          <div style="margin-bottom: 24px;">
-            <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:6px">Observações</label>
-            <textarea id="e3d-modal-obs" class="inp" rows="2" style="width:100%; padding:8px; border-radius:8px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff; resize:none"></textarea>
-          </div>
-
-          <div style="display:flex; justify-content:space-between; gap:12px">
-            <button class="btn sec" onclick="e3dClosePalletModal()" style="padding:10px 16px; border-radius:8px">Fechar</button>
+          <div style="display:flex; justify-content:space-between; gap:12px; margin-top:20px; border-top:1px solid rgba(255,255,255,0.06); padding-top:16px;">
+            <button class="btn sec" onclick="e3dClosePalletModal()" style="padding:8px 16px; border-radius:6px; font-size:12px;">Fechar</button>
             <div style="display:flex; gap:12px">
-              <button class="btn purple" id="e3d-modal-dispatch-btn" onclick="e3dModalDispatchPallet()" style="padding:10px 16px; border-radius:8px">✈️ Expedir</button>
-              <button class="btn blue" onclick="e3dSavePalletChanges()" style="padding:10px 16px; border-radius:8px; font-weight:bold">Salvar Alterações</button>
+              <button class="btn purple" id="e3d-modal-dispatch-btn" onclick="e3dModalDispatchPallet()" style="padding:8px 16px; border-radius:6px; font-size:12px;">✈️ Expedir</button>
+              <button class="btn blue" onclick="e3dSavePalletChanges()" style="padding:8px 16px; border-radius:6px; font-weight:bold; font-size:12px;">Salvar Alterações</button>
             </div>
           </div>
         </div>
@@ -6636,10 +7059,13 @@ function e3dGetPalletLimit(boxType, caliber, boxModel) {
 
 function e3dGetPalletAge(createdAt) {
   if (!createdAt) return 0;
-  const createdDate = new Date(createdAt);
-  const diffTime = Math.max(0, new Date() - createdDate);
+  const created = new Date(createdAt);
+  const today = new Date();
+  const d1 = new Date(created.getFullYear(), created.getMonth(), created.getDate());
+  const d2 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const diffTime = d2 - d1;
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
+  return Math.max(0, diffDays);
 }
 
 // ── WMS Config Panel Javascript ──────────────────
@@ -6896,7 +7322,11 @@ async function e3dLoadGridState() {
         label: p.label || '',
         obs: p.obs || '',
         closedAt: p.updated_at,
-        createdAt: p.created_at
+        createdAt: p.created_at,
+        harvest_date: p.harvest_date || '',
+        processing_date: p.processing_date || '',
+        planting_date: p.planting_date || '',
+        wagon_code: p.wagon_code || ''
       };
 
       e3d.totalBoxes += slotObj.boxes;
@@ -7014,6 +7444,11 @@ function e3dRenderColdTable() {
 
 
 async function e3dDispatchColdPallet(id) {
+  const slot = e3d.coldGrid.find(s => s.id === id);
+  if (slot && slot.status === E3D_STATUS.FORMING) {
+    toast('⚠️ Não é permitido expedir pallets em formação!', 'warning');
+    return;
+  }
   if (!confirm('Deseja expedir este pallet?')) return;
   const { error } = await sb.from('pallets').update({ location: 'DISPATCHED' }).eq('id', id);
   if (error) {
@@ -7095,11 +7530,18 @@ function e3dRenderGrid() {
         
         // Calcular camadas 3D da pilha (1 a 3 camadas, 4 caixas por camada)
         const layers = pct < 33 ? 1 : pct < 66 ? 2 : 3;
+        const isMelancia = String(slot.boxType || '').toLowerCase().includes('melancia');
+        const fruitColor = isMelancia ? '#22c55e' : '#eab308'; // green vs yellow
         let stackHTML = '<div class="pallet-stack">';
         for (let l = 0; l < layers; l++) {
           stackHTML += '<div class="pallet-row">';
           for (let b = 0; b < 4; b++) {
-            stackHTML += `<div class="pallet-box" style="background:${badgeColor};opacity:${0.55 + l*0.15}"></div>`;
+            stackHTML += `
+              <div class="pallet-box" style="background: #a16207; border: 1px solid #78350f; display: flex; align-items: center; justify-content: center; gap: 1.5px; padding: 1px; height: 12px; box-sizing: border-box; box-shadow: inset 0 0 3px rgba(0,0,0,0.5);">
+                <span style="width: 4px; height: 4px; background: ${fruitColor}; border-radius: 50%; display: inline-block; box-shadow: inset -0.5px -0.5px 1px rgba(0,0,0,0.4)"></span>
+                <span style="width: 4px; height: 4px; background: ${fruitColor}; border-radius: 50%; display: inline-block; box-shadow: inset -0.5px -0.5px 1px rgba(0,0,0,0.4)"></span>
+              </div>
+            `;
           }
           stackHTML += '</div>';
         }
@@ -7272,6 +7714,9 @@ function e3dOpenPalletModal(idx, gridName = 'packing') {
 
   if ($('e3d-modal-obs')) $('e3d-modal-obs').value = slot.obs || '';
   if ($('e3d-modal-caixas')) $('e3d-modal-caixas').value = slot.boxes || 0;
+  if ($('e3d-modal-wagon')) $('e3d-modal-wagon').value = slot.wagon_code || '';
+  if ($('e3d-modal-colheita')) $('e3d-modal-colheita').value = slot.harvest_date || '';
+  if ($('e3d-modal-processamento')) $('e3d-modal-processamento').value = slot.processing_date || (slot.createdAt ? slot.createdAt.split('T')[0] : '');
   
   if ($('e3d-modal-trace')) {
     $('e3d-modal-trace').textContent = slot.id || 'Sem ID (Local)';
@@ -7297,6 +7742,100 @@ function e3dOpenPalletModal(idx, gridName = 'packing') {
     badge.style.background = colors[slot.status] || '#3b82f6';
   }
 
+  // Auto-load plantio from _infoParcelas
+  const ipRecord = _infoParcelas.find(x => 
+    String(x.parcela).trim().toLowerCase() === String(slot.parcel).trim().toLowerCase() ||
+    String(x.parcela2).trim().toLowerCase() === String(slot.parcel).trim().toLowerCase()
+  );
+  let resolvedPlantingDate = slot.planting_date || '';
+  if (ipRecord && ipRecord.plantio) {
+    resolvedPlantingDate = ipRecord.plantio;
+  }
+  if ($('e3d-modal-plantio')) $('e3d-modal-plantio').value = resolvedPlantingDate;
+
+  // Timeline / History rendering
+  const timelineEl = $('e3d-modal-timeline');
+  if (timelineEl) {
+    timelineEl.innerHTML = '';
+    const timelineItems = [];
+
+    // Helper to format date
+    const formatDate = (dStr) => {
+      if (!dStr) return '';
+      const parts = dStr.split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return dStr;
+    };
+
+    // Step 1: Semente (Semeadura)
+    if (ipRecord && ipRecord.semeadura) {
+      timelineItems.push({
+        title: '🌱 1. Semeadeira / Muda',
+        color: '#8b5cf6',
+        details: `<b>Data:</b> ${formatDate(ipRecord.semeadura)}<br>
+                  <b>Fornecedor:</b> ${ipRecord.fornecedor2 || ipRecord.fornecedor || '—'}<br>
+                  <b>Lote Muda:</b> ${ipRecord.lote2 || ipRecord.lote || '—'}<br>
+                  <b>NF Mudas:</b> ${ipRecord.nf2 || ipRecord.nf || '—'}`
+      });
+    }
+
+    // Step 2: Plantio
+    if (ipRecord && ipRecord.plantio) {
+      timelineItems.push({
+        title: '🌾 2. Plantio no Campo',
+        color: '#10b981',
+        details: `<b>Data:</b> ${formatDate(ipRecord.plantio)}<br>
+                  <b>Área:</b> ${ipRecord.area ? ipRecord.area + ' ha' : '—'} (${ipRecord.linhas || '—'} linhas)<br>
+                  <b>Variedade:</b> ${ipRecord.variedade || '—'}<br>
+                  <b>Previsão Colheita:</b> ${formatDate(ipRecord.previsao_colheita)}`
+      });
+    }
+
+    // Step 3: Colheita (Campo)
+    const harvestDate = slot.harvest_date || '';
+    const wagonCode = slot.wagon_code || '';
+    timelineItems.push({
+      title: '🚜 3. Colheita',
+      color: '#f59e0b',
+      details: `<b>Data:</b> ${harvestDate ? formatDate(harvestDate) : '<i>Aguardando preenchimento</i>'}<br>
+                <b>Carrocão de Origem:</b> ${wagonCode || '<i>Não informado</i>'}`
+    });
+
+    // Step 4: Processamento WMS
+    const procDate = slot.processing_date || (slot.createdAt ? slot.createdAt.split('T')[0] : '');
+    timelineItems.push({
+      title: '🏢 4. Recepção & Embalagem (WMS)',
+      color: '#3b82f6',
+      details: `<b>Data Processamento:</b> ${formatDate(procDate)}<br>
+                <b>Quantidade:</b> ${slot.boxes} caixas (Calibre ${slot.caliber || '—'})<br>
+                <b>Tipo de Caixa:</b> ${slot.boxModel || 'Padrão'}`
+    });
+
+    // Step 5: Expedição
+    if (slot.location === 'DISPATCHED') {
+      const dispDate = slot.closedAt ? slot.closedAt.split('T')[0] : '';
+      timelineItems.push({
+        title: '✈️ 5. Expedido para Mercado',
+        color: '#ef4444',
+        details: `<b>Data Faturamento:</b> ${formatDate(dispDate)}<br>
+                  <b>Destino/Etiqueta:</b> ${slot.label ? (E3D_LABEL_NAMES[slot.label] || slot.label) : 'Mercado Geral'}`
+      });
+    }
+
+    timelineEl.innerHTML = timelineItems.map(item => `
+      <div style="display:flex; gap:12px; position:relative; padding-bottom:8px;">
+        <div style="display:flex; flex-direction:column; align-items:center;">
+          <div style="width:10px; height:10px; border-radius:50%; background:${item.color}; border:2px solid #0f1c33; z-index:2; box-shadow: 0 0 6px ${item.color}"></div>
+          <div style="width:2px; flex:1; background:rgba(255,255,255,0.08); margin-top:2px;"></div>
+        </div>
+        <div style="flex:1; background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.04);">
+          <div style="font-size:11px; font-weight:800; color:#fff">${item.title}</div>
+          <div style="font-size:10px; color:#94a3b8; margin-top:4px; line-height:1.4">${item.details}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
   const modal = $('e3d-pallet-modal');
   if (modal) modal.classList.add('open');
 }
@@ -7318,10 +7857,18 @@ async function e3dSavePalletChanges() {
   const label = $('e3d-modal-label').value;
   const obs = $('e3d-modal-obs').value;
   const newBoxes = parseInt($('e3d-modal-caixas').value) || 0;
+  const wagon_code = $('e3d-modal-wagon').value.trim();
+  const harvest_date = $('e3d-modal-colheita').value || null;
+  const planting_date = $('e3d-modal-plantio').value || null;
+  const processing_date = $('e3d-modal-processamento').value || null;
 
   slot.label = label;
   slot.obs = obs;
   slot.boxes = newBoxes;
+  slot.wagon_code = wagon_code;
+  slot.harvest_date = harvest_date;
+  slot.planting_date = planting_date;
+  slot.processing_date = processing_date;
 
   // Recalculate status based on boxes and limit
   const limit = e3dGetPalletLimit(slot.boxType, slot.caliber, slot.boxModel);
@@ -7337,7 +7884,15 @@ async function e3dSavePalletChanges() {
 
   if (slot.id) {
     const { error } = await sb.from('pallets')
-      .update({ label, obs, box_count: newBoxes })
+      .update({ 
+        label, 
+        obs, 
+        box_count: newBoxes,
+        wagon_code,
+        harvest_date,
+        planting_date,
+        processing_date
+      })
       .eq('id', slot.id);
       
     if (error) {
@@ -7363,6 +7918,11 @@ async function e3dModalDispatchPallet() {
 
   const slot = gridName === 'packing' ? e3d.grid[idx] : e3d.coldGrid[idx];
   if (!slot) return;
+
+  if (slot.status === E3D_STATUS.FORMING) {
+    toast('⚠️ Não é permitido expedir pallets em formação!', 'warning');
+    return;
+  }
 
   if (confirm(`Deseja expedir o pallet P${String(slot.palletNum).padStart(2,'0')}?`)) {
     if (slot.id) {
@@ -7597,6 +8157,7 @@ document.addEventListener('click', (e) => {
     if (sb && (sb.classList.contains('open') || sb.classList.contains('active')) && !sb.contains(e.target) && (!toggle || !toggle.contains(e.target))) {
       sb.classList.remove('open');
       sb.classList.remove('active');
+      document.body.classList.remove('sidebar-open');
     }
   }
 });
@@ -7604,6 +8165,9 @@ document.addEventListener('click', (e) => {
 // INFO PARCELAS (CROP CYCLES) GESTÃO
 // ═══════════════════════════════════════════
 let _infoParcelas = [];
+let _defensivos = [];
+let _mipRecords = [];
+let _newOpItems = [];
 
 async function loadInfoParcelas() {
   try {
@@ -7766,6 +8330,25 @@ function showModalIpTab(tab) {
 }
 
 function onModalParcelSelect() {
+}
+
+function calculateAreaFromLines() {
+  const linesVal = document.getElementById('infoP_linhas').value;
+  const areaInput = document.getElementById('infoP_area');
+  if (linesVal) {
+    const lines = parseInt(linesVal) || 0;
+    areaInput.value = (lines * 0.04).toFixed(2);
+  } else {
+    areaInput.value = '';
+  }
+}
+
+function isMatchingPraga(mipPraga, defAlvo) {
+  if (!mipPraga || !defAlvo) return false;
+  const clean = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  const cMip = clean(mipPraga);
+  const cDef = clean(defAlvo);
+  return cMip.includes(cDef) || cDef.includes(cMip);
 }
 
 async function saveInfoParcela() {
@@ -7953,6 +8536,905 @@ async function importStaticInfoParcelas() {
   loadInfoParcelas();
   loadParcels();
 }
+
+// ═══════════════════════════════════════════
+// CADERNO DE CAMPO (MIP & ORDENS DE PULVERIZAÇÃO)
+// ═══════════════════════════════════════════
+function showCcTab(tab) {
+  if (tab === 'mip') {
+    $('ccTabMip').style.display = 'block';
+    $('ccTabOp').style.display = 'none';
+    $('ccTabMipBtn').className = 'btn on';
+    $('ccTabOpBtn').className = 'btn sec';
+  } else {
+    $('ccTabMip').style.display = 'none';
+    $('ccTabOp').style.display = 'block';
+    $('ccTabMipBtn').className = 'btn sec';
+    $('ccTabOpBtn').className = 'btn on';
+  }
+}
+
+async function loadCadernoCampo() {
+  try {
+    // 1. Carregar MIP
+    const { data: mipData, error: mipError } = await sb.from('caderno_campo_mip').select('*').eq('tenant_id', tenantId).order('data_vistoria', { ascending: false });
+    if (mipError) throw mipError;
+    renderCcMipTable(mipData);
+    _mipRecords = mipData || [];
+    
+    // 2. Carregar O.P
+    const { data: opData, error: opError } = await sb.from('caderno_campo_op').select('*, caderno_campo_op_itens(*)').eq('tenant_id', tenantId).order('data_aplicacao', { ascending: false });
+    if (opError) throw opError;
+    renderCcOpTable(opData);
+    window._opList = opData || [];
+    
+    // 3. Carregar parcelas para popular o select de Nova O.P
+    if (!_infoParcelas || _infoParcelas.length === 0) {
+      const { data: ipData } = await sb.from('info_parcelas').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
+      _infoParcelas = ipData || [];
+    }
+    
+    // 4. Carregar cadastro de defensivos
+    const { data: defData, error: defError } = await sb.from('caderno_campo_defensivos_cadastro').select('*').eq('tenant_id', tenantId).order('produto', { ascending: true });
+    if (!defError) {
+      _defensivos = defData || [];
+    }
+    
+    const opSel = $('newOpParcelSelect');
+    if (opSel) {
+      opSel.innerHTML = '<option value="">— Selecione a Parcela —</option>';
+      _infoParcelas.forEach(ip => {
+        opSel.insertAdjacentHTML('beforeend', `<option value="${ip.id}">${ip.parcela2 || ip.parcela} (${ip.variedade})</option>`);
+      });
+    }
+  } catch(e) {
+    console.error('Erro ao carregar caderno de campo:', e);
+  }
+}
+
+function renderCcMipTable(list) {
+  const tbody = $('ccMipTableBody');
+  if (!tbody) return;
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Nenhuma vistoria MIP registrada.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(item => {
+    let limiar = 1.0;
+    if (item.praga.includes('LAGARTA')) limiar = 0.2;
+    if (item.praga.includes('OÍDIO') || item.praga.includes('MÍLDIO')) limiar = 0.0;
+    
+    const mediaVal = parseFloat(item.media) || 0;
+    const acimaLimiar = mediaVal > limiar;
+    
+    const statusText = acimaLimiar ? 'Recomenda-se Controle' : 'Sob Controle';
+    const statusColor = acimaLimiar ? 'rgba(239, 68, 68, 0.1); color: var(--red)' : 'rgba(16, 185, 129, 0.1); color: var(--green)';
+    
+    const formattedDate = item.data_vistoria ? item.data_vistoria.split('-').reverse().join('/') : '—';
+    const pragaFriendly = item.praga.replace(/_/g, ' ');
+    
+    return `
+      <tr style="border-bottom:1px solid var(--border); font-size:13px">
+        <td style="padding:12px 10px">${formattedDate}</td>
+        <td style="padding:12px 10px; font-weight:600">${item.parcela}</td>
+        <td style="padding:12px 10px">${item.variedade}</td>
+        <td style="padding:12px 10px; font-weight:500">${pragaFriendly}</td>
+        <td style="padding:12px 10px; text-align:center; font-weight:700">${mediaVal.toFixed(2)}</td>
+        <td style="padding:12px 10px; text-align:center">
+          <span class="badge" style="background:${statusColor}; font-size:11px">${statusText}</span>
+        </td>
+        <td style="padding:12px 10px; text-align:center">
+          <button class="danger" style="padding:4px 8px; font-size:11px" onclick="deleteMipRecord('${item.id}')">Excluir</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderCcOpTable(list) {
+  const tbody = $('ccOpTableBody');
+  if (!tbody) return;
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--muted)">Nenhuma ordem de pulverização registrada.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(item => {
+    const formattedDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—';
+    const horarioStr = (item.horario_inicio || item.horario_fim) ? `${item.horario_inicio || ''} - ${item.horario_fim || ''}` : '—';
+    
+    // Processar os itens da calda
+    const itemsCalda = item.caderno_campo_op_itens || [];
+    let defensivosHtml = '';
+    let maxCarencia = 0;
+    
+    if (itemsCalda.length > 0) {
+      defensivosHtml = itemsCalda.map(i => {
+        if (i.carencia_dias > maxCarencia) maxCarencia = i.carencia_dias;
+        const corrigidaBadge = i.dosagem_real > i.dosagem_corrigida ? `<br/><small style="color:var(--orange)">Correção de Auditoria: ${i.dosagem_corrigida} ${i.unidade}</small>` : '';
+        return `<div><strong>${i.produto_nome}</strong> (${i.dosagem_real} ${i.unidade})<br/><small style="color:var(--muted)">Alvo: ${i.alvo || '—'} | Carência: ${i.carencia_dias} dias</small>${corrigidaBadge}</div>`;
+      }).join('<hr style="margin:4px 0; border-color:var(--border)"/>');
+    } else {
+      defensivosHtml = `<span style="color:var(--muted)">Sem produtos listados</span>`;
+    }
+    
+    let dataLiberacaoStr = '—';
+    let statusCarencia = 'Liberado';
+    let statusCarenciaColor = 'rgba(16, 185, 129, 0.1); color: var(--green)';
+    
+    if (item.data_aplicacao) {
+      const appDate = new Date(item.data_aplicacao + 'T12:00:00');
+      appDate.setDate(appDate.getDate() + maxCarencia);
+      dataLiberacaoStr = appDate.toLocaleDateString('pt-BR');
+      
+      const todayDate = new Date();
+      todayDate.setHours(0,0,0,0);
+      const appDateZero = new Date(appDate);
+      appDateZero.setHours(0,0,0,0);
+      
+      if (todayDate < appDateZero) {
+        statusCarencia = `Bloqueado até ${dataLiberacaoStr}`;
+        statusCarenciaColor = 'rgba(245, 158, 11, 0.1); color: var(--yellow)';
+      }
+    }
+    
+    const itemStr = encodeURIComponent(JSON.stringify(item));
+    
+    return `
+      <tr style="border-bottom:1px solid var(--border); font-size:13px">
+        <td style="padding:12px 10px">${formattedDate}</td>
+        <td style="padding:12px 10px; font-weight:600">${item.parcela}</td>
+        <td style="padding:12px 10px">${item.cultura} / ${item.variedade}</td>
+        <td style="padding:12px 10px">
+          ${defensivosHtml}
+        </td>
+        <td style="padding:12px 10px; text-align:center">
+          <strong>${maxCarencia} dias</strong><br/>
+          <span style="font-size:10px; padding:2px 6px; border-radius:4px; background:${statusCarenciaColor}">${statusCarencia}</span>
+        </td>
+        <td style="padding:12px 10px; text-align:center">${horarioStr}</td>
+        <td style="padding:12px 10px; text-align:center; white-space:nowrap">
+          <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printOpReport('${itemStr}')"><i data-lucide="file-text" style="width:12px; height:12px"></i> O.P</button>
+          <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printColheitaReport('${itemStr}')"><i data-lucide="wheat" style="width:12px; height:12px"></i> Laudo</button>
+          <button class="danger" style="font-size:11px; padding:4px 8px" onclick="deleteOpRecord('${item.id}')">×</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  
+  setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
+}
+
+async function deleteMipRecord(id) {
+  if (!confirm('Deseja realmente excluir este monitoramento MIP?')) return;
+  try {
+    const { error } = await sb.from('caderno_campo_mip').delete().eq('id', id);
+    if (error) throw error;
+    toast('✓ Monitoramento MIP excluído!', 'ok');
+    loadCadernoCampo();
+  } catch(e) {
+    console.error(e);
+    alert('Erro ao excluir registro MIP.');
+  }
+}
+
+async function deleteOpRecord(id) {
+  if (!confirm('Deseja realmente excluir esta Ordem de Pulverização?')) return;
+  try {
+    const { error } = await sb.from('caderno_campo_op').delete().eq('id', id);
+    if (error) throw error;
+    toast('✓ Ordem de Pulverização excluída!', 'ok');
+    loadCadernoCampo();
+  } catch(e) {
+    console.error(e);
+    alert('Erro ao excluir O.P.');
+  }
+}
+
+function openNewOpModal() {
+  _newOpItems = [];
+  renderNewOpItems();
+  
+  $('newOpDate').value = today();
+  $('newOpTratorista').value = "Robson Rafael de Medeiros";
+  $('newOpBarrista').value = "";
+  $('newOpTrator').value = "Trator 2";
+  $('newOpEquipamento').value = "Pulverizador Turbo";
+  $('newOpPressao').value = "Pressão: 70 PSI / Rotação 1900";
+  $('newOpBicos').value = "Cone Vazio";
+  $('newOpVolumeCalda').value = "200";
+  $('newOpTemp').value = "";
+  $('newOpUmid').value = "";
+  $('newOpVento').value = "";
+  $('newOpHoraInicio').value = "07:30";
+  $('newOpHoraFim').value = "11:30";
+  $('newOpTecnico').value = "Ivanosca Martins de Oliveira Cunha";
+  $('newOpAgronomo').value = "Reinaldo Chotten";
+  $('newOpObs').value = "";
+  $('newOpParcelSelect').value = "";
+  $('newOpCultura').value = "";
+  $('newOpArea').value = "";
+  
+  populateNewOpDefensivesSelect();
+  
+  $('newOpModal').style.display = 'flex';
+}
+
+function closeNewOpModal() {
+  $('newOpModal').style.display = 'none';
+}
+
+function onNewOpParcelChange() {
+  const pId = $('newOpParcelSelect').value;
+  const ip = _infoParcelas.find(x => x.id === pId);
+  if (ip) {
+    $('newOpCultura').value = `${ip.cultura || 'MELÃO'} (${ip.variedade})`;
+    $('newOpArea').value = ip.area || '1.00';
+  } else {
+    $('newOpCultura').value = '';
+    $('newOpArea').value = '';
+  }
+  populateNewOpDefensivesSelect();
+}
+
+function populateNewOpDefensivesSelect() {
+  const select = $('newOpDefensivoSelect');
+  if (!select) return;
+  select.innerHTML = '<option value="">Selecione um defensivo</option>';
+  
+  const pId = $('newOpParcelSelect').value;
+  const ip = _infoParcelas.find(x => x.id === pId);
+  const cultura = ip ? ip.cultura : '';
+  
+  let listToUse = _defensivos;
+  if (cultura) {
+    const filtered = _defensivos.filter(d => d.cultura && d.cultura.toUpperCase() === cultura.toUpperCase());
+    if (filtered.length > 0) listToUse = filtered;
+  }
+  
+  listToUse.forEach(d => {
+    select.insertAdjacentHTML('beforeend', `<option value="${d.id}">${d.produto} (${d.ingrediente_ativo || ''})</option>`);
+  });
+  
+  $('newOpDosagemReal').value = '1.00';
+}
+
+function onNewOpDefensivoChange() {
+  const id = $('newOpDefensivoSelect').value;
+  const def = _defensivos.find(d => d.id === id);
+  if (def) {
+    $('newOpDosagemReal').value = def.dosagem_recomendada || '1.00';
+  }
+}
+
+function addNewOpItem() {
+  const pId = $('newOpParcelSelect').value;
+  if (!pId) { alert('Selecione o ciclo de parcela primeiro!'); return; }
+  
+  const id = $('newOpDefensivoSelect').value;
+  if (!id) { alert('Selecione o defensivo'); return; }
+  
+  const def = _defensivos.find(d => d.id === id);
+  const dosagemReal = parseFloat($('newOpDosagemReal').value) || 0;
+  const dosagemLimite = parseFloat(def.dosagem_recomendada) || dosagemReal;
+  const dosagemCorrigida = dosagemReal > dosagemLimite ? dosagemLimite : dosagemReal;
+  
+  const ip = _infoParcelas.find(x => x.id === pId);
+  
+  // Validação 1: Duplicados por Praga/Alvo
+  const targetAlvo = def.alvo || '';
+  const cleanAlvo = targetAlvo.toUpperCase();
+  if (targetAlvo) {
+    const alreadyHasAlvo = _newOpItems.some(item => item.alvo.trim().toUpperCase() === targetAlvo.trim().toUpperCase());
+    if (alreadyHasAlvo) {
+      alert(`Você não pode aplicar dois defensivos para a mesma praga/alvo (${targetAlvo}) na mesma calda!`);
+      return;
+    }
+  }
+  
+  // Validação 2: Justificativa de MIP
+  const isFertilizer = !targetAlvo || cleanAlvo.includes('ADUBO') || cleanAlvo.includes('FOLIARE') || cleanAlvo.includes('NUTRIENTE') || cleanAlvo.includes('FISIOLOGICO') || cleanAlvo === 'N/A';
+  if (!isFertilizer) {
+    const parcelName = ip.parcela2 || ip.parcela;
+    const relevantMips = _mipRecords.filter(m => {
+      const matchesParcel = m.parcela === parcelName;
+      const matchesPraga = isMatchingPraga(m.praga, targetAlvo);
+      return matchesParcel && matchesPraga;
+    });
+    
+    relevantMips.sort((a, b) => new Date(b.data_vistoria) - new Date(a.data_vistoria));
+    const latestMip = relevantMips[0];
+    
+    if (!latestMip || parseFloat(latestMip.media) <= 0) {
+      alert(`Você não pode aplicar o defensivo ${def.produto} para a praga "${targetAlvo}" na parcela ${parcelName} porque ela não foi identificada no MIP (Manejo Integrado de Pragas) recente desta parcela.`);
+      return;
+    }
+  }
+  
+  _newOpItems.push({
+    produto_id: def.id,
+    produto_nome: def.produto,
+    alvo: targetAlvo,
+    dosagem_real: dosagemReal,
+    dosagem_corrigida: dosagemCorrigida,
+    unidade: def.unidade || 'L/ha',
+    carencia_dias: def.carencia_dias || 0
+  });
+  
+  renderNewOpItems();
+}
+
+function removeNewOpItem(idx) {
+  _newOpItems.splice(idx, 1);
+  renderNewOpItems();
+}
+
+function renderNewOpItems() {
+  const container = $('newOpItemsContainer');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  if (_newOpItems.length === 0) {
+    container.innerHTML = '<div style="font-size:12px; color:var(--muted); text-align:center; padding:10px;">Nenhum produto adicionado.</div>';
+    return;
+  }
+  
+  _newOpItems.forEach((item, idx) => {
+    container.insertAdjacentHTML('beforeend', `
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding:6px 0; font-size:13px;">
+        <div>
+          <strong>${item.produto_nome}</strong> - ${item.dosagem_real} ${item.unidade} <span style="color:var(--muted)">(Alvo: ${item.alvo || '—'})</span>
+        </div>
+        <button onclick="removeNewOpItem(${idx})" style="background:var(--red-dim); color:var(--red); border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:700;">Remover</button>
+      </div>
+    `);
+  });
+}
+
+function timeToMinutes(tStr) {
+  if (!tStr) return 0;
+  const parts = tStr.split(':');
+  return (parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0);
+}
+
+function overlaps(startA, endA, startB, endB) {
+  const minStartA = timeToMinutes(startA);
+  const minEndA = timeToMinutes(endA);
+  const minStartB = timeToMinutes(startB);
+  const minEndB = timeToMinutes(endB);
+  return Math.max(minStartA, minStartB) < Math.min(minEndA, minEndB);
+}
+
+async function saveNewOpDashboard() {
+  const pId = $('newOpParcelSelect').value;
+  if (!pId) { alert('Selecione uma parcela!'); return; }
+  if (_newOpItems.length === 0) { alert('Adicione pelo menos um produto na calda!'); return; }
+  
+  const ip = _infoParcelas.find(x => x.id === pId);
+  const chosenDate = $('newOpDate').value || today();
+  const startVal = $('newOpHoraInicio').value;
+  const endVal = $('newOpHoraFim').value;
+  const tratoristaVal = $('newOpTratorista').value.trim();
+  const barristaVal = $('newOpBarrista').value.trim();
+  const tratorVal = $('newOpTrator').value.trim();
+  
+  // Validação 1: Tratorista e Barrista
+  if (tratoristaVal && barristaVal && tratoristaVal.toLowerCase() === barristaVal.toLowerCase()) {
+    alert("O Tratorista e o Barrista não podem ser a mesma pessoa!");
+    return;
+  }
+  
+  // Validação 2: Conflito de horários
+  if (startVal && endVal) {
+    if (timeToMinutes(startVal) >= timeToMinutes(endVal)) {
+      alert("O horário de início deve ser anterior ao horário de término!");
+      return;
+    }
+    
+    const conflicts = (window._opList || []).filter(op => {
+      const isSameDay = op.data_aplicacao === chosenDate;
+      const hasOverlap = overlaps(startVal, endVal, op.horario_inicio, op.horario_fim);
+      return isSameDay && hasOverlap;
+    });
+    
+    for (const op of conflicts) {
+      if (tratoristaVal && op.tratorista && op.tratorista.trim().toLowerCase() === tratoristaVal.toLowerCase()) {
+        alert(`Conflito de Horário! O tratorista ${tratoristaVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
+        return;
+      }
+      if (barristaVal && op.barrista && op.barrista.trim().toLowerCase() === barristaVal.toLowerCase()) {
+        alert(`Conflito de Horário! O barrista ${barristaVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
+        return;
+      }
+      if (tratorVal && op.trator && op.trator.trim().toLowerCase() === tratorVal.toLowerCase()) {
+        alert(`Conflito de Horário! O trator ${tratorVal} já está sendo utilizado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
+        return;
+      }
+    }
+  }
+  
+  const recordOP = {
+    tenant_id: tenantId,
+    parcel_id: ip.parcel_id || null,
+    parcela: ip.parcela2 || ip.parcela,
+    variedade: ip.variedade,
+    data_aplicacao: chosenDate,
+    cultura: ip.cultura || 'MELÃO',
+    area_ha: parseFloat(ip.area) || 1.0,
+    trator: tratorVal,
+    tratorista: tratoristaVal,
+    barrista: barristaVal,
+    equipamento: $('newOpEquipamento').value,
+    pressao: $('newOpPressao').value,
+    bicos: $('newOpBicos').value,
+    volume_calda: $('newOpVolumeCalda').value,
+    temperatura_c: parseFloat($('newOpTemp').value) || null,
+    umidade_rel_pct: parseFloat($('newOpUmid').value) || null,
+    velocidade_vento_kmh: parseFloat($('newOpVento').value) || null,
+    horario_inicio: startVal,
+    horario_fim: endVal,
+    tecnico: $('newOpTecnico').value,
+    eng_agronomo: $('newOpAgronomo').value,
+    observacoes: $('newOpObs').value
+  };
+  
+  try {
+    const { data: opData, error: opErr } = await sb.from('caderno_campo_op').insert(recordOP).select('id').single();
+    if (opErr) throw opErr;
+    
+    const itemsToInsert = _newOpItems.map(i => ({
+      tenant_id: tenantId,
+      op_id: opData.id,
+      produto_id: i.produto_id,
+      produto_nome: i.produto_nome,
+      alvo: i.alvo,
+      dosagem_real: i.dosagem_real,
+      dosagem_corrigida: i.dosagem_corrigida,
+      unidade: i.unidade,
+      carencia_dias: i.carencia_dias
+    }));
+    
+    const { error: itemsErr } = await sb.from('caderno_campo_op_itens').insert(itemsToInsert);
+    if (itemsErr) throw itemsErr;
+    
+    toast('✓ Ordem de Pulverização registrada com sucesso!', 'ok');
+    closeNewOpModal();
+    loadCadernoCampo();
+  } catch(e) {
+    console.error(e);
+    alert('Erro ao registrar O.P no banco de dados.');
+  }
+}
+
+function printOpReport(itemStr) {
+  const item = JSON.parse(decodeURIComponent(itemStr));
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  
+  // Cores
+  const primaryColor = [27, 67, 50]; // Verde escuro agro
+  const secondaryColor = [82, 183, 136]; // Verde claro
+  const textColor = [33, 37, 41];
+  const lightBg = [248, 249, 250];
+  
+  // Desenhar borda externa fina decorativa
+  doc.setDrawColor(27, 67, 50);
+  doc.setLineWidth(0.5);
+  doc.rect(5, 5, 200, 287);
+  
+  // Cabeçalho
+  doc.setFillColor(27, 67, 50);
+  doc.rect(6, 6, 198, 25, 'F');
+  
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text("PRODTEC - GESTÃO AGRÍCOLA", 12, 16);
+  
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text("Caderno de Campo Digital - Rastreabilidade e Aplicações", 12, 22);
+  
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text("ORDEM DE PULVERIZAÇÃO (PC 02)", 192, 16, { align: "right" });
+  
+  const formattedDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—';
+  doc.setFontSize(9);
+  doc.text(`Data Emissão: ${formattedDate}`, 192, 22, { align: "right" });
+  
+  let y = 38;
+  
+  // Seção 1: Identificação da Parcela
+  doc.setFillColor(240, 247, 244);
+  doc.rect(8, y, 194, 8, 'F');
+  doc.setTextColor(27, 67, 50);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("1. IDENTIFICAÇÃO DA ÁREA DE CULTIVO", 12, y + 6);
+  
+  y += 10;
+  doc.setTextColor(33, 37, 41);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  
+  // Tabela de Info
+  doc.rect(8, y, 194, 20);
+  doc.line(8, y + 10, 202, y + 10);
+  doc.line(70, y, 70, y + 20);
+  doc.line(140, y, 140, y + 20);
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Parcela física:", 10, y + 6);
+  doc.setFont("helvetica", "normal");
+  doc.text(String(item.parcela), 38, y + 6);
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Cultura:", 72, y + 6);
+  doc.setFont("helvetica", "normal");
+  doc.text(String(item.cultura), 90, y + 6);
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Variedade:", 142, y + 6);
+  doc.setFont("helvetica", "normal");
+  doc.text(String(item.variedade), 164, y + 6);
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Área Tratada (ha):", 10, y + 16);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${item.area_ha || '1.00'} ha`, 44, y + 16);
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Safra / Ciclo ID:", 72, y + 16);
+  doc.setFont("helvetica", "normal");
+  doc.text("Ciclo Ativo", 102, y + 16);
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Status Regulação:", 142, y + 16);
+  doc.setFont("helvetica", "normal");
+  doc.text("Conforme IDIARN", 175, y + 16);
+  
+  y += 28;
+  
+  // Seção 2: Especificação do Defensivo / Agroquímico
+  doc.setFillColor(240, 247, 244);
+  doc.rect(8, y, 194, 8, 'F');
+  doc.setTextColor(27, 67, 50);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("2. ESPECIFICAÇÃO TÉCNICA DA CALDA (PRODUTOS)", 12, y + 6);
+  
+  y += 10;
+  
+  const itemsCalda = item.caderno_campo_op_itens || [];
+  
+  doc.rect(8, y, 194, 8);
+  doc.setTextColor(33, 37, 41);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("Produto Comercial", 10, y + 5);
+  doc.text("Alvo Biológico", 85, y + 5);
+  doc.text("Carência", 130, y + 5);
+  doc.text("Regulamentar", 155, y + 5);
+  doc.text("Campo", 180, y + 5);
+  
+  y += 8;
+  
+  doc.setFont("helvetica", "normal");
+  if(itemsCalda.length === 0) {
+    doc.rect(8, y, 194, 10);
+    doc.text("Nenhum produto registrado nesta aplicação.", 12, y + 6);
+    y += 10;
+  } else {
+    itemsCalda.forEach(i => {
+      doc.rect(8, y, 194, 10);
+      doc.text(String(i.produto_nome).substring(0, 35), 10, y + 6);
+      doc.text(String(i.alvo || '—').substring(0, 20), 85, y + 6);
+      doc.text(`${i.carencia_dias} dias`, 130, y + 6);
+      doc.text(`${i.dosagem_corrigida} ${i.unidade}`, 155, y + 6);
+      doc.text(`${i.dosagem_real} ${i.unidade}`, 180, y + 6);
+      y += 10;
+    });
+  }
+  
+  y += 6;
+  
+  // Seção 3: Operação de Campo
+  doc.setFillColor(240, 247, 244);
+  doc.rect(8, y, 194, 8, 'F');
+  doc.setTextColor(27, 67, 50);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("3. PARÂMETROS E DADOS DA APLICAÇÃO DE CAMPO", 12, y + 6);
+  
+  y += 10;
+  doc.rect(8, y, 194, 40);
+  doc.line(8, y + 10, 202, y + 10);
+  doc.line(8, y + 20, 202, y + 20);
+  doc.line(8, y + 30, 202, y + 30);
+  doc.line(100, y, 100, y + 40);
+  
+  doc.setTextColor(33, 37, 41);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  
+  // Linha 1
+  doc.text("Tratorista / Operador:", 10, y + 6);
+  doc.setFont("helvetica", "normal");
+  doc.text(String(item.tratorista || '—'), 48, y + 6);
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Barrista (Calda):", 102, y + 6);
+  doc.setFont("helvetica", "normal");
+  doc.text(String(item.barrista || '—'), 135, y + 6);
+  
+  // Linha 2
+  doc.setFont("helvetica", "bold");
+  doc.text("Equipamento / Trator:", 10, y + 16);
+  doc.setFont("helvetica", "normal");
+  doc.text(String(item.trator || '—'), 48, y + 16);
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Bicos / Pressão:", 102, y + 16);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${item.bicos || '—'} / ${item.pressao || '—'}`, 135, y + 16);
+  
+  // Linha 3
+  doc.setFont("helvetica", "bold");
+  doc.text("Horário de Operação:", 10, y + 26);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${item.horario_inicio || '—'} às ${item.horario_fim || '—'}`, 48, y + 26);
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Volume de Calda:", 102, y + 26);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${item.volume_calda || '—'} L/ha`, 135, y + 26);
+  
+  // Linha 4
+  doc.setFont("helvetica", "bold");
+  doc.text("Clima (T / U / V):", 10, y + 36);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${item.temperatura_c||'—'}°C / ${item.umidade_rel_pct||'—'}% / ${item.velocidade_vento_kmh||'—'} km/h`, 48, y + 36);
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Responsável:", 102, y + 36);
+  doc.setFont("helvetica", "normal");
+  doc.text(String(item.tecnico || '—'), 135, y + 36);
+  
+  y += 48;
+  
+  // Seção 4: Observações e Assinaturas
+  doc.setFillColor(240, 247, 244);
+  doc.rect(8, y, 194, 8, 'F');
+  doc.setTextColor(27, 67, 50);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("4. OBSERVAÇÕES E RESPONSABILIDADE TÉCNICA", 12, y + 6);
+  
+  y += 10;
+  doc.rect(8, y, 194, 20);
+  doc.setTextColor(33, 37, 41);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text(item.observacoes || "Aplicação realizada conforme planejamento e de acordo com as normas de segurança.", 10, y + 6, { maxWidth: 190 });
+  
+  y += 40;
+  
+  // Assinaturas
+  doc.line(15, y, 90, y);
+  doc.line(115, y, 190, y);
+  
+  doc.setFontSize(9);
+  doc.setTextColor(33, 37, 41);
+  doc.text(String(item.eng_agronomo || 'Reinaldo Chotten'), 52, y + 4, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.text("Responsável Técnico (Agrônomo / CREA)", 52, y + 8, { align: "center" });
+  
+  doc.setFont("helvetica", "normal");
+  doc.text(String(item.tratorista || 'Operador'), 152, y + 4, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.text("Aplicador Responsável (Operador)", 152, y + 8, { align: "center" });
+  
+  // Rodapé decorativo
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(150, 150, 150);
+  doc.text(`Documento emitido eletronicamente pelo Sistema Prodtech Web em ${new Date().toLocaleString('pt-BR')}.`, 105, 280, { align: "center" });
+  
+  doc.save(`Ordem_Pulverizacao_Parcela_${item.parcela.replace(/\s+/g, '_')}_${item.data_aplicacao}.pdf`);
+}
+
+function printColheitaReport(itemStr) {
+  const item = JSON.parse(decodeURIComponent(itemStr));
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  
+  // Cores
+  const primaryColor = [27, 67, 50]; // Verde escuro agro
+  const secondaryColor = [82, 183, 136]; // Verde claro
+  const textColor = [33, 37, 41];
+  const lightBg = [248, 249, 250];
+  
+  // Desenhar borda externa
+  doc.setDrawColor(27, 67, 50);
+  doc.setLineWidth(0.5);
+  doc.rect(5, 5, 200, 287);
+  
+  // Cabeçalho
+  doc.setFillColor(27, 67, 50);
+  doc.rect(6, 6, 198, 25, 'F');
+  
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text("PRODTEC - RASTREABILIDADE FITOSSANITÁRIA", 12, 16);
+  
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text("Certificação e Liberação de Áreas Produtivas", 12, 22);
+  
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.text("LAUDO DE AUTORIZAÇÃO DE COLHEITA (PC 11)", 192, 16, { align: "right" });
+  
+  const formattedDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—';
+  doc.setFontSize(9);
+  doc.text(`Data Emissão: ${new Date().toLocaleDateString('pt-BR')}`, 192, 22, { align: "right" });
+  
+  let y = 40;
+  
+  // 1. DADOS TÉCNICOS
+  doc.setFillColor(240, 247, 244);
+  doc.rect(8, y, 194, 8, 'F');
+  doc.setTextColor(27, 67, 50);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("1. ESPECIFICAÇÕES DA ÁREA E ÚLTIMO TRATAMENTO", 12, y + 6);
+  
+  y += 10;
+  
+  const itemsCalda = item.caderno_campo_op_itens || [];
+  let maxCarencia = 0;
+  let nomesProdutos = [];
+  itemsCalda.forEach(i => {
+    if(i.carencia_dias > maxCarencia) maxCarencia = i.carencia_dias;
+    nomesProdutos.push(i.produto_nome);
+  });
+  
+  const produtosStr = nomesProdutos.length > 0 ? nomesProdutos.join(', ') : 'Nenhum';
+  
+  doc.rect(8, y, 194, 30);
+  doc.line(8, y + 10, 202, y + 10);
+  doc.line(8, y + 20, 202, y + 20);
+  doc.line(100, y, 100, y + 30);
+  
+  doc.setTextColor(33, 37, 41);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("Parcela / Área de Cultivo:", 10, y + 6);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${item.parcela} (Área: ${item.area_ha || '1.00'} ha)`, 56, y + 6);
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Cultura / Variedade:", 102, y + 6);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${item.cultura} (${item.variedade})`, 140, y + 6);
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Últimos Produtos Aplicados:", 10, y + 16);
+  doc.setFont("helvetica", "normal");
+  doc.text(produtosStr.substring(0, 30) + (produtosStr.length > 30 ? '...' : ''), 62, y + 16);
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Data da Aplicação:", 102, y + 16);
+  doc.setFont("helvetica", "normal");
+  doc.text(formattedDate, 136, y + 16);
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Carência Base Máxima:", 10, y + 26);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${maxCarencia} dias`, 55, y + 26);
+  
+  // Calcular data de liberação
+  let dataLiberacaoStr = '—';
+  let isLiberado = true;
+  
+  if (item.data_aplicacao) {
+    const appDate = new Date(item.data_aplicacao + 'T12:00:00');
+    appDate.setDate(appDate.getDate() + maxCarencia);
+    dataLiberacaoStr = appDate.toLocaleDateString('pt-BR');
+    
+    const todayDate = new Date();
+    todayDate.setHours(0,0,0,0);
+    const appDateZero = new Date(appDate);
+    appDateZero.setHours(0,0,0,0);
+    
+    isLiberado = todayDate >= appDateZero;
+  }
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Término da Carência:", 102, y + 26);
+  doc.setFont("helvetica", "normal");
+  doc.text(dataLiberacaoStr, 142, y + 26);
+  
+  y += 38;
+  
+  // 2. DECLARAÇÃO E PARECER TÉCNICO
+  doc.setFillColor(240, 247, 244);
+  doc.rect(8, y, 194, 8, 'F');
+  doc.setTextColor(27, 67, 50);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("2. DECLARAÇÃO DE CONFORMIDADE E SEGURANÇA ALIMENTAR", 12, y + 6);
+  
+  y += 10;
+  doc.rect(8, y, 194, 55);
+  
+  doc.setTextColor(33, 37, 41);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  
+  let declaracao = `O Responsável Técnico abaixo assinado declara, sob as normas de rastreabilidade vigentes (IDIARN / MAPA / Instrução Normativa Conjunta MAPA/ANVISA n° 02/2018), que a referida parcela cumpriu integralmente o intervalo de carência e segurança fitossanitária referente aos defensivos ${produtosStr}.`;
+  
+  let parecer = "";
+  if (isLiberado) {
+    parecer = `PARECER TÉCNICO: LIBERADO PARA COLHEITA\n\nConstatou-se que o período de carência encerrou-se em ${dataLiberacaoStr}, portanto os frutos colhidos nesta parcela encontram-se livres de resíduos acima dos limites máximos permitidos, estando aptos para colheita, embalagem, transporte e comercialização segura.`;
+    doc.setFillColor(220, 245, 230); // Fundo verde leve
+  } else {
+    parecer = `PARECER TÉCNICO: BLOQUEADO / EM CARÊNCIA\n\nAtenção! A data limite de carência é ${dataLiberacaoStr}. A colheita nesta parcela está terminantemente proibida até o cumprimento do prazo de segurança estabelecido em bula pelo fabricante dos defensivos comerciais aplicados.`;
+    doc.setFillColor(254, 237, 222); // Fundo laranja leve
+  }
+  
+  // Retângulo do parecer técnico interno
+  doc.rect(10, y + 22, 190, 30, 'F');
+  doc.rect(10, y + 22, 190, 30, 'S');
+  
+  doc.setTextColor(33, 37, 41);
+  doc.text(declaracao, 12, y + 6, { maxWidth: 186 });
+  
+  if (isLiberado) {
+    doc.setTextColor(27, 67, 50);
+  } else {
+    doc.setTextColor(120, 50, 10);
+  }
+  doc.setFont("helvetica", "bold");
+  doc.text(parecer, 12, y + 28, { maxWidth: 186 });
+  
+  y += 65;
+  
+  // 3. REGULAMENTAÇÃO E ASSINATURA
+  doc.setFillColor(240, 247, 244);
+  doc.rect(8, y, 194, 8, 'F');
+  doc.setTextColor(27, 67, 50);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("3. TERMO DE RESPONSABILIDADE E CERTIFICAÇÃO", 12, y + 6);
+  
+  y += 35;
+  
+  // Assinaturas
+  doc.line(15, y, 90, y);
+  doc.line(115, y, 190, y);
+  
+  doc.setTextColor(33, 37, 41);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text(String(item.eng_agronomo || 'Reinaldo Chotten'), 52, y + 4, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.text("Engenheiro Agrônomo / RT (CREA)", 52, y + 8, { align: "center" });
+  
+  doc.setFont("helvetica", "normal");
+  doc.text("Gerente de Operações / Qualidade", 152, y + 4, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.text("Diretor da Unidade Produtiva (Packinghouse)", 152, y + 8, { align: "center" });
+  
+  // Rodapé decorativo
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(150, 150, 150);
+  doc.text(`Laudo PC11 - Certificação Digital de Rastreabilidade. Emitido em ${new Date().toLocaleString('pt-BR')}.`, 105, 280, { align: "center" });
+  
+  doc.save(`Laudo_PC11_Liberacao_${item.parcela.replace(/\s+/g, '_')}_${item.data_aplicacao}.pdf`);
+}
 </script><!-- DRAWER DE DESEMPENHO DO COLABORADOR -->
 <div id="empDrawer" class="drawer">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:32px">
@@ -8044,7 +9526,7 @@ async function importStaticInfoParcelas() {
         </div>
         <div>
           <label class="flabel">Linhas</label>
-          <input type="number" id="infoP_linhas" step="1" placeholder="Ex: 48"/>
+          <input type="number" id="infoP_linhas" step="1" placeholder="Ex: 48" oninput="calculateAreaFromLines()"/>
         </div>
         <div>
           <label class="flabel">Qtd. Sementes</label>

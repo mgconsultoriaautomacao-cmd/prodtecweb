@@ -2,6 +2,13 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
+<meta name="color-scheme" content="light dark">
+<script>
+  (function() {
+    const savedTheme = localStorage.getItem('prodtech_campo_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  })();
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -18,17 +25,34 @@
 <script src="https://unpkg.com/html5-qrcode"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-:root{
+:root, html[data-theme="dark"] {
   --bg:#030712;--card:#0f172a;--card2:#111827;
-  --text:#f8fafc;--muted:#64748b;--muted2:#94a3b8;
-  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
-  --green:#10b981;--green-dim:rgba(16,185,129,.15);
-  --blue:#3b82f6;--blue-dim:rgba(59,130,246,.15);
-  --red:#ef4444;--red-dim:rgba(239,68,68,.12);
+  --text:#f0fdf4;--muted:#64748b;--muted2:#86efac;
+  --border:rgba(46, 204, 113, 0.08);--border2:rgba(46, 204, 113, 0.15);
+  --green:#2ecc71;--green-dim:rgba(46, 204, 113, 0.15);
+  --blue:#14a832;--blue-dim:rgba(20, 168, 50, 0.15);
+  --red:#ef4444;--red-dim:rgba(239, 68, 68, 0.12);
   --yellow:#f59e0b;--orange:#f97316;
   --r:14px;
   --safe-top:env(safe-area-inset-top,0px);
   --safe-bottom:env(safe-area-inset-bottom,0px);
+  --input-bg:rgba(0,0,0,.45);
+  color-scheme: dark;
+}
+
+html[data-theme="light"] {
+  --bg:#f4fbf7;--card:#ffffff;--card2:#f0fdf4;
+  --text:#111d15;--muted:#4a6b57;--muted2:#344c3e;
+  --border:rgba(20, 168, 50, 0.1);--border2:rgba(20, 168, 50, 0.18);
+  --green:#14a832;--green-dim:rgba(20, 168, 50, 0.12);
+  --blue:#2ecc71;--blue-dim:rgba(46, 204, 113, 0.12);
+  --red:#dc2626;--red-dim:rgba(220, 38, 38, 0.1);
+  --yellow:#d97706;--orange:#ea580c;
+  --r:14px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --input-bg:rgba(255,255,255,0.85);
+  color-scheme: light;
 }
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,sans-serif;overflow:hidden;touch-action:manipulation}
 .detail-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
@@ -42,9 +66,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter'
 .ip-badge-papaya{background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.2)}
 
 /* ── SCREENS ── */
-.screen{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--bg);transform:translateX(110%);transition:transform .28s cubic-bezier(.4,0,.2,1);will-change:transform;padding-bottom:calc(84px + var(--safe-bottom))}
-.screen.active{transform:translateX(0)}
-.screen.behind{transform:translateX(-12%);pointer-events:none}
+.screen{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;background:var(--bg);transform:translateX(110%);transition:transform .28s cubic-bezier(.4,0,.2,1),visibility .28s;will-change:transform;padding-bottom:calc(84px + var(--safe-bottom));visibility:hidden;pointer-events:none}
+.screen.active{transform:translateX(0);visibility:visible;pointer-events:auto}
+.screen.behind{transform:translateX(-12%);visibility:visible;pointer-events:none}
 #screenLogin{padding-bottom:0;display:flex;align-items:center;justify-content:center;min-height:100dvh}
 #screenHome{padding-bottom:calc(32px + var(--safe-bottom))}
 
@@ -63,7 +87,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter'
 .login-sub{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:28px}
 .field-group{margin-bottom:16px}
 .field-label{display:block;font-size:10px;color:var(--muted2);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
-input,select,textarea{width:100%;background:rgba(0,0,0,.45);border:1px solid var(--border2);color:var(--text);padding:13px 14px;border-radius:10px;font-size:15px;font-family:inherit;appearance:none;transition:border-color .2s}
+input,select,textarea{width:100%;background:var(--input-bg);border:1px solid var(--border2);color:var(--text);padding:13px 14px;border-radius:10px;font-size:15px;font-family:inherit;appearance:none;transition:border-color .2s}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 .err-msg{background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,.2);padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:14px;display:none}
 
@@ -92,7 +116,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 .section-title{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin-bottom:10px}
 
 /* ── HOME ── */
-.home-header{padding:calc(28px + var(--safe-top)) 20px 20px;text-align:center;background:linear-gradient(180deg,rgba(16,185,129,.08) 0%,transparent 100%)}
+.home-header{position:relative;padding:calc(28px + var(--safe-top)) 20px 20px;text-align:center;background:linear-gradient(180deg,rgba(16,185,129,.08) 0%,transparent 100%)}
 .home-logo{font-size:40px;margin-bottom:6px}
 .home-title{font-size:24px;font-weight:900;letter-spacing:-.5px}
 .home-tenant{font-size:12px;color:var(--green);font-weight:600;margin-top:4px}
@@ -157,7 +181,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 .issue-opt:active{transform:scale(.97)}
 
 /* ── EMPLOYEE LIST ── */
-.emp-search{display:flex;gap:8px;align-items:center;background:rgba(0,0,0,.3);border:1px solid var(--border2);border-radius:10px;padding:0 14px;margin-bottom:10px}
+.emp-search{display:flex;gap:8px;align-items:center;background:var(--input-bg);border:1px solid var(--border2);border-radius:10px;padding:0 14px;margin-bottom:10px}
 .emp-search input{border:none;background:transparent;padding:12px 0;font-size:14px}
 .emp-list{max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;overscroll-behavior:contain}
 .emp-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--card2);cursor:pointer;transition:all .15s}
@@ -240,7 +264,292 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 .hist-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:4px}
 .details-modal{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px}
 .details-card{background:var(--card);width:100%;max-width:350px;border-radius:20px;padding:24px;border:1px solid var(--border)}
+
+/* ── ESTOQUE 3D STYLES ── */
+    #e3d-root { display:grid; grid-template-columns:1fr 340px; gap:24px; min-height:80vh; }
+    @media(max-width:1440px){ #e3d-root{ grid-template-columns:1fr 280px; gap:16px; } }
+    @media(max-width:1200px){ #e3d-root{ grid-template-columns:1fr; } } /* Switch to 1 column below 1200px */
+
+    #e3d-zones-wrap {
+      display: flex; 
+      gap: 24px; 
+      min-height: 600px; 
+      padding: 24px; 
+      background: linear-gradient(135deg, #020810 0%, #0a1628 40%, #060d1c 100%); 
+      border-radius: 20px; 
+      border: 1px solid rgba(59,130,246,0.2); 
+      box-shadow: 0 0 60px rgba(59,130,246,0.08);
+      flex-wrap: wrap; /* Allows stacking on smaller screens */
+    }
+    
+    .e3d-zone {
+      flex: 1; 
+      min-width: 300px; /* Forces stacking if screen is too narrow */
+      display: flex; 
+      flex-direction: column; 
+      background: rgba(0,0,0,0.25); 
+      border-radius: 16px; 
+      padding: 20px;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.4);
+      transition: all 0.3s ease;
+    }
+    
+    #e3d-grid-packing, #e3d-grid-cold {
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
+      grid-auto-rows: minmax(110px, auto); 
+      gap: 12px; 
+      flex: 1;
+    }
+
+    @media(max-width:768px) {
+      #e3d-zones-wrap { padding: 12px; gap: 16px; min-height: auto; }
+      .e3d-zone { padding: 12px; min-width: 100%; }
+      #e3d-grid-packing, #e3d-grid-cold { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+    }
+
+    /* AI Camera panel */
+    #e3d-camera-card { background:rgba(15,23,42,.9); border-radius:16px; border:1px solid rgba(59,130,246,.15); padding:20px; margin-bottom:16px; }
+    #e3d-camera-feed { width:100%; aspect-ratio:4/3; background:#000; border-radius:12px; overflow:hidden; border:1px solid rgba(59,130,246,.2); position:relative; display:flex; align-items:center; justify-content:center; }
+    #e3d-camera-feed img { width:100%; height:100%; object-fit:cover; display:none; }
+    #e3d-cam-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#334155; font-size:13px; font-weight:600; height:100%; }
+    #e3d-cam-placeholder svg { width:40px; height:40px; opacity:.3; }
+    .e3d-ai-badge {
+      position:absolute; top:10px; right:10px; padding:3px 10px; border-radius:99px;
+      font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:1px;
+    }
+    .e3d-ai-badge.sim { background:rgba(245,158,11,.15); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
+    .e3d-ai-badge.live { background:rgba(16,185,129,.15); color:#10b981; border:1px solid rgba(16,185,129,.3); animation:blink 2s infinite; }
+
+    /* Count cards */
+    #e3d-count-area { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+    .e3d-count-card {
+      background:rgba(15,23,42,.95); border-radius:12px; border:1px solid rgba(255,255,255,.05);
+      padding:14px; text-align:center;
+    }
+    .e3d-count-num { font-size:28px; font-weight:900; line-height:1; margin-bottom:4px; }
+    .e3d-count-lbl { font-size:10px; color:#64748b; text-transform:uppercase; letter-spacing:1px; font-weight:700; }
+
+    /* Config card */
+    #e3d-cfg-card {
+      background:rgba(15,23,42,.9); border-radius:16px; border:1px solid rgba(255,255,255,.06);
+      padding:20px; margin-bottom:16px;
+    }
+    #e3d-cfg-card .cfg-title { font-size:12px; font-weight:800; color:var(--blue); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+
+    /* Pallet detail modal */
+    #e3d-pallet-modal {
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:3000;
+      align-items:center; justify-content:center; backdrop-filter:blur(6px);
+    }
+    #e3d-pallet-modal.open { display:flex; }
+    #e3d-pallet-inner {
+      background:linear-gradient(135deg, #0f1c33 0%, #0a1220 100%);
+      border:1px solid rgba(59,130,246,.25); border-radius:24px; padding:32px;
+      width:520px; max-width:95%; box-shadow:0 40px 100px rgba(0,0,0,.8);
+      animation: slideUp .3s ease;
+    }
+    @keyframes slideUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+    #e3d-pallet-inner h3 { font-size:18px; font-weight:900; margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+
+    /* Queue list */
+    #e3d-queue { background:rgba(15,23,42,.9); border-radius:16px; border:1px solid rgba(255,255,255,.06); padding:20px; }
+    #e3d-queue .q-title { font-size:12px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px; }
+    .e3d-queue-item {
+      display:flex; align-items:center; gap:12px; padding:10px 12px;
+      background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.05); border-radius:10px; margin-bottom:8px;
+    }
+    .e3d-queue-icon { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+    .e3d-queue-info { flex:1; min-width:0; }
+    .e3d-queue-name { font-size:13px; font-weight:700; }
+    .e3d-queue-meta { font-size:11px; color:#64748b; margin-top:2px; }
+    .e3d-queue-progress { width:100%; height:5px; background:rgba(255,255,255,.06); border-radius:99px; overflow:hidden; margin-top:6px; }
+    .e3d-queue-fill { height:100%; border-radius:99px; transition:width .5s ease; background:linear-gradient(90deg,#3b82f6,#10b981); }
+
+    /* progress ring */
+    .e3d-pbar { position:absolute; bottom:20px; right:20px; }
+    .e3d-pbar-ring { transform:rotate(-90deg); }
+
+    /* ── Visual 3D de Pallet Empilhado ─────────────────────────── */
+    .pallet-3d-wrap {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end;
+      position: relative; gap: 2px;
+    }
+    .pallet-base {
+      width: 85%; height: 8px;
+      background: linear-gradient(90deg, #78350f, #92400e, #78350f);
+      border-radius: 2px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.6);
+      position: relative;
+    }
+    .pallet-base::before {
+      content: '';
+      position: absolute; top: -3px; left: 10%; width: 80%; height: 3px;
+      background: #a16207; border-radius: 1px;
+    }
+    .pallet-stack {
+      width: 85%;
+      display: flex; flex-direction: column;
+      gap: 2px; align-items: center;
+    }
+    .pallet-row {
+      width: 100%; display: flex; gap: 2px;
+    }
+    .pallet-box {
+      flex: 1; height: 16px; border-radius: 2px;
+      position: relative;
+      box-shadow: inset 0 -2px 4px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4);
+      transition: all 0.3s ease;
+    }
+    .pallet-box::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: rgba(255,255,255,0.15); border-radius: 2px 2px 0 0;
+    }
+    /* ── Card do Pallet: Layout sem sobreposição ─────────────── */
+    .pallet-card {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      gap: 0; overflow: hidden; border-radius: 10px;
+    }
+    /* Zona de informações (topo) */
+    .pallet-card-header {
+      flex-shrink: 0;
+      padding: 6px 7px 5px;
+      background: rgba(0,0,0,0.35);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .pallet-card-num {
+      font-size: 14px; font-weight: 900; color: #fff;
+      line-height: 1; letter-spacing: -0.5px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .pallet-card-status-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    }
+    .pallet-card-variety {
+      font-size: 9.5px; font-weight: 700; color: #cbd5e1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-top: 3px;
+    }
+    .pallet-card-meta {
+      display: flex; gap: 5px; align-items: center;
+      margin-top: 3px; flex-wrap: wrap;
+    }
+    .pallet-card-chip {
+      font-size: 8px; font-weight: 700;
+      padding: 1px 5px; border-radius: 4px;
+      background: rgba(255,255,255,0.08);
+      color: #94a3b8;
+    }
+    .pallet-card-chip.accent { background: rgba(6,182,212,0.15); color: #22d3ee; font-family: monospace; }
+    /* Zona da pilha 3D (rodapé) */
+    .pallet-card-stack {
+      flex: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end;
+      padding: 4px 6px 6px;
+      position: relative;
+    }
+    /* Badge de caixas (canto sup. direito do card inteiro) */
+    .pallet-cx-badge {
+      position: absolute; top: -9px; right: -9px;
+      font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px; color: #fff;
+      z-index: 10; box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+    /* Badge de idade (canto sup. esquerdo do card inteiro) */
+    .pallet-age-badge {
+      position: absolute; top: -9px; left: -9px;
+      display: flex; align-items: center; gap: 3px;
+      background: rgba(5,15,30,0.95); border-radius: 10px;
+      font-size: 8px; font-weight: 700; color: #fff;
+      padding: 2px 5px; z-index: 10;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+    .pallet-stack {
+      width: 85%;
+      display: flex; flex-direction: column;
+      gap: 2px; align-items: center;
+    }
+    .pallet-row {
+      width: 100%; display: flex; gap: 2px;
+    }
+    .pallet-box {
+      flex: 1; height: 12px; border-radius: 2px;
+      position: relative;
+      box-shadow: inset 0 -2px 4px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4);
+    }
+    .pallet-box::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: rgba(255,255,255,0.18); border-radius: 2px 2px 0 0;
+    }
+    .pallet-base {
+      width: 85%; height: 6px;
+      background: linear-gradient(90deg, #78350f, #92400e, #78350f);
+      border-radius: 2px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.6);
+      position: relative; margin-top: 2px;
+    }
+    .pallet-base::before {
+      content: '';
+      position: absolute; top: -3px; left: 10%; width: 80%; height: 3px;
+      background: #a16207; border-radius: 1px;
+    }
+    /* Barra de progresso no rodapé da pilha */
+    .pallet-card-bar {
+      width: 85%; height: 3px; border-radius: 2px;
+      background: rgba(255,255,255,0.08); margin-top: 5px; overflow: hidden;
+    }
+    .pallet-card-bar-fill {
+      height: 100%; border-radius: 2px; transition: width 0.5s ease;
+    }
+
+
+    /* ── Modo Seleção em Lote ─────────────────────────────────── */
+    .slot-selectable:hover { cursor: pointer; filter: brightness(1.3); }
+    .slot-selected {
+      outline: 2.5px solid #22d3ee !important;
+      box-shadow: 0 0 20px rgba(34,211,238,0.5), inset 0 0 20px rgba(34,211,238,0.1) !important;
+    }
+    .slot-selected .selection-check {
+      display: flex !important;
+    }
+    .selection-check {
+      display: none;
+      position: absolute; top: 4px; right: 4px;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #22d3ee; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 900; color: #000; z-index: 20;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+    #e3d-selection-banner {
+      display: none; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 10px 16px; border-radius: 10px;
+      background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.3);
+      margin-bottom: 12px; flex-wrap: wrap;
+    }
+    #e3d-selection-banner.visible { display: flex; }
+    #e3d-batch-panel {
+      display: none; background: rgba(15,23,42,0.95);
+      border: 1px solid rgba(34,211,238,0.3); border-radius: 14px; padding: 16px;
+    }
+    #e3d-batch-panel.visible { display: block; }
+    .batch-field { margin-bottom: 10px; }
+    .batch-field label { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px; }
+    .batch-field input, .batch-field select { width: 100%; padding: 7px 10px; border-radius: 7px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 12px; }
+
+    /* ── Botão modo seleção ──────────────────────────────────── */
+    #e3d-select-mode-btn.active {
+      background: rgba(34,211,238,0.15) !important;
+      border-color: #22d3ee !important;
+      color: #22d3ee !important;
+    }
+  
 </style>
+<script src="dragDropTouch.js"></script>
 </head>
 <body>
 
@@ -273,6 +582,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 <!-- ══════════════ HOME ══════════════ -->
 <div id="screenHome" class="screen">
   <div class="home-header">
+    <button id="themeToggleBtn" onclick="toggleTheme()" style="position:absolute; top:calc(16px + var(--safe-top)); right:16px; width:38px; height:38px; border-radius:10px; background:var(--card); border:1px solid var(--border2); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text); z-index:100; transition:all .15s">
+      <span id="themeBtnIcon"></span>
+    </button>
     <div class="home-logo" style="display:flex; align-items:center; justify-content:center; margin-bottom:8px;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:48px; height:48px; color:var(--green); flex-shrink:0;">
         <path d="M12 22C12 22 20 18 20 12V4L12 2L4 4V12C4 18 12 22 12 22Z" stroke="var(--green)"/>
@@ -286,6 +598,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   </div>
 
   <div class="home-modules">
+    
+    <div class="module-card" style="--grad:linear-gradient(90deg,#0ea5e9,#2563eb)" onclick="showScreen('e3d'); if(window.e3dLoadGridState) e3dLoadGridState();">
+      <span class="module-icon"><i data-lucide="warehouse"></i></span>
+      <div class="module-name">Estoque 3D</div>
+      <div class="module-desc">Visualize e gerencie pallets via Tablet</div>
+      <div class="module-arrow">›</div>
+    </div>
+    
     <div class="module-card" style="--grad:linear-gradient(90deg,#f59e0b,#ef4444)" onclick="showScreen('bulk')">
       <span class="module-icon"><i data-lucide="scale"></i></span>
       <div class="module-name">Venda a Granel</div>
@@ -320,6 +640,18 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       <span class="module-icon"><i data-lucide="clipboard-list"></i></span>
       <div class="module-name">Apontamento de Campo</div>
       <div class="module-desc">Registre capina, estufa e serviços gerais com rateio de custos</div>
+      <div class="module-arrow">›</div>
+    </div>
+    <div class="module-card" style="--grad:linear-gradient(90deg,#059669,#06b6d4)" onclick="showScreen('mip')">
+      <span class="module-icon"><i data-lucide="sprout"></i></span>
+      <div class="module-name">Monitoramento MIP</div>
+      <div class="module-desc">Lance amostragem de pragas e doenças no campo por ponto (Modelo Embrapa)</div>
+      <div class="module-arrow">›</div>
+    </div>
+    <div class="module-card" style="--grad:linear-gradient(90deg,#7c3aed,#2563eb)" onclick="showScreen('op')">
+      <span class="module-icon"><i data-lucide="file-text"></i></span>
+      <div class="module-name">Aplicação de Defensivos (O.P)</div>
+      <div class="module-desc">Registre ordens de pulverização e carências de defensivos</div>
       <div class="module-arrow">›</div>
     </div>
   </div>
@@ -954,10 +1286,268 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   </div>
 </div>
 
+<!-- ══════════════ MONITORAMENTO MIP ══════════════ -->
+<div id="screenMip" class="screen">
+  <div class="header">
+    <div class="back-btn" onclick="showScreen('home')">‹</div>
+    <div class="header-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="sprout" style="width:20px;height:20px"></i> Lançar MIP</div>
+    <div class="online-dot" id="mipOnlineDot"></div>
+  </div>
+
+  <div style="padding:16px">
+    <div class="card" style="margin-bottom:16px; border-color:var(--green)">
+      <div style="font-weight:800; font-size:15px; color:var(--green); margin-bottom:4px">Ficha de Amostragem (Embrapa)</div>
+      <div style="font-size:11px; color:var(--muted2)">Monitore a infestação de pragas e doenças em 10 pontos da parcela.</div>
+    </div>
+
+    <!-- Cabeçalho de Seleção -->
+    <div class="card" style="margin-bottom:16px; padding:16px; display:flex; flex-direction:column; gap:12px">
+      <div class="form-field">
+        <label class="field-label">Parcela</label>
+        <select id="mipParcelSelect" onchange="onMipParcelChange()" style="font-size:14px"></select>
+      </div>
+      <div class="form-field">
+        <label class="field-label">Variedade / Cultura</label>
+        <input id="mipVariedadeInput" type="text" readonly placeholder="Selecionar parcela..." style="font-size:14px; background:rgba(0,0,0,0.1)">
+      </div>
+      <div class="form-field">
+        <label class="field-label">Praga / Alvo de Amostragem</label>
+        <select id="mipAlvoSelect" onchange="onMipAlvoChange()" style="font-size:14px">
+          <option value="MOSCA_BRANCA_ADULTO">Mosca Branca (Adulto)</option>
+          <option value="MOSCA_BRANCA_NINFA">Mosca Branca (Ninfa)</option>
+          <option value="MINADORA_LAGARTA">Minadora (Lagarta)</option>
+          <option value="TRIPS_ADULTO">Trips (Adulto)</option>
+          <option value="DIAFANIA_LAGARTA">Diafânia (Lagarta)</option>
+          <option value="OÍDIO_PRESENCA">Oídio (Presença/Ausência)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Área de Lançamento por Pontos -->
+    <div class="card" style="margin-bottom:16px; padding:16px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+        <div style="font-weight:700; font-size:12px; text-transform:uppercase; color:var(--muted)">Lançamento por Ponto</div>
+        <div style="font-size:14px; font-weight:800; color:var(--green)">Média: <span id="mipAverageVal">0.00</span></div>
+      </div>
+      
+      <!-- Grid de 10 botões interativos -->
+      <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin-bottom:16px" id="mipPointsGrid">
+        <!-- Renderizado via JS -->
+      </div>
+
+      <!-- Ajuste Rápido do Ponto Selecionado -->
+      <div id="mipAdjusterArea" style="display:flex; align-items:center; justify-content:space-between; background:var(--card2); padding:12px; border-radius:10px; border:1px solid var(--border2)">
+        <span style="font-size:13px; font-weight:700">Ponto <span id="mipSelPointLabel">1</span>:</span>
+        <div style="display:flex; align-items:center; gap:16px">
+          <button class="btn btn-sec" onclick="adjustMipVal(-1)" style="width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700">-</button>
+          <span id="mipPointValLabel" style="font-size:18px; font-weight:800; width:30px; text-align:center">0</span>
+          <button class="btn btn-sec" onclick="adjustMipVal(1)" style="width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700">+</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-full" id="btnSaveMip" onclick="saveMipRecord()" style="display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="check" style="width:18px;height:18px"></i> Salvar Ficha MIP</button>
+  </div>
+</div>
+
+<!-- ══════════════ ORDEM DE PULVERIZAÇÃO (O.P) ══════════════ -->
+<div id="screenOp" class="screen">
+  <div class="header">
+    <div class="back-btn" onclick="showScreen('home')">‹</div>
+    <div class="header-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="file-text" style="width:20px;height:20px"></i> Nova Aplicação (O.P)</div>
+    <div class="online-dot" id="opOnlineDot"></div>
+  </div>
+
+  <div style="padding:16px; padding-bottom:100px;">
+    <div class="card" style="margin-bottom:16px; border-color:var(--blue)">
+      <div style="font-weight:800; font-size:15px; color:var(--blue); margin-bottom:4px">Ordem de Pulverização</div>
+      <div style="font-size:11px; color:var(--muted2)">Preencha os dados operacionais e a calda.</div>
+    </div>
+
+    <!-- CABEÇALHO DA O.P -->
+    <div class="card" style="padding:16px; display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
+      <div style="font-size:13px; font-weight:700; color:var(--text); border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:4px;">1. Dados da Área</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+        <div class="form-field">
+          <label class="field-label">Parcela</label>
+          <select id="opParcelSelect" onchange="onOpParcelChange()" style="font-size:14px"></select>
+        </div>
+        <div class="form-field">
+          <label class="field-label">Data da Aplicação</label>
+          <input id="opDateInput" type="date" style="font-size:13px">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+        <div class="form-field">
+          <label class="field-label">Cultura</label>
+          <input id="opCulturaInput" type="text" readonly placeholder="Cultura" style="font-size:13px; background:rgba(0,0,0,0.1)">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Área (ha)</label>
+          <input id="opAreaInput" type="text" readonly placeholder="Hectares" style="font-size:13px; background:rgba(0,0,0,0.1)">
+        </div>
+      </div>
+      
+      <div style="font-size:13px; font-weight:700; color:var(--text); border-bottom:1px solid var(--border); padding-bottom:6px; margin-top:8px; margin-bottom:4px;">2. Operacional & Clima</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+        <div class="form-field">
+          <label class="field-label">Tratorista</label>
+          <input id="opTratoristaInput" type="text" placeholder="Nome do tratorista" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Barrista</label>
+          <input id="opBarristaInput" type="text" placeholder="Nome do barrista" style="font-size:13px">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+        <div class="form-field">
+          <label class="field-label">Trator</label>
+          <input id="opTratorInput" type="text" placeholder="Ex: Trator 2" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Equipamento</label>
+          <input id="opEquipamentoInput" type="text" placeholder="Ex: Turbo Jacto" style="font-size:13px">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px">
+        <div class="form-field">
+          <label class="field-label">Pressão</label>
+          <input id="opPressaoInput" type="text" placeholder="Ex: 100 psi" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Bicos</label>
+          <input id="opBicosInput" type="text" placeholder="Ex: Cone" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Vol (L/ha)</label>
+          <input id="opVolumeInput" type="text" placeholder="Ex: 200" style="font-size:13px">
+        </div>
+      </div>
+      
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px">
+        <div class="form-field">
+          <label class="field-label">Temp (°C)</label>
+          <input id="opTempInput" type="number" step="0.1" placeholder="Ex: 28.5" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Umid (%)</label>
+          <input id="opUmidInput" type="number" step="0.1" placeholder="Ex: 65" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Vento (km/h)</label>
+          <input id="opVentoInput" type="number" step="0.1" placeholder="Ex: 8.5" style="font-size:13px">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+        <div class="form-field">
+          <label class="field-label">Início</label>
+          <input id="opHoraInicio" type="time" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Término</label>
+          <input id="opHoraFim" type="time" style="font-size:13px">
+        </div>
+      </div>
+      
+      <div style="font-size:13px; font-weight:700; color:var(--text); border-bottom:1px solid var(--border); padding-bottom:6px; margin-top:8px; margin-bottom:4px;">3. Responsáveis</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+        <div class="form-field">
+          <label class="field-label">Técnico Resp.</label>
+          <input id="opTecnicoInput" type="text" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Eng. Agrônomo</label>
+          <input id="opAgronomoInput" type="text" value="Reinaldo Chotten" style="font-size:13px">
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="field-label">Observações</label>
+        <textarea id="opObsInput" placeholder="Observações..." rows="2" style="font-size:13px; width:100%; border-radius:10px; padding:10px; background:var(--input-bg); color:var(--text); border:1px solid var(--border2)"></textarea>
+      </div>
+    </div>
+
+    <!-- CALDA DE DEFENSIVOS -->
+    <div class="card" style="padding:16px; display:flex; flex-direction:column; gap:12px">
+      <div style="font-size:13px; font-weight:700; color:var(--text); border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+        <span>4. Produtos na Calda</span>
+      </div>
+      
+      <div id="opItemsList" style="display:flex; flex-direction:column; gap:8px;">
+        <!-- Lista de itens dinâmicos -->
+      </div>
+      
+      <button class="btn btn-sec" onclick="openOpAddProductModal()" style="font-size:12px; padding:8px; display:flex; align-items:center; justify-content:center; gap:6px;">
+        <i data-lucide="plus" style="width:14px;height:14px"></i> Adicionar Produto à Calda
+      </button>
+    </div>
+
+    <button class="btn btn-primary btn-full" id="btnSaveOp" onclick="saveOpRecord()" style="margin-top:16px; display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="check" style="width:18px;height:18px"></i> Salvar Ordem de Aplicação</button>
+  </div>
+</div>
+
+<!-- Modal para adicionar produto na calda -->
+<div id="opAddProductModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10000; align-items:center; justify-content:center; padding:16px">
+  <div class="card" style="width:100%; max-width:400px; padding:16px; display:flex; flex-direction:column; gap:12px">
+    <div style="font-weight:700; font-size:16px; color:var(--text)">Adicionar Defensivo</div>
+    
+    <div class="form-field">
+      <label class="field-label">Defensivo</label>
+      <select id="opAddDefensivoSelect" onchange="onOpAddDefensivoChange()" style="font-size:13px"></select>
+    </div>
+    
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+      <div class="form-field">
+        <label class="field-label">Dosagem Real (L/ha)</label>
+        <input id="opAddDosagemReal" type="number" step="0.01" value="1.0" style="font-size:13px">
+      </div>
+      <div class="form-field">
+        <label class="field-label">Limite Legal</label>
+        <input id="opAddDosagemLimite" type="text" readonly style="font-size:13px; background:rgba(0,0,0,0.1)">
+      </div>
+    </div>
+    
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+      <div class="form-field">
+        <label class="field-label">Alvo Principal</label>
+        <input id="opAddAlvo" type="text" style="font-size:13px">
+      </div>
+      <div class="form-field">
+        <label class="field-label">Carência (Dias)</label>
+        <input id="opAddCarencia" type="number" readonly style="font-size:13px; background:rgba(0,0,0,0.1)">
+      </div>
+    </div>
+
+    <div style="display:flex; gap:8px; margin-top:8px">
+      <button class="btn btn-sec btn-full" onclick="closeOpAddProductModal()">Cancelar</button>
+      <button class="btn btn-primary btn-full" onclick="confirmOpAddProduct()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+
 <!-- TOAST -->
 <div id="toast"></div>
 
 <script>
+// ═══════════════════════════════════════════
+// THEME CONTROL
+// ═══════════════════════════════════════════
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('prodtech_campo_theme', next);
+  updateThemeUI(next);
+}
+function updateThemeUI(theme) {
+  const btnIcon = document.getElementById('themeBtnIcon');
+  if (btnIcon) {
+    btnIcon.innerHTML = theme === 'dark' 
+      ? `<svg style="width:18px;height:18px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`
+      : `<svg style="width:18px;height:18px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+  }
+}
+
 // ═══════════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════════
@@ -972,6 +1562,9 @@ let sb, user, tenantId, tenantName;
 let employees  = [];   // [{id, name, role, barcode}]
 let parcelas   = [];   // [{id, code}]
 let infoParcelasData = [];
+let defensivosData   = [];
+let mipRecordsData   = [];
+let opRecordsData    = [];
 let isOnline   = navigator.onLine;
 
 const qState = { empId: null, empBarcode: null, empName: '', issue: null, varietyId: null, parcelId: null };
@@ -1011,7 +1604,7 @@ function showScreen(name) {
     login:'screenLogin', home:'screenHome', quality:'screenQuality', 
     carrao:'screenCarrao', closure:'screenClosure', bulk:'screenBulk',
     phSign:'screenPhSign', stops:'screenStops', fieldOp:'screenFieldOp',
-    infoParcelas:'screenInfoParcelas'
+    infoParcelas:'screenInfoParcelas', mip:'screenMip', op:'screenOp'
   };
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active','behind'));
   const active = $(screens[name]);
@@ -1024,6 +1617,7 @@ function showScreen(name) {
   if (name === 'stops') loadStops();
   if (name === 'fieldOp') loadFieldOpSelects();
   if (name === 'infoParcelas') renderInfoParcelas();
+  if (name === 'mip' || name === 'op') initMipAndOpForm();
 
   if (window.lucide) lucide.createIcons();
 }
@@ -1154,6 +1748,7 @@ async function syncQueue() {
       if (item.type === 'quality') await pushQuality(item.data);
       if (item.type === 'carrao')  await pushCarrao({ session: item.data.session, workers: item.data.workers, carriageIds: item.data.carriageIds || [] });
       if (item.type === 'field_service') await pushFieldService(item.data);
+      if (item.type === 'bulk_sale') await pushBulkSale(item.data);
       await idbDelete(item.id);
       ok++;
     } catch(e) { 
@@ -1172,6 +1767,8 @@ async function syncQueue() {
 // AUTH
 // ═══════════════════════════════════════════
 async function initApp() {
+  const savedTheme = localStorage.getItem('prodtech_campo_theme') || 'dark';
+  updateThemeUI(savedTheme);
   sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
   await initIDB();
   window.addEventListener('online',  () => { isOnline = true;  updateOnlineDots(); syncQueue(); });
@@ -1200,7 +1797,10 @@ async function initApp() {
             loadVarieties(),
             loadFruits(),
             loadCustomRegisters(),
-            loadInfoParcelas()
+            loadInfoParcelas(),
+            loadDefensivos(),
+            loadMipRecords(),
+            loadOpRecords()
           ]).then(cacheOfflineData).catch(e => console.warn('Erro ao atualizar cache:', e));
         }
       } catch (e) {
@@ -1405,6 +2005,9 @@ async function selectTenantAndContinue(tu) {
   await loadFruits();
   await loadCustomRegisters();
   await loadInfoParcelas();
+  await loadDefensivos();
+  await loadMipRecords();
+  await loadOpRecords();
   
   // Salva no cache offline
   cacheOfflineData();
@@ -1415,6 +2018,7 @@ async function selectTenantAndContinue(tu) {
   initCarraoForm();
   loadPhParcelas();
   loadQualitySelects();
+  initMipAndOpForm();
   
   setTimeout(() => {
     initBulkSig();
@@ -1460,6 +2064,9 @@ async function selectTenantAndContinueOffline() {
   operations = JSON.parse(localStorage.getItem('prodtech_operations') || '[]');
   machines = JSON.parse(localStorage.getItem('prodtech_machines') || '[]');
   infoParcelasData = JSON.parse(localStorage.getItem('prodtech_info_parcelas') || '[]');
+  defensivosData = JSON.parse(localStorage.getItem('prodtech_defensivos') || '[]');
+  mipRecordsData = JSON.parse(localStorage.getItem('prodtech_mip_records') || '[]');
+  opRecordsData = JSON.parse(localStorage.getItem('prodtech_op_records') || '[]');
 
   await loadFieldOpSelects();
   await loadCarraoSelects();
@@ -1467,6 +2074,7 @@ async function selectTenantAndContinueOffline() {
   initCarraoForm();
   loadPhParcelas();
   loadQualitySelects();
+  initMipAndOpForm();
 
   setTimeout(() => {
     initBulkSig();
@@ -1493,6 +2101,9 @@ function cacheOfflineData() {
     localStorage.setItem('prodtech_operations', JSON.stringify(operations || []));
     localStorage.setItem('prodtech_machines', JSON.stringify(machines || []));
     localStorage.setItem('prodtech_info_parcelas', JSON.stringify(infoParcelasData || []));
+    localStorage.setItem('prodtech_defensivos', JSON.stringify(defensivosData || []));
+    localStorage.setItem('prodtech_mip_records', JSON.stringify(mipRecordsData || []));
+    localStorage.setItem('prodtech_op_records', JSON.stringify(opRecordsData || []));
   } catch(e) {
     console.error('Erro ao cachear offline:', e);
   }
@@ -1636,6 +2247,457 @@ let varieties = [];
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false });
     infoParcelasData = data || [];
+  }
+
+  async function loadDefensivos() {
+    const { data } = await sb.from('caderno_campo_defensivos_cadastro')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('produto', { ascending: true });
+    defensivosData = data || [];
+  }
+
+  async function loadMipRecords() {
+    try {
+      const { data } = await sb.from('caderno_campo_mip')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('data_vistoria', { ascending: false });
+      mipRecordsData = data || [];
+    } catch (e) {
+      console.warn('Erro ao carregar caderno_campo_mip:', e);
+      mipRecordsData = JSON.parse(localStorage.getItem('prodtech_mip_records') || '[]');
+    }
+  }
+
+  async function loadOpRecords() {
+    try {
+      const { data } = await sb.from('caderno_campo_op')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('data_aplicacao', { ascending: false });
+      opRecordsData = data || [];
+    } catch (e) {
+      console.warn('Erro ao carregar caderno_campo_op:', e);
+      opRecordsData = JSON.parse(localStorage.getItem('prodtech_op_records') || '[]');
+    }
+  }
+
+  function isMatchingPraga(mipPraga, defAlvo) {
+    if (!mipPraga || !defAlvo) return false;
+    const clean = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    const cMip = clean(mipPraga);
+    const cDef = clean(defAlvo);
+    return cMip.includes(cDef) || cDef.includes(cMip);
+  }
+
+  // ═══════════════════════════════════════════
+  // MÓDULO DE CAMPO (MIP & O.P)
+  // ═══════════════════════════════════════════
+  let mipValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  let mipSelPoint = 0; // 0 a 9
+
+  function initMipAndOpForm() {
+    populateMipSelects();
+    renderMipPoints();
+    const dateInput = document.getElementById('opDateInput');
+    if (dateInput) dateInput.value = today();
+  }
+
+  function populateMipSelects() {
+    const mipSel = document.getElementById('mipParcelSelect');
+    const opSel = document.getElementById('opParcelSelect');
+    
+    if (mipSel) {
+      mipSel.innerHTML = '<option value="">— Selecione a Parcela —</option>';
+      infoParcelasData.forEach(ip => {
+        mipSel.insertAdjacentHTML('beforeend', `<option value="${ip.id}">${ip.parcela2 || ip.parcela} (${ip.variedade})</option>`);
+      });
+    }
+    if (opSel) {
+      opSel.innerHTML = '<option value="">— Selecione a Parcela —</option>';
+      infoParcelasData.forEach(ip => {
+        opSel.insertAdjacentHTML('beforeend', `<option value="${ip.id}">${ip.parcela2 || ip.parcela} (${ip.variedade})</option>`);
+      });
+    }
+  }
+
+  function onMipParcelChange() {
+    const pId = document.getElementById('mipParcelSelect').value;
+    const ip = infoParcelasData.find(x => x.id === pId);
+    const varInput = document.getElementById('mipVariedadeInput');
+    if (ip && varInput) {
+      varInput.value = `${ip.variedade} (${ip.cultura || 'MELÃO'})`;
+    } else if (varInput) {
+      varInput.value = '';
+    }
+  }
+
+  function onMipAlvoChange() {
+    const alvo = document.getElementById('mipAlvoSelect').value;
+    mipValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    mipSelPoint = 0;
+    
+    renderMipPoints();
+  }
+
+  function renderMipPoints() {
+    const grid = document.getElementById('mipPointsGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    
+    for (let i = 0; i < 10; i++) {
+      const activeClass = i === mipSelPoint ? 'border-color:var(--green); background:var(--green-dim);' : '';
+      grid.insertAdjacentHTML('beforeend', `
+        <button class="btn btn-sec" onclick="selectMipPoint(${i})" style="padding:4px; height:48px; font-size:11px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; ${activeClass}">
+          <span style="font-size:9px;color:var(--muted)">Pt ${i+1}</span>
+          <span style="font-weight:800;font-size:13px">${mipValues[i]}</span>
+        </button>
+      `);
+    }
+    
+    document.getElementById('mipSelPointLabel').textContent = mipSelPoint + 1;
+    document.getElementById('mipPointValLabel').textContent = mipValues[mipSelPoint];
+    
+    const avg = mipValues.reduce((a, b) => a + b, 0) / 10.0;
+    document.getElementById('mipAverageVal').textContent = avg.toFixed(2);
+  }
+
+  function selectMipPoint(idx) {
+    mipSelPoint = idx;
+    renderMipPoints();
+  }
+
+  function adjustMipVal(delta) {
+    const alvo = document.getElementById('mipAlvoSelect').value;
+    let val = mipValues[mipSelPoint] + delta;
+    if (val < 0) val = 0;
+    
+    if (alvo.includes('PRESENCA') && val > 1) {
+      val = 1;
+    }
+    
+    mipValues[mipSelPoint] = val;
+    renderMipPoints();
+  }
+
+  async function saveMipRecord() {
+    const pId = document.getElementById('mipParcelSelect').value;
+    const praga = document.getElementById('mipAlvoSelect').value;
+    
+    if (!pId) {
+      alert('Por favor, selecione uma parcela!');
+      return;
+    }
+    
+    const ip = infoParcelasData.find(x => x.id === pId);
+    const avg = mipValues.reduce((a, b) => a + b, 0) / 10.0;
+    
+    const record = {
+      tenant_id: tenantId,
+      parcel_id: ip.parcel_id || null,
+      parcela: ip.parcela2 || ip.parcela,
+      variedade: ip.variedade,
+      data_vistoria: today(),
+      praga: praga,
+      ponto1: mipValues[0],
+      ponto2: mipValues[1],
+      ponto3: mipValues[2],
+      ponto4: mipValues[3],
+      ponto5: mipValues[4],
+      ponto6: mipValues[5],
+      ponto7: mipValues[6],
+      ponto8: mipValues[7],
+      ponto9: mipValues[8],
+      ponto10: mipValues[9],
+      media: avg,
+      observacoes: 'Registrado via PWA campo'
+    };
+    
+    try {
+      const { error } = await sb.from('caderno_campo_mip').insert(record);
+      if (error) throw error;
+      
+      toast('✓ Amostragem MIP salva com sucesso!', 'ok');
+      
+      mipRecordsData.unshift(record);
+      localStorage.setItem('prodtech_mip_records', JSON.stringify(mipRecordsData || []));
+      
+      showScreen('home');
+      mipValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+      mipSelPoint = 0;
+      renderMipPoints();
+    } catch(err) {
+      console.error(err);
+      
+      mipRecordsData.unshift(record);
+      localStorage.setItem('prodtech_mip_records', JSON.stringify(mipRecordsData || []));
+      
+      toast('✓ Amostragem MIP salva offline!', 'ok');
+      showScreen('home');
+      mipValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+      mipSelPoint = 0;
+      renderMipPoints();
+    }
+  }
+
+  let opItems = [];
+
+  function onOpParcelChange() {
+    const pId = document.getElementById('opParcelSelect').value;
+    const ip = infoParcelasData.find(x => x.id === pId);
+    const cultInput = document.getElementById('opCulturaInput');
+    const areaInput = document.getElementById('opAreaInput');
+    if (ip) {
+      if (cultInput) cultInput.value = ip.cultura || 'MELÃO';
+      if (areaInput) areaInput.value = ip.area || '1.00';
+    } else {
+      if (cultInput) cultInput.value = '';
+      if (areaInput) areaInput.value = '';
+    }
+  }
+
+  function openOpAddProductModal() {
+    const select = document.getElementById('opAddDefensivoSelect');
+    select.innerHTML = '<option value="">Selecione um defensivo</option>';
+    
+    const cultura = document.getElementById('opCulturaInput').value;
+    const filtered = defensivosData.filter(d => d.cultura && d.cultura.toUpperCase() === cultura.toUpperCase());
+    const listToUse = filtered.length > 0 ? filtered : defensivosData;
+    
+    listToUse.forEach(d => {
+      select.insertAdjacentHTML('beforeend', `<option value="${d.id}">${d.produto} (${d.ingrediente_ativo || ''})</option>`);
+    });
+    
+    document.getElementById('opAddDosagemReal').value = '1.0';
+    document.getElementById('opAddDosagemLimite').value = '';
+    document.getElementById('opAddCarencia').value = '';
+    document.getElementById('opAddAlvo').value = '';
+    document.getElementById('opAddProductModal').style.display = 'flex';
+  }
+
+  function closeOpAddProductModal() {
+    document.getElementById('opAddProductModal').style.display = 'none';
+  }
+
+  function onOpAddDefensivoChange() {
+    const id = document.getElementById('opAddDefensivoSelect').value;
+    const def = defensivosData.find(d => d.id === id);
+    if(def) {
+      document.getElementById('opAddDosagemLimite').value = def.dosagem_recomendada || 0;
+      document.getElementById('opAddCarencia').value = def.carencia_dias || 0;
+      document.getElementById('opAddAlvo').value = def.alvo || '';
+    }
+  }
+
+  function confirmOpAddProduct() {
+    const id = document.getElementById('opAddDefensivoSelect').value;
+    if(!id) { alert('Selecione o defensivo'); return; }
+    
+    const def = defensivosData.find(d => d.id === id);
+    const dosagemReal = parseFloat(document.getElementById('opAddDosagemReal').value) || 0;
+    const dosagemLimite = parseFloat(def.dosagem_recomendada) || dosagemReal;
+    const dosagemCorrigida = dosagemReal > dosagemLimite ? dosagemLimite : dosagemReal;
+    const alvo = document.getElementById('opAddAlvo').value;
+    const carencia = parseInt(document.getElementById('opAddCarencia').value) || 0;
+    
+    // Validação 1: Duplicados por Praga/Alvo
+    const cleanAlvo = (alvo || '').toUpperCase();
+    if (alvo) {
+      const alreadyHasAlvo = opItems.some(item => (item.alvo || '').trim().toUpperCase() === alvo.trim().toUpperCase());
+      if (alreadyHasAlvo) {
+        alert(`Você não pode aplicar dois defensivos para a mesma praga/alvo (${alvo}) na mesma calda!`);
+        return;
+      }
+    }
+    
+    // Validação 2: Justificativa de MIP
+    const pId = document.getElementById('opParcelSelect').value;
+    const ip = infoParcelasData.find(x => x.id === pId);
+    const parcelName = ip.parcela2 || ip.parcela;
+    
+    const isFertilizer = !alvo || cleanAlvo.includes('ADUBO') || cleanAlvo.includes('FOLIARE') || cleanAlvo.includes('NUTRIENTE') || cleanAlvo.includes('FISIOLOGICO') || cleanAlvo === 'N/A';
+    if (!isFertilizer) {
+      const relevantMips = mipRecordsData.filter(m => {
+        const matchesParcel = m.parcela === parcelName;
+        const matchesPraga = isMatchingPraga(m.praga, alvo);
+        return matchesParcel && matchesPraga;
+      });
+      
+      relevantMips.sort((a, b) => new Date(b.data_vistoria) - new Date(a.data_vistoria));
+      const latestMip = relevantMips[0];
+      
+      if (!latestMip || parseFloat(latestMip.media) <= 0) {
+        alert(`Você não pode aplicar o defensivo ${def.produto} para a praga "${alvo}" na parcela ${parcelName} porque ela não foi identificada no MIP (Manejo Integrado de Pragas) recente desta parcela.`);
+        return;
+      }
+    }
+    
+    opItems.push({
+      produto_id: def.id,
+      produto_nome: def.produto,
+      alvo: alvo,
+      dosagem_real: dosagemReal,
+      dosagem_corrigida: dosagemCorrigida,
+      unidade: def.unidade || 'L/ha',
+      carencia_dias: carencia
+    });
+    
+    renderOpItems();
+    closeOpAddProductModal();
+  }
+
+  function removeOpItem(idx) {
+    opItems.splice(idx, 1);
+    renderOpItems();
+  }
+
+  function renderOpItems() {
+    const container = document.getElementById('opItemsList');
+    container.innerHTML = '';
+    
+    if(opItems.length === 0) {
+      container.innerHTML = '<div style="font-size:12px; color:var(--muted); text-align:center; padding:10px;">Nenhum produto adicionado.</div>';
+      return;
+    }
+    
+    opItems.forEach((item, idx) => {
+      container.insertAdjacentHTML('beforeend', `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid var(--border)">
+          <div style="display:flex; flex-direction:column;">
+            <span style="font-size:13px; font-weight:700; color:var(--text)">${item.produto_nome}</span>
+            <span style="font-size:11px; color:var(--muted)">Alvo: ${item.alvo} | Carência: ${item.carencia_dias} dias</span>
+            <span style="font-size:11px; color:var(--muted2)">Dosagem Aplicada: ${item.dosagem_real} ${item.unidade} ${item.dosagem_real > item.dosagem_corrigida ? '<span style="color:var(--orange)">(Corrigida p/ Laudo: '+item.dosagem_corrigida+')</span>' : ''}</span>
+          </div>
+          <button onclick="removeOpItem(${idx})" class="btn" style="background:var(--red-dim); color:var(--red); padding:6px; border-radius:6px;">
+            <i data-lucide="trash" style="width:14px;height:14px"></i>
+          </button>
+        </div>
+      `);
+    });
+    
+    if(window.lucide) lucide.createIcons();
+  }
+
+  async function saveOpRecord() {
+    const pId = document.getElementById('opParcelSelect').value;
+    if (!pId) { alert('Por favor, selecione uma parcela!'); return; }
+    if (opItems.length === 0) { alert('Adicione pelo menos um produto na calda!'); return; }
+    
+    const ip = infoParcelasData.find(x => x.id === pId);
+    const chosenDate = document.getElementById('opDateInput').value || today();
+    const tratoristaVal = document.getElementById('opTratoristaInput').value.trim();
+    const barristaVal = document.getElementById('opBarristaInput').value.trim();
+    const tratorVal = document.getElementById('opTratorInput').value.trim();
+    const startVal = document.getElementById('opHoraInicio').value;
+    const endVal = document.getElementById('opHoraFim').value;
+    
+    // Validação 1: Tratorista e Barrista
+    if (tratoristaVal && barristaVal && tratoristaVal.toLowerCase() === barristaVal.toLowerCase()) {
+      alert("O Tratorista e o Barrista não podem ser a mesma pessoa!");
+      return;
+    }
+    
+    // Validação 2: Conflitos de horário
+    function timeToMinutes(tStr) {
+      if (!tStr) return 0;
+      const parts = tStr.split(':');
+      return (parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0);
+    }
+    function overlaps(startA, endA, startB, endB) {
+      const minStartA = timeToMinutes(startA);
+      const minEndA = timeToMinutes(endA);
+      const minStartB = timeToMinutes(startB);
+      const minEndB = timeToMinutes(endB);
+      return Math.max(minStartA, minStartB) < Math.min(minEndA, minEndB);
+    }
+    
+    if (startVal && endVal) {
+      if (timeToMinutes(startVal) >= timeToMinutes(endVal)) {
+        alert("O horário de início deve ser anterior ao horário de término!");
+        return;
+      }
+      
+      const conflicts = (opRecordsData || []).filter(op => {
+        const isSameDay = op.data_aplicacao === chosenDate;
+        const hasOverlap = overlaps(startVal, endVal, op.horario_inicio, op.horario_fim);
+        return isSameDay && hasOverlap;
+      });
+      
+      for (const op of conflicts) {
+        if (tratoristaVal && op.tratorista && op.tratorista.trim().toLowerCase() === tratoristaVal.toLowerCase()) {
+          alert(`Conflito de Horário! O tratorista ${tratoristaVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
+          return;
+        }
+        if (barristaVal && op.barrista && op.barrista.trim().toLowerCase() === barristaVal.toLowerCase()) {
+          alert(`Conflito de Horário! O barrista ${barristaVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
+          return;
+        }
+        if (tratorVal && op.trator && op.trator.trim().toLowerCase() === tratorVal.toLowerCase()) {
+          alert(`Conflito de Horário! O trator ${tratorVal} já está sendo utilizado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
+          return;
+        }
+      }
+    }
+    
+    const recordOP = {
+      tenant_id: tenantId,
+      parcel_id: ip.parcel_id || null,
+      parcela: ip.parcela2 || ip.parcela,
+      variedade: ip.variedade,
+      data_aplicacao: chosenDate,
+      cultura: ip.cultura || 'MELÃO',
+      area_ha: parseFloat(ip.area) || 1.0,
+      trator: tratorVal,
+      tratorista: tratoristaVal,
+      barrista: barristaVal,
+      equipamento: document.getElementById('opEquipamentoInput').value,
+      pressao: document.getElementById('opPressaoInput').value,
+      bicos: document.getElementById('opBicosInput').value,
+      volume_calda: document.getElementById('opVolumeInput').value,
+      temperatura_c: parseFloat(document.getElementById('opTempInput').value) || null,
+      umidade_rel_pct: parseFloat(document.getElementById('opUmidInput').value) || null,
+      velocidade_vento_kmh: parseFloat(document.getElementById('opVentoInput').value) || null,
+      horario_inicio: startVal,
+      horario_fim: endVal,
+      tecnico: document.getElementById('opTecnicoInput').value,
+      eng_agronomo: document.getElementById('opAgronomoInput').value,
+      observacoes: document.getElementById('opObsInput').value
+    };
+    
+    try {
+      const { data: opData, error: opErr } = await sb.from('caderno_campo_op').insert(recordOP).select('id').single();
+      if (opErr) throw opErr;
+      
+      const itemsToInsert = opItems.map(i => ({
+        tenant_id: tenantId,
+        op_id: opData.id,
+        produto_id: i.produto_id,
+        produto_nome: i.produto_nome,
+        alvo: i.alvo,
+        dosagem_real: i.dosagem_real,
+        dosagem_corrigida: i.dosagem_corrigida,
+        unidade: i.unidade,
+        carencia_dias: i.carencia_dias
+      }));
+      
+      const { error: itemsErr } = await sb.from('caderno_campo_op_itens').insert(itemsToInsert);
+      if (itemsErr) throw itemsErr;
+      
+      toast('✓ Ordem de Aplicação salva com sucesso!', 'ok');
+      
+      recordOP.id = opData.id;
+      recordOP.caderno_campo_op_itens = itemsToInsert;
+      opRecordsData.unshift(recordOP);
+      localStorage.setItem('prodtech_op_records', JSON.stringify(opRecordsData || []));
+      
+      opItems = [];
+      renderOpItems();
+      showScreen('home');
+    } catch(err) {
+      console.error(err);
+      toast('✓ Erro ao salvar Ordem de Aplicação!', 'error');
+    }
   }
 
 // ═══════════════════════════════════════════
@@ -2312,12 +3374,527 @@ function showOrdemColheita(list) {
       body{margin:0;padding:0;font-family:sans-serif;}
       .page{width:100%; max-width:800px; margin:20px auto; border:1px solid #ddd; padding:20px; box-sizing:border-box; background:#fff;}
       @media print{ button{display:none!important}; .page{margin:0; border:none; padding:10px} }
-    </style></head><body>
+    
+/* ── ESTOQUE 3D STYLES ── */
+    #e3d-root { display:grid; grid-template-columns:1fr 340px; gap:24px; min-height:80vh; }
+    @media(max-width:1440px){ #e3d-root{ grid-template-columns:1fr 280px; gap:16px; } }
+    @media(max-width:1200px){ #e3d-root{ grid-template-columns:1fr; } } /* Switch to 1 column below 1200px */
+
+    #e3d-zones-wrap {
+      display: flex; 
+      gap: 24px; 
+      min-height: 600px; 
+      padding: 24px; 
+      background: linear-gradient(135deg, #020810 0%, #0a1628 40%, #060d1c 100%); 
+      border-radius: 20px; 
+      border: 1px solid rgba(59,130,246,0.2); 
+      box-shadow: 0 0 60px rgba(59,130,246,0.08);
+      flex-wrap: wrap; /* Allows stacking on smaller screens */
+    }
+    
+    .e3d-zone {
+      flex: 1; 
+      min-width: 300px; /* Forces stacking if screen is too narrow */
+      display: flex; 
+      flex-direction: column; 
+      background: rgba(0,0,0,0.25); 
+      border-radius: 16px; 
+      padding: 20px;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.4);
+      transition: all 0.3s ease;
+    }
+    
+    #e3d-grid-packing, #e3d-grid-cold {
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
+      grid-auto-rows: minmax(110px, auto); 
+      gap: 12px; 
+      flex: 1;
+    }
+
+    @media(max-width:768px) {
+      #e3d-zones-wrap { padding: 12px; gap: 16px; min-height: auto; }
+      .e3d-zone { padding: 12px; min-width: 100%; }
+      #e3d-grid-packing, #e3d-grid-cold { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+    }
+
+    /* AI Camera panel */
+    #e3d-camera-card { background:rgba(15,23,42,.9); border-radius:16px; border:1px solid rgba(59,130,246,.15); padding:20px; margin-bottom:16px; }
+    #e3d-camera-feed { width:100%; aspect-ratio:4/3; background:#000; border-radius:12px; overflow:hidden; border:1px solid rgba(59,130,246,.2); position:relative; display:flex; align-items:center; justify-content:center; }
+    #e3d-camera-feed img { width:100%; height:100%; object-fit:cover; display:none; }
+    #e3d-cam-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#334155; font-size:13px; font-weight:600; height:100%; }
+    #e3d-cam-placeholder svg { width:40px; height:40px; opacity:.3; }
+    .e3d-ai-badge {
+      position:absolute; top:10px; right:10px; padding:3px 10px; border-radius:99px;
+      font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:1px;
+    }
+    .e3d-ai-badge.sim { background:rgba(245,158,11,.15); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
+    .e3d-ai-badge.live { background:rgba(16,185,129,.15); color:#10b981; border:1px solid rgba(16,185,129,.3); animation:blink 2s infinite; }
+
+    /* Count cards */
+    #e3d-count-area { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+    .e3d-count-card {
+      background:rgba(15,23,42,.95); border-radius:12px; border:1px solid rgba(255,255,255,.05);
+      padding:14px; text-align:center;
+    }
+    .e3d-count-num { font-size:28px; font-weight:900; line-height:1; margin-bottom:4px; }
+    .e3d-count-lbl { font-size:10px; color:#64748b; text-transform:uppercase; letter-spacing:1px; font-weight:700; }
+
+    /* Config card */
+    #e3d-cfg-card {
+      background:rgba(15,23,42,.9); border-radius:16px; border:1px solid rgba(255,255,255,.06);
+      padding:20px; margin-bottom:16px;
+    }
+    #e3d-cfg-card .cfg-title { font-size:12px; font-weight:800; color:var(--blue); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+
+    /* Pallet detail modal */
+    #e3d-pallet-modal {
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:3000;
+      align-items:center; justify-content:center; backdrop-filter:blur(6px);
+    }
+    #e3d-pallet-modal.open { display:flex; }
+    #e3d-pallet-inner {
+      background:linear-gradient(135deg, #0f1c33 0%, #0a1220 100%);
+      border:1px solid rgba(59,130,246,.25); border-radius:24px; padding:32px;
+      width:520px; max-width:95%; box-shadow:0 40px 100px rgba(0,0,0,.8);
+      animation: slideUp .3s ease;
+    }
+    @keyframes slideUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+    #e3d-pallet-inner h3 { font-size:18px; font-weight:900; margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+
+    /* Queue list */
+    #e3d-queue { background:rgba(15,23,42,.9); border-radius:16px; border:1px solid rgba(255,255,255,.06); padding:20px; }
+    #e3d-queue .q-title { font-size:12px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px; }
+    .e3d-queue-item {
+      display:flex; align-items:center; gap:12px; padding:10px 12px;
+      background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.05); border-radius:10px; margin-bottom:8px;
+    }
+    .e3d-queue-icon { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+    .e3d-queue-info { flex:1; min-width:0; }
+    .e3d-queue-name { font-size:13px; font-weight:700; }
+    .e3d-queue-meta { font-size:11px; color:#64748b; margin-top:2px; }
+    .e3d-queue-progress { width:100%; height:5px; background:rgba(255,255,255,.06); border-radius:99px; overflow:hidden; margin-top:6px; }
+    .e3d-queue-fill { height:100%; border-radius:99px; transition:width .5s ease; background:linear-gradient(90deg,#3b82f6,#10b981); }
+
+    /* progress ring */
+    .e3d-pbar { position:absolute; bottom:20px; right:20px; }
+    .e3d-pbar-ring { transform:rotate(-90deg); }
+
+    /* ── Visual 3D de Pallet Empilhado ─────────────────────────── */
+    .pallet-3d-wrap {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end;
+      position: relative; gap: 2px;
+    }
+    .pallet-base {
+      width: 85%; height: 8px;
+      background: linear-gradient(90deg, #78350f, #92400e, #78350f);
+      border-radius: 2px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.6);
+      position: relative;
+    }
+    .pallet-base::before {
+      content: '';
+      position: absolute; top: -3px; left: 10%; width: 80%; height: 3px;
+      background: #a16207; border-radius: 1px;
+    }
+    .pallet-stack {
+      width: 85%;
+      display: flex; flex-direction: column;
+      gap: 2px; align-items: center;
+    }
+    .pallet-row {
+      width: 100%; display: flex; gap: 2px;
+    }
+    .pallet-box {
+      flex: 1; height: 16px; border-radius: 2px;
+      position: relative;
+      box-shadow: inset 0 -2px 4px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4);
+      transition: all 0.3s ease;
+    }
+    .pallet-box::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: rgba(255,255,255,0.15); border-radius: 2px 2px 0 0;
+    }
+    /* ── Card do Pallet: Layout sem sobreposição ─────────────── */
+    .pallet-card {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      gap: 0; overflow: hidden; border-radius: 10px;
+    }
+    /* Zona de informações (topo) */
+    .pallet-card-header {
+      flex-shrink: 0;
+      padding: 6px 7px 5px;
+      background: rgba(0,0,0,0.35);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .pallet-card-num {
+      font-size: 14px; font-weight: 900; color: #fff;
+      line-height: 1; letter-spacing: -0.5px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .pallet-card-status-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    }
+    .pallet-card-variety {
+      font-size: 9.5px; font-weight: 700; color: #cbd5e1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-top: 3px;
+    }
+    .pallet-card-meta {
+      display: flex; gap: 5px; align-items: center;
+      margin-top: 3px; flex-wrap: wrap;
+    }
+    .pallet-card-chip {
+      font-size: 8px; font-weight: 700;
+      padding: 1px 5px; border-radius: 4px;
+      background: rgba(255,255,255,0.08);
+      color: #94a3b8;
+    }
+    .pallet-card-chip.accent { background: rgba(6,182,212,0.15); color: #22d3ee; font-family: monospace; }
+    /* Zona da pilha 3D (rodapé) */
+    .pallet-card-stack {
+      flex: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end;
+      padding: 4px 6px 6px;
+      position: relative;
+    }
+    /* Badge de caixas (canto sup. direito do card inteiro) */
+    .pallet-cx-badge {
+      position: absolute; top: -9px; right: -9px;
+      font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px; color: #fff;
+      z-index: 10; box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+    /* Badge de idade (canto sup. esquerdo do card inteiro) */
+    .pallet-age-badge {
+      position: absolute; top: -9px; left: -9px;
+      display: flex; align-items: center; gap: 3px;
+      background: rgba(5,15,30,0.95); border-radius: 10px;
+      font-size: 8px; font-weight: 700; color: #fff;
+      padding: 2px 5px; z-index: 10;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+    .pallet-stack {
+      width: 85%;
+      display: flex; flex-direction: column;
+      gap: 2px; align-items: center;
+    }
+    .pallet-row {
+      width: 100%; display: flex; gap: 2px;
+    }
+    .pallet-box {
+      flex: 1; height: 12px; border-radius: 2px;
+      position: relative;
+      box-shadow: inset 0 -2px 4px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4);
+    }
+    .pallet-box::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: rgba(255,255,255,0.18); border-radius: 2px 2px 0 0;
+    }
+    .pallet-base {
+      width: 85%; height: 6px;
+      background: linear-gradient(90deg, #78350f, #92400e, #78350f);
+      border-radius: 2px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.6);
+      position: relative; margin-top: 2px;
+    }
+    .pallet-base::before {
+      content: '';
+      position: absolute; top: -3px; left: 10%; width: 80%; height: 3px;
+      background: #a16207; border-radius: 1px;
+    }
+    /* Barra de progresso no rodapé da pilha */
+    .pallet-card-bar {
+      width: 85%; height: 3px; border-radius: 2px;
+      background: rgba(255,255,255,0.08); margin-top: 5px; overflow: hidden;
+    }
+    .pallet-card-bar-fill {
+      height: 100%; border-radius: 2px; transition: width 0.5s ease;
+    }
+
+
+    /* ── Modo Seleção em Lote ─────────────────────────────────── */
+    .slot-selectable:hover { cursor: pointer; filter: brightness(1.3); }
+    .slot-selected {
+      outline: 2.5px solid #22d3ee !important;
+      box-shadow: 0 0 20px rgba(34,211,238,0.5), inset 0 0 20px rgba(34,211,238,0.1) !important;
+    }
+    .slot-selected .selection-check {
+      display: flex !important;
+    }
+    .selection-check {
+      display: none;
+      position: absolute; top: 4px; right: 4px;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #22d3ee; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 900; color: #000; z-index: 20;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+    #e3d-selection-banner {
+      display: none; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 10px 16px; border-radius: 10px;
+      background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.3);
+      margin-bottom: 12px; flex-wrap: wrap;
+    }
+    #e3d-selection-banner.visible { display: flex; }
+    #e3d-batch-panel {
+      display: none; background: rgba(15,23,42,0.95);
+      border: 1px solid rgba(34,211,238,0.3); border-radius: 14px; padding: 16px;
+    }
+    #e3d-batch-panel.visible { display: block; }
+    .batch-field { margin-bottom: 10px; }
+    .batch-field label { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px; }
+    .batch-field input, .batch-field select { width: 100%; padding: 7px 10px; border-radius: 7px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 12px; }
+
+    /* ── Botão modo seleção ──────────────────────────────────── */
+    #e3d-select-mode-btn.active {
+      background: rgba(34,211,238,0.15) !important;
+      border-color: #22d3ee !important;
+      color: #22d3ee !important;
+    }
+  
+</style></head><body>
     ${pagesHtml}
     <div style="text-align:center;margin-top:16px;margin-bottom:32px;">
       <button onclick="window.print()" style="padding:12px 32px;background:#111;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨 Imprimir / Salvar PDF</button>
     </div>
-    </body></html>
+    
+<!-- ══════════════ ESTOQUE 3D ══════════════ -->
+<div id="screenE3d" class="screen" style="padding-top: calc(48px + var(--safe-top)); height: 100vh; overflow-y: auto;">
+  <div class="header">
+    <div class="back-btn" onclick="showScreen('home')">‹</div>
+    <div class="header-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="warehouse" style="width:20px;height:20px"></i> Estoque 3D</div>
+    <div class="online-dot"></div>
+  </div>
+  <div style="padding: 16px;">
+    <h1 class="ptitle"><i data-lucide="warehouse"></i> Estoque Virtual 3D</h1>
+  <p style="color:var(--muted);font-size:13px;margin-bottom:24px">
+    Acompanhe em tempo real o crescimento dos pallets no estoque. A IA identifica automaticamente o tipo de caixa e calibre de cada fruto e fecha pallets quando atingem a capacidade configurada.
+  </p>
+
+  <!-- KPI bar -->
+  <div class="kgrid" id="e3d-kpi-bar" style="margin-bottom:24px">
+    <div class="kcard">
+      <div class="klabel">Pallets no Estoque</div>
+      <div id="e3d-kpi-pallets" class="kval blue">0</div>
+      <div class="ksub">posições ocupadas</div>
+    </div>
+    <div class="kcard green">
+      <div class="klabel">Caixas Acumuladas</div>
+      <div id="e3d-kpi-caixas" class="kval green">0</div>
+      <div class="ksub">desde o início da sessão</div>
+    </div>
+    <div class="kcard yellow">
+      <div class="klabel">Capacidade do Armazém</div>
+      <div id="e3d-kpi-cap" class="kval yellow">0%</div>
+      <div class="ksub">pallets vs. capacidade máx.</div>
+    </div>
+    <div class="kcard orange">
+      <div class="klabel">Pallet em Formação</div>
+      <div id="e3d-kpi-forming" class="kval orange">0 cx</div>
+      <div class="ksub">aguardando fechamento</div>
+    </div>
+  </div>
+
+  <div id="e3d-root">
+
+    <!-- 3D Canvas -->
+    <!-- 2D Grid UI -->
+    <div id="e3d-zones-wrap">
+      
+      <!-- Zone 1: Packing House -->
+      <div class="e3d-zone" style="border: 1px dashed rgba(245,158,11,0.3);">
+        <div style="font-size: 15px; font-weight: 900; color: #f59e0b; margin-bottom: 14px; letter-spacing: 1px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span style="display:flex;align-items:center;gap:8px;"><i data-lucide="warehouse" style="width:16px;height:16px"></i> PACKING HOUSE</span>
+          <button id="e3d-select-mode-btn" onclick="e3dToggleSelectionMode()" style="margin-left:auto; font-size:10px; font-weight:800; padding:5px 12px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.2s;">
+            <i data-lucide="check-square" style="width:13px;height:13px"></i> Seleção em Lote
+          </button>
+        </div>
+        <!-- Banner de seleção -->
+        <div id="e3d-selection-banner">
+          <span style="font-size:12px; font-weight:700; color:#22d3ee;" id="e3d-selection-count">0 pallets selecionados</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button onclick="e3dClearSelection()" style="font-size:11px; padding:5px 10px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer;">Limpar</button>
+            <button id="e3d-unify-btn" onclick="e3dUnifySelectedPallets()" style="font-size:11px; padding:5px 12px; border-radius:6px; background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; cursor:pointer; font-weight:700; display:none;">🔗 Unificar Pallets</button>
+            <button onclick="e3dToggleBatchPanel()" style="font-size:11px; padding:5px 12px; border-radius:6px; background:rgba(34,211,238,0.15); border:1px solid #22d3ee; color:#22d3ee; cursor:pointer; font-weight:700;">✈️ Expedir Selecionados</button>
+          </div>
+        </div>
+        <div id="e3d-grid-packing">
+          <!-- slots rendered via JS -->
+        </div>
+      </div>
+
+      <!-- Zone 2: Câmara Fria -->
+      <div class="e3d-zone" style="border: 1px dashed rgba(6,182,212,0.3);">
+        <div style="font-size: 15px; font-weight: 900; color: #06b6d4; margin-bottom: 20px; letter-spacing: 1px; display:flex; align-items:center; gap:8px;">
+          <i data-lucide="snowflake" style="width:16px;height:16px"></i> CÂMARA FRIA
+        </div>
+        <div id="e3d-grid-cold">
+          <!-- slots rendered via JS -->
+        </div>
+        <!-- Sensor Widget -->
+        <div style="margin-top: 20px; padding: 12px; background: rgba(6,182,212,0.06); border: 1px solid rgba(6,182,212,0.15); border-radius: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="font-size: 11px; font-weight: 800; color: #06b6d4; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 6px;">
+            <span style="width: 6px; height: 6px; background: #06b6d4; border-radius: 50%; animation: blink 2s infinite;"></span>
+            Sensores Remotos (Câmara Fria)
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.03);">
+              <div style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Temperatura</div>
+              <div id="e3d-sensor-temp" style="font-size: 18px; font-weight: 900; color: #06b6d4; margin-top: 2px;">4.2 °C</div>
+            </div>
+            <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.03);">
+              <div style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Umidade</div>
+              <div id="e3d-sensor-humidity" style="font-size: 18px; font-weight: 900; color: #38bdf8; margin-top: 2px;">85.4 %</div>
+            </div>
+          </div>
+          <div style="font-size: 8.5px; color: #64748b; text-align: center;">
+            Status: Conectado (Sensor DHT22 / Modbus TCP)
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Panel -->
+    <div id="e3d-right-panel" style="display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:85vh">
+      <!-- Painel de Expedição em Lote -->
+      <div id="e3d-batch-panel">
+        <div style="font-size:11px; font-weight:800; color:#22d3ee; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; display:flex;align-items:center;gap:6px;">
+          <i data-lucide="send" style="width:14px;height:14px"></i> Expedição em Lote
+        </div>
+        <div id="e3d-batch-summary" style="font-size:11px; color:#94a3b8; margin-bottom:12px; padding:8px 10px; background:rgba(34,211,238,0.05); border-radius:6px; border:1px solid rgba(34,211,238,0.1);"></div>
+        <div class="batch-field">
+          <label>Cliente / Destinatário</label>
+          <input id="e3d-batch-cliente" placeholder="Ex: Supermercado BH" list="e3d-clientes-list">
+          <datalist id="e3d-clientes-list"></datalist>
+        </div>
+        <div class="batch-field">
+          <label>Fazenda de Origem</label>
+          <input id="e3d-batch-fazenda" placeholder="Ex: Fazenda Coopyfrutas">
+        </div>
+        <div class="batch-field">
+          <label>Tipo de Mercado</label>
+          <select id="e3d-batch-market">
+            <option value="Mercado Interno">🇧🇷 Mercado Interno</option>
+            <option value="Exportação USA">🇺🇸 Exportação USA</option>
+            <option value="Exportação Europa">🇪🇺 Exportação Europa</option>
+            <option value="Exportação Argentina">🇦🇷 Exportação Argentina</option>
+          </select>
+        </div>
+        <button onclick="e3dConfirmBatchDispatch()" style="width:100%; padding:10px; border-radius:8px; background:linear-gradient(135deg,#0ea5e9,#06b6d4); border:none; color:#fff; font-size:12px; font-weight:800; cursor:pointer; display:flex;align-items:center;justify-content:center;gap:6px; transition:all 0.2s;">
+          <i data-lucide="send" style="width:14px;height:14px"></i> Confirmar Expedição e Gerar Romaneio
+        </button>
+      </div>
+
+      <!-- Queue list -->
+      <div id="e3d-queue" style="background:rgba(15,23,42,.9);border-radius:14px;border:1px solid rgba(255,255,255,.06);padding:16px;">
+        <div class="q-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="package-open" style="width:18px;height:18px"></i> Pallets Ativos</div>
+        <div id="e3d-queue-list"></div>
+      </div>
+
+      <!-- WMS Config Panel -->
+      <div id="e3d-config-panel" style="background:rgba(15,23,42,.9);border-radius:14px;border:1px solid rgba(255,255,255,.06);padding:16px;">
+        <div class="q-title" style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
+          <i data-lucide="settings" style="width:18px;height:18px"></i> Configurações WMS
+        </div>
+        
+        <!-- Tabs for config panel -->
+        <div style="display:flex; gap:8px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:12px;">
+          <button id="e3d-cfg-tab-cap-btn" onclick="e3dSwitchCfgTab('cap')" style="background:none; border:none; color:#3b82f6; font-size:11px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:4px; transition:all 0.2s;">Capacidades</button>
+          <button id="e3d-cfg-tab-labels-btn" onclick="e3dSwitchCfgTab('labels')" style="background:none; border:none; color:#64748b; font-size:11px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:4px; transition:all 0.2s;">Etiquetas</button>
+          <button id="e3d-cfg-tab-galpao-btn" onclick="e3dSwitchCfgTab('galpao')" style="background:none; border:none; color:#64748b; font-size:11px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:4px; transition:all 0.2s;">Galpão</button>
+        </div>
+
+        <!-- Tab 1: Capacidades -->
+        <div id="e3d-cfg-tab-cap" style="display:block;">
+          <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+              <select id="e3d-add-cap-variety" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%"></select>
+              <input type="number" id="e3d-add-cap-caliber" placeholder="Calibre" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+              <input type="text" id="e3d-add-cap-boxmodel" placeholder="Ex: Samba, Forro" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
+              <input type="number" id="e3d-add-cap-limit" placeholder="Qtd Caixas" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
+            </div>
+            <button class="btn blue" onclick="e3dAddCapRule()" style="padding:6px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer">Adicionar Regra</button>
+          </div>
+          <div id="e3d-cap-rules-list" style="max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding-right:4px;">
+            <!-- list of capacity rules -->
+          </div>
+        </div>
+
+        <!-- Tab 2: Etiquetas -->
+        <div id="e3d-cfg-tab-labels" style="display:none;">
+          <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+              <input type="text" id="e3d-add-label-key" placeholder="Chave (Ex: EXP_CHINA)" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
+              <input type="text" id="e3d-add-label-name" placeholder="Nome (Ex: 🇨🇳 China)" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
+            </div>
+            <button class="btn blue" onclick="e3dAddLabel()" style="padding:6px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer">Cadastrar Etiqueta</button>
+          </div>
+          <div id="e3d-labels-list" style="max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding-right:4px;">
+            <!-- list of custom labels -->
+          </div>
+        </div>
+
+        <!-- Tab 3: Galpão -->
+        <div id="e3d-cfg-tab-galpao" style="display:none;">
+          <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:12px;">
+            <div>
+              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Posições Packing House</label>
+              <input type="number" id="e3d-cfg-packing-cap" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
+            </div>
+            <div>
+              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Posições Câmara Fria</label>
+              <input type="number" id="e3d-cfg-cold-cap" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
+            </div>
+            <button class="btn blue" onclick="e3dSaveGalpaoCapacities()" style="padding:8px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer">Salvar Capacidades</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /right panel -->
+  </div><!-- /e3d-root -->
+
+  <div id="e3d-view-cold" class="e3d-view">
+    <div style="background:rgba(15,23,42,.9);border-radius:16px;border:1px solid rgba(255,255,255,.06);padding:20px;min-height:60vh;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <h3 style="color:var(--blue);display:flex;align-items:center;gap:8px"><i data-lucide="snowflake"></i> Pallets na Câmara Fria</h3>
+        <button class="btn" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--text);padding:6px 12px;font-size:12px;border-radius:6px;cursor:pointer" onclick="e3dLoadColdRoom()">Atualizar</button>
+      </div>
+      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
+        <table style="width:100%;border-collapse:collapse;text-align:left;font-size:13px">
+          <thead>
+            <tr style="border-bottom:1px solid rgba(255,255,255,.1);color:var(--muted)">
+              <th style="padding:10px">Pallet #</th>
+              <th style="padding:10px">Variedade</th>
+              <th style="padding:10px">Parcela</th>
+              <th style="padding:10px">Calibre</th>
+              <th style="padding:10px">Tipo Caixa</th>
+              <th style="padding:10px">Qtd</th>
+              <th style="padding:10px">Etiqueta</th>
+              <th style="padding:10px">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="e3d-cold-tbody">
+            <!-- preenchido via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /e3d-view-cold -->
+
+</div>
+  </div>
+</div>
+
+</body></html>
   `;
 
 
@@ -2697,32 +4274,14 @@ async function saveBulkSale() {
   };
 
   try {
-    // Tentativa 1: payload completo
-    let { error } = await sb.from('bulk_sales').insert({ ...sale });
-    
-    if (error) {
-      console.warn('Bulk Fallback 1 | code:', error.code, '| msg:', error.message, '| details:', error.details);
-      // Tentativa 2: sem fruit_type e ts (colunas que podem não existir)
-      const p2 = { tenant_id: sale.tenant_id, date: sale.date, customer_name: sale.customer_name, parcel_id: sale.parcel_id, weight_kg: sale.weight_kg, total_value: sale.total_value, signature_base64: sale.signature_base64 };
-      const r2 = await sb.from('bulk_sales').insert(p2);
-      error = r2.error;
+    if (isOnline) {
+      await pushBulkSale(sale);
+      toast('✓ Venda a granel registrada!', 'ok');
+    } else {
+      await idbAdd({ type: 'bulk_sale', data: sale });
+      toast('✓ Venda a granel salva OFFLINE!', 'ok');
+      updateSyncBadge();
     }
-
-    if (error) {
-      console.warn('Bulk Fallback 2 | code:', error.code, '| msg:', error.message);
-      // Tentativa 3: payload absolutamente mínimo
-      const p3 = { tenant_id: sale.tenant_id, date: sale.date, weight_kg: sale.weight_kg, total_value: sale.total_value };
-      const r3 = await sb.from('bulk_sales').insert(p3);
-      error = r3.error;
-    }
-
-    if (error) {
-      toast(`Erro ${error.code}: ${error.message}`, 'err');
-      console.error('Bulk sale FINAL error:', JSON.stringify(error));
-      return;
-    }
-
-    toast('✓ Venda a granel registrada!', 'ok');
     resetBulkForm();
     showScreen('home');
   } catch (e) {
@@ -2733,6 +4292,21 @@ async function saveBulkSale() {
     btn.innerHTML = '<i data-lucide="check" style="width:18px;height:18px"></i> Finalizar e Salvar';
     if (window.lucide) lucide.createIcons();
   }
+}
+
+async function pushBulkSale(sale) {
+  let { error } = await sb.from('bulk_sales').insert({ ...sale });
+  if (error) {
+    const p2 = { tenant_id: sale.tenant_id, date: sale.date, customer_name: sale.customer_name, parcel_id: sale.parcel_id, weight_kg: sale.weight_kg, total_value: sale.total_value, signature_base64: sale.signature_base64 };
+    const r2 = await sb.from('bulk_sales').insert(p2);
+    error = r2.error;
+  }
+  if (error) {
+    const p3 = { tenant_id: sale.tenant_id, date: sale.date, weight_kg: sale.weight_kg, total_value: sale.total_value };
+    const r3 = await sb.from('bulk_sales').insert(p3);
+    error = r3.error;
+  }
+  if (error) throw error;
 }
 
 function resetBulkForm() {
@@ -3312,6 +4886,237 @@ document.addEventListener('DOMContentLoaded', async () => {
   </div>
   <div style="margin-top:24px; color:white; font-weight:700; text-align:center">Posicione o código de barras no centro</div>
   <button class="btn btn-danger" onclick="stopQScanner()" style="margin-top:32px; width:200px">✖ Fechar Câmera</button>
+</div>
+
+
+<!-- ══════════════ ESTOQUE 3D ══════════════ -->
+<div id="screenE3d" class="screen" style="padding-top: calc(48px + var(--safe-top)); height: 100vh; overflow-y: auto;">
+  <div class="header">
+    <div class="back-btn" onclick="showScreen('home')">‹</div>
+    <div class="header-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="warehouse" style="width:20px;height:20px"></i> Estoque 3D</div>
+    <div class="online-dot"></div>
+  </div>
+  <div style="padding: 16px;">
+    <h1 class="ptitle"><i data-lucide="warehouse"></i> Estoque Virtual 3D</h1>
+  <p style="color:var(--muted);font-size:13px;margin-bottom:24px">
+    Acompanhe em tempo real o crescimento dos pallets no estoque. A IA identifica automaticamente o tipo de caixa e calibre de cada fruto e fecha pallets quando atingem a capacidade configurada.
+  </p>
+
+  <!-- KPI bar -->
+  <div class="kgrid" id="e3d-kpi-bar" style="margin-bottom:24px">
+    <div class="kcard">
+      <div class="klabel">Pallets no Estoque</div>
+      <div id="e3d-kpi-pallets" class="kval blue">0</div>
+      <div class="ksub">posições ocupadas</div>
+    </div>
+    <div class="kcard green">
+      <div class="klabel">Caixas Acumuladas</div>
+      <div id="e3d-kpi-caixas" class="kval green">0</div>
+      <div class="ksub">desde o início da sessão</div>
+    </div>
+    <div class="kcard yellow">
+      <div class="klabel">Capacidade do Armazém</div>
+      <div id="e3d-kpi-cap" class="kval yellow">0%</div>
+      <div class="ksub">pallets vs. capacidade máx.</div>
+    </div>
+    <div class="kcard orange">
+      <div class="klabel">Pallet em Formação</div>
+      <div id="e3d-kpi-forming" class="kval orange">0 cx</div>
+      <div class="ksub">aguardando fechamento</div>
+    </div>
+  </div>
+
+  <div id="e3d-root">
+
+    <!-- 3D Canvas -->
+    <!-- 2D Grid UI -->
+    <div id="e3d-zones-wrap">
+      
+      <!-- Zone 1: Packing House -->
+      <div class="e3d-zone" style="border: 1px dashed rgba(245,158,11,0.3);">
+        <div style="font-size: 15px; font-weight: 900; color: #f59e0b; margin-bottom: 14px; letter-spacing: 1px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span style="display:flex;align-items:center;gap:8px;"><i data-lucide="warehouse" style="width:16px;height:16px"></i> PACKING HOUSE</span>
+          <button id="e3d-select-mode-btn" onclick="e3dToggleSelectionMode()" style="margin-left:auto; font-size:10px; font-weight:800; padding:5px 12px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.2s;">
+            <i data-lucide="check-square" style="width:13px;height:13px"></i> Seleção em Lote
+          </button>
+        </div>
+        <!-- Banner de seleção -->
+        <div id="e3d-selection-banner">
+          <span style="font-size:12px; font-weight:700; color:#22d3ee;" id="e3d-selection-count">0 pallets selecionados</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button onclick="e3dClearSelection()" style="font-size:11px; padding:5px 10px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer;">Limpar</button>
+            <button id="e3d-unify-btn" onclick="e3dUnifySelectedPallets()" style="font-size:11px; padding:5px 12px; border-radius:6px; background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; cursor:pointer; font-weight:700; display:none;">🔗 Unificar Pallets</button>
+            <button onclick="e3dToggleBatchPanel()" style="font-size:11px; padding:5px 12px; border-radius:6px; background:rgba(34,211,238,0.15); border:1px solid #22d3ee; color:#22d3ee; cursor:pointer; font-weight:700;">✈️ Expedir Selecionados</button>
+          </div>
+        </div>
+        <div id="e3d-grid-packing">
+          <!-- slots rendered via JS -->
+        </div>
+      </div>
+
+      <!-- Zone 2: Câmara Fria -->
+      <div class="e3d-zone" style="border: 1px dashed rgba(6,182,212,0.3);">
+        <div style="font-size: 15px; font-weight: 900; color: #06b6d4; margin-bottom: 20px; letter-spacing: 1px; display:flex; align-items:center; gap:8px;">
+          <i data-lucide="snowflake" style="width:16px;height:16px"></i> CÂMARA FRIA
+        </div>
+        <div id="e3d-grid-cold">
+          <!-- slots rendered via JS -->
+        </div>
+        <!-- Sensor Widget -->
+        <div style="margin-top: 20px; padding: 12px; background: rgba(6,182,212,0.06); border: 1px solid rgba(6,182,212,0.15); border-radius: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="font-size: 11px; font-weight: 800; color: #06b6d4; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 6px;">
+            <span style="width: 6px; height: 6px; background: #06b6d4; border-radius: 50%; animation: blink 2s infinite;"></span>
+            Sensores Remotos (Câmara Fria)
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.03);">
+              <div style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Temperatura</div>
+              <div id="e3d-sensor-temp" style="font-size: 18px; font-weight: 900; color: #06b6d4; margin-top: 2px;">4.2 °C</div>
+            </div>
+            <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.03);">
+              <div style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Umidade</div>
+              <div id="e3d-sensor-humidity" style="font-size: 18px; font-weight: 900; color: #38bdf8; margin-top: 2px;">85.4 %</div>
+            </div>
+          </div>
+          <div style="font-size: 8.5px; color: #64748b; text-align: center;">
+            Status: Conectado (Sensor DHT22 / Modbus TCP)
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Panel -->
+    <div id="e3d-right-panel" style="display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:85vh">
+      <!-- Painel de Expedição em Lote -->
+      <div id="e3d-batch-panel">
+        <div style="font-size:11px; font-weight:800; color:#22d3ee; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; display:flex;align-items:center;gap:6px;">
+          <i data-lucide="send" style="width:14px;height:14px"></i> Expedição em Lote
+        </div>
+        <div id="e3d-batch-summary" style="font-size:11px; color:#94a3b8; margin-bottom:12px; padding:8px 10px; background:rgba(34,211,238,0.05); border-radius:6px; border:1px solid rgba(34,211,238,0.1);"></div>
+        <div class="batch-field">
+          <label>Cliente / Destinatário</label>
+          <input id="e3d-batch-cliente" placeholder="Ex: Supermercado BH" list="e3d-clientes-list">
+          <datalist id="e3d-clientes-list"></datalist>
+        </div>
+        <div class="batch-field">
+          <label>Fazenda de Origem</label>
+          <input id="e3d-batch-fazenda" placeholder="Ex: Fazenda Coopyfrutas">
+        </div>
+        <div class="batch-field">
+          <label>Tipo de Mercado</label>
+          <select id="e3d-batch-market">
+            <option value="Mercado Interno">🇧🇷 Mercado Interno</option>
+            <option value="Exportação USA">🇺🇸 Exportação USA</option>
+            <option value="Exportação Europa">🇪🇺 Exportação Europa</option>
+            <option value="Exportação Argentina">🇦🇷 Exportação Argentina</option>
+          </select>
+        </div>
+        <button onclick="e3dConfirmBatchDispatch()" style="width:100%; padding:10px; border-radius:8px; background:linear-gradient(135deg,#0ea5e9,#06b6d4); border:none; color:#fff; font-size:12px; font-weight:800; cursor:pointer; display:flex;align-items:center;justify-content:center;gap:6px; transition:all 0.2s;">
+          <i data-lucide="send" style="width:14px;height:14px"></i> Confirmar Expedição e Gerar Romaneio
+        </button>
+      </div>
+
+      <!-- Queue list -->
+      <div id="e3d-queue" style="background:rgba(15,23,42,.9);border-radius:14px;border:1px solid rgba(255,255,255,.06);padding:16px;">
+        <div class="q-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="package-open" style="width:18px;height:18px"></i> Pallets Ativos</div>
+        <div id="e3d-queue-list"></div>
+      </div>
+
+      <!-- WMS Config Panel -->
+      <div id="e3d-config-panel" style="background:rgba(15,23,42,.9);border-radius:14px;border:1px solid rgba(255,255,255,.06);padding:16px;">
+        <div class="q-title" style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
+          <i data-lucide="settings" style="width:18px;height:18px"></i> Configurações WMS
+        </div>
+        
+        <!-- Tabs for config panel -->
+        <div style="display:flex; gap:8px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:12px;">
+          <button id="e3d-cfg-tab-cap-btn" onclick="e3dSwitchCfgTab('cap')" style="background:none; border:none; color:#3b82f6; font-size:11px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:4px; transition:all 0.2s;">Capacidades</button>
+          <button id="e3d-cfg-tab-labels-btn" onclick="e3dSwitchCfgTab('labels')" style="background:none; border:none; color:#64748b; font-size:11px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:4px; transition:all 0.2s;">Etiquetas</button>
+          <button id="e3d-cfg-tab-galpao-btn" onclick="e3dSwitchCfgTab('galpao')" style="background:none; border:none; color:#64748b; font-size:11px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:4px; transition:all 0.2s;">Galpão</button>
+        </div>
+
+        <!-- Tab 1: Capacidades -->
+        <div id="e3d-cfg-tab-cap" style="display:block;">
+          <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+              <select id="e3d-add-cap-variety" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%"></select>
+              <input type="number" id="e3d-add-cap-caliber" placeholder="Calibre" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+              <input type="text" id="e3d-add-cap-boxmodel" placeholder="Ex: Samba, Forro" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
+              <input type="number" id="e3d-add-cap-limit" placeholder="Qtd Caixas" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
+            </div>
+            <button class="btn blue" onclick="e3dAddCapRule()" style="padding:6px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer">Adicionar Regra</button>
+          </div>
+          <div id="e3d-cap-rules-list" style="max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding-right:4px;">
+            <!-- list of capacity rules -->
+          </div>
+        </div>
+
+        <!-- Tab 2: Etiquetas -->
+        <div id="e3d-cfg-tab-labels" style="display:none;">
+          <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+              <input type="text" id="e3d-add-label-key" placeholder="Chave (Ex: EXP_CHINA)" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
+              <input type="text" id="e3d-add-label-name" placeholder="Nome (Ex: 🇨🇳 China)" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
+            </div>
+            <button class="btn blue" onclick="e3dAddLabel()" style="padding:6px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer">Cadastrar Etiqueta</button>
+          </div>
+          <div id="e3d-labels-list" style="max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding-right:4px;">
+            <!-- list of custom labels -->
+          </div>
+        </div>
+
+        <!-- Tab 3: Galpão -->
+        <div id="e3d-cfg-tab-galpao" style="display:none;">
+          <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:12px;">
+            <div>
+              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Posições Packing House</label>
+              <input type="number" id="e3d-cfg-packing-cap" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
+            </div>
+            <div>
+              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Posições Câmara Fria</label>
+              <input type="number" id="e3d-cfg-cold-cap" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
+            </div>
+            <button class="btn blue" onclick="e3dSaveGalpaoCapacities()" style="padding:8px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer">Salvar Capacidades</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /right panel -->
+  </div><!-- /e3d-root -->
+
+  <div id="e3d-view-cold" class="e3d-view">
+    <div style="background:rgba(15,23,42,.9);border-radius:16px;border:1px solid rgba(255,255,255,.06);padding:20px;min-height:60vh;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <h3 style="color:var(--blue);display:flex;align-items:center;gap:8px"><i data-lucide="snowflake"></i> Pallets na Câmara Fria</h3>
+        <button class="btn" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--text);padding:6px 12px;font-size:12px;border-radius:6px;cursor:pointer" onclick="e3dLoadColdRoom()">Atualizar</button>
+      </div>
+      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
+        <table style="width:100%;border-collapse:collapse;text-align:left;font-size:13px">
+          <thead>
+            <tr style="border-bottom:1px solid rgba(255,255,255,.1);color:var(--muted)">
+              <th style="padding:10px">Pallet #</th>
+              <th style="padding:10px">Variedade</th>
+              <th style="padding:10px">Parcela</th>
+              <th style="padding:10px">Calibre</th>
+              <th style="padding:10px">Tipo Caixa</th>
+              <th style="padding:10px">Qtd</th>
+              <th style="padding:10px">Etiqueta</th>
+              <th style="padding:10px">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="e3d-cold-tbody">
+            <!-- preenchido via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /e3d-view-cold -->
+
+</div>
+  </div>
 </div>
 
 </body>

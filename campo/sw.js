@@ -3,6 +3,7 @@ const ASSETS = [
   './',
   './index.html',
   './manifest.json',
+  './dragDropTouch.js',
 ];
 
 // INSTALL: pre-caches the local assets
