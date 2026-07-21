@@ -1800,21 +1800,21 @@
       width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
     }
     .pallet-card-variety {
-      font-size: 9.5px; font-weight: 700; color: #cbd5e1;
+      font-size: 11px; font-weight: 800; color: #f8fafc;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      margin-top: 3px;
+      margin-top: 2px;
     }
     .pallet-card-meta {
-      display: flex; gap: 5px; align-items: center;
+      display: flex; gap: 4px; align-items: center;
       margin-top: 3px; flex-wrap: wrap;
     }
     .pallet-card-chip {
-      font-size: 8px; font-weight: 700;
-      padding: 1px 5px; border-radius: 4px;
-      background: rgba(255,255,255,0.08);
-      color: #94a3b8;
+      font-size: 9.5px; font-weight: 800;
+      padding: 2px 6px; border-radius: 4px;
+      background: rgba(255,255,255,0.12);
+      color: #cbd5e1;
     }
-    .pallet-card-chip.accent { background: rgba(6,182,212,0.15); color: #22d3ee; font-family: monospace; }
+    .pallet-card-chip.accent { background: rgba(6,182,212,0.25); color: #38bdf8; font-family: monospace; font-weight: 900; }
     /* Zona da pilha 3D (rodapé) */
     .pallet-card-stack {
       flex: 1;
@@ -1825,18 +1825,25 @@
     }
     /* Badge de caixas (canto sup. direito do card inteiro) */
     .pallet-cx-badge {
-      position: absolute; top: -9px; right: -9px;
-      font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px; color: #fff;
-      z-index: 10; box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+      position: absolute; top: -11px; right: -9px;
+      font-size: 11px; font-weight: 900; padding: 3px 8px; border-radius: 10px; color: #fff;
+      z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.7);
     }
     /* Badge de idade (canto sup. esquerdo do card inteiro) */
     .pallet-age-badge {
-      position: absolute; top: -9px; left: -9px;
-      display: flex; align-items: center; gap: 3px;
-      background: rgba(5,15,30,0.95); border-radius: 10px;
-      font-size: 8px; font-weight: 700; color: #fff;
-      padding: 2px 5px; z-index: 10;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      position: absolute; top: -11px; left: -9px;
+      display: flex; align-items: center; gap: 4px;
+      background: #0f172a; border-radius: 8px;
+      font-size: 11px; font-weight: 900; color: #fff;
+      padding: 3px 8px; z-index: 10;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.7);
+      border: 1.5px solid var(--border-color, #10b981);
+    }
+    .pallet-error-badge {
+      position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+      background: #ef4444; color: #fff; font-size: 9px; font-weight: 900;
+      padding: 2px 7px; border-radius: 8px; z-index: 12; white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(239,68,68,0.5); animation: blink 1.5s infinite;
     }
     .pallet-stack {
       width: 85%;
@@ -2076,16 +2083,23 @@
           </div>
         </div>
 
-        <!-- Tab 2: Etiquetas -->
+        <!-- Tab 2: Etiquetas de Fruta -->
         <div id="e3d-cfg-tab-labels" style="display:none;">
           <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
-              <input type="text" id="e3d-add-label-key" placeholder="Chave (Ex: EXP_CHINA)" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
-              <input type="text" id="e3d-add-label-name" placeholder="Nome (Ex: 🇨🇳 China)" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
+            <div>
+              <label style="font-size:10px; color:#64748b; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px">Nome da Etiqueta</label>
+              <input type="text" id="e3d-add-label-name" placeholder="Ex: Melos, Samba Poti Doce, Samba 13kg" style="padding:7px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
             </div>
-            <button class="btn blue" onclick="e3dAddLabel()" style="padding:6px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer">Cadastrar Etiqueta</button>
+            <div>
+              <label style="font-size:10px; color:#64748b; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px">Foto da Etiqueta</label>
+              <div style="display:flex; align-items:center; gap:8px">
+                <input type="file" id="e3d-add-label-photo" accept="image/*" onchange="e3dPreviewLabelPhoto(this)" style="font-size:10px; color:var(--text)">
+                <img id="e3d-label-photo-preview" style="display:none; width:42px; height:42px; object-fit:cover; border-radius:6px; border:1px solid rgba(255,255,255,0.2);">
+              </div>
+            </div>
+            <button class="btn blue" onclick="e3dAddLabel()" style="padding:8px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer; margin-top:4px">🏷️ Cadastrar Etiqueta com Foto</button>
           </div>
-          <div id="e3d-labels-list" style="max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding-right:4px;">
+          <div id="e3d-labels-list" style="max-height:160px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding-right:4px;">
             <!-- list of custom labels -->
           </div>
         </div>
@@ -6927,22 +6941,29 @@ async function initEstoque3D() {
                   <div id="e3d-modal-age" style="font-weight:700; font-size:13px; margin-top:2px; display:flex; align-items:center; gap:6px">—</div>
                 </div>
                 <div>
-                  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Rastreabilidade (ID)</label>
-                  <div id="e3d-modal-trace" style="font-weight:700; font-size:10px; margin-top:2px; color:#94a3b8; word-break:break-all; font-family:monospace">—</div>
+                  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Rastreabilidade (Parcela / Lote)</label>
+                  <div id="e3d-modal-trace" style="font-weight:700; font-size:11px; margin-top:2px; color:#38bdf8; word-break:break-all; font-family:monospace">—</div>
                 </div>
               </div>
 
               <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">
                 <div>
-                  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Qtd Caixas</label>
-                  <input type="number" id="e3d-modal-caixas" class="inp" style="width:100%; padding:6px 8px; border-radius:6px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:12px;">
+                  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Qtd Caixas (Customizável)</label>
+                  <input type="number" id="e3d-modal-caixas" class="inp" placeholder="Ex: 54, 68..." style="width:100%; padding:6px 8px; border-radius:6px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:12px; font-weight:bold;">
                 </div>
                 <div>
                   <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Etiqueta de Destino</label>
-                  <select id="e3d-modal-label" class="inp" style="width:100%; padding:6px 8px; border-radius:6px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:12px;">
-                    <option value="">— Sem Etiqueta —</option>
-                  </select>
+                  <div style="display:flex; align-items:center; gap:6px">
+                    <select id="e3d-modal-label" class="inp" onchange="e3dUpdateModalLabelPhotoPreview()" style="flex:1; padding:6px 8px; border-radius:6px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:12px;">
+                      <option value="">— Sem Etiqueta —</option>
+                    </select>
+                    <img id="e3d-modal-label-img" style="display:none; width:34px; height:34px; object-fit:cover; border-radius:4px; border:1px solid rgba(255,255,255,0.2);" />
+                  </div>
                 </div>
+              </div>
+              <div style="margin-bottom:12px; padding:6px 10px; background:rgba(255,255,255,0.03); border-radius:6px; border:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="e3d-modal-misto" style="width:16px; height:16px; accent-color:#3b82f6; cursor:pointer;">
+                <label for="e3d-modal-misto" style="font-size:11px; font-weight:700; color:#e2e8f0; cursor:pointer;">🔀 Pallet Misto (Contém caixas de diferentes variedades/calibres)</label>
               </div>
 
               <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">
@@ -7137,6 +7158,39 @@ async function e3dSaveGalpaoCapacities() {
   }
 }
 
+let _tempLabelPhotoData = '';
+
+function e3dGetLabelObj(key) {
+  if (!key || !E3D_LABEL_NAMES[key]) return { name: key || '—', photo: '' };
+  const val = E3D_LABEL_NAMES[key];
+  if (typeof val === 'object' && val !== null) {
+    return { name: val.name || key, photo: val.photo || '' };
+  }
+  return { name: String(val), photo: '' };
+}
+
+function e3dGetLabelName(key) {
+  return e3dGetLabelObj(key).name;
+}
+
+function e3dPreviewLabelPhoto(input) {
+  const preview = $('e3d-label-photo-preview');
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      _tempLabelPhotoData = e.target.result;
+      if (preview) {
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+      }
+    };
+    reader.readAsDataURL(input.files[0]);
+  } else {
+    _tempLabelPhotoData = '';
+    if (preview) preview.style.display = 'none';
+  }
+}
+
 function e3dRenderConfigLists() {
   const capList = $('e3d-cap-rules-list');
   if (capList) {
@@ -7163,15 +7217,20 @@ function e3dRenderConfigLists() {
     if (!customLabelEntries.length) {
       labelsList.innerHTML = '<div style="color:#475569;font-size:10px;text-align:center;padding:8px">Nenhuma etiqueta cadastrada.</div>';
     } else {
-      labelsList.innerHTML = customLabelEntries.map(([key, name]) => `
-        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.04); font-size:11px;">
-          <div>
-            <span style="font-weight:700; color:#fff">${name}</span>
-            <span style="color:#64748b; font-size:9px; display:block;">Chave: ${key}</span>
+      labelsList.innerHTML = customLabelEntries.map(([key, val]) => {
+        const obj = e3dGetLabelObj(key);
+        return `
+          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.04); font-size:11px;">
+            <div style="display:flex; align-items:center; gap:8px">
+              ${obj.photo ? `<img src="${obj.photo}" style="width:32px; height:32px; object-fit:cover; border-radius:4px; border:1px solid rgba(255,255,255,0.1);" />` : '<div style="width:32px; height:32px; background:rgba(255,255,255,0.05); border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:14px">🏷️</div>'}
+              <div>
+                <span style="font-weight:700; color:#fff">${obj.name}</span>
+              </div>
+            </div>
+            <button onclick="e3dDeleteLabel('${key}')" style="background:none; border:none; color:#ef4444; font-size:14px; cursor:pointer; padding:2px 6px;">×</button>
           </div>
-          <button onclick="e3dDeleteLabel('${key}')" style="background:none; border:none; color:#ef4444; font-size:14px; cursor:pointer; padding:2px 6px;">×</button>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
   }
 }
@@ -7233,29 +7292,31 @@ function e3dDeleteCapRule(idx) {
 }
 
 function e3dAddLabel() {
-  const key = $('e3d-add-label-key').value.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '');
   const name = $('e3d-add-label-name').value.trim();
-
-  if (!key) {
-    toast('⚠️ Insira uma chave válida (somente letras, números e underline)!', 'warning');
-    return;
-  }
   if (!name) {
-    toast('⚠️ Insira um nome para a etiqueta!', 'warning');
+    toast('⚠️ Insira o nome da etiqueta!', 'warning');
     return;
   }
+  const key = name.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, '_');
 
-  E3D_LABEL_NAMES[key] = name;
+  E3D_LABEL_NAMES[key] = {
+    name: name,
+    photo: _tempLabelPhotoData || ''
+  };
   localStorage.setItem('packinghouse_e3d_labels', JSON.stringify(E3D_LABEL_NAMES));
   
   e3dRenderConfigLists();
   e3dRenderGrid();
   e3dRenderQueue();
   e3dRenderColdTable();
-  toast('✓ Etiqueta cadastrada com sucesso!', 'success');
+  toast('✓ Etiqueta com foto cadastrada com sucesso!', 'success');
 
-  $('e3d-add-label-key').value = '';
   $('e3d-add-label-name').value = '';
+  const photoInput = $('e3d-add-label-photo');
+  if (photoInput) photoInput.value = '';
+  const preview = $('e3d-label-photo-preview');
+  if (preview) preview.style.display = 'none';
+  _tempLabelPhotoData = '';
 }
 
 function e3dDeleteLabel(key) {
@@ -7424,7 +7485,8 @@ function e3dRenderColdTable() {
   }
   tbody.innerHTML = activeCold.map((slot, index) => {
     const limit = e3dGetPalletLimit(slot.boxType, slot.caliber, slot.boxModel);
-    const labelText = slot.label ? (E3D_LABEL_NAMES[slot.label] || slot.label) : '—';
+    const labelObj = e3dGetLabelObj(slot.label);
+    const labelText = labelObj ? labelObj.name : '—';
     return `
       <tr style="border-bottom:1px solid rgba(255,255,255,.05)">
         <td style="padding:10px;font-weight:700">P${String(slot.palletNum).padStart(2,'0')}</td>
@@ -7547,21 +7609,23 @@ function e3dRenderGrid() {
         }
         stackHTML += '</div><div class="pallet-base"></div>';
         
-        // Badge de idade
+        // Badge de idade do pallet (Destaque e Alta Legibilidade)
         const days = e3dGetPalletAge(slot.createdAt);
-        let ageDotColor = '#10b981';
-        let ageText = days === 0 ? 'hoje' : (days === 1 ? '1d' : `${days}d`);
-        if (days > 5 && days <= 10) ageDotColor = '#f59e0b';
-        else if (days > 10) ageDotColor = '#ef4444';
+        let ageDotColor = '#10b981'; // verde
+        let ageText = days === 0 ? '⏱️ HOJE' : (days === 1 ? '⏱️ 1 DIA' : `⏱️ ${days} DIAS`);
+        if (days > 5 && days <= 10) ageDotColor = '#f59e0b'; // amarelo
+        else if (days > 10) ageDotColor = '#ef4444'; // vermelho
         
-        const labelText = slot.label ? (E3D_LABEL_NAMES[slot.label] || slot.label) : '';
+        const labelObj = e3dGetLabelObj(slot.label);
+        const labelText = labelObj ? labelObj.name : '';
+        const labelPhoto = labelObj ? labelObj.photo : '';
         
         el.innerHTML = `
           <!-- Badges flutuantes (fora do card) -->
           <div class="selection-check">✓</div>
-          <div class="pallet-age-badge" style="border:1px solid ${ageDotColor};">
-            <span style="width:5px;height:5px;background:${ageDotColor};border-radius:50%;display:inline-block;"></span>
-            ${ageText}
+          <div class="pallet-age-badge" style="border-color:${ageDotColor};">
+            <span style="width:6px;height:6px;background:${ageDotColor};border-radius:50%;display:inline-block;box-shadow:0 0 5px ${ageDotColor}"></span>
+            <span>${ageText}</span>
           </div>
           <div class="pallet-cx-badge" style="background:${badgeColor};">${slot.boxes}cx</div>
 
@@ -7577,9 +7641,13 @@ function e3dRenderGrid() {
               <div class="pallet-card-meta">
                 <span class="pallet-card-chip">${slot.boxModel || 'Padrão'}</span>
                 <span class="pallet-card-chip">Par.${slot.parcel || '?'}</span>
+                ${slot.isMisto ? '<span class="pallet-card-chip" style="background:#8b5cf6; color:#fff; font-weight:900">🔀 Misto</span>' : ''}
                 <span class="pallet-card-chip accent">J${julianCode}</span>
               </div>
-              ${labelText ? `<div style="font-size:7.5px;color:#f59e0b;font-weight:800;margin-top:3px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🏷️ ${labelText}</div>` : ''}
+              ${labelText && slot.label ? `<div style="font-size:8.5px;color:#f59e0b;font-weight:900;margin-top:3px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px;">
+                ${labelPhoto ? `<img src="${labelPhoto}" style="width:14px; height:14px; object-fit:cover; border-radius:3px;" />` : '🏷️'}
+                <span>${labelText}</span>
+              </div>` : ''}
             </div>
             <!-- Zona 2: Pilha 3D visual -->
             <div class="pallet-card-stack">
@@ -7687,6 +7755,38 @@ async function e3dHandleDrop(e, targetIdx, targetGridName) {
   }
 }
 
+function e3dGetParcelTraceCode(parcelCode, julianCode) {
+  const code = (parcelCode || '').trim();
+  if (!code || code === '—' || code === '?') {
+    return `JULIANO J${julianCode || e3dGetJulianCode(new Date())}`;
+  }
+  const ip = (_infoParcelas || []).find(x => 
+    String(x.parcela || '').trim().toLowerCase() === code.toLowerCase() ||
+    String(x.parcela2 || '').trim().toLowerCase() === code.toLowerCase()
+  );
+  if (ip && ip.lote) {
+    return `${code} · LOTE: ${ip.lote}`;
+  }
+  if (ip && ip.cultura) {
+    return `${code} · ${ip.cultura} (J${julianCode || e3dGetJulianCode(new Date())})`;
+  }
+  return `PARCELA ${code} · J${julianCode || e3dGetJulianCode(new Date())}`;
+}
+
+function e3dUpdateModalLabelPhotoPreview() {
+  const sel = $('e3d-modal-label');
+  const img = $('e3d-modal-label-img');
+  if (!sel || !img) return;
+  const key = sel.value;
+  const obj = e3dGetLabelObj(key);
+  if (obj && obj.photo) {
+    img.src = obj.photo;
+    img.style.display = 'block';
+  } else {
+    img.style.display = 'none';
+  }
+}
+
 function e3dOpenPalletModal(idx, gridName = 'packing') {
   e3d.selectedSlot = idx;
   e3d.selectedGrid = gridName;
@@ -7707,9 +7807,11 @@ function e3dOpenPalletModal(idx, gridName = 'packing') {
     labelSel.innerHTML = '<option value="">— Sem Etiqueta —</option>';
     for (const [k, v] of Object.entries(E3D_LABEL_NAMES)) {
       if (k === '') continue;
-      labelSel.innerHTML += `<option value="${k}">${v}</option>`;
+      const labelObj = e3dGetLabelObj(k);
+      labelSel.innerHTML += `<option value="${k}">${labelObj.name}</option>`;
     }
     labelSel.value = slot.label || '';
+    e3dUpdateModalLabelPhotoPreview();
   }
 
   if ($('e3d-modal-obs')) $('e3d-modal-obs').value = slot.obs || '';
@@ -7717,9 +7819,12 @@ function e3dOpenPalletModal(idx, gridName = 'packing') {
   if ($('e3d-modal-wagon')) $('e3d-modal-wagon').value = slot.wagon_code || '';
   if ($('e3d-modal-colheita')) $('e3d-modal-colheita').value = slot.harvest_date || '';
   if ($('e3d-modal-processamento')) $('e3d-modal-processamento').value = slot.processing_date || (slot.createdAt ? slot.createdAt.split('T')[0] : '');
-  
+  if ($('e3d-modal-misto')) $('e3d-modal-misto').checked = !!slot.isMisto;
+
   if ($('e3d-modal-trace')) {
-    $('e3d-modal-trace').textContent = slot.id || 'Sem ID (Local)';
+    const julianCode = e3dGetJulianCode(slot.createdAt ? new Date(slot.createdAt) : new Date());
+    const traceCode = e3dGetParcelTraceCode(slot.parcel, julianCode);
+    $('e3d-modal-trace').textContent = traceCode;
   }
 
   if ($('e3d-modal-age')) {
@@ -7861,6 +7966,7 @@ async function e3dSavePalletChanges() {
   const harvest_date = $('e3d-modal-colheita').value || null;
   const planting_date = $('e3d-modal-plantio').value || null;
   const processing_date = $('e3d-modal-processamento').value || null;
+  const isMisto = $('e3d-modal-misto') ? $('e3d-modal-misto').checked : false;
 
   slot.label = label;
   slot.obs = obs;
@@ -7869,6 +7975,7 @@ async function e3dSavePalletChanges() {
   slot.harvest_date = harvest_date;
   slot.planting_date = planting_date;
   slot.processing_date = processing_date;
+  slot.isMisto = isMisto;
 
   // Recalculate status based on boxes and limit
   const limit = e3dGetPalletLimit(slot.boxType, slot.caliber, slot.boxModel);
@@ -7900,14 +8007,15 @@ async function e3dSavePalletChanges() {
     } else {
       toast('✓ Alterações salvas com sucesso!', 'success');
       e3dClosePalletModal();
-      e3dLoadGridState();
+      e3dSaveGridState();
+      e3dRenderGrid();
+      e3dRenderColdTable();
     }
   } else {
+    toast('✓ Alterações salvas com sucesso!', 'success');
     e3dClosePalletModal();
-    e3dSaveGridState();
     e3dUpdateKPIs();
     e3dRenderQueue();
-    e3dRenderGrid();
   }
 }
 
