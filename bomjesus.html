@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Agrícola Bom Jesus — Módulo Integrado AppSheet & RH</title>
+
+  <!-- Lucide Icons & SheetJS -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #090d16;
+      --card: #111827;
+      --card-hover: #1f293d;
+      --sidebar-bg: rgba(15, 23, 42, 0.95);
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --muted2: #64748b;
+      --green: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.2);
+      --blue: #3b82f6;
+      --blue-glow: rgba(59, 130, 246, 0.2);
+      --amber: #f59e0b;
+      --purple: #8b5cf6;
+      --red: #ef4444;
+      --accent: #06b6d4;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+
+    /* HEADER TOP BAR */
+    header {
+      height: 64px;
+      background: rgba(17, 24, 39, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 900;
+      font-size: 18px;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--green), #059669);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      box-shadow: 0 4px 14px var(--green-glow);
+    }
+
+    .header-actions { display: flex; align-items: center; gap: 12px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn:hover { background: rgba(255,255,255,0.1); transform: translateY(-1px); }
+    .btn-green { background: linear-gradient(135deg, var(--green), #059669); border: none; color: #fff; box-shadow: 0 4px 14px var(--green-glow); }
+    .btn-green:hover { background: linear-gradient(135deg, #10b981, #047857); }
+    .btn-blue { background: linear-gradient(135deg, var(--blue), #2563eb); border: none; color: #fff; box-shadow: 0 4px 14px var(--blue-glow); }
+
+    /* LAYOUT WRAPPER */
+    .app-container { display: flex; flex: 1; height: calc(100vh - 64px); overflow: hidden; }
+
+    /* SIDEBAR MODULE NAVIGATION */
+    aside.sidebar {
+      width: 280px;
+      background: var(--sidebar-bg);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 16px 12px;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+
+    .mod-group {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--muted2);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 16px 12px 6px;
+    }
+
+    .mod-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      margin-bottom: 2px;
+    }
+
+    .mod-item:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+    .mod-item.active { background: rgba(59, 130, 246, 0.15); color: var(--blue); font-weight: 700; border-left: 3px solid var(--blue); }
+    .mod-item .count-badge { font-size: 11px; background: rgba(255,255,255,0.08); padding: 2px 8px; border-radius: 12px; color: var(--muted); }
+
+    /* MAIN CONTENT VIEW */
+    main.content { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+
+    /* KPI METRICS GRID */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::before { content:''; position:absolute; top:0; left:0; width:4px; height:100%; background:var(--blue); }
+    .kpi-card.green::before { background:var(--green); }
+    .kpi-card.amber::before { background:var(--amber); }
+    .kpi-card.purple::before { background:var(--purple); }
+
+    .kpi-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-value { font-size: 26px; font-weight: 900; color: var(--text); }
+    .kpi-sub { font-size: 11px; color: var(--muted2); }
+
+    /* CONTROLS BAR (SEARCH & FILTERS) */
+    .toolbar {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 14px;
+      flex: 1;
+      min-width: 260px;
+    }
+
+    .search-box input {
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 13px;
+      width: 100%;
+    }
+
+    /* DATA TABLE STYLES */
+    .table-container {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .table-header-title {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .table-wrapper { overflow-x: auto; max-height: 60vh; }
+
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+    th {
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      white-space: nowrap;
+    }
+
+    td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--text); white-space: nowrap; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .tag-blue { background: rgba(59, 130, 246, 0.15); color: var(--blue); }
+    .tag-green { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+    .tag-amber { background: rgba(245, 158, 11, 0.15); color: var(--amber); }
+
+    /* PAGINATION */
+    .pagination {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="/index.html" class="brand-logo">
+      <div class="brand-icon"><i data-lucide="sprout"></i></div>
+      <div>
+        <span>AGRÍCOLA BOM JESUS</span>
+        <div style="font-size: 10px; color: var(--muted); font-weight: 500;">Módulo Integrado AppSheet & RH</div>
+      </div>
+    </a>
+
+    <div class="header-actions">
+      <label class="btn btn-green">
+        <i data-lucide="upload"></i> Atualizar Excel (.xlsx)
+        <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display:none" onchange="handleExcelUpload(this)"/>
+      </label>
+      <button class="btn" onclick="exportCurrentTable()"><i data-lucide="download"></i> Exportar Dados</button>
+      <a href="/index.html" class="btn btn-blue"><i data-lucide="arrow-left"></i> Voltar à Produção</a>
+    </div>
+  </header>
+
+  <div class="app-container">
+
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="sidebar">
+
+      <div class="mod-group">👥 Recursos Humanos (RH)</div>
+      <div class="mod-item active" onclick="switchSheet('CadastroPessoal', this)">
+        <span><i data-lucide="users" style="width:16px;height:16px;margin-right:6px"></i> Funcionários (RH)</span>
+        <span class="count-badge" id="count-CadastroPessoal">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('ASOS', this)">
+        <span><i data-lucide="activity" style="width:16px;height:16px;margin-right:6px"></i> Exames ASOS</span>
+        <span class="count-badge" id="count-ASOS">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Setores', this)">
+        <span><i data-lucide="building" style="width:16px;height:16px;margin-right:6px"></i> Setores & Funções</span>
+        <span class="count-badge" id="count-Setores">...</span>
+      </div>
+
+      <div class="mod-group">🌱 Operações & Campo</div>
+      <div class="mod-item" onclick="switchSheet('Parcela', this)">
+        <span><i data-lucide="grid" style="width:16px;height:16px;margin-right:6px"></i> Parcelas</span>
+        <span class="count-badge" id="count-Parcela">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Plantio', this)">
+        <span><i data-lucide="sprout" style="width:16px;height:16px;margin-right:6px"></i> Registros de Plantio</span>
+        <span class="count-badge" id="count-Plantio">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Pulverizacao', this)">
+        <span><i data-lucide="wind" style="width:16px;height:16px;margin-right:6px"></i> Pulverizações</span>
+        <span class="count-badge" id="count-Pulverizacao">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('AplicacaoDefensivo', this)">
+        <span><i data-lucide="shield" style="width:16px;height:16px;margin-right:6px"></i> Aplicação Defensivos</span>
+        <span class="count-badge" id="count-AplicacaoDefensivo">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('AplicacaoFoliares', this)">
+        <span><i data-lucide="droplet" style="width:16px;height:16px;margin-right:6px"></i> Aplicação Foliares</span>
+        <span class="count-badge" id="count-AplicacaoFoliares">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Mip', this)">
+        <span><i data-lucide="bug" style="width:16px;height:16px;margin-right:6px"></i> Manejo MIP (Pragas)</span>
+        <span class="count-badge" id="count-Mip">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Medida Chuvas', this)">
+        <span><i data-lucide="cloud-rain" style="width:16px;height:16px;margin-right:6px"></i> Pluviometria (Chuvas)</span>
+        <span class="count-badge" id="count-Medida Chuvas">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Colheita', this)">
+        <span><i data-lucide="shopping-bag" style="width:16px;height:16px;margin-right:6px"></i> Colheita</span>
+        <span class="count-badge" id="count-Colheita">...</span>
+      </div>
+
+      <div class="mod-group">📦 Estoque & Suprimentos</div>
+      <div class="mod-item" onclick="switchSheet('Estoque', this)">
+        <span><i data-lucide="archive" style="width:16px;height:16px;margin-right:6px"></i> Movimentações Estoque</span>
+        <span class="count-badge" id="count-Estoque">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Produto', this)">
+        <span><i data-lucide="package" style="width:16px;height:16px;margin-right:6px"></i> Cadastro de Produtos</span>
+        <span class="count-badge" id="count-Produto">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Inventario', this)">
+        <span><i data-lucide="clipboard-list" style="width:16px;height:16px;margin-right:6px"></i> Inventário</span>
+        <span class="count-badge" id="count-Inventario">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Fornecedor', this)">
+        <span><i data-lucide="truck" style="width:16px;height:16px;margin-right:6px"></i> Fornecedores</span>
+        <span class="count-badge" id="count-Fornecedor">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Requisição', this)">
+        <span><i data-lucide="file-input" style="width:16px;height:16px;margin-right:6px"></i> Requisições</span>
+        <span class="count-badge" id="count-Requisição">...</span>
+      </div>
+
+      <div class="mod-group">🚜 Frota & Maquinário</div>
+      <div class="mod-item" onclick="switchSheet('Abastecimento', this)">
+        <span><i data-lucide="fuel" style="width:16px;height:16px;margin-right:6px"></i> Abastecimento Frota</span>
+        <span class="count-badge" id="count-Abastecimento">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('OrdemServico', this)">
+        <span><i data-lucide="wrench" style="width:16px;height:16px;margin-right:6px"></i> Ordens de Serviço</span>
+        <span class="count-badge" id="count-OrdemServico">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Condutores', this)">
+        <span><i data-lucide="user-check" style="width:16px;height:16px;margin-right:6px"></i> Condutores</span>
+        <span class="count-badge" id="count-Condutores">...</span>
+      </div>
+
+      <div class="mod-group">💰 Vendas & Financeiro</div>
+      <div class="mod-item" onclick="switchSheet('Vendas', this)">
+        <span><i data-lucide="dollar-sign" style="width:16px;height:16px;margin-right:6px"></i> Registro de Vendas</span>
+        <span class="count-badge" id="count-Vendas">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Cliente', this)">
+        <span><i data-lucide="briefcase" style="width:16px;height:16px;margin-right:6px"></i> Clientes</span>
+        <span class="count-badge" id="count-Cliente">...</span>
+      </div>
+
+      <div class="mod-group">📋 Auditoria & Outros</div>
+      <div class="mod-item" onclick="switchSheet('AuditoriaInterna', this)">
+        <span><i data-lucide="shield-check" style="width:16px;height:16px;margin-right:6px"></i> Auditoria Interna</span>
+        <span class="count-badge" id="count-AuditoriaInterna">...</span>
+      </div>
+
+    </aside>
+
+    <!-- MAIN VIEW AREA -->
+    <main class="content">
+
+      <!-- KPI METRICS SUMMARY -->
+      <div class="kpi-grid">
+        <div class="kpi-card green">
+          <div class="kpi-label">TOTAL FUNCIONÁRIOS (RH)</div>
+          <div class="kpi-value" id="kpiEmpCount">1.857</div>
+          <div class="kpi-sub">Cadastrados no sistema</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label">MOVIMENTAÇÕES ESTOQUE</div>
+          <div class="kpi-value" id="kpiStockCount">12.474</div>
+          <div class="kpi-sub">Registros de saída / entrada</div>
+        </div>
+        <div class="kpi-card amber">
+          <div class="kpi-label">ABASTECIMENTOS FROTA</div>
+          <div class="kpi-value" id="kpiFuelCount">2.301</div>
+          <div class="kpi-sub">Registros de combustível</div>
+        </div>
+        <div class="kpi-card purple">
+          <div class="kpi-label">PARCELAS AGRÍCOLAS</div>
+          <div class="kpi-value" id="kpiParcelCount">204</div>
+          <div class="kpi-sub">Áreas registradas</div>
+        </div>
+      </div>
+
+      <!-- SEARCH & FILTER TOOLBAR -->
+      <div class="toolbar">
+        <div class="search-box">
+          <i data-lucide="search" style="color:var(--muted);width:16px;height:16px"></i>
+          <input type="text" id="searchInput" placeholder="Pesquisar em todos os campos..." oninput="onSearchInput(this.value)"/>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; font-size:12px; color:var(--muted);">
+          <span>Exibindo: <strong id="activeSheetTitle" style="color:var(--blue)">CadastroPessoal</strong></span>
+          <span style="background:rgba(255,255,255,0.06); padding:4px 10px; border-radius:6px;" id="recordTotalCounter">0 registros</span>
+        </div>
+      </div>
+
+      <!-- DATA TABLE -->
+      <div class="table-container">
+        <div class="table-header-title">
+          <h3 id="currentSheetHeader" style="font-size:15px; font-weight:800; display:flex; align-items:center; gap:8px;">
+            <i data-lucide="table" style="color:var(--green); width:18px; height:18px;"></i>
+            <span>Visualização de Dados</span>
+          </h3>
+          <small style="color:var(--muted)">Origem: Google Sheets / AppSheet Agrícola Bom Jesus</small>
+        </div>
+
+        <div class="table-wrapper">
+          <table id="mainTable">
+            <thead id="tableHead"></thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <button class="btn" onclick="prevPage()"><i data-lucide="chevron-left"></i> Anterior</button>
+          <span id="pageIndicator">Página 1 de 1</span>
+          <button class="btn" onclick="nextPage()">Próxima <i data-lucide="chevron-right"></i></button>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <script>
+    let dbData = {};
+    let currentSheetName = 'CadastroPessoal';
+    let filteredRows = [];
+    let currentPage = 1;
+    const pageSize = 50;
+
+    async function loadDatabase() {
+      try {
+        const resp = await fetch('/bomjesus_data.json');
+        if (resp.ok) {
+          dbData = await resp.json();
+          updateCounts();
+          renderSheet(currentSheetName);
+        } else {
+          console.warn('bomjesus_data.json não encontrado. Aguardando upload manual.');
+        }
+      } catch(e) {
+        console.error('Erro ao carregar bomjesus_data.json:', e);
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function updateCounts() {
+      for (const sheetKey in dbData) {
+        const el = document.getElementById('count-' + sheetKey);
+        if (el) {
+          el.textContent = (dbData[sheetKey] || []).length;
+        }
+      }
+      if (dbData['CadastroPessoal']) document.getElementById('kpiEmpCount').textContent = dbData['CadastroPessoal'].length;
+      if (dbData['Estoque']) document.getElementById('kpiStockCount').textContent = dbData['Estoque'].length;
+      if (dbData['Abastecimento']) document.getElementById('kpiFuelCount').textContent = dbData['Abastecimento'].length;
+      if (dbData['Parcela']) document.getElementById('kpiParcelCount').textContent = dbData['Parcela'].length;
+    }
+
+    function switchSheet(sheetName, el) {
+      document.querySelectorAll('.mod-item').forEach(m => m.classList.remove('active'));
+      if (el) el.classList.add('active');
+      currentSheetName = sheetName;
+      document.getElementById('searchInput').value = '';
+      currentPage = 1;
+      renderSheet(sheetName);
+    }
+
+    function renderSheet(sheetName) {
+      const rows = dbData[sheetName] || [];
+      document.getElementById('activeSheetTitle').textContent = sheetName;
+      document.getElementById('currentSheetHeader').querySelector('span').textContent = 'Tabela: ' + sheetName;
+      
+      const q = document.getElementById('searchInput').value.toLowerCase().trim();
+      if (q) {
+        filteredRows = rows.filter(r => Object.values(r).some(v => String(v).toLowerCase().includes(q)));
+      } else {
+        filteredRows = rows;
+      }
+
+      document.getElementById('recordTotalCounter').textContent = filteredRows.length + ' registros';
+      renderTablePage();
+    }
+
+    function renderTablePage() {
+      const thead = document.getElementById('tableHead');
+      const tbody = document.getElementById('tableBody');
+      thead.innerHTML = '';
+      tbody.innerHTML = '';
+
+      if (filteredRows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:30px; color:var(--muted)">Nenhum registro encontrado nesta tabela.</td></tr>`;
+        document.getElementById('pageIndicator').textContent = 'Página 0 de 0';
+        return;
+      }
+
+      const headers = Object.keys(filteredRows[0] || {});
+      let trHead = '<tr>';
+      headers.forEach(h => { trHead += `<th>${h}</th>`; });
+      trHead += '</tr>';
+      thead.innerHTML = trHead;
+
+      const totalPages = Math.ceil(filteredRows.length / pageSize);
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const start = (currentPage - 1) * pageSize;
+      const pageData = filteredRows.slice(start, start + pageSize);
+
+      let tbodyHtml = '';
+      pageData.forEach(row => {
+        tbodyHtml += '<tr>';
+        headers.forEach(h => {
+          const val = row[h] !== undefined ? String(row[h]) : '';
+          tbodyHtml += `<td>${val}</td>`;
+        });
+        tbodyHtml += '</tr>';
+      });
+
+      tbody.innerHTML = tbodyHtml;
+      document.getElementById('pageIndicator').textContent = `Página ${currentPage} de ${totalPages}`;
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function prevPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        renderTablePage();
+      }
+    }
+
+    function nextPage() {
+      const totalPages = Math.ceil(filteredRows.length / pageSize);
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderTablePage();
+      }
+    }
+
+    function onSearchInput(val) {
+      currentPage = 1;
+      renderSheet(currentSheetName);
+    }
+
+    function handleExcelUpload(input) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const newDb = {};
+        workbook.SheetNames.forEach(sheetName => {
+          const roa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+          newDb[sheetName] = roa;
+        });
+        dbData = newDb;
+        updateCounts();
+        renderSheet(currentSheetName);
+        alert('Planilha ' + file.name + ' importada com sucesso!');
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function exportCurrentTable() {
+      if (!filteredRows || filteredRows.length === 0) return alert('Sem dados para exportar.');
+      const ws = XLSX.utils.json_to_sheet(filteredRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, currentSheetName);
+      XLSX.writeFile(wb, currentSheetName + '_Export.xlsx');
+    }
+
+    window.addEventListener('DOMContentLoaded', loadDatabase);
+  </script>
+</body>
+</html>
