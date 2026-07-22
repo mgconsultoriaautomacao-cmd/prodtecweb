@@ -189,5 +189,28 @@ ALTER TABLE public.caderno_campo_defensivos_cadastro ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "caderno_campo_defensivos_cadastro_all" ON public.caderno_campo_defensivos_cadastro;
 CREATE POLICY "caderno_campo_defensivos_cadastro_all" ON public.caderno_campo_defensivos_cadastro FOR ALL USING (true) WITH CHECK (true);
 
--- HABILITAR REALTIME NAS TABELAS
-ALTER PUBLICATION supabase_realtime ADD TABLE public.controle_etiquetas, public.romaneios, public.pallets, public.info_parcelas, public.caderno_campo, public.caderno_campo_mip, public.caderno_campo_op;
+-- 9. HABILITAR REALTIME NAS TABELAS (BLINDADO CONTRA ERRO 42710 DUPLICADO)
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.controle_etiquetas;
+  EXCEPTION WHEN duplicate_object THEN END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.romaneios;
+  EXCEPTION WHEN duplicate_object THEN END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.pallets;
+  EXCEPTION WHEN duplicate_object THEN END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.info_parcelas;
+  EXCEPTION WHEN duplicate_object THEN END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.caderno_campo;
+  EXCEPTION WHEN duplicate_object THEN END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.caderno_campo_mip;
+  EXCEPTION WHEN duplicate_object THEN END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.caderno_campo_op;
+  EXCEPTION WHEN duplicate_object THEN END;
+END $$;
