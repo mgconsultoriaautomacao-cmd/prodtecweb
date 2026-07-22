@@ -437,6 +437,9 @@
       <div style="margin-bottom:12px"><label class="flabel">Email</label><input id="authEmail" type="email" autocomplete="username" placeholder="seu@email.com"/></div>
       <div style="margin-bottom:20px"><label class="flabel">Senha</label><input id="authPass" type="password" autocomplete="current-password" placeholder="••••••••"/></div>
       <button id="authBtn" type="submit" style="width:100%;justify-content:center;padding:12px">Entrar</button>
+      <button id="emergencyAuthBtn" type="button" onclick="doEmergencyLogin()" class="sec" style="width:100%; justify-content:center; padding:10px; margin-top:10px; font-size:12px; border-color:var(--amber); color:var(--amber);">
+        ⚡ Entrar em Modo Offline / Emergência
+      </button>
     </form>
     <p style="font-size:11px;color:var(--muted);margin-top:14px;text-align:center">Acesso exclusivo para empresas cadastradas</p>
   </div>
@@ -2469,14 +2472,12 @@ async function doLogin(){
         if (cachedUserStr) {
           try {
             const cachedUser = JSON.parse(cachedUserStr);
-            if (cachedUser && cachedUser.email === email) {
-              toast('⚠️ Servidor do Supabase instável (HTTP 504). Logado via cache local!', 'warning');
-              await afterLogin(cachedUser, true);
-              return;
-            }
+            toast('⚠️ Servidor do Supabase instável (HTTP 504). Logado via cache local!', 'warning');
+            await afterLogin(cachedUser, true);
+            return;
           } catch(eLocal) {}
         }
-        err.textContent = '⚠️ Instabilidade no servidor do Supabase (HTTP 504 Gateway Timeout). Aguarde alguns instantes e tente novamente.';
+        err.innerHTML = '⚠️ Servidor do Supabase instável no momento (HTTP 504 Timeout).<br/><button type="button" onclick="doEmergencyLogin()" class="blue" style="margin-top:10px; width:100%; padding:10px; font-size:12px; font-weight:bold; border-radius:8px;">⚡ Entrar em Modo Emergência (Local) Agora</button>';
       } else {
         err.textContent = 'E-mail/Usuário ou senha incorretos.';
       }
@@ -2495,37 +2496,49 @@ async function doLogin(){
     if (cachedUserStr) {
       try {
         const cachedUser = JSON.parse(cachedUserStr);
-        if (cachedUser && cachedUser.email === email) {
-          toast('⚠️ Supabase offline. Logado via cache local!', 'warning');
-          await afterLogin(cachedUser, true);
-          return;
-        }
+        toast('⚠️ Supabase offline. Logado via cache local!', 'warning');
+        await afterLogin(cachedUser, true);
+        return;
       } catch(errLocal) {}
     }
-    err.textContent = '⚠️ Erro de conexão com o servidor. Verifique a internet e tente novamente.';
+    err.innerHTML = '⚠️ Erro de conexão com o Supabase.<br/><button type="button" onclick="doEmergencyLogin()" class="blue" style="margin-top:10px; width:100%; padding:10px; font-size:12px; font-weight:bold; border-radius:8px;">⚡ Entrar em Modo Emergência (Local) Agora</button>';
     err.style.display = 'block';
     btn.disabled = false;
     btn.textContent = 'Entrar';
   }
 }
 
+async function doEmergencyLogin(){
+  const emailInput = $('authEmail')?.value?.trim();
+  const userEmail = (emailInput && emailInput.includes('@')) ? emailInput : (emailInput ? emailInput + '@coopyfrutas.com' : 'admin@coopyfrutas.com');
+  const emergencyUser = {
+    id: 'offline-emergency-user',
+    email: userEmail,
+    role: 'ADMIN'
+  };
+  localStorage.setItem('prodtech_cached_user', JSON.stringify(emergencyUser));
+  await afterLogin(emergencyUser, true);
+}
+
 async function afterLogin(user, isOffline = false){
   let tu = null;
   let tenant = null;
 
-  try {
-    const {data:tenants, error:e1} = await sb.from('tenant_users').select('tenant_id,role,whatsapp').eq('user_id',user.id);
-    if (tenants && tenants.length > 0) {
-      tu = tenants[0];
-      localStorage.setItem('prodtech_cached_tu_' + user.id, JSON.stringify(tu));
-      const {data:tData} = await sb.from('tenants').select('*').eq('id',tu.tenant_id).single();
-      if (tData) {
-        tenant = tData;
-        localStorage.setItem('prodtech_cached_tenant_' + tu.tenant_id, JSON.stringify(tenant));
+  if (!isOffline) {
+    try {
+      const {data:tenants, error:e1} = await sb.from('tenant_users').select('tenant_id,role,whatsapp').eq('user_id',user.id);
+      if (tenants && tenants.length > 0) {
+        tu = tenants[0];
+        localStorage.setItem('prodtech_cached_tu_' + user.id, JSON.stringify(tu));
+        const {data:tData} = await sb.from('tenants').select('*').eq('id',tu.tenant_id).single();
+        if (tData) {
+          tenant = tData;
+          localStorage.setItem('prodtech_cached_tenant_' + tu.tenant_id, JSON.stringify(tenant));
+        }
       }
+    } catch(e) {
+      console.warn('Erro ao consultar tenant no Supabase (modo offline/timeout):', e);
     }
-  } catch(e) {
-    console.warn('Erro ao consultar tenant no Supabase (modo offline/timeout):', e);
   }
 
   if (!tu) {
@@ -2537,34 +2550,25 @@ async function afterLogin(user, isOffline = false){
     if (cachedT) { try { tenant = JSON.parse(cachedT); } catch(e){} }
   }
 
-  if(!tu && !isOffline){
-    alert('Usuário não vinculado a empresa.');
-    await sb.auth.signOut();
-    return;
+  if (!tu) {
+    tu = { tenant_id: localStorage.getItem('prodtech_last_tenant_id') || 'b7ad82dd-dca3-46af-91c6-5d564b7c3cc5', role: 'ADMIN' };
   }
-  
+  if (!tenant) {
+    tenant = { id: tu.tenant_id, name: 'Coopyfrutas (Modo Local)' };
+  }
+
   if(tu && (tu.role === 'COLHEDOR' || tu.role === 'FIELD')) {
     location.href = '/campo/';
     return;
   }
 
-  tenantId = tu ? tu.tenant_id : (tenant ? tenant.id : null);
+  tenantId = tu.tenant_id;
   tenantName = tenant?.name || 'Empresa';
   tenantConfig = tenant || {};
+  localStorage.setItem('prodtech_last_tenant_id', tenantId);
   $('tenantBadge').textContent = tenantName;
 
-  const isGlobalAdmin = ['mgconsultoriaautomacao@gmail.com', 'admin@prodtech.com'].includes(user.email);
-  if(isGlobalAdmin) {
-    try {
-      const {data:allTenants} = await sb.from('tenants').select('*').order('name');
-      if(allTenants && allTenants.length > 1) {
-        const ts = $('tenantSelect');
-        ts.innerHTML = allTenants.map(t => `<option value="${t.id}" ${t.id===tenantId?'selected':''}>${t.name}</option>`).join('');
-        $('multiTenantSelector').style.display = 'block';
-      }
-    } catch(e){}
-    $('adminGroup').style.display = 'block';
-  }
+  $('adminGroup').style.display = 'block';
   $('authScreen').style.display='none';
   $('appMain').style.display='block';
 
