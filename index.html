@@ -473,6 +473,7 @@
   <div class="nav" onclick="showTab('mass',this)"><span class="nav-icon"><i data-lucide="scale"></i></span> Balanço de Massa</div>
   <div class="nav" onclick="showTab('logs',this)"><span class="nav-icon"><i data-lucide="file-spreadsheet"></i></span> Logs de Produção</div>
   <div class="nav" onclick="showTab('quality',this)"><span class="nav-icon"><i data-lucide="check-square"></i></span> Auditoria & Qualidade</div>
+  <div class="nav" onclick="showTab('certificacao_pack',this)"><span class="nav-icon"><i data-lucide="award"></i></span> Certificação Pack</div>
   <div class="nav" onclick="showTab('romaneio',this)"><span class="nav-icon"><i data-lucide="truck"></i></span> Romaneio Expedição</div>
   <div class="nav" onclick="showTab('bulk',this)"><span class="nav-icon"><i data-lucide="shopping-cart"></i></span> Refugo & Vendas</div>
   <div class="nav" onclick="showTab('campo',this)"><span class="nav-icon"><i data-lucide="sprout"></i></span> Caderno de Campo</div>
@@ -503,7 +504,88 @@
     </button>
     <button class="sec" onclick="doLogout()" style="width:100%;justify-content:center;font-size:12px">Sair da Conta</button>
   </div>
-</nav>
+  <!-- MODAL CONTROLE DE ETIQUETAS E EMBALAGENS -->
+  <div id="modalControleEtiqueta" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:2500; align-items:center; justify-content:center; overflow-y:auto; padding:20px;">
+    <div style="background:var(--card); width:100%; max-width:720px; border-radius:16px; padding:24px; border:1px solid var(--border); box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px;">
+        <h3 style="margin:0; display:flex; align-items:center; gap:8px; font-size:16px; font-weight:800; color:var(--text)">
+          <i data-lucide="award" style="color:var(--blue); width:20px; height:20px;"></i> 
+          <span id="cpModalTitle">Novo Lançamento — Controle de Etiquetas & Embalagens</span>
+        </h3>
+        <button type="button" onclick="closeModalControleEtiqueta()" style="background:none; border:none; color:var(--muted); cursor:pointer; font-size:18px;">✕</button>
+      </div>
+
+      <form id="formControleEtiqueta" onsubmit="event.preventDefault(); saveControleEtiqueta();">
+        <input type="hidden" id="cpId"/>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div><label class="flabel">Data</label><input type="date" id="cpData" required/></div>
+          <div><label class="flabel">Hora</label><input type="time" id="cpHora" required/></div>
+          <div><label class="flabel">Cliente</label><input type="text" id="cpCliente" placeholder="Ex: MERCADO INTERNO" required/></div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div><label class="flabel">Variedade</label><input type="text" id="cpVariedade" placeholder="Ex: GOLD MINE / MELÃO" required/></div>
+          <div><label class="flabel">Tipo de Caixa</label><input type="text" id="cpTipoCaixa" placeholder="Ex: SAMBA / FORRO / SAMBA P"/></div>
+          <div><label class="flabel">Lote da Caixa</label><input type="text" id="cpLoteCaixa" placeholder="Ex: SAMBA ESPECIAL"/></div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:14px; background:rgba(255,255,255,0.02); padding:12px; border-radius:10px; border:1px solid var(--border);">
+          <div>
+            <label class="flabel">Caixa Conforme Ordem?</label>
+            <select id="cpCaixaConforme">
+              <option value="true">Sim (Conforme)</option>
+              <option value="false">Não (Não conforme)</option>
+            </select>
+          </div>
+          <div>
+            <label class="flabel">Sacola Plástica</label>
+            <select id="cpSacolaPlastica">
+              <option value="true">Sim (Usou Sacola)</option>
+              <option value="false">Não</option>
+            </select>
+          </div>
+          <div>
+            <label class="flabel">Bandeja</label>
+            <select id="cpBandeja">
+              <option value="true">Sim (Usou Bandeja)</option>
+              <option value="false">Não</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div><label class="flabel">Código Rastreabilidade Fruta</label><input type="text" id="cpCodigoRastreabilidade" placeholder="Ex: 40339173"/></div>
+          <div><label class="flabel">Nº do Rolo</label><input type="text" id="cpNumeroRolo" placeholder="Opcional (Ex: ROLO #04)"/></div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div>
+            <label class="flabel">Etiqueta Entregue à Produção</label>
+            <select id="cpEtiquetaEntregueSelect" onchange="cpUpdateLabelPreview('cpEtiquetaEntregueSelect', 'cpLabelImgPreviewEntregue')"></select>
+            <div id="cpLabelImgPreviewEntregue" style="margin-top:6px; min-height:36px; display:flex; align-items:center; gap:8px;"></div>
+          </div>
+          <div>
+            <label class="flabel">Etiqueta Recebida da Produção (Retorno)</label>
+            <select id="cpEtiquetaRecebidaSelect" onchange="cpUpdateLabelPreview('cpEtiquetaRecebidaSelect', 'cpLabelImgPreviewRecebida')"></select>
+            <div id="cpLabelImgPreviewRecebida" style="margin-top:6px; min-height:36px; display:flex; align-items:center; gap:8px;"></div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
+          <div><label class="flabel">Responsável (Gerente/Op.)</label><input type="text" id="cpResponsavel" placeholder="Nome do Responsável"/></div>
+          <div><label class="flabel">Coord. de Qualidade</label><input type="text" id="cpCoordQualidade" placeholder="Nome do Coord. Qualidade"/></div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--border); padding-top:16px;">
+          <button type="button" class="sec" onclick="closeModalControleEtiqueta()">Cancelar</button>
+          <button type="submit" class="blue" style="font-weight:800; display:flex; align-items:center; gap:6px;">
+            <i data-lucide="save" style="width:16px; height:16px;"></i> Salvar Lançamento
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- ABSENCE MODAL -->
   <div id="absenceModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center">
     <div style="background:var(--card); width:100%; max-width:500px; border-radius:20px; padding:24px; border:1px solid var(--border)">
@@ -944,6 +1026,83 @@
     <div class="card">
       <div class="title"><i data-lucide="list-checks" class="btn-i"></i> Registros de Auditoria</div>
       <table id="qaTable"><thead><tr><th>Data/Hora</th><th>Colaborador</th><th>Defeito</th><th>Caixas Desc.</th><th>Motivo</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <!-- ═══ CERTIFICAÇÃO PACK / CONTROLE DE ETIQUETAS E EMBALAGENS ═══ -->
+  <div id="tab-certificacao_pack" class="tab">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+      <div>
+        <h1 class="ptitle" style="margin:0"><i data-lucide="award"></i> Certificação Pack — Controle de Etiquetas & Embalagens</h1>
+        <p style="color:var(--muted); font-size:12px; margin-top:4px;">Controle de saída de etiquetas da linha de produção, caixas, sacolas, bandejas e rastreabilidade.</p>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="sec" onclick="printCertificacaoPackSheet()" style="display:inline-flex; align-items:center; gap:6px; background:var(--blue-dim); color:var(--blue); border:1px solid var(--blue); font-weight:800; font-size:12px; padding:10px 14px;">
+          <i data-lucide="printer" style="width:16px; height:16px;"></i> IMPRIMIR FICHA OFICIAL (PDF/A4)
+        </button>
+        <button class="blue" onclick="openModalControleEtiqueta()" style="display:inline-flex; align-items:center; gap:6px; font-weight:800; font-size:12px; padding:10px 14px;">
+          <i data-lucide="plus-circle" style="width:16px; height:16px;"></i> Novo Lançamento Manual
+        </button>
+      </div>
+    </div>
+
+    <!-- Metric Cards -->
+    <div class="kgrid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:16px;">
+      <div class="kcard">
+        <div class="klabel">TOTAL LANÇAMENTOS</div>
+        <div class="kval" id="cpStatTotal">0</div>
+        <div class="ksub">Saídas de etiquetas</div>
+      </div>
+      <div class="kcard">
+        <div class="klabel">CONFORMIDADE CAIXAS</div>
+        <div class="kval" style="color:var(--green)" id="cpStatConf">100%</div>
+        <div class="ksub">Conformes c/ OP</div>
+      </div>
+      <div class="kcard">
+        <div class="klabel">SACOLAS PLÁSTICAS</div>
+        <div class="kval" style="color:var(--blue)" id="cpStatSacolas">0</div>
+        <div class="ksub">Com uso de sacola</div>
+      </div>
+      <div class="kcard">
+        <div class="klabel">BANDEJAS</div>
+        <div class="kval" style="color:var(--accent)" id="cpStatBandejas">0</div>
+        <div class="ksub">Com uso de bandeja</div>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="fbar" style="margin-bottom:16px;">
+      <div class="f"><label class="flabel">Data Início</label><input type="date" id="cpStartDate" onchange="loadControleEtiquetas()"/></div>
+      <div class="f"><label class="flabel">Data Fim</label><input type="date" id="cpEndDate" onchange="loadControleEtiquetas()"/></div>
+      <div class="f"><label class="flabel">Filtrar Cliente / Variedade</label><input type="text" id="cpClientFilter" placeholder="Ex: Mercado Interno" oninput="loadControleEtiquetas()"/></div>
+      <button onclick="loadControleEtiquetas()"><i data-lucide="refresh-cw" class="btn-i"></i> Atualizar</button>
+    </div>
+
+    <!-- Table of Records -->
+    <div class="card">
+      <div class="title" style="display:flex; justify-content:space-between; align-items:center;">
+        <span><i data-lucide="list-checks" class="btn-i"></i> Histórico de Saídas de Etiquetas e Embalagens</span>
+        <span style="font-size:11px; color:var(--muted); font-weight:normal;" id="cpRecordsCount">0 registros</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="cpTable" style="width:100%; text-align:left; border-collapse:collapse; font-size:12px;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border); color:var(--muted); font-size:11px;">
+              <th style="padding:10px">Data/Hora</th>
+              <th>Cliente</th>
+              <th>Variedade</th>
+              <th>Caixa / Lote</th>
+              <th>Conforme?</th>
+              <th>Sacola / Bandeja</th>
+              <th>Código Rastreabilidade</th>
+              <th>Etiqueta Entregue</th>
+              <th>Responsável</th>
+              <th style="text-align:right">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="cpTableBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -2352,7 +2511,8 @@ function showTab(n,el){
     trace:()=>{loadFruits();loadVarieties();loadParcels();loadLinks();loadInfoParcelas();},
     registers:loadRegisters,
     estoque3d:initEstoque3D,
-    campo:loadCadernoCampo
+    campo:loadCadernoCampo,
+    certificacao_pack:loadControleEtiquetas
   };
   if(fns[n]) fns[n]();
   setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 150);
@@ -6125,7 +6285,19 @@ async function saveRomaneio() {
   if (error) {
     alert('Erro ao salvar no banco: ' + error.message);
   } else {
-    toast('✅ Romaneio com ' + _romaneioItems.length + ' itens salvo!', 'success');
+    // Automate label outflow registration in Certificação Pack
+    for (const it of docs) {
+      createAutomaticControleEtiqueta({
+        cliente: it.cliente,
+        variedade: it.variedade,
+        tipo_caixa: it.tipo_caixa || 'SAMBA',
+        lote_caixa: it.tipo_caixa || 'SAMBA',
+        codigo_rastreabilidade: it.lote || e3dGetJulianCode(it.data_expedicao),
+        etiqueta_nome: it.tipo_caixa || 'SAMBA',
+        data: it.data_expedicao
+      }).catch(console.error);
+    }
+    toast('✅ Romaneio com ' + _romaneioItems.length + ' itens salvo & Saída de Etiquetas Registrada!', 'success');
     $('formRomaneio').reset();
     _romaneioItems = [];
     renderRomaneioItems();
@@ -7157,6 +7329,493 @@ async function e3dSaveGalpaoCapacities() {
     toast('❌ Ocorreu um erro inesperado.', 'danger');
   }
 }
+
+// ═════════════════════════════════════════════════════════════════
+// ── CERTIFICAÇÃO PACK: CONTROLE DE ETIQUETAS, CAIXAS & EMBALAGENS 
+// ═════════════════════════════════════════════════════════════════
+window._controleEtiquetas = [];
+
+async function loadControleEtiquetas() {
+  const startDate = $('cpStartDate') ? $('cpStartDate').value : '';
+  const endDate = $('cpEndDate') ? $('cpEndDate').value : '';
+  const clientFilter = $('cpClientFilter') ? $('cpClientFilter').value.toLowerCase().trim() : '';
+
+  let data = [];
+  try {
+    let q = sb.from('controle_etiquetas').select('*').order('created_at', { ascending: false });
+    if (tenantId) q = q.eq('tenant_id', tenantId);
+    if (startDate) q = q.gte('data', startDate);
+    if (endDate) q = q.lte('data', endDate);
+    const { data: dbData, error } = await q;
+    if (!error && dbData) {
+      data = dbData;
+    } else {
+      const local = localStorage.getItem('packinghouse_controle_etiquetas');
+      data = local ? JSON.parse(local) : [];
+    }
+  } catch (err) {
+    const local = localStorage.getItem('packinghouse_controle_etiquetas');
+    data = local ? JSON.parse(local) : [];
+  }
+
+  window._controleEtiquetas = data;
+  renderControleEtiquetas(clientFilter);
+}
+
+function saveLocalControleEtiquetas(list) {
+  localStorage.setItem('packinghouse_controle_etiquetas', JSON.stringify(list));
+}
+
+function renderControleEtiquetas(clientFilter = '') {
+  let list = window._controleEtiquetas || [];
+  if (clientFilter) {
+    list = list.filter(r => 
+      (r.cliente || '').toLowerCase().includes(clientFilter) || 
+      (r.variedade || '').toLowerCase().includes(clientFilter) ||
+      (r.codigo_rastreabilidade || '').toLowerCase().includes(clientFilter)
+    );
+  }
+
+  if ($('cpStatTotal')) $('cpStatTotal').innerText = list.length;
+  if ($('cpRecordsCount')) $('cpRecordsCount').innerText = `${list.length} registro(s)`;
+  
+  const conformes = list.filter(r => r.caixa_conforme !== false).length;
+  const pctConf = list.length > 0 ? Math.round((conformes / list.length) * 100) : 100;
+  if ($('cpStatConf')) $('cpStatConf').innerText = `${pctConf}%`;
+
+  const sacolas = list.filter(r => r.sacola_plastica === true || r.sacola_plastica === 'Sim').length;
+  if ($('cpStatSacolas')) $('cpStatSacolas').innerText = sacolas;
+
+  const bandejas = list.filter(r => r.bandeja === true || r.bandeja === 'Sim').length;
+  if ($('cpStatBandejas')) $('cpStatBandejas').innerText = bandejas;
+
+  const tbody = $('cpTableBody');
+  if (!tbody) return;
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:24px; color:var(--muted)">Nenhum lançamento de controle de etiquetas encontrado. Clique em "Novo Lançamento Manual" ou faça uma expedição.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(r => {
+    let labelObj = { name: r.etiqueta_entregue || '—', photo: '' };
+    if (r.etiqueta_entregue) {
+      if (typeof r.etiqueta_entregue === 'string' && r.etiqueta_entregue.startsWith('{')) {
+        try { labelObj = JSON.parse(r.etiqueta_entregue); } catch(e){}
+      } else {
+        labelObj = e3dGetLabelObj(r.etiqueta_entregue);
+      }
+    }
+
+    const dtStr = r.data ? new Date(r.data + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    const isConf = r.caixa_conforme !== false;
+
+    return `
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:10px">
+          <div style="font-weight:700">${dtStr}</div>
+          <div style="font-size:10px; color:var(--muted)">⏱️ ${r.hora || '—'}</div>
+        </td>
+        <td style="font-weight:800; color:var(--blue)">${r.cliente || 'MERCADO INTERNO'}</td>
+        <td style="font-weight:700">${r.variedade || '—'}</td>
+        <td>
+          <div style="font-weight:700">${r.tipo_caixa || 'SAMBA'}</div>
+          <div style="font-size:10px; color:var(--muted)">Lote: ${r.lote_caixa || '—'}</div>
+        </td>
+        <td>
+          ${isConf 
+            ? '<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:12px; font-weight:800; font-size:10px">✓ Conforme</span>' 
+            : '<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:3px 8px; border-radius:12px; font-weight:800; font-size:10px">⚠️ Não Conforme</span>'}
+        </td>
+        <td style="font-size:11px">
+          <div>Sacola: <strong>${(r.sacola_plastica === true || r.sacola_plastica === 'Sim') ? 'Sim' : 'Não'}</strong></div>
+          <div>Bandeja: <strong>${(r.bandeja === true || r.bandeja === 'Sim') ? 'Sim' : 'Não'}</strong></div>
+        </td>
+        <td style="font-weight:800; font-family:monospace; color:var(--accent)">${r.codigo_rastreabilidade || '—'}</td>
+        <td>
+          <div style="display:flex; align-items:center; gap:8px">
+            ${labelObj.photo ? `<img src="${labelObj.photo}" style="width:34px; height:34px; object-fit:cover; border-radius:4px; border:1px solid var(--border)" />` : '<div style="width:34px; height:34px; background:rgba(255,255,255,0.05); border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:14px">🏷️</div>'}
+            <div>
+              <div style="font-weight:700">${labelObj.name}</div>
+              ${r.numero_rolo ? `<div style="font-size:9px; color:var(--muted)">Rolo #${r.numero_rolo}</div>` : ''}
+            </div>
+          </div>
+        </td>
+        <td style="font-size:11px">
+          <div>Resp: <strong>${r.responsavel || '—'}</strong></div>
+          <div style="color:var(--muted)">Qualid: ${r.coord_qualidade || '—'}</div>
+        </td>
+        <td style="text-align:right">
+          <button class="sec" onclick="editControleEtiqueta('${r.id}')" title="Editar" style="padding:4px 8px; font-size:11px"><i data-lucide="edit-3" style="width:13px;height:13px"></i></button>
+          <button class="danger" onclick="deleteControleEtiqueta('${r.id}')" title="Excluir" style="padding:4px 8px; font-size:11px"><i data-lucide="trash-2" style="width:13px;height:13px"></i></button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function cpPopulateLabelSelects() {
+  const customLabelEntries = Object.entries(E3D_LABEL_NAMES).filter(([k]) => k !== '');
+  let optionsHtml = '<option value="">— Selecionar Etiqueta Cadastrada —</option>';
+  optionsHtml += customLabelEntries.map(([key, val]) => {
+    const obj = e3dGetLabelObj(key);
+    return `<option value="${key}">${obj.name}</option>`;
+  }).join('');
+
+  if ($('cpEtiquetaEntregueSelect')) $('cpEtiquetaEntregueSelect').innerHTML = optionsHtml;
+  if ($('cpEtiquetaRecebidaSelect')) $('cpEtiquetaRecebidaSelect').innerHTML = optionsHtml;
+}
+
+function cpUpdateLabelPreview(selectId, previewDivId) {
+  const key = $(selectId) ? $(selectId).value : '';
+  const previewDiv = $(previewDivId);
+  if (!previewDiv) return;
+  if (!key) { previewDiv.innerHTML = ''; return; }
+  const obj = e3dGetLabelObj(key);
+  previewDiv.innerHTML = `
+    ${obj.photo ? `<img src="${obj.photo}" style="width:36px; height:36px; object-fit:cover; border-radius:4px; border:1px solid var(--border);" />` : '<div style="width:36px; height:36px; background:rgba(255,255,255,0.05); border-radius:4px; display:flex; align-items:center; justify-content:center">🏷️</div>'}
+    <span style="font-weight:700; font-size:12px; color:var(--text);">${obj.name}</span>
+  `;
+}
+
+function openModalControleEtiqueta(record = null) {
+  cpPopulateLabelSelects();
+  const m = $('modalControleEtiqueta');
+  if (!m) return;
+  
+  if (record) {
+    $('cpModalTitle').innerText = 'Editar Lançamento — Controle de Etiquetas';
+    $('cpId').value = record.id || '';
+    $('cpData').value = record.data || new Date().toISOString().split('T')[0];
+    $('cpHora').value = record.hora || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    $('cpCliente').value = record.cliente || '';
+    $('cpVariedade').value = record.variedade || '';
+    $('cpTipoCaixa').value = record.tipo_caixa || '';
+    $('cpLoteCaixa').value = record.lote_caixa || '';
+    $('cpCaixaConforme').value = record.caixa_conforme !== false ? 'true' : 'false';
+    $('cpSacolaPlastica').value = (record.sacola_plastica === true || record.sacola_plastica === 'Sim') ? 'true' : 'false';
+    $('cpBandeja').value = (record.bandeja === true || record.bandeja === 'Sim') ? 'true' : 'false';
+    $('cpCodigoRastreabilidade').value = record.codigo_rastreabilidade || '';
+    $('cpNumeroRolo').value = record.numero_rolo || '';
+    $('cpResponsavel').value = record.responsavel || '';
+    $('cpCoordQualidade').value = record.coord_qualidade || '';
+
+    let labelName = '';
+    if (record.etiqueta_entregue) {
+      if (typeof record.etiqueta_entregue === 'string' && record.etiqueta_entregue.startsWith('{')) {
+        try { labelName = JSON.parse(record.etiqueta_entregue).name; } catch(e){}
+      } else {
+        labelName = record.etiqueta_entregue;
+      }
+    }
+    const key = Object.keys(E3D_LABEL_NAMES).find(k => e3dGetLabelName(k) === labelName || k === labelName) || '';
+    if ($('cpEtiquetaEntregueSelect')) {
+      $('cpEtiquetaEntregueSelect').value = key;
+      cpUpdateLabelPreview('cpEtiquetaEntregueSelect', 'cpLabelImgPreviewEntregue');
+    }
+  } else {
+    $('cpModalTitle').innerText = 'Novo Lançamento — Controle de Etiquetas & Embalagens';
+    $('cpId').value = '';
+    $('cpData').value = new Date().toISOString().split('T')[0];
+    $('cpHora').value = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    $('cpCliente').value = 'MERCADO INTERNO';
+    $('cpVariedade').value = 'GOLD MINE';
+    $('cpTipoCaixa').value = 'SAMBA';
+    $('cpLoteCaixa').value = 'SAMBA ESPECIAL';
+    $('cpCaixaConforme').value = 'true';
+    $('cpSacolaPlastica').value = 'true';
+    $('cpBandeja').value = 'true';
+    $('cpCodigoRastreabilidade').value = e3dGetJulianCode();
+    $('cpNumeroRolo').value = '';
+    $('cpResponsavel').value = '';
+    $('cpCoordQualidade').value = '';
+    if ($('cpEtiquetaEntregueSelect')) $('cpEtiquetaEntregueSelect').value = '';
+    if ($('cpEtiquetaRecebidaSelect')) $('cpEtiquetaRecebidaSelect').value = '';
+    if ($('cpLabelImgPreviewEntregue')) $('cpLabelImgPreviewEntregue').innerHTML = '';
+    if ($('cpLabelImgPreviewRecebida')) $('cpLabelImgPreviewRecebida').innerHTML = '';
+  }
+
+  m.style.display = 'flex';
+}
+
+function closeModalControleEtiqueta() {
+  const m = $('modalControleEtiqueta');
+  if (m) m.style.display = 'none';
+}
+
+async function saveControleEtiqueta() {
+  const id = $('cpId').value;
+  const entregueKey = $('cpEtiquetaEntregueSelect') ? $('cpEtiquetaEntregueSelect').value : '';
+  const recebidaKey = $('cpEtiquetaRecebidaSelect') ? $('cpEtiquetaRecebidaSelect').value : '';
+  const labelEntregueObj = e3dGetLabelObj(entregueKey);
+  const labelRecebidaObj = e3dGetLabelObj(recebidaKey);
+
+  const doc = {
+    tenant_id: tenantId,
+    data: $('cpData').value,
+    hora: $('cpHora').value,
+    cliente: $('cpCliente').value,
+    variedade: $('cpVariedade').value,
+    tipo_caixa: $('cpTipoCaixa').value,
+    lote_caixa: $('cpLoteCaixa').value,
+    caixa_conforme: $('cpCaixaConforme').value === 'true',
+    sacola_plastica: $('cpSacolaPlastica').value === 'true',
+    bandeja: $('cpBandeja').value === 'true',
+    codigo_rastreabilidade: $('cpCodigoRastreabilidade').value,
+    numero_rolo: $('cpNumeroRolo').value,
+    etiqueta_entregue: JSON.stringify(labelEntregueObj),
+    etiqueta_recebida: JSON.stringify(labelRecebidaObj),
+    responsavel: $('cpResponsavel').value,
+    coord_qualidade: $('cpCoordQualidade').value
+  };
+
+  try {
+    if (id && !id.startsWith('loc_')) {
+      const { error } = await sb.from('controle_etiquetas').update(doc).eq('id', id);
+      if (error) throw error;
+    } else {
+      const { error } = await sb.from('controle_etiquetas').insert([doc]);
+      if (error) throw error;
+    }
+    toast('✅ Lançamento de controle de etiquetas salvo!', 'success');
+  } catch (err) {
+    const local = localStorage.getItem('packinghouse_controle_etiquetas');
+    let list = local ? JSON.parse(local) : [];
+    if (id) {
+      list = list.map(r => r.id === id ? { ...r, ...doc } : r);
+    } else {
+      doc.id = 'loc_' + Date.now();
+      list.unshift(doc);
+    }
+    saveLocalControleEtiquetas(list);
+    toast('✅ Lançamento salvo localmente!', 'success');
+  }
+
+  closeModalControleEtiqueta();
+  loadControleEtiquetas();
+}
+
+function editControleEtiqueta(id) {
+  const rec = (window._controleEtiquetas || []).find(r => r.id === id);
+  if (rec) openModalControleEtiqueta(rec);
+}
+
+async function deleteControleEtiqueta(id) {
+  if (!confirm('Deseja excluir este lançamento de controle de etiquetas?')) return;
+  try {
+    if (id && !id.startsWith('loc_')) {
+      await sb.from('controle_etiquetas').delete().eq('id', id);
+    }
+  } catch (err) {}
+  
+  const local = localStorage.getItem('packinghouse_controle_etiquetas');
+  if (local) {
+    let list = JSON.parse(local);
+    list = list.filter(r => r.id !== id);
+    saveLocalControleEtiquetas(list);
+  }
+
+  toast('Lançamento removido.', 'info');
+  loadControleEtiquetas();
+}
+
+async function createAutomaticControleEtiqueta(opts) {
+  const dataToday = opts.data || new Date().toISOString().split('T')[0];
+  const horaNow = opts.hora || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const cliente = opts.cliente || 'MERCADO INTERNO';
+  const variedade = opts.variedade || 'MELÃO';
+  const tipo_caixa = opts.tipo_caixa || 'SAMBA';
+  const lote_caixa = opts.lote_caixa || tipo_caixa;
+  const codigo_rastreabilidade = opts.codigo_rastreabilidade || e3dGetJulianCode();
+  const etiqueta_nome = opts.etiqueta_nome || tipo_caixa;
+  const labelObj = e3dGetLabelObj(etiqueta_nome);
+
+  const doc = {
+    tenant_id: tenantId,
+    data: dataToday,
+    hora: horaNow,
+    cliente: cliente,
+    variedade: variedade,
+    tipo_caixa: tipo_caixa,
+    lote_caixa: lote_caixa,
+    caixa_conforme: true,
+    sacola_plastica: true,
+    bandeja: true,
+    codigo_rastreabilidade: codigo_rastreabilidade,
+    numero_rolo: opts.numero_rolo || '',
+    etiqueta_entregue: JSON.stringify(labelObj),
+    etiqueta_recebida: JSON.stringify(labelObj),
+    responsavel: opts.responsavel || 'Gerente de Packing',
+    coord_qualidade: opts.coord_qualidade || 'Qualidade'
+  };
+
+  try {
+    const { data, error } = await sb.from('controle_etiquetas').insert([doc]).select();
+    if (error) throw error;
+  } catch (err) {
+    const local = localStorage.getItem('packinghouse_controle_etiquetas');
+    const list = local ? JSON.parse(local) : [];
+    doc.id = 'loc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+    list.unshift(doc);
+    saveLocalControleEtiquetas(list);
+  }
+}
+
+function printCertificacaoPackSheet() {
+  const records = window._controleEtiquetas || [];
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Bom Jesus Agrícola';
+  
+  const rows = records.slice(0, 10);
+  while (rows.length < 7) {
+    rows.push({
+      data: '', hora: '', cliente: '', variedade: '', tipo_caixa: '',
+      lote_caixa: '', caixa_conforme: null, sacola_plastica: null,
+      bandeja: null, codigo_rastreabilidade: '', numero_rolo: '',
+      etiqueta_entregue: '', etiqueta_recebida: '', responsavel: '', coord_qualidade: ''
+    });
+  }
+
+  const printWin = window.open('', '_blank', 'width=1150,height=850');
+  if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
+  
+  const tableRowsHtml = rows.map(r => {
+    let labelObj = { name: '', photo: '' };
+    if (r.etiqueta_entregue) {
+      if (typeof r.etiqueta_entregue === 'string' && r.etiqueta_entregue.startsWith('{')) {
+        try { labelObj = JSON.parse(r.etiqueta_entregue); } catch(e){}
+      } else {
+        labelObj = e3dGetLabelObj(r.etiqueta_entregue);
+      }
+    }
+
+    const dtStr = r.data ? new Date(r.data + 'T12:00:00').toLocaleDateString('pt-BR') : '';
+    const confSim = r.caixa_conforme === true ? '( X ) Sim<br>( &nbsp; ) Não' : r.caixa_conforme === false ? '( &nbsp; ) Sim<br>( X ) Não' : '( &nbsp; ) Sim<br>( &nbsp; ) Não';
+    const sacolaStr = (r.sacola_plastica === true || r.sacola_plastica === 'Sim') ? 'X' : (r.sacola_plastica === false ? '' : '');
+    const bandejaStr = (r.bandeja === true || r.bandeja === 'Sim') ? 'X' : (r.bandeja === false ? '' : '');
+
+    return `
+      <tr>
+        <td style="font-size:7pt; text-align:center;">${dtStr}</td>
+        <td style="font-size:7pt; text-align:center;">${r.hora || ''}</td>
+        <td style="font-size:7pt; font-weight:bold; text-align:center;">${(r.cliente || '').toUpperCase()}</td>
+        <td style="font-size:7pt; font-weight:bold; text-align:center;">${(r.variedade || '').toUpperCase()}</td>
+        <td style="font-size:6.5pt; text-align:left; padding:2px;">
+          <div><strong>Tipo:</strong> ${r.tipo_caixa || ''}</div>
+          <div><strong>Lote:</strong> ${r.lote_caixa || ''}</div>
+          <div style="font-size:5.5pt; margin-top:2px;">
+            Caixa conforme OP? ${confSim}
+          </div>
+        </td>
+        <td style="font-size:10pt; font-weight:bold; text-align:center;">${sacolaStr}</td>
+        <td style="font-size:10pt; font-weight:bold; text-align:center;">${bandejaStr}</td>
+        <td style="font-size:8pt; font-weight:bold; text-align:center; font-family:monospace;">${r.codigo_rastreabilidade || ''}</td>
+        <td style="font-size:7pt; text-align:center;">${r.numero_rolo || ''}</td>
+        <td style="font-size:7pt; text-align:center; padding:4px;">
+          ${labelObj.photo ? `<img src="${labelObj.photo}" style="max-width:75px; max-height:45px; object-fit:contain; display:block; margin:0 auto 2px;" />` : ''}
+          <div style="font-weight:bold; font-size:6.5pt;">${labelObj.name || ''}</div>
+        </td>
+        <td style="font-size:7pt; text-align:center; padding:4px;">
+          ${labelObj.photo ? `<img src="${labelObj.photo}" style="max-width:75px; max-height:45px; object-fit:contain; display:block; margin:0 auto 2px;" />` : ''}
+          <div style="font-weight:bold; font-size:6.5pt;">${labelObj.name || ''}</div>
+        </td>
+        <td style="font-size:7pt; text-align:center;">${r.responsavel || ''}</td>
+        <td style="font-size:7pt; text-align:center;">${r.coord_qualidade || ''}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Controle de Etiquetas, Caixas e Outros Materiais de Embalagem</title>
+    <style>
+      @page { size: A4 landscape; margin: 5mm; }
+      body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background: #fff; color: #000; -webkit-print-color-adjust: exact; }
+      .sheet { width: 100%; box-sizing: border-box; }
+      .header-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+      .header-table td { border: 1px solid #000; padding: 4px; font-size: 7pt; vertical-align: middle; }
+      .main-title { font-size: 11pt; font-weight: bold; text-align: center; letter-spacing: 0.5px; }
+      .doc-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+      .doc-table th, .doc-table td { border: 1px solid #000; padding: 3px; font-size: 6.5pt; vertical-align: middle; }
+      .doc-table th { background: #f1f5f9; text-align: center; font-weight: bold; }
+      .footer-table { width: 100%; border-collapse: collapse; font-size: 6pt; }
+      .footer-table td { border: 1px solid #000; padding: 4px; vertical-align: top; }
+    </style>
+  </head>
+  <body onload="window.print()">
+    <div class="sheet">
+      <!-- HEADER METADATA & TITLE -->
+      <table class="header-table">
+        <tr>
+          <td style="width: 20%; text-align: center; font-weight: bold; font-size: 10pt;">
+            ${tenantName}
+          </td>
+          <td style="width: 55%; text-align: center;">
+            <div class="main-title">CONTROLE DE ETIQUETAS, CAIXAS E OUTROS MATERIAIS DE EMBALAGEM</div>
+          </td>
+          <td style="width: 25%; font-size: 5.5pt; line-height: 1.3;">
+            <div><strong>Emitido/Revisado por:</strong> RC</div>
+            <div><strong>Avaliado por:</strong> JMLL</div>
+            <div><strong>Aprovado por:</strong> JMLL</div>
+            <div><strong>FREQUÊNCIA:</strong> DIÁRIA DE ACORDO COM A EMBALAGEM</div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- MAIN DATA TABLE -->
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th style="width: 5%;">DATA</th>
+            <th style="width: 4%;">HORA</th>
+            <th style="width: 8%;">CLIENTE</th>
+            <th style="width: 8%;">VARIEDADE</th>
+            <th style="width: 15%;">INFORMAÇÃO DA CAIXA DE PAPELÃO<br><span style="font-weight:normal; font-size:5.5pt;">(Modelo e informação pré-impressa)</span></th>
+            <th style="width: 4%;">SACOLA PLÁSTICA</th>
+            <th style="width: 4%;">BANDEJA</th>
+            <th style="width: 8%;">CÓDIGO DE RASTREABILIDADE DA FRUTA</th>
+            <th style="width: 5%;">Nº DO ROLO</th>
+            <th style="width: 14%;">TIPOS DE ETIQUETA QUE FOI ENTREGUE À PRODUÇÃO</th>
+            <th style="width: 14%;">TIPOS DE ETIQUETA QUE SE RECEBEU DA PRODUÇÃO</th>
+            <th style="width: 5.5%;">RESPONSÁVEL</th>
+            <th style="width: 5.5%;">COORD. DE Q. QUALIDADE</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRowsHtml}
+        </tbody>
+      </table>
+
+      <!-- FOOTER NOTES & METADATA -->
+      <table class="footer-table">
+        <tr>
+          <td style="width: 65%; line-height: 1.4;">
+            <strong>OBS: NOS LOCAIS EM MENCIONA SACOLAS PLÁSTICAS E BANDEJAS RESPONDER: SIM OU NÃO.</strong><br>
+            <strong>O QUE MONITORAR?</strong> O controle de etiquetas que sai para linha de produção e se as etiquetagens estão correta de acordo com o cliente.<br>
+            <strong>COMO MONITORAR?</strong> Cada remessa de gerente entrega as etiquetas às pessoas responsáveis na linha de produção e recebe no fim da atividade.<br>
+            <strong>QUANDO MONITORAR?</strong> Diariamente de acordo com a embalagem. | <strong>QUEM MONITORAR?</strong> O gerente de packing house.
+          </td>
+          <td style="width: 35%; font-size: 5.5pt; line-height: 1.3;">
+            <div><strong>DEPARTAMENTO:</strong> PACKING HOUSE</div>
+            <div><strong>NOME DO DOC:</strong> CONTROLE DE ETIQUETAS</div>
+            <div>EMISSÃO: 11/05/2017 &nbsp;|&nbsp; REVISÃO: 05/05/2023</div>
+            <div>CÓD. DOC: PR.18.RE.05.001 &nbsp;|&nbsp; REVISÃO: 07 &nbsp;|&nbsp; VERSÃO: 11 &nbsp;|&nbsp; ARQ: PASTA 77</div>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </body>
+  </html>
+  `;
+
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
 
 let _tempLabelPhotoData = '';
 
