@@ -433,9 +433,11 @@
     </div>
     <div class="auth-sub">Plataforma de Gestão de Produção</div>
     <div id="authErr" class="auth-err"></div>
-    <div style="margin-bottom:12px"><label class="flabel">Email</label><input id="authEmail" type="email" placeholder="seu@email.com"/></div>
-    <div style="margin-bottom:20px"><label class="flabel">Senha</label><input id="authPass" type="password" placeholder="••••••••"/></div>
-    <button id="authBtn" onclick="doLogin()" style="width:100%;justify-content:center;padding:12px">Entrar</button>
+    <form onsubmit="event.preventDefault(); doLogin();">
+      <div style="margin-bottom:12px"><label class="flabel">Email</label><input id="authEmail" type="email" autocomplete="username" placeholder="seu@email.com"/></div>
+      <div style="margin-bottom:20px"><label class="flabel">Senha</label><input id="authPass" type="password" autocomplete="current-password" placeholder="••••••••"/></div>
+      <button id="authBtn" type="submit" style="width:100%;justify-content:center;padding:12px">Entrar</button>
+    </form>
     <p style="font-size:11px;color:var(--muted);margin-top:14px;text-align:center">Acesso exclusivo para empresas cadastradas</p>
   </div>
 </div>
@@ -617,7 +619,7 @@
       <div style="margin-bottom:12px"><label class="flabel">Cliente / Comprador</label><input id="editBulkCustomer"/></div>
       <div id="editBulkSigArea" style="margin-bottom:12px; display:none">
         <label class="flabel">Assinatura do Comprador</label>
-        <img id="editBulkSigImg" src="" style="width:100%; height:80px; background:#f8fafc; border:1px solid var(--border); border-radius:10px; object-fit:contain"/>
+        <img id="editBulkSigImg" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" style="width:100%; height:80px; background:#f8fafc; border:1px solid var(--border); border-radius:10px; object-fit:contain"/>
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
         <div><label class="flabel">Peso (Kg)</label><input type="number" id="editBulkWeight"/></div>
@@ -1589,11 +1591,13 @@
       <div class="card">
         <div class="title"><i data-lucide="activity" class="btn-i"></i> Conexão PariPassu</div>
         <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Sincronize sua Pallet List da PariPassu para controle automático de rastreabilidade.</p>
-        <div class="field-group">
-          <label class="flabel">API Token PariPassu</label>
-          <input type="password" placeholder="Insira o token de acesso"/>
-        </div>
-        <button class="blue btn-full" style="margin-top:10px; display:flex; align-items:center; justify-content:center; gap:6px"><i data-lucide="link-2" style="width:16px;height:16px"></i> Testar Conexão</button>
+        <form onsubmit="event.preventDefault();">
+          <div class="field-group">
+            <label class="flabel">API Token PariPassu</label>
+            <input type="password" autocomplete="off" placeholder="Insira o token de acesso"/>
+          </div>
+          <button class="blue btn-full" type="submit" style="margin-top:10px; display:flex; align-items:center; justify-content:center; gap:6px"><i data-lucide="link-2" style="width:16px;height:16px"></i> Testar Conexão</button>
+        </form>
       </div>
     </div>
   </div>
@@ -1693,7 +1697,7 @@
       <div class="card">
         <div class="title"><i data-lucide="message-square" class="btn-i"></i> Evolution API (WhatsApp)</div>
         <div style="margin-bottom:10px"><label class="flabel">URL da API</label><input id="cfgEvoUrl" placeholder="https://sua-evolution-api.com"/></div>
-        <div style="margin-bottom:10px"><label class="flabel">API Key</label><input id="cfgEvoKey" type="password" placeholder="sua-chave"/></div>
+        <div style="margin-bottom:10px"><label class="flabel">API Key</label><input id="cfgEvoKey" type="password" autocomplete="off" placeholder="sua-chave"/></div>
         <div style="margin-bottom:10px"><label class="flabel">Instância</label><input id="cfgEvoInstance" placeholder="nome-da-instancia"/></div>
       </div>
       <div class="card" style="grid-column: span 2">
@@ -1725,7 +1729,7 @@
           </div>
           <div style="margin-bottom:10px">
             <label class="flabel">Senha</label>
-            <input id="newUsrPass" type="password" placeholder="Mínimo 6 caracteres" required style="width:100%; box-sizing:border-box;"/>
+            <input id="newUsrPass" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres" required style="width:100%; box-sizing:border-box;"/>
           </div>
           <div style="margin-bottom:10px">
             <label class="flabel">Papel (Role)</label>
