@@ -1696,9 +1696,11 @@
       </div>
       <div class="card">
         <div class="title"><i data-lucide="message-square" class="btn-i"></i> Evolution API (WhatsApp)</div>
-        <div style="margin-bottom:10px"><label class="flabel">URL da API</label><input id="cfgEvoUrl" placeholder="https://sua-evolution-api.com"/></div>
-        <div style="margin-bottom:10px"><label class="flabel">API Key</label><input id="cfgEvoKey" type="password" autocomplete="off" placeholder="sua-chave"/></div>
-        <div style="margin-bottom:10px"><label class="flabel">Instância</label><input id="cfgEvoInstance" placeholder="nome-da-instancia"/></div>
+        <form onsubmit="event.preventDefault();">
+          <div style="margin-bottom:10px"><label class="flabel">URL da API</label><input id="cfgEvoUrl" placeholder="https://sua-evolution-api.com"/></div>
+          <div style="margin-bottom:10px"><label class="flabel">API Key</label><input id="cfgEvoKey" type="password" autocomplete="off" placeholder="sua-chave"/></div>
+          <div style="margin-bottom:10px"><label class="flabel">Instância</label><input id="cfgEvoInstance" placeholder="nome-da-instancia"/></div>
+        </form>
       </div>
       <div class="card" style="grid-column: span 2">
         <div class="title"><i data-lucide="message-circle" class="btn-i"></i> Templates de Mensagem (WhatsApp)</div>
@@ -1724,7 +1726,7 @@
         <form id="formNewUser" onsubmit="event.preventDefault(); registerNewUser();">
           <div style="margin-bottom:10px">
             <label class="flabel">Nome de Usuário (Username)</label>
-            <input id="newUsrName" placeholder="Ex: joao" required style="width:100%; box-sizing:border-box;" oninput="const val = this.value.trim().toLowerCase(); document.getElementById('newUsrEmailPreview').textContent = val ? (val.includes('@') ? val : val + '@coopyfrutas.com') : '...';"/>
+            <input id="newUsrName" autocomplete="username" placeholder="Ex: joao" required style="width:100%; box-sizing:border-box;" oninput="const val = this.value.trim().toLowerCase(); document.getElementById('newUsrEmailPreview').textContent = val ? (val.includes('@') ? val : val + '@coopyfrutas.com') : '...';"/>
             <small style="color:var(--muted2); font-size:10px;">Login gerado: <span id="newUsrEmailPreview" style="color:var(--blue); font-weight:bold;">...</span></small>
           </div>
           <div style="margin-bottom:10px">
@@ -9326,40 +9328,60 @@ function showCcTab(tab) {
 }
 
 async function loadCadernoCampo() {
+  // 1. Carregar MIP
   try {
-    // 1. Carregar MIP
     const { data: mipData, error: mipError } = await sb.from('caderno_campo_mip').select('*').eq('tenant_id', tenantId).order('data_vistoria', { ascending: false });
-    if (mipError) throw mipError;
-    renderCcMipTable(mipData);
-    _mipRecords = mipData || [];
-    
-    // 2. Carregar O.P
+    if (!mipError && mipData) {
+      renderCcMipTable(mipData);
+      _mipRecords = mipData;
+    } else {
+      renderCcMipTable([]);
+      _mipRecords = [];
+    }
+  } catch(e) {
+    renderCcMipTable([]);
+    _mipRecords = [];
+  }
+
+  // 2. Carregar O.P
+  try {
     const { data: opData, error: opError } = await sb.from('caderno_campo_op').select('*, caderno_campo_op_itens(*)').eq('tenant_id', tenantId).order('data_aplicacao', { ascending: false });
-    if (opError) throw opError;
-    renderCcOpTable(opData);
-    window._opList = opData || [];
-    
-    // 3. Carregar parcelas para popular o select de Nova O.P
+    if (!opError && opData) {
+      renderCcOpTable(opData);
+      window._opList = opData;
+    } else {
+      renderCcOpTable([]);
+      window._opList = [];
+    }
+  } catch(e) {
+    renderCcOpTable([]);
+    window._opList = [];
+  }
+  
+  // 3. Carregar parcelas para popular o select de Nova O.P
+  try {
     if (!_infoParcelas || _infoParcelas.length === 0) {
       const { data: ipData } = await sb.from('info_parcelas').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
       _infoParcelas = ipData || [];
     }
-    
-    // 4. Carregar cadastro de defensivos
-    const { data: defData, error: defError } = await sb.from('caderno_campo_defensivos_cadastro').select('*').eq('tenant_id', tenantId).order('produto', { ascending: true });
-    if (!defError) {
-      _defensivos = defData || [];
-    }
-    
-    const opSel = $('newOpParcelSelect');
-    if (opSel) {
-      opSel.innerHTML = '<option value="">— Selecione a Parcela —</option>';
-      _infoParcelas.forEach(ip => {
-        opSel.insertAdjacentHTML('beforeend', `<option value="${ip.id}">${ip.parcela2 || ip.parcela} (${ip.variedade})</option>`);
-      });
-    }
   } catch(e) {
-    console.error('Erro ao carregar caderno de campo:', e);
+    _infoParcelas = [];
+  }
+  
+  // 4. Carregar cadastro de defensivos
+  try {
+    const { data: defData, error: defError } = await sb.from('caderno_campo_defensivos_cadastro').select('*').eq('tenant_id', tenantId).order('produto', { ascending: true });
+    if (!defError && defData) {
+      _defensivos = defData;
+    }
+  } catch(e) {}
+  
+  const opSel = $('newOpParcelSelect');
+  if (opSel && _infoParcelas) {
+    opSel.innerHTML = '<option value="">— Selecione a Parcela —</option>';
+    _infoParcelas.forEach(ip => {
+      opSel.insertAdjacentHTML('beforeend', `<option value="${ip.id}">${ip.parcela2 || ip.parcela} (${ip.variedade || ''})</option>`);
+    });
   }
 }
 

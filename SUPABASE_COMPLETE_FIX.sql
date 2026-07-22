@@ -84,7 +84,7 @@ ALTER TABLE public.pallets ADD COLUMN IF NOT EXISTS has_caliber_error BOOLEAN DE
 ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS packing_capacity INTEGER DEFAULT 120;
 ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS cold_room_capacity INTEGER DEFAULT 60;
 
--- 5. TABELA DE RASTREABILIDADE POR PARCELA (INFO_PARCELAS)
+-- 5. RASTREABILIDADE POR PARCELA (INFO_PARCELAS)
 CREATE TABLE IF NOT EXISTS public.info_parcelas (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID,
@@ -101,7 +101,7 @@ ALTER TABLE public.info_parcelas ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "info_parcelas_all" ON public.info_parcelas;
 CREATE POLICY "info_parcelas_all" ON public.info_parcelas FOR ALL USING (true) WITH CHECK (true);
 
--- 6. TABELA DE CADERNO DE CAMPO
+-- 6. CADERNO DE CAMPO (APLICAÇÕES E MANEJO)
 CREATE TABLE IF NOT EXISTS public.caderno_campo (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID,
@@ -126,7 +126,68 @@ CREATE TABLE IF NOT EXISTS public.caderno_campo (
 ALTER TABLE public.caderno_campo ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "caderno_campo_all" ON public.caderno_campo;
 CREATE POLICY "caderno_campo_all" ON public.caderno_campo FOR ALL USING (true) WITH CHECK (true);
-ALTER TABLE public.caderno_campo ADD COLUMN IF NOT EXISTS barrista VARCHAR(255);
 
--- HABILITAR REALTIME NAS NOVAS TABELAS
-ALTER PUBLICATION supabase_realtime ADD TABLE public.controle_etiquetas, public.romaneios, public.pallets, public.info_parcelas, public.caderno_campo;
+-- 7. CADERNO DE CAMPO MIP (VISTORIAS DE PRAGAS E DOENÇAS)
+CREATE TABLE IF NOT EXISTS public.caderno_campo_mip (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID,
+  data_vistoria DATE DEFAULT CURRENT_DATE,
+  parcela VARCHAR(255),
+  praga_doenca VARCHAR(255),
+  nivel_infestacao VARCHAR(100),
+  observacao TEXT,
+  responsavel VARCHAR(255),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.caderno_campo_mip ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "caderno_campo_mip_all" ON public.caderno_campo_mip;
+CREATE POLICY "caderno_campo_mip_all" ON public.caderno_campo_mip FOR ALL USING (true) WITH CHECK (true);
+
+-- 8. CADERNO DE CAMPO OP (ORDENS DE APLICAÇÃO)
+CREATE TABLE IF NOT EXISTS public.caderno_campo_op (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID,
+  data_aplicacao DATE DEFAULT CURRENT_DATE,
+  parcela_id UUID,
+  responsavel VARCHAR(255),
+  observacao TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.caderno_campo_op ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "caderno_campo_op_all" ON public.caderno_campo_op;
+CREATE POLICY "caderno_campo_op_all" ON public.caderno_campo_op FOR ALL USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS public.caderno_campo_op_itens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  op_id UUID REFERENCES public.caderno_campo_op(id) ON DELETE CASCADE,
+  produto VARCHAR(255),
+  ingrediente_ativo VARCHAR(255),
+  dosagem VARCHAR(100),
+  carencia_dias INTEGER DEFAULT 0,
+  reentrada_horas INTEGER DEFAULT 24,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.caderno_campo_op_itens ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "caderno_campo_op_itens_all" ON public.caderno_campo_op_itens;
+CREATE POLICY "caderno_campo_op_itens_all" ON public.caderno_campo_op_itens FOR ALL USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS public.caderno_campo_defensivos_cadastro (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID,
+  produto VARCHAR(255),
+  ingrediente_ativo VARCHAR(255),
+  dosagem VARCHAR(100),
+  carencia_dias INTEGER DEFAULT 0,
+  reentrada_horas INTEGER DEFAULT 24,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.caderno_campo_defensivos_cadastro ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "caderno_campo_defensivos_cadastro_all" ON public.caderno_campo_defensivos_cadastro;
+CREATE POLICY "caderno_campo_defensivos_cadastro_all" ON public.caderno_campo_defensivos_cadastro FOR ALL USING (true) WITH CHECK (true);
+
+-- HABILITAR REALTIME NAS TABELAS
+ALTER PUBLICATION supabase_realtime ADD TABLE public.controle_etiquetas, public.romaneios, public.pallets, public.info_parcelas, public.caderno_campo, public.caderno_campo_mip, public.caderno_campo_op;

@@ -1,0 +1,148 @@
+name: Build & Release Electron App
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────
+  # Windows Build → gera .exe (Squirrel installer)
+  # ─────────────────────────────────────────────────────────────────────
+  build-windows:
+    name: Build Windows (.exe)
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        working-directory: packinghouse-app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: packinghouse-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild native modules for Windows x64
+        run: npx @electron/rebuild -f -w sqlite3
+
+      - name: Make Windows installer
+        run: npm run make -- --platform win32 --arch x64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: packinghouse-app/out/make/squirrel.windows/x64/*.exe
+          retention-days: 30
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Linux ARM64 Build → gera .deb para Raspberry Pi 4/5
+  # ─────────────────────────────────────────────────────────────────────
+  build-linux-arm64:
+    name: Build Linux ARM64 (.deb para Raspberry Pi)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: packinghouse-app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup QEMU (para emulação ARM64)
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: packinghouse-app/package-lock.json
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            dpkg fakeroot \
+            gcc-aarch64-linux-gnu \
+            g++-aarch64-linux-gnu \
+            python3 python3-pip
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Rebuild sqlite3 for Linux ARM64
+        run: |
+          npx @electron/rebuild -f -w sqlite3 --target-arch arm64
+        env:
+          npm_config_arch: arm64
+          npm_config_target_arch: arm64
+
+      - name: Make Linux ARM64 .deb
+        run: npm run make -- --platform linux --arch arm64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Linux ARM64 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64-deb
+          path: packinghouse-app/out/make/deb/arm64/*.deb
+          retention-days: 30
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Release — cria GitHub Release quando há uma tag v*
+  # ─────────────────────────────────────────────────────────────────────
+  release:
+    name: Create GitHub Release
+    needs: [build-windows, build-linux-arm64]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: dist/windows
+
+      - name: Download Linux ARM64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-arm64-deb
+          path: dist/linux-arm64
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "PRODTEC Packinghouse ${{ github.ref_name }}"
+          body: |
+            ## PRODTEC Packinghouse ${{ github.ref_name }}
+
+            ### Downloads
+            - **Windows**: instale o arquivo `.exe` (Squirrel installer)
+            - **Raspberry Pi 4/5**: instale o arquivo `.deb` com `sudo dpkg -i prodtec-packinghouse_*.deb`
+
+            > ⚠️ No Windows, se aparecer alerta de segurança clique em "Mais informações → Executar assim mesmo"
+          files: |
+            dist/windows/*.exe
+            dist/linux-arm64/*.deb
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
