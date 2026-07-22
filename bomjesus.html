@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Agrícola Bom Jesus — Módulo Integrado AppSheet & RH</title>
+  <title>Agrícola Bom Jesus — Plataforma Relacional AppSheet 360° & RH</title>
 
   <!-- Lucide Icons & SheetJS -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -40,7 +40,7 @@
     /* HEADER TOP BAR */
     header {
       height: 64px;
-      background: rgba(17, 24, 39, 0.85);
+      background: rgba(17, 24, 39, 0.9);
       backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
       display: flex;
@@ -238,17 +238,25 @@
     td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--text); white-space: nowrap; }
     tr:hover td { background: rgba(255,255,255,0.02); }
 
-    .tag {
+    /* RELATIONAL BADGES */
+    .rel-badge {
       display: inline-flex;
       align-items: center;
-      padding: 3px 10px;
+      gap: 6px;
+      padding: 4px 10px;
       border-radius: 20px;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: rgba(59, 130, 246, 0.12);
+      color: var(--blue);
+      border: 1px solid rgba(59, 130, 246, 0.25);
     }
-    .tag-blue { background: rgba(59, 130, 246, 0.15); color: var(--blue); }
-    .tag-green { background: rgba(16, 185, 129, 0.15); color: var(--green); }
-    .tag-amber { background: rgba(245, 158, 11, 0.15); color: var(--amber); }
+    .rel-badge:hover { background: rgba(59, 130, 246, 0.25); transform: translateY(-1px); }
+    .rel-badge.green { background: rgba(16, 185, 129, 0.12); color: var(--green); border-color: rgba(16, 185, 129, 0.25); }
+    .rel-badge.amber { background: rgba(245, 158, 11, 0.12); color: var(--amber); border-color: rgba(245, 158, 11, 0.25); }
+    .rel-badge.purple { background: rgba(139, 92, 246, 0.12); color: var(--purple); border-color: rgba(139, 92, 246, 0.25); }
 
     /* PAGINATION */
     .pagination {
@@ -260,6 +268,53 @@
       font-size: 12px;
       color: var(--muted);
     }
+
+    /* MODAL DRAWER 360° RELACIONAL */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(8px);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-content {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 900px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7);
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(15, 23, 42, 0.6);
+    }
+    .modal-body { padding: 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 20px; }
+
+    .nav-tabs-rel { display: flex; gap: 8px; border-bottom: 1px solid var(--border); padding-bottom: 12px; flex-wrap: wrap; }
+    .tab-rel-btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted);
+    }
+    .tab-rel-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
   </style>
 </head>
 <body>
@@ -269,13 +324,13 @@
       <div class="brand-icon"><i data-lucide="sprout"></i></div>
       <div>
         <span>AGRÍCOLA BOM JESUS</span>
-        <div style="font-size: 10px; color: var(--muted); font-weight: 500;">Módulo Integrado AppSheet & RH</div>
+        <div style="font-size: 10px; color: var(--muted); font-weight: 500;">Plataforma Relacional AppSheet 360° & RH</div>
       </div>
     </a>
 
     <div class="header-actions">
       <label class="btn btn-green">
-        <i data-lucide="upload"></i> Atualizar Excel (.xlsx)
+        <i data-lucide="upload"></i> Carregar Nova Planilha (.xlsx)
         <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display:none" onchange="handleExcelUpload(this)"/>
       </label>
       <button class="btn" onclick="exportCurrentTable()"><i data-lucide="download"></i> Exportar Dados</button>
@@ -288,62 +343,72 @@
     <!-- SIDEBAR NAVIGATION -->
     <aside class="sidebar">
 
-      <div class="mod-group">👥 Recursos Humanos (RH)</div>
+      <div class="mod-group">📊 Visões Relacionais 360°</div>
       <div class="mod-item active" onclick="switchSheet('CadastroPessoal', this)">
-        <span><i data-lucide="users" style="width:16px;height:16px;margin-right:6px"></i> Funcionários (RH)</span>
+        <span><i data-lucide="users" style="width:16px;height:16px;margin-right:6px"></i> 👥 Funcionários (RH)</span>
         <span class="count-badge" id="count-CadastroPessoal">...</span>
       </div>
+      <div class="mod-item" onclick="switchSheet('Parcela', this)">
+        <span><i data-lucide="grid" style="width:16px;height:16px;margin-right:6px"></i> 📍 Parcelas Agrícolas</span>
+        <span class="count-badge" id="count-Parcela">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Produto', this)">
+        <span><i data-lucide="package" style="width:16px;height:16px;margin-right:6px"></i> 📦 Produtos & Insumos</span>
+        <span class="count-badge" id="count-Produto">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Prefixo', this)">
+        <span><i data-lucide="truck" style="width:16px;height:16px;margin-right:6px"></i> 🚜 Frota & Máquinas</span>
+        <span class="count-badge" id="count-Prefixo">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Vendas', this)">
+        <span><i data-lucide="dollar-sign" style="width:16px;height:16px;margin-right:6px"></i> 💰 Vendas & Faturamento</span>
+        <span class="count-badge" id="count-Vendas">...</span>
+      </div>
+
+      <div class="mod-group">👥 Saúde & RH</div>
       <div class="mod-item" onclick="switchSheet('ASOS', this)">
         <span><i data-lucide="activity" style="width:16px;height:16px;margin-right:6px"></i> Exames ASOS</span>
         <span class="count-badge" id="count-ASOS">...</span>
       </div>
       <div class="mod-item" onclick="switchSheet('Setores', this)">
-        <span><i data-lucide="building" style="width:16px;height:16px;margin-right:6px"></i> Setores & Funções</span>
+        <span><i data-lucide="building" style="width:16px;height:16px;margin-right:6px"></i> Setores</span>
         <span class="count-badge" id="count-Setores">...</span>
       </div>
 
-      <div class="mod-group">🌱 Operações & Campo</div>
-      <div class="mod-item" onclick="switchSheet('Parcela', this)">
-        <span><i data-lucide="grid" style="width:16px;height:16px;margin-right:6px"></i> Parcelas</span>
-        <span class="count-badge" id="count-Parcela">...</span>
-      </div>
+      <div class="mod-group">🌱 Campo & Produção</div>
       <div class="mod-item" onclick="switchSheet('Plantio', this)">
-        <span><i data-lucide="sprout" style="width:16px;height:16px;margin-right:6px"></i> Registros de Plantio</span>
+        <span><i data-lucide="sprout" style="width:16px;height:16px;margin-right:6px"></i> Plantio</span>
         <span class="count-badge" id="count-Plantio">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Colheita', this)">
+        <span><i data-lucide="shopping-bag" style="width:16px;height:16px;margin-right:6px"></i> Colheita</span>
+        <span class="count-badge" id="count-Colheita">...</span>
       </div>
       <div class="mod-item" onclick="switchSheet('Pulverizacao', this)">
         <span><i data-lucide="wind" style="width:16px;height:16px;margin-right:6px"></i> Pulverizações</span>
         <span class="count-badge" id="count-Pulverizacao">...</span>
       </div>
       <div class="mod-item" onclick="switchSheet('AplicacaoDefensivo', this)">
-        <span><i data-lucide="shield" style="width:16px;height:16px;margin-right:6px"></i> Aplicação Defensivos</span>
+        <span><i data-lucide="shield" style="width:16px;height:16px;margin-right:6px"></i> Defensivos</span>
         <span class="count-badge" id="count-AplicacaoDefensivo">...</span>
       </div>
       <div class="mod-item" onclick="switchSheet('AplicacaoFoliares', this)">
-        <span><i data-lucide="droplet" style="width:16px;height:16px;margin-right:6px"></i> Aplicação Foliares</span>
+        <span><i data-lucide="droplet" style="width:16px;height:16px;margin-right:6px"></i> Foliares</span>
         <span class="count-badge" id="count-AplicacaoFoliares">...</span>
       </div>
       <div class="mod-item" onclick="switchSheet('Mip', this)">
-        <span><i data-lucide="bug" style="width:16px;height:16px;margin-right:6px"></i> Manejo MIP (Pragas)</span>
+        <span><i data-lucide="bug" style="width:16px;height:16px;margin-right:6px"></i> Manejo MIP</span>
         <span class="count-badge" id="count-Mip">...</span>
       </div>
       <div class="mod-item" onclick="switchSheet('Medida Chuvas', this)">
-        <span><i data-lucide="cloud-rain" style="width:16px;height:16px;margin-right:6px"></i> Pluviometria (Chuvas)</span>
+        <span><i data-lucide="cloud-rain" style="width:16px;height:16px;margin-right:6px"></i> Pluviometria</span>
         <span class="count-badge" id="count-Medida Chuvas">...</span>
-      </div>
-      <div class="mod-item" onclick="switchSheet('Colheita', this)">
-        <span><i data-lucide="shopping-bag" style="width:16px;height:16px;margin-right:6px"></i> Colheita</span>
-        <span class="count-badge" id="count-Colheita">...</span>
       </div>
 
       <div class="mod-group">📦 Estoque & Suprimentos</div>
       <div class="mod-item" onclick="switchSheet('Estoque', this)">
         <span><i data-lucide="archive" style="width:16px;height:16px;margin-right:6px"></i> Movimentações Estoque</span>
         <span class="count-badge" id="count-Estoque">...</span>
-      </div>
-      <div class="mod-item" onclick="switchSheet('Produto', this)">
-        <span><i data-lucide="package" style="width:16px;height:16px;margin-right:6px"></i> Cadastro de Produtos</span>
-        <span class="count-badge" id="count-Produto">...</span>
       </div>
       <div class="mod-item" onclick="switchSheet('Inventario', this)">
         <span><i data-lucide="clipboard-list" style="width:16px;height:16px;margin-right:6px"></i> Inventário</span>
@@ -358,9 +423,9 @@
         <span class="count-badge" id="count-Requisição">...</span>
       </div>
 
-      <div class="mod-group">🚜 Frota & Maquinário</div>
+      <div class="mod-group">🚜 Frota & Manutenção</div>
       <div class="mod-item" onclick="switchSheet('Abastecimento', this)">
-        <span><i data-lucide="fuel" style="width:16px;height:16px;margin-right:6px"></i> Abastecimento Frota</span>
+        <span><i data-lucide="fuel" style="width:16px;height:16px;margin-right:6px"></i> Abastecimentos</span>
         <span class="count-badge" id="count-Abastecimento">...</span>
       </div>
       <div class="mod-item" onclick="switchSheet('OrdemServico', this)">
@@ -372,17 +437,17 @@
         <span class="count-badge" id="count-Condutores">...</span>
       </div>
 
-      <div class="mod-group">💰 Vendas & Financeiro</div>
-      <div class="mod-item" onclick="switchSheet('Vendas', this)">
-        <span><i data-lucide="dollar-sign" style="width:16px;height:16px;margin-right:6px"></i> Registro de Vendas</span>
-        <span class="count-badge" id="count-Vendas">...</span>
+      <div class="mod-group">💰 Vendas & Clientes</div>
+      <div class="mod-item" onclick="switchSheet('Itens da Venda', this)">
+        <span><i data-lucide="shopping-cart" style="width:16px;height:16px;margin-right:6px"></i> Itens Vendidos</span>
+        <span class="count-badge" id="count-Itens da Venda">...</span>
       </div>
       <div class="mod-item" onclick="switchSheet('Cliente', this)">
-        <span><i data-lucide="briefcase" style="width:16px;height:16px;margin-right:6px"></i> Clientes</span>
+        <span><i data-lucide="briefcase" style="width:16px;height:16px;margin-right:6px"></i> Cadastro Clientes</span>
         <span class="count-badge" id="count-Cliente">...</span>
       </div>
 
-      <div class="mod-group">📋 Auditoria & Outros</div>
+      <div class="mod-group">📋 Auditoria</div>
       <div class="mod-item" onclick="switchSheet('AuditoriaInterna', this)">
         <span><i data-lucide="shield-check" style="width:16px;height:16px;margin-right:6px"></i> Auditoria Interna</span>
         <span class="count-badge" id="count-AuditoriaInterna">...</span>
@@ -398,22 +463,22 @@
         <div class="kpi-card green">
           <div class="kpi-label">TOTAL FUNCIONÁRIOS (RH)</div>
           <div class="kpi-value" id="kpiEmpCount">1.857</div>
-          <div class="kpi-sub">Cadastrados no sistema</div>
+          <div class="kpi-sub">Com histórico relacional de 3 anos</div>
         </div>
         <div class="kpi-card blue">
           <div class="kpi-label">MOVIMENTAÇÕES ESTOQUE</div>
           <div class="kpi-value" id="kpiStockCount">12.474</div>
-          <div class="kpi-sub">Registros de saída / entrada</div>
+          <div class="kpi-sub">Insumos & Produtos</div>
         </div>
         <div class="kpi-card amber">
           <div class="kpi-label">ABASTECIMENTOS FROTA</div>
           <div class="kpi-value" id="kpiFuelCount">2.301</div>
-          <div class="kpi-sub">Registros de combustível</div>
+          <div class="kpi-sub">Máquinas e Veículos</div>
         </div>
         <div class="kpi-card purple">
           <div class="kpi-label">PARCELAS AGRÍCOLAS</div>
           <div class="kpi-value" id="kpiParcelCount">204</div>
-          <div class="kpi-sub">Áreas registradas</div>
+          <div class="kpi-sub">Áreas com plantio e colheita</div>
         </div>
       </div>
 
@@ -421,10 +486,10 @@
       <div class="toolbar">
         <div class="search-box">
           <i data-lucide="search" style="color:var(--muted);width:16px;height:16px"></i>
-          <input type="text" id="searchInput" placeholder="Pesquisar em todos os campos..." oninput="onSearchInput(this.value)"/>
+          <input type="text" id="searchInput" placeholder="Pesquisar funcionários, parcelas, produtos ou registros..." oninput="onSearchInput(this.value)"/>
         </div>
         <div style="display:flex; align-items:center; gap:12px; font-size:12px; color:var(--muted);">
-          <span>Exibindo: <strong id="activeSheetTitle" style="color:var(--blue)">CadastroPessoal</strong></span>
+          <span>Tabela Atual: <strong id="activeSheetTitle" style="color:var(--blue)">CadastroPessoal</strong></span>
           <span style="background:rgba(255,255,255,0.06); padding:4px 10px; border-radius:6px;" id="recordTotalCounter">0 registros</span>
         </div>
       </div>
@@ -434,9 +499,9 @@
         <div class="table-header-title">
           <h3 id="currentSheetHeader" style="font-size:15px; font-weight:800; display:flex; align-items:center; gap:8px;">
             <i data-lucide="table" style="color:var(--green); width:18px; height:18px;"></i>
-            <span>Visualização de Dados</span>
+            <span>Tabela: CadastroPessoal</span>
           </h3>
-          <small style="color:var(--muted)">Origem: Google Sheets / AppSheet Agrícola Bom Jesus</small>
+          <small style="color:var(--muted)">💡 Clique em qualquer item relacional (Nome, Parcela, Produto, Veículo) para ver a Visão 360°</small>
         </div>
 
         <div class="table-wrapper">
@@ -457,6 +522,33 @@
 
   </div>
 
+  <!-- MODAL DRAWER 360° RELACIONAL -->
+  <div id="modalRelational" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div id="modalRelAvatar" style="width:42px; height:42px; border-radius:12px; background:linear-gradient(135deg,var(--blue),#1d4ed8); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; font-size:18px;"></div>
+          <div>
+            <h3 id="modalRelTitle" style="margin:0; font-size:16px; font-weight:800; color:var(--text)">--</h3>
+            <p id="modalRelSub" style="margin:2px 0 0; font-size:12px; color:var(--muted)">Visão Relacional 360°</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeModalRelational()" style="background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer;">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Relational Sub-Tabs Bar -->
+        <div id="modalRelSubTabs" class="nav-tabs-rel"></div>
+        <!-- Relational Tab Content Table -->
+        <div style="overflow-x:auto;">
+          <table style="width:100%">
+            <thead id="modalRelTableHead"></thead>
+            <tbody id="modalRelTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     let dbData = {};
     let currentSheetName = 'CadastroPessoal';
@@ -464,15 +556,19 @@
     let currentPage = 1;
     const pageSize = 50;
 
+    // Relational Index Maps
+    let indexFunc = {};
+    let indexParcela = {};
+    let indexProduto = {};
+
     async function loadDatabase() {
       try {
         const resp = await fetch('/bomjesus_data.json');
         if (resp.ok) {
           dbData = await resp.json();
+          buildRelationalIndexes();
           updateCounts();
           renderSheet(currentSheetName);
-        } else {
-          console.warn('bomjesus_data.json não encontrado. Aguardando upload manual.');
         }
       } catch(e) {
         console.error('Erro ao carregar bomjesus_data.json:', e);
@@ -480,17 +576,33 @@
       if (window.lucide) lucide.createIcons();
     }
 
+    function buildRelationalIndexes() {
+      // Index Funcionários
+      (dbData['CadastroPessoal'] || []).forEach(f => {
+        const id = f['IdCadastro Funcionario'];
+        if (id) indexFunc[id] = f;
+      });
+      // Index Parcelas
+      (dbData['Parcela'] || []).forEach(p => {
+        const id = p['IdParcela'] || p['Parcela'];
+        if (id) indexParcela[id] = p;
+      });
+      // Index Produtos
+      (dbData['Produto'] || []).forEach(pr => {
+        const id = pr['IdProduto'] || pr['Produto'];
+        if (id) indexProduto[id] = pr;
+      });
+    }
+
     function updateCounts() {
       for (const sheetKey in dbData) {
         const el = document.getElementById('count-' + sheetKey);
-        if (el) {
-          el.textContent = (dbData[sheetKey] || []).length;
-        }
+        if (el) el.textContent = (dbData[sheetKey] || []).length;
       }
-      if (dbData['CadastroPessoal']) document.getElementById('kpiEmpCount').textContent = dbData['CadastroPessoal'].length;
-      if (dbData['Estoque']) document.getElementById('kpiStockCount').textContent = dbData['Estoque'].length;
-      if (dbData['Abastecimento']) document.getElementById('kpiFuelCount').textContent = dbData['Abastecimento'].length;
-      if (dbData['Parcela']) document.getElementById('kpiParcelCount').textContent = dbData['Parcela'].length;
+      if (dbData['CadastroPessoal']) document.getElementById('kpiEmpCount').textContent = dbData['CadastroPessoal'].length.toLocaleString();
+      if (dbData['Estoque']) document.getElementById('kpiStockCount').textContent = dbData['Estoque'].length.toLocaleString();
+      if (dbData['Abastecimento']) document.getElementById('kpiFuelCount').textContent = dbData['Abastecimento'].length.toLocaleString();
+      if (dbData['Parcela']) document.getElementById('kpiParcelCount').textContent = dbData['Parcela'].length.toLocaleString();
     }
 
     function switchSheet(sheetName, el) {
@@ -514,7 +626,7 @@
         filteredRows = rows;
       }
 
-      document.getElementById('recordTotalCounter').textContent = filteredRows.length + ' registros';
+      document.getElementById('recordTotalCounter').textContent = filteredRows.length.toLocaleString() + ' registros';
       renderTablePage();
     }
 
@@ -548,7 +660,22 @@
         tbodyHtml += '<tr>';
         headers.forEach(h => {
           const val = row[h] !== undefined ? String(row[h]) : '';
-          tbodyHtml += `<td>${val}</td>`;
+          
+          // Format Relational Keys into Interactive Badges
+          if (h === 'CadastroPessoal' || h === 'IdCadastro Funcionario' || h === 'Nome' && currentSheetName === 'CadastroPessoal') {
+            const funcId = row['IdCadastro Funcionario'] || row['CadastroPessoal'] || val;
+            const funcObj = indexFunc[funcId] || (currentSheetName === 'CadastroPessoal' ? row : null);
+            const funcName = funcObj ? funcObj['Nome'] || val : val;
+            tbodyHtml += `<td><span class="rel-badge" onclick="openRelational360('func', '${funcId}')">👤 ${funcName}</span></td>`;
+          } else if (h === 'Parcela' || h === 'IdParcela') {
+            tbodyHtml += `<td><span class="rel-badge green" onclick="openRelational360('parcela', '${val}')">📍 ${val}</span></td>`;
+          } else if (h === 'Produto' || h === 'IdProduto') {
+            tbodyHtml += `<td><span class="rel-badge amber" onclick="openRelational360('produto', '${val}')">📦 ${val}</span></td>`;
+          } else if (h === 'Prefixo') {
+            tbodyHtml += `<td><span class="rel-badge purple" onclick="openRelational360('prefixo', '${val}')">🚜 ${val}</span></td>`;
+          } else {
+            tbodyHtml += `<td>${val}</td>`;
+          }
         });
         tbodyHtml += '</tr>';
       });
@@ -558,25 +685,100 @@
       if (window.lucide) lucide.createIcons();
     }
 
-    function prevPage() {
-      if (currentPage > 1) {
-        currentPage--;
-        renderTablePage();
+    /* 360° RELATIONAL DRAWER MODAL */
+    function openRelational360(type, key) {
+      if (!key) return;
+      const modal = document.getElementById('modalRelational');
+      const avatar = document.getElementById('modalRelAvatar');
+      const title = document.getElementById('modalRelTitle');
+      const sub = document.getElementById('modalRelSub');
+      const tabsBar = document.getElementById('modalRelSubTabs');
+
+      tabsBar.innerHTML = '';
+
+      if (type === 'func') {
+        const func = indexFunc[key] || (dbData['CadastroPessoal'] || []).find(f => f['IdCadastro Funcionario'] === key || f['Nome'] === key);
+        const name = func ? func['Nome'] : key;
+        avatar.innerHTML = name[0] || '👤';
+        avatar.style.background = 'linear-gradient(135deg,var(--blue),#1d4ed8)';
+        title.textContent = '👤 Funcionário: ' + name;
+        sub.textContent = `Setor: ${func ? func['Setor'] : '—'} | Função: ${func ? func['Função'] : '—'} | CPF: ${func ? func['CPF'] : '—'}`;
+
+        // Find linked records across tables
+        const asos = (dbData['ASOS'] || []).filter(a => a['CadastroPessoal'] === key || a['CadastroPessoal'] === name);
+        const epi = (dbData['Ficha de EPI'] || []).filter(e => e['CadastroPessoal'] === key || e['CadastroPessoal'] === name);
+        const abastecimentos = (dbData['Abastecimento'] || []).filter(ab => ab['Condutores'] === name || ab['Condutor'] === name);
+
+        tabsBar.innerHTML = `
+          <button class="tab-rel-btn active" onclick="renderRelSubTable('ASOS', ${JSON.stringify(asos).replace(/"/g, '&quot;')}, this)">🩺 ASOS (${asos.length})</button>
+          <button class="tab-rel-btn" onclick="renderRelSubTable('Ficha de EPI', ${JSON.stringify(epi).replace(/"/g, '&quot;')}, this)">🦺 EPIs (${epi.length})</button>
+          <button class="tab-rel-btn" onclick="renderRelSubTable('Abastecimento', ${JSON.stringify(abastecimentos).replace(/"/g, '&quot;')}, this)">⛽ Abastecimentos (${abastecimentos.length})</button>
+        `;
+        renderRelSubTable('ASOS', asos);
+
+      } else if (type === 'parcela') {
+        avatar.innerHTML = '📍';
+        avatar.style.background = 'linear-gradient(135deg,var(--green),#047857)';
+        title.textContent = '📍 Parcela Agrícola: ' + key;
+        sub.textContent = 'Histórico completo de cultivo, manejo MIP, colheitas e pulverizações';
+
+        const plantios = (dbData['Plantio'] || []).filter(p => p['Parcela'] === key);
+        const colheitas = (dbData['Colheita'] || []).filter(c => c['Parcela'] === key);
+        const mips = (dbData['Mip'] || []).filter(m => m['Parcela'] === key);
+        const pulverizacoes = (dbData['Pulverizacao'] || []).filter(pv => pv['Parcela'] === key);
+
+        tabsBar.innerHTML = `
+          <button class="tab-rel-btn active" onclick="renderRelSubTable('Plantio', ${JSON.stringify(plantios).replace(/"/g, '&quot;')}, this)">🌱 Plantios (${plantios.length})</button>
+          <button class="tab-rel-btn" onclick="renderRelSubTable('Colheita', ${JSON.stringify(colheitas).replace(/"/g, '&quot;')}, this)">🍉 Colheitas (${colheitas.length})</button>
+          <button class="tab-rel-btn" onclick="renderRelSubTable('Mip', ${JSON.stringify(mips).replace(/"/g, '&quot;')}, this)">🐛 MIP (${mips.length})</button>
+          <button class="tab-rel-btn" onclick="renderRelSubTable('Pulverização', ${JSON.stringify(pulverizacoes).replace(/"/g, '&quot;')}, this)">💨 Pulverizações (${pulverizacoes.length})</button>
+        `;
+        renderRelSubTable('Plantio', plantios);
       }
+
+      modal.style.display = 'flex';
     }
 
-    function nextPage() {
-      const totalPages = Math.ceil(filteredRows.length / pageSize);
-      if (currentPage < totalPages) {
-        currentPage++;
-        renderTablePage();
+    function renderRelSubTable(title, list, btnEl) {
+      if (btnEl) {
+        document.querySelectorAll('.tab-rel-btn').forEach(b => b.classList.remove('active'));
+        btnEl.classList.add('active');
       }
+
+      const head = document.getElementById('modalRelTableHead');
+      const body = document.getElementById('modalRelTableBody');
+      head.innerHTML = '';
+      body.innerHTML = '';
+
+      if (!list || list.length === 0) {
+        body.innerHTML = `<tr><td style="text-align:center; padding:20px; color:var(--muted)">Nenhum registro associado nesta categoria.</td></tr>`;
+        return;
+      }
+
+      const headers = Object.keys(list[0]);
+      let trHead = '<tr>';
+      headers.forEach(h => { trHead += `<th>${h}</th>`; });
+      trHead += '</tr>';
+      head.innerHTML = trHead;
+
+      let tbodyHtml = '';
+      list.forEach(row => {
+        tbodyHtml += '<tr>';
+        headers.forEach(h => {
+          tbodyHtml += `<td>${row[h] !== undefined ? row[h] : ''}</td>`;
+        });
+        tbodyHtml += '</tr>';
+      });
+      body.innerHTML = tbodyHtml;
     }
 
-    function onSearchInput(val) {
-      currentPage = 1;
-      renderSheet(currentSheetName);
+    function closeModalRelational() {
+      document.getElementById('modalRelational').style.display = 'none';
     }
+
+    function prevPage() { if (currentPage > 1) { currentPage--; renderTablePage(); } }
+    function nextPage() { const totalPages = Math.ceil(filteredRows.length / pageSize); if (currentPage < totalPages) { currentPage++; renderTablePage(); } }
+    function onSearchInput(val) { currentPage = 1; renderSheet(currentSheetName); }
 
     function handleExcelUpload(input) {
       if (!input.files || !input.files[0]) return;
@@ -587,13 +789,13 @@
         const workbook = XLSX.read(data, { type: 'array' });
         const newDb = {};
         workbook.SheetNames.forEach(sheetName => {
-          const roa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
-          newDb[sheetName] = roa;
+          newDb[sheetName] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
         });
         dbData = newDb;
+        buildRelationalIndexes();
         updateCounts();
         renderSheet(currentSheetName);
-        alert('Planilha ' + file.name + ' importada com sucesso!');
+        alert('Planilha ' + file.name + ' importada com sucesso com todo o contexto relacional AppSheet!');
       };
       reader.readAsArrayBuffer(file);
     }
