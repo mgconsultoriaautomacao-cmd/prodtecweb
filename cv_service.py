@@ -73,12 +73,13 @@ def analyze_box_ocr(frame):
         print(f"🔍 [OCR] Texto lido com sucesso usando a engine {used_engine}!")
 
     # 3. Processa a saída para achar modelo/marca e peso
-    detected_weight = 0
-    # Procura por peso explícito (ex: "13KG", "15 KG", etc.)
-    for w in [18, 16, 15, 13, 10, 5]:
+    detected_weights = []
+    # Procura por pesos explícitos (ex: "13KG", "15 KG", etc.), adicionando calibre 12
+    for w in [18, 16, 15, 13, 12, 10, 5]:
         if f"{w}KG" in output_upper or f"{w} KG" in output_upper or f" {w} KG" in output_upper:
-            detected_weight = w
-            break
+            detected_weights.append(w)
+            
+    detected_weight = detected_weights[0] if detected_weights else 0
             
     detected_model = "NÃO IDENTIF."
     if "DELISSIUM" in output_upper:
@@ -101,7 +102,7 @@ def analyze_box_ocr(frame):
         if detected_weight == 0:
             detected_weight = 18
             
-    return detected_model, detected_weight
+    return detected_model, detected_weight, detected_weights
 
 def count_fingers(results, frame):
     if not results.multi_hand_landmarks:
@@ -182,9 +183,10 @@ def video_loop():
 
 last_box_model = "NÃO IDENTIF."
 last_detected_weight = 0
+last_detected_weights = []
 
 def ocr_worker():
-    global last_box_model, last_detected_weight
+    global last_box_model, last_detected_weight, last_detected_weights
     while True:
         frame_copy = None
         with lock:
@@ -193,11 +195,12 @@ def ocr_worker():
             
         if frame_copy is not None:
             try:
-                model, weight = analyze_box_ocr(frame_copy)
+                model, weight, weights = analyze_box_ocr(frame_copy)
                 if model != "NÃO IDENTIF.":
                     with lock:
                         last_box_model = model
                         last_detected_weight = weight
+                        last_detected_weights = weights
             except Exception as e:
                 print(f"⚠️ Erro na thread de OCR: {e}")
         # Roda OCR a cada 800ms em segundo plano para não pesar a CPU
@@ -205,12 +208,28 @@ def ocr_worker():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
+    data = request.get_json(silent=True) or {}
+    fruit = str(data.get("fruit", "")).upper()
+
     with lock:
         count = current_count
         box_model = last_box_model
         detected_weight = last_detected_weight
+        detected_weights = list(last_detected_weights)
         
-    print(f"✅ Análise instantânea solicitada. Retornando calibre: {count} | Caixa: {box_model} | Peso: {detected_weight}")
+    # Lógica de peso condicional para caixas Samba
+    if box_model == "Samba +Doce" or (box_model == "Samba Preta" and 16 in detected_weights and 15 in detected_weights):
+        # Se for melancia/watermelon, o peso correto é 16
+        if "MELANCIA" in fruit or "WATERMELON" in fruit:
+            detected_weight = 16
+        else:
+            # Caso contrário, assume melão com 15
+            detected_weight = 15
+    elif box_model == "Samba Preta" and not detected_weights:
+        # Se for Samba Preta padrão sem peso detectado, fallback é 13
+        detected_weight = 13
+        
+    print(f"✅ Análise instantânea solicitada. Fruta: {fruit} | Retornando calibre: {count} | Caixa: {box_model} | Peso: {detected_weight} (lidos: {detected_weights})")
     
     return jsonify({
         "ok": True,

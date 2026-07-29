@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Agrícola Bom Jesus — Plataforma Relacional AppSheet 360° & RH</title>
+  <title>PRODTECH — Módulo Agrícola Enterprise 360° & RH</title>
 
-  <!-- Lucide Icons & SheetJS -->
+  <!-- Lucide Icons, SheetJS & Supabase JS -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -315,6 +316,36 @@
       color: var(--muted);
     }
     .tab-rel-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+    /* FORM STYLES */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-group label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: var(--blue);
+      background: rgba(255,255,255,0.06);
+    }
   </style>
 </head>
 <body>
@@ -323,8 +354,8 @@
     <a href="/index.html" class="brand-logo">
       <div class="brand-icon"><i data-lucide="sprout"></i></div>
       <div>
-        <span>AGRÍCOLA BOM JESUS</span>
-        <div style="font-size: 10px; color: var(--muted); font-weight: 500;">Plataforma Relacional AppSheet 360° & RH</div>
+        <span>PRODTECH</span>
+        <div style="font-size: 10px; color: var(--muted); font-weight: 500;">Módulo Agrícola Enterprise 360° & RH</div>
       </div>
     </a>
 
@@ -488,9 +519,12 @@
           <i data-lucide="search" style="color:var(--muted);width:16px;height:16px"></i>
           <input type="text" id="searchInput" placeholder="Pesquisar funcionários, parcelas, produtos ou registros..." oninput="onSearchInput(this.value)"/>
         </div>
-        <div style="display:flex; align-items:center; gap:12px; font-size:12px; color:var(--muted);">
-          <span>Tabela Atual: <strong id="activeSheetTitle" style="color:var(--blue)">CadastroPessoal</strong></span>
-          <span style="background:rgba(255,255,255,0.06); padding:4px 10px; border-radius:6px;" id="recordTotalCounter">0 registros</span>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button class="btn btn-green" id="btnOpenNewForm" onclick="openNewRecordForm()"><i data-lucide="plus"></i> Novo Lançamento / Preenchimento</button>
+          <span style="font-size:12px; color:var(--muted); background:rgba(255,255,255,0.06); padding:8px 12px; border-radius:10px;">
+            Tabela Atual: <strong id="activeSheetTitle" style="color:var(--blue)">CadastroPessoal</strong>
+            (<span id="recordTotalCounter">0 registros</span>)
+          </span>
         </div>
       </div>
 
@@ -522,6 +556,33 @@
 
   </div>
 
+  <!-- MODAL FORM DE PREENCHIMENTO DINÂMICO APPSHEET -->
+  <div id="modalForm" class="modal-backdrop">
+    <div class="modal-content" style="max-width: 750px;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,var(--green),#059669); display:flex; align-items:center; justify-content:center; color:#fff;">
+            <i data-lucide="edit-3"></i>
+          </div>
+          <div>
+            <h3 id="modalFormTitle" style="margin:0; font-size:16px; font-weight:800; color:var(--text)">Novo Lançamento</h3>
+            <p id="modalFormSub" style="margin:2px 0 0; font-size:12px; color:var(--muted)">Preenchimento de dados da plataforma Bom Jesus</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeModalForm()" style="background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer;">✕</button>
+      </div>
+      <form id="bomJesusForm" onsubmit="handleFormSubmit(event)">
+        <div class="modal-body" id="modalFormBody">
+          <!-- O formulário será gerado dinamicamente via JS baseado na tabela selecionada -->
+        </div>
+        <div class="modal-header" style="border-top: 1px solid var(--border); border-bottom: none; display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px;">
+          <button type="button" class="btn" onclick="closeModalForm()">Cancelar</button>
+          <button type="submit" class="btn btn-green">Salvar Lançamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL DRAWER 360° RELACIONAL -->
   <div id="modalRelational" class="modal-backdrop">
     <div class="modal-content">
@@ -550,6 +611,10 @@
   </div>
 
   <script>
+    const SUPABASE_URL = 'https://yiigaohjvvieeooxsban.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpaWdhb2hqdnZpZWVvb3hzYmFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MTY1NzksImV4cCI6MjA5MDE5MjU3OX0.CjzcyltkTXHsi0zO7IL-sb5Psy7yMTAnJ7GRQ4maFK8';
+    const sb = (window.supabase && window.supabase.createClient) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
     let dbData = {};
     let currentSheetName = 'CadastroPessoal';
     let filteredRows = [];
@@ -562,21 +627,82 @@
     let indexProduto = {};
 
     async function loadDatabase() {
+      // 1. Carrega base estática inicial
       try {
         const resp = await fetch('/bomjesus_data.json');
         if (resp.ok) {
           dbData = await resp.json();
-          buildRelationalIndexes();
-          updateCounts();
-          renderSheet(currentSheetName);
         }
       } catch(e) {
         console.error('Erro ao carregar bomjesus_data.json:', e);
       }
+
+      // 2. Enriquece em tempo real com o banco Supabase PostgreSQL
+      if (sb) {
+        try {
+          const [resEmp, resPar, resProd, resPulv] = await Promise.all([
+            sb.from('agri_employees').select('*').limit(2000),
+            sb.from('agri_parcels').select('*').limit(1000),
+            sb.from('agri_products').select('*').limit(1000),
+            sb.from('agri_sprays').select('*').limit(1000)
+          ]);
+
+          if (resEmp.data && resEmp.data.length > 0) {
+            dbData['CadastroPessoal'] = resEmp.data.map(e => ({
+              'IdCadastro Funcionario': e.remote_id || e.id,
+              'Nome': e.name,
+              'CPF': e.cpf || '—',
+              'RG': e.rg || '—',
+              'Cargo': e.cargo || '—',
+              'Setor': e.setor || '—',
+              'Sexo': e.sexo || '—',
+              'Contato': e.contato || '—',
+              'Endereço': e.endereco || '—',
+              'Status ASOS': e.status_asos || 'EM DIA'
+            }));
+          }
+
+          if (resPar.data && resPar.data.length > 0) {
+            dbData['Parcela'] = resPar.data.map(p => ({
+              'IdParcela': p.remote_id || p.id,
+              'Parcela': p.code || p.parcela,
+              'Cultura': p.cultura || 'MELÃO',
+              'Variedade': p.variedade || '—',
+              'Área': p.area_ha || 0,
+              'Quantidade Sementes': p.quantidade_sementes || 0,
+              'Lote': p.lote_semente || '—',
+              'Fornecedor': p.fornecedor_semente || '—'
+            }));
+          }
+
+          if (resProd.data && resProd.data.length > 0) {
+            dbData['Produto'] = resProd.data.map(pr => ({
+              'IdProduto': pr.remote_id || pr.id,
+              'Produto': pr.name,
+              'Categoria': pr.categoria || 'DEFENSIVO',
+              'Ingrediente Ativo': pr.ingrediente_ativo || '—',
+              'Registro MAPA': pr.registro_mapa || '—',
+              'Unidade': pr.unidade || 'L',
+              'Dosagem': pr.dosagem_recomendada || 0,
+              'Carência': pr.carencia_dias || 0,
+              'Estoque': pr.estoque_atual || 0
+            }));
+          }
+        } catch(err) {
+          console.warn('Modo fallback ativo:', err.message);
+        }
+      }
+
+      buildRelationalIndexes();
+      updateCounts();
+      renderSheet(currentSheetName);
       if (window.lucide) lucide.createIcons();
     }
 
     function buildRelationalIndexes() {
+      indexFunc = {};
+      indexParcela = {};
+      indexProduto = {};
       // Index Funcionários
       (dbData['CadastroPessoal'] || []).forEach(f => {
         const id = f['IdCadastro Funcionario'];
@@ -685,6 +811,289 @@
       if (window.lucide) lucide.createIcons();
     }
 
+    /* FORMULÁRIO DINÂMICO APPSHEET */
+    function openNewRecordForm() {
+      const modal = document.getElementById('modalForm');
+      const title = document.getElementById('modalFormTitle');
+      const sub = document.getElementById('modalFormSub');
+      const body = document.getElementById('modalFormBody');
+
+      title.textContent = 'Novo Lançamento: ' + currentSheetName;
+      sub.textContent = 'Preencha a ficha relacional para a tabela ' + currentSheetName;
+      body.innerHTML = '';
+
+      let html = '<div class="form-grid">';
+
+      if (currentSheetName === 'CadastroPessoal') {
+        html += `
+          <div class="form-group">
+            <label>Nome Completo *</label>
+            <input type="text" name="Nome" required placeholder="Ex: João da Silva"/>
+          </div>
+          <div class="form-group">
+            <label>Data de Nascimento</label>
+            <input type="date" name="Data de Nascimento" onchange="calculateAge(this)"/>
+          </div>
+          <div class="form-group">
+            <label>Idade (Calculada)</label>
+            <input type="number" name="Idade" id="form-Idade" readonly placeholder="Idade"/>
+          </div>
+          <div class="form-group">
+            <label>Sexo</label>
+            <select name="Sexo">
+              <option value="MASCULINO">Masculino</option>
+              <option value="FEMININO">Feminino</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>CPF</label>
+            <input type="text" name="CPF" placeholder="000.000.000-00"/>
+          </div>
+          <div class="form-group">
+            <label>RG</label>
+            <input type="text" name="RG" placeholder="0000000-X"/>
+          </div>
+          <div class="form-group">
+            <label>Contato / Celular</label>
+            <input type="text" name="Contato" placeholder="(00) 00000-0000"/>
+          </div>
+          <div class="form-group">
+            <label>Endereço</label>
+            <input type="text" name="Endereço" placeholder="Rua, número, cidade"/>
+          </div>
+          <div class="form-group">
+            <label>Setor</label>
+            <select name="Setor">
+              ${(dbData['Setores'] || []).map(s => `<option value="${s['Setor']}">${s['Setor']}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Função</label>
+            <input type="text" name="Função" placeholder="Cargo do funcionário"/>
+          </div>
+          <div class="form-group">
+            <label>Admissão</label>
+            <input type="date" name="Admissão" value="${new Date().toISOString().split('T')[0]}"/>
+          </div>
+          <div class="form-group">
+            <label>Alojado?</label>
+            <select name="Alojado?">
+              <option value="NÃO">Não</option>
+              <option value="SIM">Sim</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Situação</label>
+            <select name="Situação">
+              <option value="ATIVO">Ativo</option>
+              <option value="AFASTADO">Afastado</option>
+              <option value="DEMITIDO">Demitido</option>
+            </select>
+          </div>
+        `;
+      } else if (currentSheetName === 'ASOS') {
+        html += `
+          <div class="form-group">
+            <label>Funcionário (CadastroPessoal) *</label>
+            <select name="CadastroPessoal" required>
+              <option value="">-- Selecione o Colaborador --</option>
+              ${(dbData['CadastroPessoal'] || []).map(f => `<option value="${f['Nome']}">${f['Nome']}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data de Realização *</label>
+            <input type="date" name="Data" required value="${new Date().toISOString().split('T')[0]}"/>
+          </div>
+          <div class="form-group">
+            <label>Tipo/Nome do Exame</label>
+            <select name="Nome do Exame">
+              <option value="ADMISSIONAL">Admissional</option>
+              <option value="PERIÓDICO">Periódico</option>
+              <option value="RETORNO AO TRABALHO">Retorno ao Trabalho</option>
+              <option value="MUDANÇA DE FUNÇÃO">Mudança de Função</option>
+              <option value="DEMISSIONAL">Demissional</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Validade / Próximo Exame (Anual)</label>
+            <input type="date" name="Próximo Exame"/>
+          </div>
+        `;
+      } else if (currentSheetName === 'Plantio') {
+        html += `
+          <div class="form-group">
+            <label>Parcela Agrícola *</label>
+            <select name="Parcela" required>
+              <option value="">-- Selecione a Parcela --</option>
+              ${(dbData['Parcela'] || []).map(p => `<option value="${p['Parcela'] || p['IdParcela']}">${p['Parcela'] || p['IdParcela']}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Produto / Muda *</label>
+            <select name="Produto" required>
+              <option value="">-- Selecione o Produto --</option>
+              ${(dbData['Produto'] || []).map(pr => `<option value="${pr['Produto'] || pr['IdProduto']}">${pr['Produto'] || pr['IdProduto']}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Variedade</label>
+            <input type="text" name="Variedade" placeholder="Ex: Melão Amarelo"/>
+          </div>
+          <div class="form-group">
+            <label>Data de Plantio *</label>
+            <input type="date" name="Data" required value="${new Date().toISOString().split('T')[0]}"/>
+          </div>
+          <div class="form-group">
+            <label>Quantidade de Mudas</label>
+            <input type="number" name="QtdMudas" placeholder="Ex: 15000"/>
+          </div>
+          <div class="form-group">
+            <label>Área (Hectares)</label>
+            <input type="number" step="0.01" name="Area" placeholder="Ex: 3.5"/>
+          </div>
+        `;
+      } else if (currentSheetName === 'Colheita') {
+        html += `
+          <div class="form-group">
+            <label>Parcela colhida *</label>
+            <select name="Parcela" required>
+              <option value="">-- Selecione a Parcela --</option>
+              ${(dbData['Parcela'] || []).map(p => `<option value="${p['Parcela'] || p['IdParcela']}">${p['Parcela'] || p['IdParcela']}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data da Colheita *</label>
+            <input type="date" name="Data" required value="${new Date().toISOString().split('T')[0]}"/>
+          </div>
+          <div class="form-group">
+            <label>Variedade *</label>
+            <input type="text" name="Variedade" required placeholder="Ex: Melancia"/>
+          </div>
+          <div class="form-group">
+            <label>Quantidade Carroções *</label>
+            <input type="number" name="Qtde Carrocao" required placeholder="Ex: 3"/>
+          </div>
+          <div class="form-group">
+            <label>Pincelador 1</label>
+            <select name="Pincelador1">
+              <option value="">-- Selecione --</option>
+              ${(dbData['CadastroPessoal'] || []).map(f => `<option value="${f['Nome']}">${f['Nome']}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Rastreabilidade</label>
+            <input type="text" name="Rastreabilidade" placeholder="AUTO"/>
+          </div>
+        `;
+      } else if (currentSheetName === 'Abastecimento') {
+        html += `
+          <div class="form-group">
+            <label>Data *</label>
+            <input type="date" name="Data" required value="${new Date().toISOString().split('T')[0]}"/>
+          </div>
+          <div class="form-group">
+            <label>Veículo / Máquina (Prefixo) *</label>
+            <select name="Prefixo" required>
+              <option value="">-- Selecione o Veículo --</option>
+              ${(dbData['Prefixo'] || []).map(p => `<option value="${p['Prefixo'] || p['IdPrefixo']}">${p['Prefixo'] || p['IdPrefixo']}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Combustível / Produto *</label>
+            <select name="Produto" required>
+              <option value="DIESEL S10">Diesel S10</option>
+              <option value="DIESEL COMUM">Diesel Comum</option>
+              <option value="GASOLINA">Gasolina</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Quantidade (Litros) *</label>
+            <input type="number" step="0.1" name="Quantidade" required placeholder="Ex: 50"/>
+          </div>
+          <div class="form-group">
+            <label>Contador (Horímetro/Hodômetro) *</label>
+            <input type="number" name="Contador" required placeholder="Ex: 10245"/>
+          </div>
+          <div class="form-group">
+            <label>Condutor (Motorista) *</label>
+            <select name="Condutor" required>
+              <option value="">-- Selecione o Condutor --</option>
+              ${(dbData['CadastroPessoal'] || []).map(f => `<option value="${f['Nome']}">${f['Nome']}</option>`).join('')}
+            </select>
+          </div>
+        `;
+      } else {
+        // Formulário Genérico com colunas básicas da planilha selecionada
+        const schema = Object.keys((dbData[currentSheetName] || [{}])[0]);
+        schema.forEach(key => {
+          if(key.startsWith('Id')) {
+            html += `<div class="form-group"><label>${key} (Auto-gerado)</label><input type="text" name="${key}" readonly placeholder="ID Gerado"/></div>`;
+          } else {
+            html += `<div class="form-group"><label>${key}</label><input type="text" name="${key}" placeholder="Insira o valor"/></div>`;
+          }
+        });
+      }
+
+      html += '</div>';
+      body.innerHTML = html;
+      modal.style.display = 'flex';
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function calculateAge(input) {
+      if (!input.value) return;
+      const birth = new Date(input.value);
+      const today = new Date();
+      let age = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+        age--;
+      }
+      document.getElementById('form-Idade').value = age;
+    }
+
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const record = {};
+      
+      formData.forEach((val, key) => {
+        record[key] = val;
+      });
+
+      // Gerar chaves primárias
+      if (currentSheetName === 'CadastroPessoal') {
+        record['IdCadastro Funcionario'] = 'OFFLINE_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        if(!record['Idade'] && record['Data de Nascimento']) {
+          const birth = new Date(record['Data de Nascimento']);
+          record['Idade'] = String(new Date().getFullYear() - birth.getFullYear());
+        }
+      } else if (currentSheetName === 'ASOS') {
+        record['IdASOS'] = 'OFFLINE_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+      } else if (currentSheetName === 'Plantio') {
+        record['IdPlantio'] = 'OFFLINE_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+      } else if (currentSheetName === 'Colheita') {
+        record['IdColheita'] = 'OFFLINE_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+      } else if (currentSheetName === 'Abastecimento') {
+        record['IdAbastecimento'] = 'OFFLINE_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+      }
+
+      // Adicionar à nossa base local na memória do navegador
+      if (!dbData[currentSheetName]) dbData[currentSheetName] = [];
+      dbData[currentSheetName].unshift(record);
+
+      // Reindexar e salvar
+      buildRelationalIndexes();
+      updateCounts();
+      renderSheet(currentSheetName);
+      closeModalForm();
+      alert('Lançamento salvo com sucesso no navegador! Para salvar permanentemente nas planilhas, use o botão "Exportar Dados".');
+    }
+
+    function closeModalForm() {
+      document.getElementById('modalForm').style.display = 'none';
+    }
+
     /* 360° RELATIONAL DRAWER MODAL */
     function openRelational360(type, key) {
       if (!key) return;
@@ -707,7 +1116,7 @@
         // Find linked records across tables
         const asos = (dbData['ASOS'] || []).filter(a => a['CadastroPessoal'] === key || a['CadastroPessoal'] === name);
         const epi = (dbData['Ficha de EPI'] || []).filter(e => e['CadastroPessoal'] === key || e['CadastroPessoal'] === name);
-        const abastecimentos = (dbData['Abastecimento'] || []).filter(ab => ab['Condutores'] === name || ab['Condutor'] === name);
+        const abastecimentos = (dbData['Abastecimento'] || []).filter(ab => ab['Condutores'] === name || ab['Condutor'] === name || ab['Condutores'] === key);
 
         tabsBar.innerHTML = `
           <button class="tab-rel-btn active" onclick="renderRelSubTable('ASOS', ${JSON.stringify(asos).replace(/"/g, '&quot;')}, this)"><i data-lucide="heart-pulse" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:4px"></i> ASOS (${asos.length})</button>

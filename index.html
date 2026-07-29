@@ -458,6 +458,12 @@
   </div>
   <div class="brand-sub" style="margin-top: 4px;">v3.0</div>
   <div id="tenantBadge" class="tenant-badge">...</div>
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px; margin-bottom:12px">
+    <button onclick="toggleTheme()" class="sec" style="padding:4px 10px; font-size:11px; display:inline-flex; align-items:center; gap:6px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text); cursor:pointer">
+      <span id="themeBtnIcon"></span>
+      <span id="themeBtnText">Tema</span>
+    </button>
+  </div>
 
 
   <div id="multiTenantSelector" style="display:none; margin-bottom: 16px;">
@@ -498,7 +504,7 @@
   <div class="nav" onclick="showTab('settings',this)"><span class="nav-icon"><i data-lucide="settings"></i></span> Configurações</div>
   <div class="nav" style="color:var(--green);font-weight:800" onclick="window.open('/campo/','_blank')"><span class="nav-icon"><i data-lucide="smartphone"></i></span> Aplicativo de Campo</div>
   <div class="nav" style="color:var(--amber);font-weight:800;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);margin-top:6px" onclick="window.open('/bomjesus.html','_blank')">
-    <span class="nav-icon"><i data-lucide="external-link"></i></span> Módulo Agrícola Bom Jesus (RH) ↗
+    <span class="nav-icon"><i data-lucide="external-link"></i></span> Módulo Agrícola 360° & Gestão ERP ↗
   </div>
 
   <div class="sf">
@@ -679,6 +685,35 @@
     </div>
   </div>
 
+  <!-- USER EDIT MODAL -->
+  <div id="userModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:24px; border-radius:12px; width:450px; max-width:95%; border:1px solid var(--border);">
+      <h3 style="margin-top:0; color:#fff; margin-bottom:20px; display:flex; align-items:center; gap:8px"><i data-lucide="user-cog" style="width:20px; height:20px; color:var(--blue)"></i> Editar Usuário</h3>
+      <form id="formEditUser" onsubmit="event.preventDefault(); saveUserEdit(event);">
+        <input type="hidden" id="editUsrId">
+        <div style="margin-bottom:12px"><label class="flabel">E-mail / Username</label><input id="editUsrEmail"/></div>
+        <div style="margin-bottom:12px"><label class="flabel">Nova Senha (deixe em branco para manter a atual)</label><input id="editUsrPass" type="password" autocomplete="new-password" placeholder="••••••••"/></div>
+        <div style="margin-bottom:12px"><label class="flabel">Empresa (Tenant)</label>
+          <select id="editUsrTenant"></select>
+        </div>
+        <div style="margin-bottom:12px"><label class="flabel">Papel (Role)</label>
+          <select id="editUsrRole">
+            <option value="ADMIN">Administrador</option>
+            <option value="MANAGER">Gerente</option>
+            <option value="PACKING">Operador Packing</option>
+            <option value="FIELD">Operador Campo</option>
+            <option value="COLHEDOR">Colhedor</option>
+          </select>
+        </div>
+        <div style="margin-bottom:20px"><label class="flabel">WhatsApp</label><input id="editUsrWhatsapp" placeholder="55..."/></div>
+        <div style="display:flex; gap:10px; justify-content:flex-end">
+          <button type="button" class="sec" onclick="document.getElementById('userModal').style.display='none'">Cancelar</button>
+          <button id="btnSaveUsrEdit" type="submit" style="background:var(--blue); font-weight:800">Salvar Alterações</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
 <!-- MAIN -->
 <div id="appMain" class="main" style="display:none">
 
@@ -717,8 +752,8 @@
       <div style="display:flex; align-items:center; gap:14px">
         <div style="width:42px; height:42px; border-radius:12px; background:linear-gradient(135deg,#10b981,#059669); display:flex; align-items:center; justify-content:center; color:#fff; font-size:20px; box-shadow:0 4px 14px rgba(16,185,129,0.3)">🌿</div>
         <div>
-          <h4 style="margin:0; font-size:14px; font-weight:800; color:var(--text)">Módulo Integrado Agrícola Bom Jesus (AppSheet & RH)</h4>
-          <p style="margin:2px 0 0; font-size:12px; color:var(--muted)">Acesse a base completa de 62 tabelas: RH (1.857 funcionários), Estoque (12k registros), Abastecimento, Parcelas e Pulverizações em uma página exclusiva.</p>
+          <h4 style="margin:0; font-size:14px; font-weight:800; color:var(--text)">Módulo Agrícola Enterprise 360° & RH</h4>
+          <p style="margin:2px 0 0; font-size:12px; color:var(--muted)">Acesse a base relacional completa: RH, Estoque, Abastecimento, Parcelas, Pulverizações e Auditorias em uma página exclusiva.</p>
         </div>
       </div>
       <button class="btn btn-green" onclick="window.open('/bomjesus.html', '_blank')" style="padding:10px 20px; font-weight:800; display:inline-flex; align-items:center; gap:8px; cursor:pointer; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:10px;">
@@ -1713,7 +1748,7 @@
           <div><label class="flabel">Almoço Fim</label><input type="time" id="cfgLunchEnd" value="13:00"/></div>
         </div>
       </div>
-      <div class="card">
+      <div class="card" id="cardEvoApi" style="display:none">
         <div class="title"><i data-lucide="message-square" class="btn-i"></i> Evolution API (WhatsApp)</div>
         <form onsubmit="event.preventDefault();">
           <div style="margin-bottom:10px"><label class="flabel">URL da API</label><input id="cfgEvoUrl" placeholder="https://sua-evolution-api.com"/></div>
@@ -1735,39 +1770,69 @@
           </div>
         </div>
       </div>
-      <div class="card">
-        <div class="title"><i data-lucide="users" class="btn-i"></i> Usuários com acesso ao painel</div>
-        <table id="usersTable"><thead><tr><th>Usuário</th><th>Papel</th><th>WhatsApp</th></tr></thead><tbody></tbody></table>
-      </div>
-      <div class="card">
-        <div class="title"><i data-lucide="user-plus" class="btn-i"></i> Cadastrar Novo Usuário</div>
-        <div style="font-size:12px; color:var(--muted); margin-bottom:15px">Cadastre novas credenciais de login para a sua empresa.</div>
-        <form id="formNewUser" onsubmit="event.preventDefault(); registerNewUser();">
-          <div style="margin-bottom:10px">
-            <label class="flabel">Nome de Usuário (Username)</label>
-            <input id="newUsrName" autocomplete="username" placeholder="Ex: joao" required style="width:100%; box-sizing:border-box;" oninput="const val = this.value.trim().toLowerCase(); document.getElementById('newUsrEmailPreview').textContent = val ? (val.includes('@') ? val : val + '@coopyfrutas.com') : '...';"/>
-            <small style="color:var(--muted2); font-size:10px;">Login gerado: <span id="newUsrEmailPreview" style="color:var(--blue); font-weight:bold;">...</span></small>
+      <div class="card" style="grid-column: span 2">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px">
+          <div class="title" style="margin:0"><i data-lucide="users" class="btn-i"></i> Gestão Unificada de Usuários</div>
+          <div style="font-size:12px; color:var(--muted)">Cadastre, vincule a empresas, edite dados e gerencie credenciais.</div>
+        </div>
+        <div style="display:grid; grid-template-columns: 360px 1fr; gap:20px">
+          <!-- Form Cadastrar Usuário -->
+          <div style="background:rgba(255,255,255,0.02); padding:16px; border-radius:12px; border:1px solid var(--border)">
+            <div style="font-weight:700; font-size:14px; margin-bottom:12px; display:flex; align-items:center; gap:6px; color:var(--green)">
+              <i data-lucide="user-plus" style="width:16px;height:16px"></i> Cadastrar & Vincular Usuário
+            </div>
+            <form id="formNewUser" onsubmit="event.preventDefault(); registerNewUser();">
+              <div style="margin-bottom:10px">
+                <label class="flabel">Usuário / E-mail</label>
+                <input id="newUsrName" autocomplete="username" placeholder="Ex: joao" required style="width:100%; box-sizing:border-box;" oninput="const val = this.value.trim().toLowerCase(); document.getElementById('newUsrEmailPreview').textContent = val ? (val.includes('@') ? val : val + '@coopyfrutas.com') : '...';"/>
+                <small style="color:var(--muted2); font-size:10px;">Login: <span id="newUsrEmailPreview" style="color:var(--blue); font-weight:bold;">...</span></small>
+              </div>
+              <div style="margin-bottom:10px">
+                <label class="flabel">Senha</label>
+                <input id="newUsrPass" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres" required style="width:100%; box-sizing:border-box;"/>
+              </div>
+              <div style="margin-bottom:10px">
+                <label class="flabel">Empresa (Tenant)</label>
+                <select id="newUsrTenant" style="width:100%; box-sizing:border-box; padding:8px; border-radius:8px; background:var(--bg); border:1px solid var(--border); color:var(--text); font-family:inherit;"></select>
+              </div>
+              <div style="margin-bottom:10px">
+                <label class="flabel">Papel (Role)</label>
+                <select id="newUsrRole" style="width:100%; box-sizing:border-box; padding:8px; border-radius:8px; background:var(--bg); border:1px solid var(--border); color:var(--text); font-family:inherit;">
+                  <option value="ADMIN">Administrador</option>
+                  <option value="MANAGER">Gerente</option>
+                  <option value="PACKING">Operador Packing</option>
+                  <option value="FIELD">Operador Campo</option>
+                  <option value="COLHEDOR">Colhedor</option>
+                </select>
+              </div>
+              <div style="margin-bottom:15px">
+                <label class="flabel">WhatsApp (Opcional)</label>
+                <input id="newUsrWhatsapp" placeholder="Ex: 5511999999999" style="width:100%; box-sizing:border-box;"/>
+              </div>
+              <button id="btnRegisterNewUser" type="submit" style="width:100%; display:flex; align-items:center; justify-content:center; gap:6px; background:linear-gradient(135deg,#10b981,#059669); border:none; color:#fff; font-weight:bold; height:38px; border-radius:10px; cursor:pointer;"><i data-lucide="user-plus" style="width:16px;height:16px"></i> Cadastrar & Vincular</button>
+            </form>
           </div>
-          <div style="margin-bottom:10px">
-            <label class="flabel">Senha</label>
-            <input id="newUsrPass" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres" required style="width:100%; box-sizing:border-box;"/>
+
+          <!-- Tabela de Usuários -->
+          <div>
+            <div style="font-weight:700; font-size:14px; margin-bottom:12px; display:flex; align-items:center; gap:6px">
+              <i data-lucide="users" style="width:16px;height:16px"></i> Usuários Cadastrados
+            </div>
+            <div style="max-height:420px; overflow-y:auto">
+              <table id="usersTable" style="width:100%">
+                <thead>
+                  <tr>
+                    <th>Usuário</th>
+                    <th>Empresa</th>
+                    <th>Papel</th>
+                    <th style="width:140px; text-align:center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
           </div>
-          <div style="margin-bottom:10px">
-            <label class="flabel">Papel (Role)</label>
-            <select id="newUsrRole" style="width:100%; box-sizing:border-box; padding:8px; border-radius:8px; background:var(--bg); border:1px solid var(--border); color:var(--text); font-family:inherit;">
-              <option value="ADMIN">Administrador</option>
-              <option value="MANAGER">Gerente</option>
-              <option value="PACKING">Operador Packing</option>
-              <option value="FIELD">Operador Campo</option>
-              <option value="COLHEDOR">Colhedor</option>
-            </select>
-          </div>
-          <div style="margin-bottom:15px">
-            <label class="flabel">WhatsApp (Opcional)</label>
-            <input id="newUsrWhatsapp" placeholder="Ex: 5511999999999" style="width:100%; box-sizing:border-box;"/>
-          </div>
-          <button id="btnRegisterNewUser" type="submit" style="width:100%; display:flex; align-items:center; justify-content:center; gap:6px; background:linear-gradient(135deg,#10b981,#059669); border:none; color:#fff; font-weight:bold; height:38px; border-radius:10px; cursor:pointer;"><i data-lucide="user-plus" style="width:16px;height:16px"></i> Cadastrar Usuário</button>
-        </form>
+        </div>
       </div>
     </div>
     <button id="cfgSaveBtn" onclick="saveSettings()" style="margin-top:20px; display:flex; align-items:center; justify-content:center; gap:6px"><i data-lucide="save" style="width:16px;height:16px"></i> Salvar Configurações</button>
@@ -2436,9 +2501,30 @@ async function initApp(){
   const savedTheme = localStorage.getItem('prodtech_theme') || 'dark';
   updateThemeUI(savedTheme);
   sb = window.supabase.createClient(SUPA_URL,SUPA_KEY);
-  const {data:{session}} = await sb.auth.getSession();
-  if(session) await afterLogin(session.user);
-  else $('authScreen').style.display='flex';
+
+  // Monitorar erros de sessão (token expirado = 400 no refresh)
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'TOKEN_REFRESHED') return; // normal
+    if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
+      // Sessão expirada ou inválida: limpar e forçar login
+      localStorage.removeItem('sb-' + SUPA_URL.split('//')[1].split('.')[0] + '-auth-token');
+      if ($('appMain') && $('appMain').style.display !== 'none') {
+        $('appMain').style.display = 'none';
+        $('authScreen').style.display = 'flex';
+        const err = $('authErr');
+        if (err) { err.textContent = 'Sessão expirada. Por favor, faça login novamente.'; err.style.display = 'block'; }
+      }
+    }
+  });
+
+  const {data:{session}, error: sessionError} = await sb.auth.getSession();
+  if (sessionError || !session) {
+    // Sessão inválida ou expirada — limpar dados antigos
+    try { await sb.auth.signOut(); } catch(e) {}
+    $('authScreen').style.display='flex';
+  } else {
+    await afterLogin(session.user);
+  }
 }
 
 async function doLogin(){
@@ -2496,6 +2582,10 @@ async function afterLogin(user){
       }
     } catch(e){}
     $('adminGroup').style.display = 'block';
+    if ($('cardEvoApi')) $('cardEvoApi').style.display = 'block';
+  } else {
+    $('adminGroup').style.display = 'none';
+    if ($('cardEvoApi')) $('cardEvoApi').style.display = 'none';
   }
   $('authScreen').style.display='none';
   $('appMain').style.display='block';
@@ -2781,7 +2871,7 @@ async function loadEmps(){
           <td><code style="background:rgba(255,255,255,.05);padding:2px 6px;border-radius:5px;font-size:12px">${e.barcode||'—'}</code></td>
           <td>
             <div style="display:flex;align-items:center;gap:10px">
-              <div class="avatar-ring" style="position:relative">${e.photo_path ? `<img src="${e.photo_path}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : ''}${e.name[0]}</div>
+              <div class="avatar-ring" style="position:relative">${safePhotoUrl(e.photo_path) ? `<img src="${safePhotoUrl(e.photo_path)}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : ''}${e.name[0]}</div>
               <div style="font-weight:700">${e.name}</div>
             </div>
           </td>
@@ -2858,7 +2948,7 @@ async function refreshRanking(){
       const emp = _employees.find(e => e.name === name);
       $('rankTopName').textContent = name.split(' ')[0];
       $('rankTopStats').textContent = boxes + ' caixas';
-      $('rankTopAvatar').innerHTML = emp?.photo_path ? `<img src="${emp.photo_path}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : '';
+      $('rankTopAvatar').innerHTML = safePhotoUrl(emp?.photo_path) ? `<img src="${safePhotoUrl(emp.photo_path)}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : '';
       $('rankTopAvatar').innerHTML += name[0];
 
       const topCard = $('rankTopName').closest('.kcard');
@@ -2951,7 +3041,7 @@ async function refreshRanking(){
       const topWorker = sorted[0];
       $('rankTopName').textContent = topWorker.name.split(' ')[0];
       $('rankTopStats').textContent = `${topWorker.opsCount} apontamentos`;
-      $('rankTopAvatar').innerHTML = topWorker.photo_path ? `<img src="${topWorker.photo_path}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : '';
+      $('rankTopAvatar').innerHTML = safePhotoUrl(topWorker.photo_path) ? `<img src="${safePhotoUrl(topWorker.photo_path)}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : '';
       $('rankTopAvatar').innerHTML += topWorker.name[0];
 
       const topCard = $('rankTopName').closest('.kcard');
@@ -3146,9 +3236,16 @@ async function refreshFin(){
   const {data:qAudits}=await sb.from('quality_audits').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
   const {data:stops}=await sb.from('global_stops').select('*').eq('tenant_id',tenantId).gte('start_ts',s).lte('start_ts',e+'T23:59:59Z');
 
-  const bonus   = Number(tenantConfig.attendance_bonus   || 0);
-  const penalty = Number(tenantConfig.attendance_penalty || 0);
+  const bonusMonthly = Number(tenantConfig.attendance_bonus || 0);
+  const penalty      = Number(tenantConfig.attendance_penalty || 0);
   const prodPenaltyPct = Number(tenantConfig.prod_penalty_percent || 0);
+
+  // Pro-rata de assiduidade por dia (Base: 24 dias úteis/mês)
+  const dStart = new Date(s);
+  const dEnd   = new Date(e);
+  const daysInPeriod = Math.max(1, Math.round((dEnd - dStart) / (1000 * 60 * 60 * 24)) + 1);
+  const dailyBonusRate = bonusMonthly / 24;
+  const periodMaxBonus = Math.min(bonusMonthly, dailyBonusRate * daysInPeriod);
 
   // Group quality audits by canonical key
   const auditsByEmp = {};
@@ -3169,9 +3266,9 @@ async function refreshFin(){
     const d = eb[key];
     const absCount = (abs||[]).filter(a => a.employee_barcode === d.barcode && d.barcode).length;
     d._absCount   = absCount;
-    d._attendanceBonus = bonus;
-    d._attendanceDeduction = absCount * penalty;
-    d._finalBonus = Math.max(0, bonus - d._attendanceDeduction);
+    d._attendanceBonus = periodMaxBonus;
+    d._attendanceDeduction = absCount * (penalty / 24);
+    d._finalBonus = Math.max(0, periodMaxBonus - d._attendanceDeduction);
 
     // Inicializa métricas de packinghouse
     d._qualityPenalties = 0;
@@ -3385,7 +3482,7 @@ async function refreshDash(){
     $('topPerformerCard').dataset.barcode = emp?.barcode || '';
     $('topPerformerName').textContent = name;
     $('topPerformerStats').textContent = boxes + ' caixas';
-    $('topPerformerAvatar').innerHTML = emp?.photo_path ? `<img src="${emp.photo_path}" onerror="this.outerHTML='${name[0]}'">` : name[0];
+    $('topPerformerAvatar').innerHTML = safePhotoUrl(emp?.photo_path) ? `<img src="${safePhotoUrl(emp.photo_path)}" onerror="this.outerHTML='${name[0]}'">` : name[0];
   } else {
     $('topPerformerCard').style.display = 'none';
   }
@@ -3546,7 +3643,7 @@ function buildRankingGrid(scans, containerId){
       e.name.trim().toLowerCase() === name.trim().toLowerCase() || 
       e.barcode === d.scans[0]?.employee_barcode
     );
-    const photo = emp?.photo_path;
+    const photo = safePhotoUrl(emp?.photo_path);
     const barcode = emp?.barcode || d.scans[0]?.employee_barcode || name;
     return `
     <div class="rcard pbi-card clickable-emp" onclick="openEmpDrawer('${barcode}')" style="display:flex; align-items:center; gap:10px; margin-bottom:6px">
@@ -3568,7 +3665,7 @@ function buildFieldRankingGrid(sorted, containerId) {
   if (!el) return;
   
   el.innerHTML = sorted.map((emp, i) => {
-    const photo = emp.photo_path;
+    const photo = safePhotoUrl(emp.photo_path);
     const barcode = emp.barcode || emp.name;
     
     // Create a mini badge list of their most frequent operations in the period
@@ -4102,8 +4199,8 @@ async function openEmpDrawer(idOrName) {
     document.getElementById('drRole').textContent = emp.role;
 
     const avatarEl = document.getElementById('drAvatar');
-    avatarEl.innerHTML = emp.photo_path
-        ? `<img src="${emp.photo_path}" style="width:100%; height:100%; object-fit:cover; border-radius:50%" onerror="this.parentElement.innerHTML='${emp.name[0]}'">`
+    avatarEl.innerHTML = safePhotoUrl(emp.photo_path)
+        ? `<img src="${safePhotoUrl(emp.photo_path)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%" onerror="this.parentElement.innerHTML='${emp.name[0]}'">` 
         : emp.name[0];
 
     const totalBoxes = stats?.boxes || allScans.length;
@@ -4124,6 +4221,16 @@ async function openEmpDrawer(idOrName) {
     const totalFieldOps = fieldServicesList.length + carraoServicesList.length;
     const totalFieldEarned = fieldServicesList.reduce((sum, srv) => sum + Number(srv.value_received || 0), 0) + carraoServicesList.reduce((sum, srv) => sum + Number(srv.value_received || 0), 0);
 
+    const dStart = new Date(start);
+    const dEnd   = new Date(end);
+    const numDaysInPeriod = Math.max(1, Math.round((dEnd - dStart) / (1000 * 60 * 60 * 24)) + 1);
+    const bonusBase = parseFloat($('cfgAttendanceBonus')?.value || tenantConfig.attendance_bonus || 0);
+    const dailyBonusRate = bonusBase / 24;
+    const periodBonusMax = Math.min(bonusBase, dailyBonusRate * numDaysInPeriod);
+    const bonusEarned = (absencesCount === 0) ? periodBonusMax : Math.max(0, periodBonusMax - (absencesCount * dailyBonusRate));
+    const roleConfig = getRoleConfig(emp.role);
+    const packingEarned = totalBoxes * (roleConfig.value || 0);
+
     window._activeDrawerStats = {
       name: emp.name,
       role: emp.role,
@@ -4133,7 +4240,12 @@ async function openEmpDrawer(idOrName) {
       absences: absencesCount,
       fieldOps: totalFieldOps,
       fieldEarned: totalFieldEarned,
-      idleTime: stats?.idleTime || 0
+      packingEarned: packingEarned,
+      bonusEarned: bonusEarned,
+      idleTime: stats?.idleTime || 0,
+      periodDays: numDaysInPeriod,
+      startDate: start.split('T')[0],
+      endDate: end.split('T')[0]
     };
 
     if (totalBoxes > 0 || stats || totalFieldOps > 0) {
@@ -5093,7 +5205,7 @@ async function refreshQuality() {
       <td>${new Date(q.ts).toLocaleString('pt-BR')}</td>
       <td>
         <div class="clickable-emp" style="display:flex;align-items:center;gap:10px" onclick="openEmpDrawer('${empName}')">
-          <div class="avatar-ring">${emp?.photo_path ? `<img src="${emp.photo_path}" onerror="this.remove()">` : empName[0]}</div>
+          <div class="avatar-ring">${safePhotoUrl(emp?.photo_path) ? `<img src="${safePhotoUrl(emp.photo_path)}" onerror="this.remove()">` : empName[0]}</div>
           <b>${empName}</b>
         </div>
       </td>
@@ -5126,7 +5238,7 @@ async function refreshQuality() {
   const sortedP = Object.entries(penalties).sort((a,b) => b[1] - a[1]).slice(0, 8);
   $('qaPenaltyList').innerHTML = sortedP.map(([name, val], idx) => {
     const emp = _employees.find(e => e.name === name);
-    const photo = emp?.photo_path;
+    const photo = safePhotoUrl(emp?.photo_path);
     return `
     <div class="pbi-card clickable-emp" onclick="openEmpDrawer('${name}')" style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(239,68,68,0.03);border-radius:12px;margin-bottom:8px;border:1px solid rgba(239,68,68,0.08)">
       <div style="display:flex; align-items:center; gap:10px">
@@ -5385,9 +5497,7 @@ async function linkUser() {
 }
 
 async function unlinkUser(id) {
-  if(!confirm('Remover acesso deste usuário?')) return;
-  await sb.from('tenant_users').delete().eq('id', id);
-  loadAdminData();
+  await deleteUser(id);
 }
 
 async function setTrackCode(tbl, id, cur) {
@@ -5426,14 +5536,43 @@ async function loadSettings(){
   if($('cfgLunchStart')) $('cfgLunchStart').value=data.lunch_start_time||'11:30';
   if($('cfgLunchEnd')) $('cfgLunchEnd').value=data.lunch_end_time||'13:00';
 
-  const {data:users}=await sb.from('tenant_users').select('email,role,whatsapp').eq('tenant_id',tenantId);
-  $('usersTable').querySelector('tbody').innerHTML=(users||[]).map(u=>`
+  // Carregar lista de empresas
+  const {data: allTenants} = await sb.from('tenants').select('*').order('name');
+  window._allTenants = allTenants || [];
+  if (allTenants && allTenants.length) {
+    const opts = allTenants.map(t => `<option value="${t.id}" ${t.id === tenantId ? 'selected' : ''}>${t.name}</option>`).join('');
+    if ($('newUsrTenant')) $('newUsrTenant').innerHTML = opts;
+    if ($('editUsrTenant')) $('editUsrTenant').innerHTML = opts;
+  }
+
+  // Carregar lista de usuários com dados da empresa vinculada
+  const {data: users, error: uErr} = await sb.from('tenant_users').select('*, tenants(name)').order('email');
+  if (uErr) console.warn('Erro ao carregar usuários:', uErr.message);
+
+  window._tenantUsers = users || [];
+  renderUsersTable(window._tenantUsers);
+}
+
+function renderUsersTable(users) {
+  const tbody = $('usersTable')?.querySelector('tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = (users || []).map(u => `
     <tr>
-      <td><b>${u.email || '—'}</b></td>
+      <td>
+        <b>${u.email || '—'}</b>
+        ${u.whatsapp ? `<br/><small style="color:var(--muted)">📱 ${u.whatsapp}</small>` : ''}
+      </td>
+      <td><span class="badge" style="background:rgba(255,255,255,0.08)">${u.tenants?.name || 'Empresa'}</span></td>
       <td><span class="badge packer">${u.role}</span></td>
-      <td>${u.whatsapp||'—'}</td>
+      <td style="text-align:center">
+        <div style="display:flex; gap:6px; justify-content:center">
+          <button class="sec" style="padding:4px 8px; font-size:11px" onclick="openEditUserModal('${u.id}')">✏️ Editar</button>
+          <button class="danger" style="padding:4px 8px; font-size:11px" onclick="deleteUser('${u.id}', '${u.email||''}')">🗑️ Excluir</button>
+        </div>
+      </td>
     </tr>
-  `).join('');
+  `).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Nenhum usuário cadastrado.</td></tr>';
 }
 
 async function saveSettings(){
@@ -5485,6 +5624,7 @@ async function registerNewUser() {
   const password = $('newUsrPass').value;
   const role     = $('newUsrRole').value;
   const whatsapp = $('newUsrWhatsapp').value.trim();
+  const targetTenant = $('newUsrTenant')?.value || tenantId;
   const btn      = $('btnRegisterNewUser');
 
   if (!username || !password) return;
@@ -5502,7 +5642,7 @@ async function registerNewUser() {
     const { data, error } = await sb.rpc('create_new_user', {
       new_email: email,
       new_password: password,
-      new_tenant_id: tenantId,
+      new_tenant_id: targetTenant,
       new_role: role,
       new_whatsapp: whatsapp
     });
@@ -5512,16 +5652,93 @@ async function registerNewUser() {
     } else {
       toast('✓ Usuário cadastrado e vinculado com sucesso!', 'ok');
       $('formNewUser').reset();
-      document.getElementById('newUsrEmailPreview').textContent = '...';
+      if ($('newUsrEmailPreview')) $('newUsrEmailPreview').textContent = '...';
       await loadSettings();
+      if (typeof loadAdminData === 'function') loadAdminData();
     }
   } catch (e) {
     console.error(e);
     alert('Erro inesperado ao cadastrar usuário: ' + e.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Cadastrar Usuário';
+    btn.textContent = 'Cadastrar & Vincular';
     if (window.lucide) lucide.createIcons();
+  }
+}
+
+function openEditUserModal(id) {
+  const u = (window._tenantUsers || []).find(x => x.id == id);
+  if (!u) return alert('Usuário não encontrado.');
+
+  $('editUsrId').value = u.id;
+  $('editUsrEmail').value = u.email || '';
+  $('editUsrPass').value = '';
+  $('editUsrRole').value = u.role || 'ADMIN';
+  $('editUsrWhatsapp').value = u.whatsapp || '';
+
+  if ($('editUsrTenant') && window._allTenants) {
+    $('editUsrTenant').innerHTML = window._allTenants.map(t => `<option value="${t.id}" ${t.id === u.tenant_id ? 'selected' : ''}>${t.name}</option>`).join('');
+  }
+
+  $('userModal').style.display = 'flex';
+}
+
+async function saveUserEdit(e) {
+  if (e) e.preventDefault();
+  const id = $('editUsrId').value;
+  const email = $('editUsrEmail').value.trim();
+  const pass = $('editUsrPass').value;
+  const role = $('editUsrRole').value;
+  const whatsapp = $('editUsrWhatsapp').value.trim();
+  const targetTenant = $('editUsrTenant')?.value;
+  const btn = $('btnSaveUsrEdit');
+
+  if (!id || !email) return alert('O e-mail é obrigatório.');
+  if (pass && pass.length < 6) return alert('A nova senha deve ter no mínimo 6 caracteres.');
+
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  try {
+    const { data, error } = await sb.rpc('update_user_rpc', {
+      target_tenant_user_id: id,
+      new_email: email,
+      new_password: pass || null,
+      new_role: role,
+      new_whatsapp: whatsapp,
+      new_tenant_id: targetTenant
+    });
+
+    if (error) throw error;
+
+    toast('✓ Usuário atualizado com sucesso!', 'ok');
+    $('userModal').style.display = 'none';
+    await loadSettings();
+    if (typeof loadAdminData === 'function') loadAdminData();
+  } catch (err) {
+    alert('Erro ao atualizar usuário: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Salvar Alterações';
+  }
+}
+
+async function deleteUser(id, email) {
+  if (!confirm(`Tem certeza que deseja remover o usuário ${email || ''}?`)) return;
+
+  try {
+    const { error } = await sb.rpc('delete_user_rpc', {
+      target_tenant_user_id: id
+    });
+    if (error) {
+      const { error: delErr } = await sb.from('tenant_users').delete().eq('id', id);
+      if (delErr) throw delErr;
+    }
+    toast('✓ Usuário removido!', 'ok');
+    await loadSettings();
+    if (typeof loadAdminData === 'function') loadAdminData();
+  } catch (err) {
+    alert('Erro ao excluir usuário: ' + err.message);
   }
 }
 
@@ -6956,6 +7173,19 @@ function toast(msg, type='info') {
   else alert(msg);
 }
 
+/**
+ * Retorna a URL segura para a foto, descartando caminhos locais (Electron/filesystem)
+ * que não funcionam no navegador web.
+ */
+function safePhotoUrl(path) {
+  if (!path) return null;
+  // Rejeitar caminhos locais do filesystem (Windows e macOS/Linux)
+  if (path.startsWith('/Users/') || path.startsWith('/home/') || path.startsWith('C:\\') || path.startsWith('file://')) return null;
+  // Aceitar apenas URLs HTTP(S) ou URLs relativas do Supabase
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return null;
+}
+
 async function exportEmpDossierPDF() {
   const name = $('drName').textContent;
   const role = $('drRole').textContent;
@@ -6971,62 +7201,70 @@ async function exportEmpDossierPDF() {
     const doc = new jsPDF();
     
     // Header
-    doc.setFillColor(15, 23, 42); // --card color
+    doc.setFillColor(15, 23, 42);
     doc.rect(0, 0, 210, 40, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(22); doc.setFont("helvetica", "bold");
-    doc.text("DOSSIÊ DE DESEMPENHO", 105, 20, { align: 'center' });
+    doc.setFontSize(20); doc.setFont("helvetica", "bold");
+    doc.text("DOSSIÊ DE PRODUÇÃO E PAGAMENTO", 105, 18, { align: 'center' });
     doc.setFontSize(10); doc.setFont("helvetica", "normal");
-    doc.text("Sistema de Gestão - Prodtech", 105, 30, { align: 'center' });
+    doc.text(`Empresa: ${tenantName} | Emissão: ${new Date().toLocaleDateString('pt-BR')}`, 105, 28, { align: 'center' });
     
-    // Employee Info
+    // Employee & Filter Info
     doc.setTextColor(0,0,0);
-    doc.setFontSize(16); doc.setFont("helvetica", "bold");
-    doc.text(name, 20, 55);
-    doc.setFontSize(11); doc.setFont("helvetica", "normal");
-    doc.text(`Cargo: ${role}`, 20, 62);
-    doc.text(`Data do Relatório: ${new Date().toLocaleDateString('pt-BR')}`, 20, 68);
-    
-    // Line
-    doc.setDrawColor(200, 200, 200); doc.line(20, 75, 190, 75);
-    
-    const isPacking = ['EMBALADOR', 'EMPILHADOR', 'PACKER', 'STACKER', 'CAIXARIA', 'MÁQUINA'].some(r => role.toUpperCase().includes(r)) || (stats.boxes > 0);
-    const isField = !isPacking || (stats.fieldOps > 0);
-
-    const bodyRows = [];
-    
-    if (isPacking) {
-      bodyRows.push(['Produção Total (Packing)', `${Math.round(stats.boxes || 0)} unidades`]);
-      bodyRows.push(['Volume Processado (Packing - Kg)', `${(stats.kg || 0).toFixed(1)} kg`]);
+    doc.setFontSize(14); doc.setFont("helvetica", "bold");
+    doc.text(`Colaborador: ${name}`, 14, 50);
+    doc.setFontSize(10); doc.setFont("helvetica", "normal");
+    doc.text(`Cargo / Função: ${role}`, 14, 57);
+    if (stats.startDate && stats.endDate) {
+      doc.text(`Período Consultado: ${stats.startDate} a ${stats.endDate} (${stats.periodDays || 1} dia(s))`, 14, 64);
     }
     
-    if (isField) {
-      bodyRows.push(['Apontamentos de Campo', `${stats.fieldOps || 0} serviços`]);
-      bodyRows.push(['Ganhos de Campo', `R$ ${(stats.fieldEarned || 0).toFixed(2)}`]);
+    doc.setDrawColor(200, 200, 200); doc.line(14, 70, 196, 70);
+
+    const packingEarned = stats.packingEarned || 0;
+    const fieldEarned = stats.fieldEarned || 0;
+    const bonusEarned = stats.bonusEarned || 0;
+    const totalToPay = packingEarned + fieldEarned + bonusEarned;
+
+    const bodyRows = [
+      ['Produção Packing (Caixas)', `${Math.round(stats.boxes || 0)} cx (${(stats.kg || 0).toFixed(1)} kg)`, `R$ ${packingEarned.toFixed(2)}`],
+      ['Serviços de Campo (Diárias/Carrocão)', `${stats.fieldOps || 0} apontamentos`, `R$ ${fieldEarned.toFixed(2)}`],
+      ['Bônus Assiduidade (Pro-rata período)', `${stats.absences || 0} faltas no período`, `R$ ${bonusEarned.toFixed(2)}`],
+      ['Falhas de Qualidade / Inspeção', `${stats.qualityIssues || 0} registros`, '—']
+    ];
+
+    if (stats.idleTime) {
+      bodyRows.push(['Inatividade / Paradas (Packing)', `${stats.idleTime} min`, '—']);
     }
 
-    bodyRows.push(['Qualidade (Falhas)', `${stats.qualityIssues || 0} registros`]);
-    bodyRows.push(['Assiduidade (Faltas)', `${stats.absences || 0} faltas no período`]);
-
-    if (stats.idleTime && isPacking) {
-      bodyRows.push(['Tempo Interrompido (Ociosidade)', `${stats.idleTime} minutos ociosos`]);
-    }
-    
-    // Summary Cards (as a table)
     doc.autoTable({
-      startY: 85,
-      head: [['Métrica', 'Valor']],
+      startY: 75,
+      head: [['Métrica / Discriminação', 'Detalhamento', 'Valor (R$)']],
       body: bodyRows,
       theme: 'grid',
-      headStyles: { fillColor: [59, 130, 246] }
+      headStyles: { fillColor: [59, 130, 246] },
+      columnStyles: { 2: { fontStyle: 'bold', halign: 'right' } }
     });
-    
+
+    const finalY = doc.lastAutoTable.finalY + 12;
+
+    // Highlights Box: Total to Pay
+    doc.setFillColor(240, 253, 244); // light green bg
+    doc.setDrawColor(34, 197, 94); // green border
+    doc.roundedRect(14, finalY, 182, 24, 4, 4, 'FD');
+
+    doc.setTextColor(22, 101, 52);
+    doc.setFontSize(11); doc.setFont("helvetica", "bold");
+    doc.text("TOTAL A ACRESCENTAR NA FOLHA DE PAGAMENTO", 20, finalY + 14);
+    doc.setFontSize(16);
+    doc.text(`R$ ${totalToPay.toFixed(2)}`, 188, finalY + 16, { align: 'right' });
+
     // Footer
     const pageCount = doc.internal.getNumberOfPages();
-    doc.setFontSize(8);
+    doc.setFontSize(8); doc.setTextColor(100, 100, 100);
     for(let i=1; i<=pageCount; i++) {
        doc.setPage(i);
-       doc.text(`Gerado por Prodtech Web - Página ${i} de ${pageCount}`, 105, 285, { align: 'center' });
+       doc.text(`Prodtech Web — Dossiê Individual de Produção — Página ${i} de ${pageCount}`, 105, 285, { align: 'center' });
     }
     
     doc.save(`Dossie_${name.replace(/\s+/g, '_')}.pdf`);
@@ -8705,17 +8943,21 @@ async function e3dSavePalletChanges() {
   }
 
   if (slot.id) {
-    const { error } = await sb.from('pallets')
-      .update({ 
-        label, 
-        obs, 
-        box_count: newBoxes,
-        wagon_code,
-        harvest_date,
-        planting_date,
-        processing_date
-      })
-      .eq('id', slot.id);
+    const payload = { 
+      label, 
+      obs, 
+      box_count: newBoxes,
+      wagon_code,
+      harvest_date,
+      planting_date,
+      processing_date
+    };
+    let { error } = await sb.from('pallets').update(payload).eq('id',slot.id);
+    if (error && error.message && error.message.includes("'obs' column")) {
+      delete payload.obs;
+      const res = await sb.from('pallets').update(payload).eq('id', slot.id);
+      error = res.error;
+    }
       
     if (error) {
       toast('Erro ao salvar no Supabase: ' + error.message, 'danger');
