@@ -409,14 +409,242 @@
     }
   }
 
-  @media(max-width: 1024px) {
-    .sidebar-collapse-btn {
-      display: none !important;
-    }
+  /* TRACTOR ANIMATED SPLASH & LOADER STYLES */
+  .tractor-login-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    background: #030712;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: all;
+  }
+
+  .tractor-tilling-bg {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(3, 7, 18, 0.75), rgba(3, 7, 18, 0.95)), url('/assets/melon_field_bg.png') center/cover no-repeat;
+  }
+
+  .tractor-vehicle-track {
+    position: absolute;
+    bottom: 20vh;
+    left: 0;
+    width: 100vw;
+    height: 220px;
+    pointer-events: none;
+  }
+
+  .tractor-drive-anim {
+    position: absolute;
+    left: -400px;
+    bottom: 0;
+    width: 380px;
+    height: 200px;
+    animation: driveAcross 2.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  }
+
+  .tractor-3d-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 15px 25px rgba(0,0,0,0.8));
+    animation: tractor3dBob 0.25s ease-in-out infinite alternate;
+  }
+
+  @keyframes tractor3dBob {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-4px); }
+  }
+
+  @keyframes driveAcross {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(calc(100vw + 450px)); }
+  }
+
+  .tractor-splash-text {
+    position: absolute;
+    bottom: 10vh;
+    font-size: 18px;
+    font-weight: 800;
+    color: #f59e0b;
+    letter-spacing: 0.5px;
+    background: rgba(3, 7, 18, 0.85);
+    backdrop-filter: blur(12px);
+    padding: 12px 24px;
+    border-radius: 30px;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .tilling-curtain {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.85) 0%, #030712 35%);
+    left: -100vw;
+    animation: curtainWipe 2.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  }
+
+  @keyframes curtainWipe {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(calc(100vw + 450px)); }
+  }
+
+  /* EMPTY STATE WITH PLANTED MELON FIELD BACKGROUND */
+  .empty-melon-field {
+    background: linear-gradient(180deg, rgba(3, 7, 18, 0.85), rgba(3, 7, 18, 0.95)), url('/assets/melon_field_bg.png') center/cover no-repeat !important;
+    border: 1px dashed rgba(16, 185, 129, 0.3) !important;
+    border-radius: 16px !important;
+    padding: 45px 24px !important;
+    text-align: center !important;
+    color: #f0fdf4 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 12px !important;
+    box-shadow: inset 0 0 50px rgba(0,0,0,0.6) !important;
+  }
+
+  /* COMPONENT-LEVEL TRACTOR LOADER */
+  .tractor-loader-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    gap: 12px;
+  }
+  .tractor-mini-anim {
+    width: 140px;
+    height: 70px;
+    animation: tractorBob 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes tractorBob {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-4px); }
+  }
+  .tractor-loader-text {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    animation: pulseText 1.5s ease-in-out infinite;
+  }
+  @keyframes pulseText {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+  /* TRACTOR REPORT MODAL OVERLAY STYLES */
+  .tractor-report-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .tractor-report-backdrop {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(3, 7, 18, 0.88), rgba(3, 7, 18, 0.96)), url('/assets/melon_field_bg.png') center/cover no-repeat;
+    backdrop-filter: blur(16px);
+  }
+  .tractor-report-card {
+    position: relative;
+    z-index: 2;
+    background: rgba(11, 19, 41, 0.94);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    border-radius: 24px;
+    padding: 32px 28px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(16, 185, 129, 0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+    overflow: hidden;
+  }
+  .tractor-report-track {
+    width: 100%;
+    height: 85px;
+    position: relative;
+    border-bottom: 2px dashed rgba(16, 185, 129, 0.3);
+    overflow: hidden;
+  }
+  .tractor-report-drive {
+    position: absolute;
+    bottom: -5px;
+    left: -120px;
+    width: 140px;
+    height: 85px;
+    animation: driveLoop 2.6s linear infinite;
+  }
+  @keyframes driveLoop {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(560px); }
+  }
+  .tractor-report-3d {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 12px rgba(0,0,0,0.6));
+  }
+  .tractor-report-head {
+    font-size: 18px;
+    font-weight: 800;
+    color: #f0fdf4;
+    margin: 0;
+  }
+  .tractor-report-sub {
+    font-size: 13px;
+    color: #86efac;
+    margin: 0;
+    line-height: 1.5;
   }
   </style>
 </head>
 <body>
+
+<!-- TRACTOR REPORT OVERLAY MODAL -->
+<div id="tractorReportModal" class="tractor-report-modal" style="display:none;">
+  <div class="tractor-report-backdrop"></div>
+  <div class="tractor-report-card">
+    <div class="tractor-report-track">
+      <div class="tractor-report-drive">
+        <img src="/assets/tractor_yellow_3d.png" class="tractor-report-3d" alt="Trator 3D"/>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <h3 id="tractorReportTitle" class="tractor-report-head">Processando Informações...</h3>
+      <p id="tractorReportSub" class="tractor-report-sub">Suas informações estão sendo carregadas... Por favor aguarde enquanto preparamos os dados do campo.</p>
+    </div>
+  </div>
+</div>
+
+<!-- TRACTOR LOGIN SPLASH OVERLAY (Efeito Trator Passando a Grade) -->
+<div id="tractorLoginSplash" class="tractor-login-splash" style="display:none;">
+  <div class="tractor-tilling-bg"></div>
+  <div class="tilling-curtain"></div>
+  <div class="tractor-vehicle-track">
+    <div class="tractor-drive-anim">
+      <img src="/assets/tractor_yellow_3d.png" class="tractor-3d-img" alt="Trator Agrícola 3D"/>
+    </div>
+  </div>
+  <div class="tractor-splash-text">
+    <i data-lucide="sprout" style="width:22px;height:22px;color:#f59e0b"></i>
+    Preparando o campo e carregando a plataforma PRODTECH...
+  </div>
+</div>
 
 <button class="menu-toggle" onclick="toggleSidebar()">☰ Menu</button>
 
@@ -808,8 +1036,8 @@
       <div class="f"><label class="flabel">Início</label><input type="date" id="massStart"/></div>
       <div class="f"><label class="flabel">Fim</label><input type="date" id="massEnd"/></div>
       <div class="f"><label class="flabel">Filtrar Parcela</label><select id="massParcel"><option value="">Todas</option></select></div>
-      <button onclick="refreshMass()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="scale"></i> Calcular Balanço</button>
-      <button class="sec" onclick="exportAuditPDF()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-check"></i> Relatório Auditoria</button>
+      <button onclick="runWithTractorLoader('Calculando Balanço de Massa...', 'Suas informações estão sendo carregadas... Por favor aguarde enquanto preparamos os dados de colheita e expedição.', () => refreshMass())" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="scale"></i> Calcular Balanço</button>
+      <button class="sec" onclick="runWithTractorLoader('Gerando Relatório de Auditoria...', 'Suas informações estão sendo carregadas... Por favor aguarde enquanto preparamos o documento.', () => exportAuditPDF())" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-check"></i> Relatório Auditoria</button>
     </div>
     <div class="kgrid">
       <div class="kcard yellow"><div class="klabel" style="display:flex; align-items:center; gap:6px"><i data-lucide="tractor" style="width:14px; height:14px; color:var(--yellow)"></i> Total Colhido</div><div id="kpiMassHarvest" class="kval yellow">0 Ton</div><div class="ksub">Entrada total (Campo)</div></div>
@@ -2554,6 +2782,69 @@ async function doLogin(){
   }
 }
 
+function triggerTractorLoginSplash(onComplete) {
+  const splash = $('tractorLoginSplash');
+  if (!splash) { 
+    if ($('authScreen')) $('authScreen').style.display = 'none';
+    if ($('appMain')) $('appMain').style.display = 'block';
+    if (onComplete) onComplete(); 
+    return; 
+  }
+
+  splash.style.display = 'flex';
+
+  setTimeout(() => {
+    if ($('authScreen')) $('authScreen').style.display = 'none';
+    if ($('appMain')) $('appMain').style.display = 'block';
+  }, 700);
+
+  setTimeout(() => {
+    splash.style.display = 'none';
+    if (onComplete) onComplete();
+  }, 2400);
+}
+
+function showTractorReportModal(title = 'Processando Informações...', sub = 'Suas informações estão sendo carregadas... Por favor aguarde enquanto calculamos os dados do campo.') {
+  const modal = $('tractorReportModal');
+  const tEl = $('tractorReportTitle');
+  const sEl = $('tractorReportSub');
+  if (tEl) tEl.textContent = title;
+  if (sEl) sEl.textContent = sub;
+  if (modal) modal.style.display = 'flex';
+}
+
+function hideTractorReportModal() {
+  const modal = $('tractorReportModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function runWithTractorLoader(title, subtitle, taskFn) {
+  showTractorReportModal(title, subtitle);
+  const startTime = Date.now();
+  try {
+    await taskFn();
+  } catch(err) {
+    console.error('Erro na geração do relatório:', err);
+  } finally {
+    const elapsed = Date.now() - startTime;
+    const remaining = Math.max(0, 1200 - elapsed);
+    setTimeout(() => {
+      hideTractorReportModal();
+    }, remaining);
+  }
+}
+
+function getTractorLoaderHTML(msg = 'Carregando dados agrícolas...') {
+  return `
+    <div class="tractor-loader-box">
+      <div class="tractor-mini-anim">
+        <img src="/assets/tractor_yellow_3d.png" style="width:100%;height:100%;object-fit:contain;" alt="Trator 3D"/>
+      </div>
+      <div class="tractor-loader-text">${msg}</div>
+    </div>
+  `;
+}
+
 async function afterLogin(user){
   const {data:tenants, error:e1} = await sb.from('tenant_users').select('tenant_id,role,whatsapp').eq('user_id',user.id);
   if(!tenants || tenants.length === 0 || e1){alert('Usuário não vinculado a empresa.');await sb.auth.signOut();return;}
@@ -2587,8 +2878,11 @@ async function afterLogin(user){
     $('adminGroup').style.display = 'none';
     if ($('cardEvoApi')) $('cardEvoApi').style.display = 'none';
   }
-  $('authScreen').style.display='none';
-  $('appMain').style.display='block';
+
+  // Dispara o efeito visual do Trator passando a grade para revelar o painel
+  triggerTractorLoginSplash(() => {
+    if (window.lucide) lucide.createIcons();
+  });
 
   const t = today();
   ['dashStart','dashEnd','rankStart','rankEnd','finStart','finEnd','logStart','logEnd','finalizeDate','qaStart','qaEnd','massStart','massEnd','bulkDate','nfeDate'].forEach(id=>{const el=$(id);if(el)el.value=t;});
@@ -2650,8 +2944,24 @@ function showTab(n,el){
     campo:loadCadernoCampo,
     certificacao_pack:loadControleEtiquetas
   };
+
+  const tabTitles = {
+    mass: 'Calculando Balanço de Massa...',
+    finance: 'Processando Relatório Financeiro...',
+    ranking: 'Gerando Ranking de Produtividade...',
+    quality: 'Carregando Controle de Qualidade...',
+    dash: 'Atualizando Dashboard Principal...',
+    romaneio: 'Gerando Romaneio de Expedição...',
+    estoque3d: 'Inicializando WMS Estoque 3D...',
+    bulk: 'Carregando Vendas a Granel...',
+    finalize: 'Carregando Apontamento Diário...'
+  };
+
   if(fns[n]) {
-    try { fns[n](); } catch(e) { console.error('Erro ao carregar conteúdo da aba (' + n + '):', e); }
+    const title = tabTitles[n] || 'Carregando Informações...';
+    runWithTractorLoader(title, 'Suas informações estão sendo carregadas... Por favor aguarde enquanto preparamos os dados.', async () => {
+      try { await fns[n](); } catch(e) { console.error('Erro ao carregar aba (' + n + '):', e); }
+    });
   }
   setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 150);
 }
