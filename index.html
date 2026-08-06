@@ -747,6 +747,134 @@
   </div>
 </nav>
 
+  <!-- MODAL CADASTRO / EDIÇÃO DE PLANTIO (GESTAO ADMIN) -->
+  <div id="webPlantioModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(12px); z-index:2500; align-items:center; justify-content:center; overflow-y:auto; padding:20px 30px;">
+    <div style="background:var(--card); width:100%; max-width:920px; border-radius:24px; padding:32px; border:1px solid var(--border); box-shadow:0 25px 60px rgba(0,0,0,0.8); margin:auto">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:16px;">
+        <div>
+          <h3 style="margin:0; display:flex; align-items:center; gap:10px; font-size:20px; font-weight:800; color:var(--text)" id="webPlantioModalTitle">
+            <i data-lucide="sprout" style="color:var(--green); width:24px; height:24px;"></i> 
+            Novo Plantio
+          </h3>
+          <div style="font-size:12px; color:var(--muted); margin-top:2px">Cadastre e gerencie a parcela física, variedades e datas de colheita</div>
+        </div>
+        <button type="button" onclick="closeWebPlantioModal()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); border-radius:50%; width:38px; height:38px; cursor:pointer; font-size:18px; font-weight:700; display:flex; align-items:center; justify-content:center">✕</button>
+      </div>
+
+      <form id="formWebPlantio" onsubmit="event.preventDefault(); saveWebPlantio();">
+        <input type="hidden" id="webPlEditId"/>
+
+        <!-- Grid Principal em 2 Colunas para Desktop -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px">
+          
+          <!-- Coluna da Esquerda: Identificação + Área -->
+          <div style="display:flex; flex-direction:column; gap:20px">
+            <!-- Seção 1: Identificação -->
+            <div style="background:rgba(16,185,129,0.05); border:1px solid var(--border); border-radius:14px; padding:18px">
+              <div style="font-size:11px; font-weight:800; color:var(--green); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; display:flex; align-items:center; gap:6px">
+                <i data-lucide="map-pin" style="width:14px;height:14px"></i> Identificação da Parcela & Cultura
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+                <div><label class="flabel">Parcela (Nº) *</label><input type="text" id="webPlParcela" placeholder="Ex: 33" required oninput="updateWebParcela2Preview()"/></div>
+                <div><label class="flabel">Letra / Linha *</label><input type="text" id="webPlLetra" placeholder="Ex: G" required style="text-transform:uppercase" oninput="updateWebParcela2Preview()"/></div>
+              </div>
+              <div style="margin-bottom:12px">
+                <label class="flabel">Identificador Gerado</label>
+                <input type="text" id="webPlParcela2Preview" readonly style="background:var(--input-bg); color:var(--green); font-weight:800; font-size:15px" placeholder="Ex: 33 G"/>
+              </div>
+              <div>
+                <label class="flabel">Cultura *</label>
+                <select id="webPlCultura" required onchange="calcWebPrevisaoColheita()" style="font-size:14px">
+                  <option value="">Selecione a Cultura</option>
+                  <option value="MELÃO">Melão</option>
+                  <option value="MELANCIA">Melancia</option>
+                  <option value="MAMÃO">Mamão</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Seção 2: Dimensões & Área -->
+            <div style="background:rgba(59,130,246,0.05); border:1px solid var(--border); border-radius:14px; padding:18px">
+              <div style="font-size:11px; font-weight:800; color:var(--blue); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; display:flex; align-items:center; gap:6px">
+                <i data-lucide="ruler" style="width:14px;height:14px"></i> Dimensões & Área Hectares
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px">
+                <div><label class="flabel">Fileiras</label><input type="number" id="webPlFileiras" placeholder="48"/></div>
+                <div><label class="flabel">Espaçamento (m)</label><input type="number" step="0.01" id="webPlEspacamento" placeholder="0.04"/></div>
+                <div><label class="flabel">Área (ha)</label><input type="number" step="0.01" id="webPlArea" placeholder="1.92"/></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Coluna da Direita: Datas + Registros Oficiais -->
+          <div style="display:flex; flex-direction:column; gap:20px">
+            <!-- Seção 3: Datas -->
+            <div style="background:rgba(139,92,246,0.05); border:1px solid var(--border); border-radius:14px; padding:18px">
+              <div style="font-size:11px; font-weight:800; color:var(--purple); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; display:flex; align-items:center; gap:6px">
+                <i data-lucide="calendar" style="width:14px;height:14px"></i> Datas do Ciclo de Produção
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+                <div><label class="flabel">Semeadura (Viveiro)</label><input type="date" id="webPlSemeadura"/></div>
+                <div><label class="flabel">Transplante (Campo) *</label><input type="date" id="webPlTransplante" required onchange="calcWebPrevisaoColheita()"/></div>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+                <div>
+                  <label class="flabel">Previsão de Colheita</label>
+                  <input type="date" id="webPlPrevisao"/>
+                  <div id="webPlPrevisaoHint" style="font-size:10px; color:var(--yellow); margin-top:3px; font-weight:600"></div>
+                </div>
+                <div><label class="flabel">Data Registro Plantio</label><input type="date" id="webPlPlantio"/></div>
+              </div>
+            </div>
+
+            <!-- Seção 4: Identificação Oficial & Notas -->
+            <div style="background:rgba(236,72,153,0.05); border:1px solid var(--border); border-radius:14px; padding:18px">
+              <div style="font-size:11px; font-weight:800; color:#ec4899; text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; display:flex; align-items:center; gap:6px">
+                <i data-lucide="file-badge" style="width:14px;height:14px"></i> IDIARN, Termo e Notas Fiscais
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+                <div><label class="flabel">IDIARN</label><input type="text" id="webPlIdiarn" placeholder="Ex: 24.08003..."/></div>
+                <div><label class="flabel">Termo / Autorização</label><input type="text" id="webPlTermo" placeholder="Ex: 51374"/></div>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px">
+                <div><label class="flabel">NF Semente</label><input type="text" id="webPlNf" placeholder="Ex: 14738"/></div>
+                <div><label class="flabel">Fornecedor Semente</label><input type="text" id="webPlFornecedor" placeholder="Ex: SYNGENTA"/></div>
+                <div><label class="flabel">Viveiro / Muda</label><input type="text" id="webPlFornecedor2" placeholder="Ex: TOP PLANT"/></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Seção 5: Variedades Plantadas (Largura Total) -->
+        <div style="background:rgba(245,158,11,0.05); border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:20px">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px">
+            <div style="font-size:11px; font-weight:800; color:var(--yellow); text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:6px">
+              <i data-lucide="wheat" style="width:14px;height:14px"></i> Variedades Plantadas na Parcela (até 5)
+            </div>
+            <button type="button" onclick="addWebVariedadeRow()" class="sec" style="padding:6px 14px; font-size:12px; display:inline-flex; align-items:center; gap:4px">
+              <i data-lucide="plus-circle" style="width:14px;height:14px"></i> + Variedade
+            </button>
+          </div>
+          <div id="webVariedadesContainer" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:12px"></div>
+        </div>
+
+        <div style="margin-bottom:24px">
+          <label class="flabel">Observações Gerais</label>
+          <textarea id="webPlObs" rows="2" placeholder="Observações livres sobre o plantio..." style="resize:vertical"></textarea>
+        </div>
+
+        <!-- Botões de Ação -->
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; border-top:1px solid var(--border); padding-top:20px">
+          <button type="button" class="danger" id="webBtnEncerrarPlantio" onclick="encerrarWebPlantio()" style="display:none; padding:10px 18px">Encerrar Plantio</button>
+          <div style="display:flex; gap:12px; margin-left:auto">
+            <button type="button" class="sec" onclick="closeWebPlantioModal()" style="padding:10px 20px">Cancelar</button>
+            <button type="submit" id="webBtnSavePlantio" class="green" style="background:var(--green); padding:10px 28px; font-weight:800; font-size:14px">Salvar Plantio</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL CONTROLE DE ETIQUETAS E EMBALAGENS -->
   <div id="modalControleEtiqueta" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:2500; align-items:center; justify-content:center; overflow-y:auto; padding:20px;">
     <div style="background:var(--card); width:100%; max-width:720px; border-radius:16px; padding:24px; border:1px solid var(--border); box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
@@ -921,7 +1049,7 @@
       <h3 style="margin-top:0; color:#fff; margin-bottom:20px; display:flex; align-items:center; gap:8px"><i data-lucide="user-cog" style="width:20px; height:20px; color:var(--blue)"></i> Editar Usuário</h3>
       <form id="formEditUser" onsubmit="event.preventDefault(); saveUserEdit(event);">
         <input type="hidden" id="editUsrId">
-        <div style="margin-bottom:12px"><label class="flabel">E-mail / Username</label><input id="editUsrEmail"/></div>
+        <div style="margin-bottom:12px"><label class="flabel">E-mail / Username</label><input id="editUsrEmail" autocomplete="username"/></div>
         <div style="margin-bottom:12px"><label class="flabel">Nova Senha (deixe em branco para manter a atual)</label><input id="editUsrPass" type="password" autocomplete="new-password" placeholder="••••••••"/></div>
         <div style="margin-bottom:12px"><label class="flabel">Empresa (Tenant)</label>
           <select id="editUsrTenant"></select>
@@ -1583,9 +1711,70 @@
     <h1 class="ptitle"><i data-lucide="sprout"></i> Caderno de Campo</h1>
     
     <!-- SUB-TABS DO CADERNO DE CAMPO -->
-    <div style="display:flex; gap:10px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:10px">
-      <button class="btn on" id="ccTabMipBtn" onclick="showCcTab('mip')" style="font-size:12px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px"><i data-lucide="bug" style="width:14px;height:14px"></i> Amostragem MIP</button>
-      <button class="btn sec" id="ccTabOpBtn" onclick="showCcTab('op')" style="font-size:12px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-text" style="width:14px;height:14px"></i> Aplicação de Defensivos (O.P)</button>
+    <div style="display:flex; gap:10px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:10px; flex-wrap:wrap">
+      <button class="btn on" id="ccTabPlantiosBtn" onclick="showCcTab('plantios')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="sprout" style="width:14px;height:14px"></i> Cadastro de Plantios</button>
+      <button class="btn sec" id="ccTabMipBtn" onclick="showCcTab('mip')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="bug" style="width:14px;height:14px"></i> Amostragem MIP</button>
+      <button class="btn sec" id="ccTabOpBtn" onclick="showCcTab('op')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="file-text" style="width:14px;height:14px"></i> Aplicação O.P</button>
+      <button class="btn sec" id="ccTabDefregBtn" onclick="showCcTab('defreg')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="shield" style="width:14px;height:14px"></i> Defensivos/Estoque</button>
+      <button class="btn sec" id="ccTabCalagemBtn" onclick="showCcTab('calagem')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="layers" style="width:14px;height:14px"></i> Ordem de Calagem</button>
+      <button class="btn sec" id="ccTabFertBtn" onclick="showCcTab('fert')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="droplet" style="width:14px;height:14px"></i> Fertirrigação</button>
+      <button class="btn sec" id="ccTabTratosBtn" onclick="showCcTab('tratos')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="clipboard-list" style="width:14px;height:14px"></i> Tratos Culturais</button>
+      <button class="btn sec" id="ccTabMudasBtn" onclick="showCcTab('mudas')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="tree-pine" style="width:14px;height:14px"></i> Mudas & Sementes</button>
+      <button class="btn sec" id="ccTabPosBtn" onclick="showCcTab('pos')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="sparkles" style="width:14px;height:14px"></i> Pós-Colheita</button>
+    </div>
+
+    <!-- ABA 0: CADASTRO & HISTÓRICO DE PLANTIOS -->
+    <div id="ccTabPlantios" class="tab-pane-cc">
+      <div class="card" style="margin-bottom:24px">
+        <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+          <div style="display:flex; align-items:center; gap:8px"><i data-lucide="sprout" class="btn-i" style="color:var(--green)"></i> Plantios e Cadastro Geral de Parcelas</div>
+          <button onclick="openWebPlantioModal()" class="green" style="font-size:13px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px; background:var(--green)"><i data-lucide="plus-circle" style="width:16px; height:16px"></i> + Novo Plantio</button>
+        </div>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:20px">Gerencie a estrutura completa de parcelas, variedades plantadas, datas de transplante e previsão de colheita.</p>
+        
+        <!-- Filtros do Caderno de Campo / Plantios -->
+        <div class="fbar" style="margin-bottom:20px; padding:16px; gap:12px">
+          <div class="f" style="flex:2"><div class="flabel">Buscar Parcela / Variedade</div><input id="webPlSearch" oninput="filterWebPlantios()" placeholder="Ex: 33 G, Goldmine..." /></div>
+          <div class="f"><div class="flabel">Cultura</div>
+            <select id="webPlCultura" onchange="filterWebPlantios()">
+              <option value="">Todas as Culturas</option>
+              <option value="MELÃO">Melão</option>
+              <option value="MELANCIA">Melancia</option>
+              <option value="MAMÃO">Mamão</option>
+            </select>
+          </div>
+          <div class="f"><div class="flabel">Status</div>
+            <select id="webPlStatus" onchange="filterWebPlantios()">
+              <option value="ativo">✅ Ativos</option>
+              <option value="todos">📋 Todos</option>
+              <option value="inativo">📦 Encerrados</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="webPlCounter" style="font-size:12px; color:var(--muted); margin-bottom:12px; font-weight:600"></div>
+
+        <div style="overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:left; padding:12px">Parcela</th>
+                <th style="text-align:left; padding:12px">Cultura</th>
+                <th style="text-align:left; padding:12px">Variedades</th>
+                <th style="text-align:center; padding:12px">Área (ha)</th>
+                <th style="text-align:center; padding:12px">Transplante</th>
+                <th style="text-align:center; padding:12px">Previsão Colheita</th>
+                <th style="text-align:center; padding:12px">IDIARN / Termo</th>
+                <th style="text-align:center; padding:12px">Status</th>
+                <th style="text-align:center; padding:12px">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="webPlantiosTableBody">
+              <tr><td colspan="9" style="text-align:center; padding:20px; color:var(--muted)">Carregando plantios...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- ABA 1: AMOSTRAGEM MIP -->
@@ -8263,9 +8452,10 @@ async function createAutomaticControleEtiqueta(opts) {
 
 function printCertificacaoPackSheet() {
   const records = window._controleEtiquetas || [];
-  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Bom Jesus Agrícola';
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'EMPRESA';
   
-  const rows = records.slice(0, 10);
+  // Preencher até 7 blocos mínimos conforme modelo oficial PPH 31
+  const rows = records.slice(0, 7);
   while (rows.length < 7) {
     rows.push({
       data: '', hora: '', cliente: '', variedade: '', tipo_caixa: '',
@@ -8275,141 +8465,923 @@ function printCertificacaoPackSheet() {
     });
   }
 
-  const printWin = window.open('', '_blank', 'width=1150,height=850');
+  const printWin = window.open('', '_blank', 'width=1200,height=900');
   if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
   
-  const tableRowsHtml = rows.map(r => {
-    let labelObj = { name: '', photo: '' };
+  // Gerar os 7 blocos — cada bloco tem 4 sub-linhas conforme planilha original
+  const tableBlocksHtml = rows.map((r, idx) => {
+    let labelEntregueObj = { name: '', photo: '' };
+    let labelRecebidaObj = { name: '', photo: '' };
     if (r.etiqueta_entregue) {
       if (typeof r.etiqueta_entregue === 'string' && r.etiqueta_entregue.startsWith('{')) {
-        try { labelObj = JSON.parse(r.etiqueta_entregue); } catch(e){}
+        try { labelEntregueObj = JSON.parse(r.etiqueta_entregue); } catch(e){}
       } else {
-        labelObj = e3dGetLabelObj(r.etiqueta_entregue);
+        labelEntregueObj = e3dGetLabelObj(r.etiqueta_entregue);
+      }
+    }
+    if (r.etiqueta_recebida) {
+      if (typeof r.etiqueta_recebida === 'string' && r.etiqueta_recebida.startsWith('{')) {
+        try { labelRecebidaObj = JSON.parse(r.etiqueta_recebida); } catch(e){}
+      } else {
+        labelRecebidaObj = e3dGetLabelObj(r.etiqueta_recebida);
       }
     }
 
     const dtStr = r.data ? new Date(r.data + 'T12:00:00').toLocaleDateString('pt-BR') : '';
-    const confSim = r.caixa_conforme === true ? '( X ) Sim<br>( &nbsp; ) Não' : r.caixa_conforme === false ? '( &nbsp; ) Sim<br>( X ) Não' : '( &nbsp; ) Sim<br>( &nbsp; ) Não';
-    const sacolaStr = (r.sacola_plastica === true || r.sacola_plastica === 'Sim') ? 'X' : (r.sacola_plastica === false ? '' : '');
-    const bandejaStr = (r.bandeja === true || r.bandeja === 'Sim') ? 'X' : (r.bandeja === false ? '' : '');
+    const confSimChecked = r.caixa_conforme === true;
+    const confNaoChecked = r.caixa_conforme === false;
+    const sacolaStr = (r.sacola_plastica === true || r.sacola_plastica === 'Sim') ? 'SIM' : (r.sacola_plastica === false ? 'NÃO' : '');
+    const bandejaStr = (r.bandeja === true || r.bandeja === 'Sim') ? 'SIM' : (r.bandeja === false ? 'NÃO' : '');
 
+    // 4 sub-linhas: Tipo Caixa | Lote/Rastreabilidade | Conforme Sim | Conforme Não
     return `
+      <!-- BLOCO ${idx+1} -->
       <tr>
-        <td style="font-size:7pt; text-align:center;">${dtStr}</td>
-        <td style="font-size:7pt; text-align:center;">${r.hora || ''}</td>
-        <td style="font-size:7pt; font-weight:bold; text-align:center;">${(r.cliente || '').toUpperCase()}</td>
-        <td style="font-size:7pt; font-weight:bold; text-align:center;">${(r.variedade || '').toUpperCase()}</td>
-        <td style="font-size:6.5pt; text-align:left; padding:2px;">
-          <div><strong>Tipo:</strong> ${r.tipo_caixa || ''}</div>
-          <div><strong>Lote:</strong> ${r.lote_caixa || ''}</div>
-          <div style="font-size:5.5pt; margin-top:2px;">
-            Caixa conforme OP? ${confSim}
-          </div>
+        <td rowspan="4" class="cell-center" style="font-size:8pt;">${dtStr}</td>
+        <td rowspan="4" class="cell-center" style="font-size:7pt; font-weight:bold;">${(r.cliente || '').toUpperCase()}</td>
+        <td rowspan="4" class="cell-center" style="font-size:7pt; font-weight:bold;">${(r.variedade || '').toUpperCase()}</td>
+        <td class="cell-left" style="font-size:8pt;"><strong>Tipo de Caixa:</strong> ${r.tipo_caixa || ''}</td>
+        <td class="cell-center" style="font-size:7pt;">—</td>
+        <td rowspan="4" class="cell-center" style="font-size:8pt;">${sacolaStr}</td>
+        <td rowspan="4" class="cell-center" style="font-size:8pt;">${bandejaStr}</td>
+        <td rowspan="4" class="cell-center" style="font-size:8pt; font-family:monospace; font-weight:bold;">${r.codigo_rastreabilidade || ''}</td>
+        <td rowspan="4" class="cell-center" style="font-size:8pt;">${r.numero_rolo || ''}</td>
+        <td rowspan="4" class="cell-center etq-cell">
+          ${labelEntregueObj.photo ? `<img src="${labelEntregueObj.photo}" style="max-width:80px; max-height:50px; object-fit:contain; display:block; margin:0 auto 2px;" />` : ''}
+          <div class="etq-label">${labelEntregueObj.name || ''}</div>
+          <div class="etq-sub">CUMPRE: ( ${r.etiqueta_entregue ? 'X' : '&nbsp;'} ) SIM &nbsp; ( &nbsp; ) NÃO</div>
         </td>
-        <td style="font-size:10pt; font-weight:bold; text-align:center;">${sacolaStr}</td>
-        <td style="font-size:10pt; font-weight:bold; text-align:center;">${bandejaStr}</td>
-        <td style="font-size:8pt; font-weight:bold; text-align:center; font-family:monospace;">${r.codigo_rastreabilidade || ''}</td>
-        <td style="font-size:7pt; text-align:center;">${r.numero_rolo || ''}</td>
-        <td style="font-size:7pt; text-align:center; padding:4px;">
-          ${labelObj.photo ? `<img src="${labelObj.photo}" style="max-width:75px; max-height:45px; object-fit:contain; display:block; margin:0 auto 2px;" />` : ''}
-          <div style="font-weight:bold; font-size:6.5pt;">${labelObj.name || ''}</div>
+        <td rowspan="4" class="cell-center etq-cell">
+          ${labelRecebidaObj.photo ? `<img src="${labelRecebidaObj.photo}" style="max-width:80px; max-height:50px; object-fit:contain; display:block; margin:0 auto 2px;" />` : ''}
+          <div class="etq-label">${labelRecebidaObj.name || ''}</div>
+          <div class="etq-sub">CUMPRE: ( ${r.etiqueta_recebida ? 'X' : '&nbsp;'} ) SIM &nbsp; ( &nbsp; ) NÃO</div>
         </td>
-        <td style="font-size:7pt; text-align:center; padding:4px;">
-          ${labelObj.photo ? `<img src="${labelObj.photo}" style="max-width:75px; max-height:45px; object-fit:contain; display:block; margin:0 auto 2px;" />` : ''}
-          <div style="font-weight:bold; font-size:6.5pt;">${labelObj.name || ''}</div>
+        <td rowspan="4" class="cell-center" style="font-size:7pt;">${r.responsavel || ''}</td>
+        <td rowspan="4" class="cell-center" style="font-size:7pt;">${r.coord_qualidade || ''}</td>
+      </tr>
+      <tr>
+        <td class="cell-left" style="font-size:8pt;"><strong>Lote / Rastreabilidade da caixa:</strong> ${r.lote_caixa || ''}</td>
+        <td class="cell-center" style="font-size:7pt;">—</td>
+      </tr>
+      <tr>
+        <td class="cell-left conf-cell" rowspan="2" style="font-size:7.5pt;">
+          Caixa está conforme à Ordem de produção?<br>
+          <span style="font-size:6.5pt; color:#555;">(verificar impressão, que não tenha código de rastreabilidade antigo)</span>
         </td>
-        <td style="font-size:7pt; text-align:center;">${r.responsavel || ''}</td>
-        <td style="font-size:7pt; text-align:center;">${r.coord_qualidade || ''}</td>
+        <td class="cell-center" style="font-size:9pt;">( ${confSimChecked ? '<b>X</b>' : '&nbsp;'} ) Sim</td>
+      </tr>
+      <tr>
+        <td class="cell-center" style="font-size:9pt;">( ${confNaoChecked ? '<b>X</b>' : '&nbsp;'} ) Não</td>
       </tr>
     `;
   }).join('');
+
+  const today = new Date();
+  const todayStr = today.toLocaleDateString('pt-BR');
 
   const html = `
   <!DOCTYPE html>
   <html>
   <head>
     <meta charset="utf-8"/>
-    <title>Controle de Etiquetas, Caixas e Outros Materiais de Embalagem</title>
+    <title>PPH 31 — Controle de Etiquetas e Materiais de Embalagem</title>
     <style>
-      @page { size: A4 landscape; margin: 5mm; }
-      body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background: #fff; color: #000; -webkit-print-color-adjust: exact; }
-      .sheet { width: 100%; box-sizing: border-box; }
-      .header-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-      .header-table td { border: 1px solid #000; padding: 4px; font-size: 7pt; vertical-align: middle; }
-      .main-title { font-size: 11pt; font-weight: bold; text-align: center; letter-spacing: 0.5px; }
-      .doc-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-      .doc-table th, .doc-table td { border: 1px solid #000; padding: 3px; font-size: 6.5pt; vertical-align: middle; }
-      .doc-table th { background: #f1f5f9; text-align: center; font-weight: bold; }
-      .footer-table { width: 100%; border-collapse: collapse; font-size: 6pt; }
-      .footer-table td { border: 1px solid #000; padding: 4px; vertical-align: top; }
+      @page { size: A4 landscape; margin: 5mm 6mm; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .sheet { width: 100%; padding: 2mm; }
+
+      /* === CABEÇALHO OFICIAL (4 LINHAS) === */
+      .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 2px; }
+      .hdr-table td { border: 1px solid #000; padding: 3px 6px; font-size: 8pt; font-family: 'Arial', sans-serif; vertical-align: middle; }
+      .hdr-left { width: 48%; }
+      .hdr-right { width: 52%; font-size: 7pt; font-family: 'Times New Roman', serif; }
+
+      /* === TÍTULO PRINCIPAL === */
+      .main-title {
+        font-family: 'Comic Sans MS', 'Arial', sans-serif;
+        font-size: 13pt;
+        font-weight: bold;
+        text-align: center;
+        padding: 6px 0;
+        margin-bottom: 3px;
+        letter-spacing: 0.3px;
+      }
+
+      /* === TABELA DE DADOS === */
+      .doc-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+      .doc-table th, .doc-table td { border: 1px solid #000; padding: 2px 3px; font-size: 7pt; vertical-align: middle; }
+      .doc-table th {
+        background: #eef2f7;
+        text-align: center;
+        font-weight: bold;
+        font-size: 7.5pt;
+        padding: 4px 2px;
+      }
+      .cell-center { text-align: center; vertical-align: middle; }
+      .cell-left { text-align: left; vertical-align: top; padding: 3px 5px !important; }
+      .conf-cell { vertical-align: middle !important; }
+      .etq-cell { padding: 4px !important; }
+      .etq-label { font-weight: bold; font-size: 7pt; margin-top: 2px; }
+      .etq-sub { font-size: 6pt; color: #333; margin-top: 3px; }
+
+      /* Zebra stripes para cada bloco de 4 linhas */
+      .doc-table tbody tr:nth-child(8n+5) td,
+      .doc-table tbody tr:nth-child(8n+6) td,
+      .doc-table tbody tr:nth-child(8n+7) td,
+      .doc-table tbody tr:nth-child(8n+8) td {
+        background: #fafbfc;
+      }
+
+      /* === RODAPÉ === */
+      .footer-section { margin-top: 4px; font-size: 7pt; line-height: 1.5; }
+      .footer-section .obs { font-weight: bold; margin-bottom: 2px; }
+      .footer-section .monitor-box {
+        border: 1px solid #000;
+        padding: 5px 8px;
+        font-size: 7pt;
+        line-height: 1.6;
+        margin-top: 3px;
+      }
+      .footer-section .signature-area {
+        margin-top: 8px;
+        text-align: right;
+        font-size: 8pt;
+        padding-right: 20px;
+      }
     </style>
   </head>
   <body onload="window.print()">
     <div class="sheet">
-      <!-- HEADER METADATA & TITLE -->
-      <table class="header-table">
+
+      <!-- ═══ CABEÇALHO OFICIAL PPH 31 (4 LINHAS) ═══ -->
+      <table class="hdr-table">
         <tr>
-          <td style="width: 20%; text-align: center; font-weight: bold; font-size: 10pt;">
-            ${tenantName}
-          </td>
-          <td style="width: 55%; text-align: center;">
-            <div class="main-title">CONTROLE DE ETIQUETAS, CAIXAS E OUTROS MATERIAIS DE EMBALAGEM</div>
-          </td>
-          <td style="width: 25%; font-size: 5.5pt; line-height: 1.3;">
-            <div><strong>Emitido/Revisado por:</strong> RC</div>
-            <div><strong>Avaliado por:</strong> JMLL</div>
-            <div><strong>Aprovado por:</strong> JMLL</div>
-            <div><strong>FREQUÊNCIA:</strong> DIÁRIA DE ACORDO COM A EMBALAGEM</div>
-          </td>
+          <td class="hdr-left">ELABORADO, EMITIDO e REVISADO POR: EMANUELA MOREIRA</td>
+          <td class="hdr-right">DEPARTAMENTO: PACKING HOUSE</td>
+        </tr>
+        <tr>
+          <td class="hdr-left">Avaliado por: ADGF</td>
+          <td class="hdr-right">NOME DO DOC: CONTROLE DE ETIQUETAS E MATERIAIS DE EMBALAGEM GERAL</td>
+        </tr>
+        <tr>
+          <td class="hdr-left">Aprovado por: ADGF</td>
+          <td class="hdr-right">EMISSÃO: 15/06/2026 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; MOD. E APROVAÇÃO: 01/07/2026 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; U. REVISÃO: 01/07/2026</td>
+        </tr>
+        <tr>
+          <td class="hdr-left" style="border-bottom:2px solid #000;">FREQUÊNCIA: DIÁRIA DE ACORDO COM A EMBALAGEM</td>
+          <td class="hdr-right" style="border-bottom:2px solid #000;">PAG: 01 DE 01 &nbsp;\\ &nbsp;COD: PPH 31 &nbsp;\\ &nbsp;REVISÃO: ANUAL &nbsp;\\ &nbsp;VERSÃO: 01</td>
         </tr>
       </table>
 
-      <!-- MAIN DATA TABLE -->
+      <!-- ═══ TÍTULO PRINCIPAL ═══ -->
+      <div class="main-title">CONTROLE DE ETIQUETAS, CAIXAS E OUTROS MATERIAIS DE EMBALAGEM</div>
+
+      <!-- ═══ TABELA DE DADOS (7 BLOCOS × 4 SUB-LINHAS) ═══ -->
       <table class="doc-table">
         <thead>
           <tr>
-            <th style="width: 5%;">DATA</th>
-            <th style="width: 4%;">HORA</th>
-            <th style="width: 8%;">CLIENTE</th>
-            <th style="width: 8%;">VARIEDADE</th>
-            <th style="width: 15%;">INFORMAÇÃO DA CAIXA DE PAPELÃO<br><span style="font-weight:normal; font-size:5.5pt;">(Modelo e informação pré-impressa)</span></th>
-            <th style="width: 4%;">SACOLA PLÁSTICA</th>
-            <th style="width: 4%;">BANDEJA</th>
-            <th style="width: 8%;">CÓDIGO DE RASTREABILIDADE DA FRUTA</th>
-            <th style="width: 5%;">Nº DO ROLO</th>
-            <th style="width: 14%;">TIPOS DE ETIQUETA QUE FOI ENTREGUE À PRODUÇÃO</th>
-            <th style="width: 14%;">TIPOS DE ETIQUETA QUE SE RECEBEU DA PRODUÇÃO</th>
-            <th style="width: 5.5%;">RESPONSÁVEL</th>
-            <th style="width: 5.5%;">COORD. DE Q. QUALIDADE</th>
+            <th style="width:5%;" rowspan="3">DATA</th>
+            <th style="width:7%;" rowspan="3">CLIENTE</th>
+            <th rowspan="2" style="width:0.1%; font-size:5pt; visibility:hidden;">V</th>
+            <th style="width:17%;" rowspan="2">INFORMAÇÃO DA CAIXA DE PAPELÃO<br><span style="font-weight:normal; font-size:5.5pt;">(Modelo e informação pré-impressa)</span></th>
+            <th style="width:4%;" rowspan="2" >—</th>
+            <th style="width:5%;" rowspan="3">SACOLA<br>PLÁSTICA</th>
+            <th style="width:4%;" rowspan="3">BANDEJA</th>
+            <th style="width:7%;" rowspan="2">CÓDIGO DE<br>RASTREABILIDADE</th>
+            <th style="width:4%;" rowspan="3">Nº DO<br>ROLO</th>
+            <th style="width:14%;" rowspan="3">TIPOS DE ETIQUETA QUE FOI ENTREGUE A PRODUÇÃO, CUMPRE COM AS ESPECIFICAÇÕES DO CLIENTE</th>
+            <th style="width:14%;" rowspan="3">TIPOS DE ETIQUETA QUE SE RECEBEU DA PRODUÇÃO, CUMPRE COM AS ESPECIFICAÇÕES DO CLIENTE</th>
+            <th style="width:5%;" rowspan="3">RESPONSÁVEL</th>
+            <th style="width:6%;" rowspan="3">COORD. DE G. QUALIDADE</th>
+          </tr>
+          <tr></tr>
+          <tr>
+            <th style="font-size:6.5pt;">VARIEDADE</th>
+            <th colspan="2" style="font-size:6.5pt;">—</th>
+            <th style="font-size:6.5pt;">DA FRUTA</th>
           </tr>
         </thead>
         <tbody>
-          ${tableRowsHtml}
+          ${tableBlocksHtml}
         </tbody>
       </table>
 
-      <!-- FOOTER NOTES & METADATA -->
-      <table class="footer-table">
-        <tr>
-          <td style="width: 65%; line-height: 1.4;">
-            <strong>OBS: NOS LOCAIS EM MENCIONA SACOLAS PLÁSTICAS E BANDEJAS RESPONDER: SIM OU NÃO.</strong><br>
-            <strong>O QUE MONITORAR?</strong> O controle de etiquetas que sai para linha de produção e se as etiquetagens estão correta de acordo com o cliente.<br>
-            <strong>COMO MONITORAR?</strong> Cada remessa de gerente entrega as etiquetas às pessoas responsáveis na linha de produção e recebe no fim da atividade.<br>
-            <strong>QUANDO MONITORAR?</strong> Diariamente de acordo com a embalagem. | <strong>QUEM MONITORAR?</strong> O gerente de packing house.
-          </td>
-          <td style="width: 35%; font-size: 5.5pt; line-height: 1.3;">
-            <div><strong>DEPARTAMENTO:</strong> PACKING HOUSE</div>
-            <div><strong>NOME DO DOC:</strong> CONTROLE DE ETIQUETAS</div>
-            <div>EMISSÃO: 11/05/2017 &nbsp;|&nbsp; REVISÃO: 05/05/2023</div>
-            <div>CÓD. DOC: PR.18.RE.05.001 &nbsp;|&nbsp; REVISÃO: 07 &nbsp;|&nbsp; VERSÃO: 11 &nbsp;|&nbsp; ARQ: PASTA 77</div>
-          </td>
-        </tr>
-      </table>
+      <!-- ═══ RODAPÉ OFICIAL ═══ -->
+      <div class="footer-section">
+        <div class="obs">OBS: NOS LOCAIS EM MENCIONA SACOLAS PLÁSTICAS E BANDEJAS RESPONDER: SIM OU NÃO.</div>
+        <div class="obs" style="margin-left:24px;">NOS LOCAIS ONDE MENCIONA ETIQUETAS: PREGAR UMA ETIQUETA QUE ESTIVER SENDO ENTREGUE À PRODUÇÃO, BEM COMO RECEBIDA NO FIM DO EXPEDIENTE.</div>
+        <div style="margin-left:24px; font-size:6.5pt; margin-top:1px;">O RASTREABILIDADE E O NÚMERO DO ROLO VÊM NA FACE INTERNA DO ROLO. NO LOCAL RASTREABILIDADE DA CAIXA MENCIONAR O Nº DO PEDIDO OU ORDEM DE VENDA, ESSA INFORMAÇÃO TEM QUE ESTAR ALINHADA COM O CHECK LIST DE RECEBIMENTO DE MATERIAIS.</div>
+
+        <div class="monitor-box">
+          <strong>O que monitorar:</strong> O controle de etiquetas que sai para linha de produção e que retorna e se a etiquetagem está correta de acordo com o cliente.<br>
+          <strong>Como monitorar:</strong> Diariamente o gerente entrega as etiquetas as pessoas responsáveis na linha de produção e recolhe no fim da atividade.<br>
+          <strong>Quando monitorar:</strong> Diariamente de acordo com a embalagem.<br>
+          <strong>Quem monitora:</strong> O gerente de packing house.
+        </div>
+
+        <div class="signature-area">
+          Gerente Geral de Gestão da Qualidade
+        </div>
+      </div>
+
     </div>
   </body>
   </html>
   `;
 
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
+function printPastaCampoCapa(id) {
+  const item = _infoParcelas.find(x => x.id === id);
+  if (!item) { alert('Ciclo de parcela não encontrado.'); return; }
+  
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa';
+  
+  const variedadesList = item.variedade ? item.variedade.split(',').map(v => v.trim()).filter(v => v) : [];
+  let variedadesHtml = variedadesList.map(v => `<div>${v.toUpperCase()}</div>`).join('');
+  if (!variedadesHtml) variedadesHtml = '—';
+  
+  const dtPlantio = item.plantio ? new Date(item.plantio + 'T12:00:00') : null;
+  const anoStr = dtPlantio ? `${dtPlantio.getFullYear()}/${dtPlantio.getFullYear() + 1}` : new Date().getFullYear();
+  
+  const printWin = window.open('', '_blank', 'width=900,height=1200');
+  if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
+  
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Capa PC01 — Registro da Cultura</title>
+    <style>
+      @page { size: A4 portrait; margin: 8mm 10mm; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 8pt; line-height: 1.3; }
+      .sheet { width: 100%; }
+      
+      .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+      .hdr-table td { border: 1px solid #000; padding: 3px 5px; font-size: 7.5pt; vertical-align: middle; }
+      .hdr-left { width: 50%; font-weight: bold; }
+      .hdr-right { width: 50%; font-family: 'Times New Roman', serif; font-size: 7.5pt; }
+      
+      .main-title {
+        font-family: 'Comic Sans MS', 'Arial', sans-serif;
+        font-size: 13pt;
+        font-weight: bold;
+        text-align: center;
+        padding: 5px 0;
+        border: 2px solid #000;
+        margin-bottom: 8px;
+        background: #f3f4f6;
+      }
+      
+      .section-title {
+        font-size: 9pt;
+        font-weight: bold;
+        margin: 10px 0 3px 0;
+        padding-bottom: 1px;
+        border-bottom: 1px solid #000;
+        text-transform: uppercase;
+      }
+      
+      .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+      .grid-table td { border: 1px solid #000; padding: 4px 6px; vertical-align: top; }
+      
+      .signatures-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .sig-box {
+        border: 1px solid #000;
+        padding: 6px;
+        font-size: 7.5pt;
+        background: #fafafa;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .sig-line {
+        margin-top: 15px;
+        border-top: 1px dashed #000;
+        text-align: center;
+        padding-top: 2px;
+        font-size: 7pt;
+      }
+      
+      .obs-box {
+        margin-top: 10px;
+        border: 1px solid #000;
+        padding: 6px;
+        font-size: 7.5pt;
+        line-height: 1.3;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body onload="window.print()">
+    <div class="sheet">
+      <!-- CABEÇALHO OFICIAL (4 LINHAS) -->
+      <table class="hdr-table">
+        <tr>
+          <td class="hdr-left">ELABORADO, EMITIDO e REVISADO POR: EMANUELA MOREIRA</td>
+          <td class="hdr-right">DEPARTAMENTO: CAMPO</td>
+        </tr>
+        <tr>
+          <td class="hdr-left">Avaliado por: ADGF</td>
+          <td class="hdr-right">NOME DO DOC: REGISTRO DA CULTURA</td>
+        </tr>
+        <tr>
+          <td class="hdr-left">Aprovado Por: ADGF</td>
+          <td class="hdr-right">EMISSÃO: 15/06/2026 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; MOD. E APROVAÇÃO: 01/07/2026</td>
+        </tr>
+        <tr>
+          <td class="hdr-left">Frequência: Por parcela de campo.</td>
+          <td class="hdr-right">U. REVISÃO: 01/07/2026 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; VERSÃO: 01 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; COD: PC01 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; REVISÃO: ANUAL &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; PAG: 01 DE 01</td>
+        </tr>
+      </table>
+      
+      <div class="main-title">REGISTROS DA CULTURA</div>
+      
+      <!-- REGISTROS DA CULTURA -->
+      <table class="grid-table" style="font-size: 8.5pt;">
+        <tr>
+          <td style="width: 33%;"><strong>PARCELA:</strong><br/><span style="font-size: 11pt; font-weight: bold;">${item.parcela2 || item.parcela || '—'}</span></td>
+          <td style="width: 33%;"><strong>CULTURA:</strong><br/><span style="font-size: 11pt; font-weight: bold;">${(item.cultura || 'MELÃO').toUpperCase()}</span></td>
+          <td style="width: 34%;"><strong>ANO:</strong><br/><span style="font-size: 10pt; font-weight: bold;">${anoStr}</span></td>
+        </tr>
+        <tr>
+          <td colspan="2"><strong>VARIEDADES:</strong><br/>${variedadesHtml}</td>
+          <td><strong>TOTAL HECTARES:</strong><br/><span style="font-size: 10pt; font-weight: bold;">${item.area ? item.area + ' ha' : '—'}</span></td>
+        </tr>
+      </table>
+      
+      <div class="section-title">1. IDENTIFICAÇÃO DA EMPRESA</div>
+      <table class="grid-table">
+        <tr>
+          <td colspan="2"><strong>EMPRESA:</strong><br/><span style="font-weight: bold;">${tenantName.toUpperCase()}</span></td>
+          <td style="width: 15%;"><strong>UF:</strong><br/>RN</td>
+        </tr>
+        <tr>
+          <td colspan="2"><strong>ENDEREÇO:</strong><br/>Sítio Pau Branco, S/N - Zona Rural</td>
+          <td><strong>MUNICÍPIO:</strong><br/>Mossoró</td>
+        </tr>
+        <tr>
+          <td><strong>CEP:</strong><br/>59.600-970</td>
+          <td><strong>CAIXA POSTAL:</strong><br/>111</td>
+          <td><strong>TELEFONE:</strong><br/>(84) 9424 0050</td>
+        </tr>
+        <tr>
+          <td colspan="3"><strong>E-MAIL:</strong><br/>ajaxdgfilho@uol.com.br / neto@coopyfrutas.com</td>
+        </tr>
+      </table>
+      
+      <div class="section-title">REGISTROS GLOBALG.A.P. & OUTROS</div>
+      <table class="grid-table" style="font-size: 7.5pt;">
+        <tr>
+          <td style="width: 30%;"><strong>REGISTRO NO GLOBALGAP:</strong></td>
+          <td>SATIVA EURO 18GP</td>
+        </tr>
+        <tr>
+          <td><strong>REGISTRO GGN GERAL NO GLOBALGAP:</strong></td>
+          <td>4049928377654</td>
+        </tr>
+        <tr>
+          <td><strong>REGISTRO GGN INDIVIDUAL DAS FAZENDAS:</strong></td>
+          <td>NOR-4049928594464 / DINA-4049929454279 / FV-4050373290191 / JM-4049929684294 / ABJ-4049929454262</td>
+        </tr>
+        <tr>
+          <td><strong>REGISTRO TN - TESCO NATURE'S:</strong></td>
+          <td>NOR-55/NC10/35365/08, DINA-55/NC10/35363/08, FV-55/NC10/50717/09, JM-55/NC10/35364/08, ABJ-55/NC10/35366/08.</td>
+        </tr>
+        <tr>
+          <td><strong>REGISTRO NO SEDEX:</strong></td>
+          <td>NOR-PS974429034707, DINA-P000000040784, FV-P000000040785, JM-P000000040787, ABJ-P000000040789.</td>
+        </tr>
+        <tr>
+          <td colspan="2" style="text-align: center; font-weight: bold; background: #f9fafb; font-size: 8pt; padding: 6px;">CERTIFICADOS ENCONTRAM-SE NA PASTA 13</td>
+        </tr>
+      </table>
+      
+      <div class="section-title">2. RESPONSÁVEIS TÉCNICOS</div>
+      <div class="signatures-grid">
+        <div class="sig-box">
+          <div>
+            <strong>Ajax Dantas de Gois Filho</strong><br/>
+            Engenheiro Agrônomo | CREA: 2100995243<br/>
+            Rua João da Escóssia, 1728 - Nova Betânia, Mossoró - RN. CEP: 59.607-330<br/>
+            Tel: (84) 99424 0030 | Email: ajaxdgfilho@uol.com.br
+          </div>
+          <div class="sig-line">Assinatura</div>
+        </div>
+        <div class="sig-box">
+          <div>
+            <strong>Valeriano Dantas de Gois</strong><br/>
+            Engenheiro Agrônomo | CREA: 2106090242<br/>
+            Av, Lauro Monte Filho, Abolição 1, Mossoró - RN. CEP: 59619-000<br/>
+            Tel: (84) 99424 0055 | Email: valerianogois@hotmail.com
+          </div>
+          <div class="sig-line">Assinatura</div>
+        </div>
+        <div class="sig-box">
+          <div>
+            <strong>Francisco Canindé dos Santos Neto</strong><br/>
+            Engenheiro Agrônomo | CREA: 2112017578<br/>
+            Rua João da Escóssia, 1728 - Nova Betânia, Mossoró - RN. CEP: 59.607-330<br/>
+            Tel: (84) 99191 8682 | Email: neto@coopyfrutas.com
+          </div>
+          <div class="sig-line">Assinatura</div>
+        </div>
+        <div class="sig-box">
+          <div>
+            <strong>Clara Alana Rocha Santos Gois</strong><br/>
+            Engenheiro Agrônomo | CREA: 2112663046<br/>
+            Av. Dona Izaura Rosado, 1840, Ab. III, Mossoró - RN. CEP: 59612-670<br/>
+            Tel: (84) 99191-8654 | Email: gois_clara@yahoo.com.br
+          </div>
+          <div class="sig-line">Assinatura</div>
+        </div>
+      </div>
+      
+      <div class="obs-box">
+        <strong>OBS:</strong> O responsável técnico ao assinar esse documento cod: <strong>PC01</strong> está se responsabilizando por todos os registros contidos na parcela de campo. Sem mais obrigação de constar in cada planilha seus dados pessoais e de assinar cada planilha individualmente.
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+  
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
+function printPastaCampoOrdemPulv(itemStr) {
+  const item = JSON.parse(decodeURIComponent(itemStr));
+  const formattedDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—';
+  
+  // Buscar ciclo correspondente em _infoParcelas para preencher dados extras
+  const ip = _infoParcelas.find(x => x.parcela2 === item.parcela || x.parcela === item.parcela);
+  const dataPlantioStr = ip && ip.plantio ? ip.plantio.split('-').reverse().join('/') : '—';
+  const prevColheitaStr = ip && ip.previsao_colheita ? ip.previsao_colheita.split('-').reverse().join('/') : '—';
+  
+  // Calcular idade (dias entre plantio e data_aplicacao)
+  let idadeDias = '—';
+  if (ip && ip.plantio && item.data_aplicacao) {
+    const pDate = new Date(ip.plantio + 'T12:00:00');
+    const aDate = new Date(item.data_aplicacao + 'T12:00:00');
+    const diffTime = Math.abs(aDate - pDate);
+    idadeDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + ' dias';
+  }
+  
+  // Processar itens da calda
+  const itemsCalda = item.caderno_campo_op_itens || [];
+  
+  // Preencher até 3 linhas de produtos para manter estrutura limpa
+  const filledProducts = [...itemsCalda];
+  while (filledProducts.length < 3) {
+    filledProducts.push({
+      produto_nome: '', alvo: '', dosagem_real: '', dosagem_corrigida: '', unidade: '', carencia_dias: ''
+    });
+  }
+  
+  const productsRowsHtml = filledProducts.map((p, idx) => {
+    // Buscar ingrediente ativo, grupo e toxicologia do cadastro se disponível
+    let activeIng = '—';
+    let toxicClass = '—';
+    let concentration = '—';
+    let regMapa = '—';
+    
+    if (p.produto_nome) {
+      const match = _defensivos.find(d => d.produto.toUpperCase() === p.produto_nome.toUpperCase());
+      if (match) {
+        activeIng = match.ingrediente_ativo || '—';
+        toxicClass = match.classe_toxicologica || '—';
+        regMapa = match.registro_mapa || '—';
+      }
+    }
+    
+    const doseReal = p.dosagem_real ? `${p.dosagem_real} ${p.unidade || 'L'}` : '';
+    const doseCorr = p.dosagem_corrigida ? `${p.dosagem_corrigida} ${p.unidade || 'L'}` : '';
+    const carencia = p.carencia_dias !== '' && p.carencia_dias !== undefined ? `${p.carencia_dias} dias` : '';
+    
+    // Calcular data limite carência
+    let dataCarStr = '';
+    if (item.data_aplicacao && p.carencia_dias) {
+      const appDate = new Date(item.data_aplicacao + 'T12:00:00');
+      appDate.setDate(appDate.getDate() + parseInt(p.carencia_dias));
+      dataCarStr = appDate.toLocaleDateString('pt-BR');
+    }
+    
+    return `
+      <tr>
+        <td style="font-size: 7.5pt; font-weight: bold;">${p.produto_nome || ''}</td>
+        <td style="font-size: 7.5pt;">${activeIng}</td>
+        <td class="cell-center" style="font-size: 7pt;">${concentration}</td>
+        <td class="cell-center" style="font-size: 7pt;">${p.unidade || ''}</td>
+        <td class="cell-center" style="font-weight: bold;">${carencia}</td>
+        <td style="font-size: 7.5pt;">${p.alvo || ''}</td>
+        <td class="cell-center">—</td>
+        <td class="cell-center">${p.produto_nome ? '1' : ''}</td>
+        <td class="cell-center">—</td>
+        <td class="cell-center">—</td>
+        <td class="cell-center" style="font-size: 7.5pt;">${doseCorr}</td>
+        <td class="cell-center" style="font-size: 7.5pt;">${doseReal}</td>
+        <td class="cell-center">—</td>
+        <td class="cell-center">${item.volume_calda || '—'} L</td>
+        <td class="cell-center">${item.volume_calda || '—'} L/ha</td>
+        <td class="cell-center">Barra</td>
+        <td class="cell-center">5 km/h</td>
+        <td class="cell-center" style="font-weight: bold;">${dataCarStr}</td>
+        <td class="cell-center">1 dia</td>
+        <td class="cell-center">${toxicClass}</td>
+        <td class="cell-center">Depósito</td>
+      </tr>
+    `;
+  }).join('');
+
+  // Clima
+  const isEnsolarado = (parseFloat(item.temperatura_c) > 22 && !(item.observacoes || '').toUpperCase().includes('CHUVA')) ? 'x' : '';
+  const isNublado = (item.observacoes || '').toUpperCase().includes('NUBLADO') ? 'x' : '';
+  const isChovendo = (item.observacoes || '').toUpperCase().includes('CHUVA') ? 'x' : '';
+
+  const printWin = window.open('', '_blank', 'width=1400,height=900');
+  if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>OC02 — Ordem de Pulverização</title>
+    <style>
+      @page { size: A4 landscape; margin: 4mm 6mm; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 7.5pt; line-height: 1.3; }
+      .sheet { width: 100%; }
+      
+      .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+      .hdr-table td { border: 1px solid #000; padding: 2px 4px; font-size: 7.5pt; vertical-align: middle; }
+      .hdr-left { width: 45%; font-weight: bold; }
+      .hdr-right { width: 55%; font-family: 'Times New Roman', serif; font-size: 7pt; }
+      
+      .main-title {
+        font-family: 'Comic Sans MS', 'Arial', sans-serif;
+        font-size: 11pt;
+        font-weight: bold;
+        text-align: center;
+        padding: 4px 0;
+        margin-bottom: 4px;
+        letter-spacing: 0.2px;
+      }
+      
+      .info-grid { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+      .info-grid td { border: 1px solid #000; padding: 3px 5px; vertical-align: middle; font-size: 7.5pt; }
+      
+      .doc-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+      .doc-table th, .doc-table td { border: 1px solid #000; padding: 2px 3px; font-size: 7pt; vertical-align: middle; }
+      .doc-table th { background: #eef2f7; text-align: center; font-weight: bold; font-size: 7pt; }
+      .cell-center { text-align: center; }
+      
+      .epi-section { display: flex; justify-content: space-between; border: 1px solid #000; padding: 4px 8px; margin-bottom: 4px; font-weight: bold; font-size: 7.5pt; }
+      
+      .clim-section { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+      .clim-section td { border: 1px solid #000; padding: 3px; font-size: 7.5pt; }
+      
+      .footer-notes { font-size: 6.5pt; line-height: 1.25; margin-top: 4px; color: #111; }
+      .footer-notes ol { padding-left: 12px; }
+      
+      .signatures-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+      .signatures-table td { border: 1px solid #000; padding: 4px 8px; font-size: 7.5pt; width: 33.33%; }
+      .sig-line { border-top: 1px dashed #000; margin-top: 16px; text-align: center; padding-top: 2px; }
+    </style>
+  </head>
+  <body onload="window.print()">
+    <div class="sheet">
+      <!-- CABEÇALHO OFICIAL (4 LINHAS) -->
+      <table class="hdr-table">
+        <tr>
+          <td class="hdr-left">ELABORADO, EMITIDO E REVISADO POR: EMANUELA MOREIRA</td>
+          <td class="hdr-right">DEPARTAMENTO: CAMPO</td>
+        </tr>
+        <tr>
+          <td class="hdr-left">AVALIADO POR: ADGF</td>
+          <td class="hdr-right">NOME DO DOC: ORDEM DE AUTORIZAÇÃO DE APLICAÇÃO DE PRODUTOS FITOSSANITÁRIOS - CAMPO</td>
+        </tr>
+        <tr>
+          <td class="hdr-left">APROVADO POR: ADGF</td>
+          <td class="hdr-right">DATA EMISSÃO: 15/06/2026 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; MOD. E APROVAÇÃO: 01/07/2026 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; U. REVISÃO: 01/07/2026</td>
+        </tr>
+        <tr>
+          <td class="hdr-left">FREQUENCIA: POR APLICAÇÃO EM CAMPO</td>
+          <td class="hdr-right">PAG: 01 DE 01 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; COD: OC02 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; REVISÃO: ANUAL &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; VERSÃO: 01</td>
+        </tr>
+      </table>
+      
+      <div class="main-title">ORDEM DE AUTORIZAÇÃO DE APLICAÇÃO DE PRODUTOS FITOSSANITÁRIOS - CAMPO</div>
+      
+      <!-- GRID DE INFORMAÇÕES DA ÁREA -->
+      <table class="info-grid">
+        <tr>
+          <td style="width: 25%;"><strong>PARCELA:</strong> ${item.parcela}</td>
+          <td style="width: 15%;"><strong>IDADE:</strong> ${idadeDias}</td>
+          <td style="width: 20%;"><strong>TAMANHO DA ÁREA:</strong> ${item.area_ha || '3.00'} ha</td>
+          <td style="width: 20%;"><strong>CULTURA:</strong> ${(item.cultura || 'Melão').toUpperCase()}</td>
+          <td style="width: 20%;"><strong>TRANSPLANTIO:</strong> ${dataPlantioStr}</td>
+        </tr>
+        <tr>
+          <td colspan="2"><strong>VARIEDADE:</strong> ${item.variedade || '—'}</td>
+          <td><strong>PREVISÃO DE COLHEITA:</strong> ${prevColheitaStr}</td>
+          <td colspan="2"><strong>Nº DA ORDEM DE PULV:</strong> OP #${item.id ? item.id.substring(0,6).toUpperCase() : '02'}</td>
+        </tr>
+      </table>
+      
+      <!-- SEÇÃO USO OBRIGATÓRIO (EPI) -->
+      <div class="epi-section">
+        <span>USO OBRIGATÓRIO DE EPI:</span>
+        <span>( X ) Máscara</span>
+        <span>( X ) Luvas em PVC</span>
+        <span>( X ) Botas PVC</span>
+        <span>( X ) Óculos</span>
+        <span>( X ) Conj. de Roupa Completo com avental</span>
+      </div>
+      
+      <!-- TABELA PRODUTOS AUTORIZADOS -->
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th style="width: 9%;">Nome Comercial de acordo com Bula</th>
+            <th style="width: 8%;">Ingrediente Ativo</th>
+            <th style="width: 3%;">Conc.</th>
+            <th style="width: 3%;">Und</th>
+            <th style="width: 4%;">Carência</th>
+            <th style="width: 8%;">Alvo Biológico (Praga/Doença)</th>
+            <th style="width: 4%;">Nº max ciclo</th>
+            <th style="width: 3%;">Nº aplic</th>
+            <th style="width: 3%;">Interv. bula</th>
+            <th style="width: 3%;">Ult. aplic (dias)</th>
+            <th style="width: 6%;">Dosagem Bula</th>
+            <th style="width: 5%;">Qtd Utilizada</th>
+            <th style="width: 4%;">Dose/Área</th>
+            <th style="width: 5%;">Vol. Calda (Tanque)</th>
+            <th style="width: 5%;">Vol. Calda (Lt/ha)</th>
+            <th style="width: 5%;">Tipo Aplic.</th>
+            <th style="width: 5%;">Veloc. Trator</th>
+            <th style="width: 6%;">Data Limite Carência</th>
+            <th style="width: 4%;">Reentrada</th>
+            <th style="width: 3%;">Classe Tox.</th>
+            <th style="width: 4%;">Local Excedente</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${productsRowsHtml}
+        </tbody>
+      </table>
+      
+      <!-- ADUBOS FOLIARES -->
+      <table class="info-grid" style="margin-top: 4px;">
+        <tr>
+          <td style="font-weight: bold; background: #eef2f7; text-align: center; width: 20%;">ADUBOS FOLIARES INSERIDOS</td>
+          <td style="width: 25%;"><strong>Nome Comercial:</strong> ${item.defensivo1 || '—'}</td>
+          <td style="width: 15%;"><strong>Unidade:</strong> LT / KG</td>
+          <td style="width: 15%;"><strong>Quantidade:</strong> 5.00</td>
+          <td style="width: 25%;"><strong>Observações:</strong> Diluição em tanque principal</td>
+        </tr>
+      </table>
+      
+      <!-- DETALHES DE OPERAÇÃO E CONDIÇÕES CLIMÁTICAS -->
+      <table class="clim-section" style="margin-top: 4px;">
+        <tr>
+          <td style="width: 30%;">
+            <strong>Volume Calda (Lt/ha):</strong> ${item.volume_calda || '500'}<br/>
+            <strong>Volume Calda (Tanque):</strong> ${item.volume_calda ? item.volume_calda * 3 : '1500'}<br/>
+            <strong>Tipo de Aplicação:</strong> Barra<br/>
+            <strong>Velocidade do Trator:</strong> 5 KM/H
+          </td>
+          <td style="width: 30%;">
+            <strong>Nº do Trator:</strong> ${item.trator || 'Trator 2'}<br/>
+            <strong>Nº do Pulverizador:</strong> Pulverizador Turbo<br/>
+            <strong>Pressão:</strong> ${item.pressao || '70 psi'}<br/>
+            <strong>Rotação:</strong> 1600 RPM
+          </td>
+          <td style="width: 40%;">
+            <strong>Horário Aplicação:</strong> Inicial: ${item.horario_inicio || '07:30'} &nbsp;&nbsp; Final: ${item.horario_fim || '11:30'}<br/>
+            <strong>Temperatura / Umidade / Vento:</strong> ${item.temperatura_c || '—'}°C / ${item.umidade_rel_pct || '—'}% / ${item.velocidade_vento_kmh || '—'} km/h<br/>
+            <strong>Condições Climáticas:</strong> 
+            ( ${isChovendo ? 'X' : '&nbsp;'} ) Chovendo &nbsp;&nbsp; 
+            ( ${isEnsolarado ? 'X' : '&nbsp;'} ) Ensolarado &nbsp;&nbsp; 
+            ( ${isNublado ? 'X' : '&nbsp;'} ) Nublado
+          </td>
+        </tr>
+      </table>
+      
+      <!-- ASSINATURAS -->
+      <table class="signatures-table">
+        <tr>
+          <td>
+            <strong>Nome do Manipulador:</strong> ${item.tratorista || 'ROBSON RAFAEL'}<br/>
+            <div class="sig-line">Assinatura do Manipulador</div>
+          </td>
+          <td>
+            <strong>Nome do Aplicador:</strong> FELIPE OLIVEIRA<br/>
+            <div class="sig-line">Assinatura do Aplicador</div>
+          </td>
+          <td>
+            <strong>Nome do Técnico Responsável:</strong> ${item.tecnico || 'IVANOSCA MARTINS'}<br/>
+            <div class="sig-line">Assinatura do Técnico Responsável / Agrônomo</div>
+          </td>
+        </tr>
+      </table>
+      
+      <!-- FOOTER RULES -->
+      <div class="footer-notes">
+        <ol>
+          <li>A escolha do equipamento é imprescindível para uma boa aplicação. Observar se os mesmos estão aptos para uso;</li>
+          <li>Ao receber a ordem de pulverização, o manipulador deve se dirigir ao depósito de produtos a fim de levar a quantidade necessária à aplicação para o ponto de mistrura. Sempre fazendo o uso correto dos EPI's, o manipulador deve realizar o preparo da calda para aplicação, obedecendo as instruções prescritas;</li>
+          <li>Os produtos necessários à mistura devem ser depositados no pulverizador com bastante atenção para não haver derrames;</li>
+          <li>Caso a embalagem do produto esvazie, o mesmo deve passar por tríplice lavagem e esta água deve retornar à mistura no pulverizador;</li>
+          <li>O aplicador deve ser devidamente treinado para esta atividade, bem como portar devidamente todos os EPI's necessários à aplicação;</li>
+          <li>É terminantemente proibido utilizar roupas comuns durante o preparo da calda ou pulverização, bem como EPI incompleto;</li>
+          <li>Não pulverizar quando estiver chovendo. Caso sobre calda de pulverização, solicitar ajuda do responsável técnico para descarte da mesma;</li>
+        </ol>
+        <div style="font-weight: bold; text-align: center; margin-top: 2px;">QUALQUER SITUAÇÃO DE EMERGÊNCIA, COMUNICAR A SAÚDE, SEGURANÇA E GERENCIA DA EMPRESA.</div>
+      </div>
+      
+    </div>
+  </body>
+  </html>
+  `;
+  
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
+function printPastaCampoAutColheita(itemStr) {
+  const item = JSON.parse(decodeURIComponent(itemStr));
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'DINA DINAMARCA INDUSTRIAL AGRÍCOLA LTDA';
+  
+  // Buscar ciclo correspondente em _infoParcelas para preencher dados extras
+  const ip = _infoParcelas.find(x => x.parcela2 === item.parcela || x.parcela === item.parcela);
+  const variedadesStr = ip && ip.variedade ? ip.variedade : item.variedade || 'JADIAL, GOLDEX, GRAND PRIX, ASTURIA, GOLDMINE';
+  
+  const printWin = window.open('', '_blank', 'width=900,height=1200');
+  if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
+  
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>PC11 — Autorização de Colheita</title>
+    <style>
+      @page { size: A4 portrait; margin: 8mm 10mm; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 8.5pt; line-height: 1.4; }
+      .sheet { width: 100%; }
+      
+      .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+      .hdr-table td { border: 1px solid #000; padding: 4px 6px; font-size: 7.5pt; vertical-align: middle; }
+      .hdr-left { width: 45%; font-weight: bold; }
+      .hdr-right { width: 55%; font-family: 'Times New Roman', serif; font-size: 7pt; }
+      
+      .main-title {
+        font-family: 'Arial', sans-serif;
+        font-size: 11pt;
+        font-weight: bold;
+        text-align: center;
+        padding: 8px 12px;
+        border: 2px solid #000;
+        margin-bottom: 20px;
+        line-height: 1.4;
+        background: #f3f4f6;
+      }
+      
+      .declaration-text {
+        font-size: 10.5pt;
+        line-height: 1.6;
+        text-align: justify;
+        margin-bottom: 24px;
+      }
+      
+      .cuts-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 24px;
+      }
+      .cuts-table td {
+        border: 1px solid #000;
+        padding: 8px 12px;
+        font-size: 10pt;
+        vertical-align: middle;
+      }
+      
+      .obs-box {
+        font-size: 7.5pt;
+        line-height: 1.4;
+        margin-top: 15px;
+        border-top: 1px solid #000;
+        padding-top: 8px;
+        color: #222;
+      }
+      .obs-box p {
+        margin-bottom: 6px;
+      }
+      
+      .signature-area {
+        margin-top: 40px;
+        display: flex;
+        justify-content: flex-end;
+      }
+      .signature-box {
+        border-top: 1px solid #000;
+        width: 250px;
+        text-align: center;
+        padding-top: 4px;
+        font-size: 9pt;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body onload="window.print()">
+    <div class="sheet">
+      <!-- CABEÇALHO OFICIAL (4 LINHAS) -->
+      <table class="hdr-table">
+        <tr>
+          <td class="hdr-left">ELABORADO, EMITIDO e REVISADO POR:<br/>EMANUELA MOREIRA</td>
+          <td class="hdr-right">DEPARTAMENTO: CAMPO</td>
+        </tr>
+        <tr>
+          <td class="hdr-left">Avaliado por: ADGF</td>
+          <td class="hdr-right">NOME DO DOC: AUTORIZAÇÃO PARA COLHEITA DE FRUTOS</td>
+        </tr>
+        <tr>
+          <td class="hdr-left">Aprovado Por: ADGF</td>
+          <td class="hdr-right">EMISSÃO: 15/06/2026 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; MOD. E APROVAÇÃO: 01/07/2026</td>
+        </tr>
+        <tr>
+          <td class="hdr-left">Frequência: Por parcela de campo.</td>
+          <td class="hdr-right">U. REVISÃO: 01/07/2026 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; VERSÃO: 01 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; REVISÃO: ANUAL &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; CODIGO: PC 11 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; PAG: 01 DE 01</td>
+        </tr>
+      </table>
+      
+      <div class="main-title">
+        AUTORIZAÇÃO PARA COLHEITA DE FRUTOS LIVRE DE EXCEDENTE DE<br/>RESÍDUOS QUÍMICOS
+      </div>
+      
+      <!-- TEXTO DA DECLARAÇÃO -->
+      <div class="declaration-text">
+        Ajax Dantas de Gois Filho, Engenheiro Agrônomo, CREA sob o nº 2100995243 e/ou Valeriano Dantas de Gois, Engenheiro Agrônomo, CREA sob o nº 2106090242 e/ou Francisco Canindé dos Santos Neto, Engenheiro Agrônomo, CREA sob o nº 2112017578, Técnicos Responsáveis pela produção da empresa <strong>${tenantName.toUpperCase()}</strong>, autorizo(amos) a colheita da parcela nº <strong>${item.parcela}</strong> com as variedades <strong>${variedadesStr.toUpperCase()}</strong>.
+      </div>
+      
+      <div style="font-weight: bold; font-size: 10pt; margin-bottom: 8px;">NÚMERO DO CORTE / DATA:</div>
+      
+      <!-- CHECKBOXES DOS CORTES -->
+      <table class="cuts-table">
+        <tr>
+          <td style="width: 50%;">( &nbsp;&nbsp; ) PRIMEIRO / DATA: _____/_____/_____</td>
+          <td>Autorização: ____________________________</td>
+        </tr>
+        <tr>
+          <td>( &nbsp;&nbsp; ) SEGUNDO / DATA: _____/_____/_____</td>
+          <td>Autorização: ____________________________</td>
+        </tr>
+        <tr>
+          <td>( &nbsp;&nbsp; ) TERCEIRO / DATA: _____/_____/_____</td>
+          <td>Autorização: ____________________________</td>
+        </tr>
+        <tr>
+          <td>( &nbsp;&nbsp; ) QUARTA / DATA: _____/_____/_____</td>
+          <td>Autorização: ____________________________</td>
+        </tr>
+        <tr>
+          <td>( &nbsp;&nbsp; ) QUINTO / DATA: _____/_____/_____</td>
+          <td>Autorização: ____________________________</td>
+        </tr>
+      </table>
+      
+      <!-- REGRAS E OBSERVAÇÕES -->
+      <div class="obs-box">
+        <p><strong>OBS:</strong> Obrigatoriamente o primeiro corte deve ser autorizado pelo responsável técnico que deve observar e cumprir as carências estabelecidas dos produtos químicos. Se não houver tempo de colher toda à área no dia da autorização, o dia seguinte não se caracteriza como segundo corte é apenas a continuação do primeiro.</p>
+        <p>Se não houver após o corte autorizado aplicação de produtos químicos, não há necessidade de autorizar os demais cortes, isso porque não há possibilidade de excedentes de resíduos. Se houve nova aplicação deve-se autorizar novamente o corte seguinte, cumprindo as carências dos últimos produtos aplicados.</p>
+        <p><strong>Atenção com o horário das aplicações:</strong> 01 dia quer dizer 24 horas. Não podemos aplicar produto à tarde às 16:00 h e colher no outro dia às 13:00 h, pois não obedeceu 01 dia (24 horas). Verificar os horários de aplicações e os horários de colheita para certificar-se que estão sendo cumpridas todas as carências.</p>
+        <p style="margin-top: 10px; font-weight: bold;">Eu responsável por autorizar a colheita estou ciente que entendi e estou cumprindo a legislação em vigor.</p>
+      </div>
+      
+      <!-- ASSINATURA -->
+      <div class="signature-area">
+        <div class="signature-box">
+          <br/><br/>
+          CARIMBO - ASSINATURA
+        </div>
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+  
   printWin.document.write(html);
   printWin.document.close();
 }
@@ -9586,13 +10558,15 @@ function renderInfoParcelasTable(list) {
           <div style="font-size:11px">${item.fornecedor || '—'}</div>
           <small style="color:var(--muted)">Lote: ${item.lote || '—'}</small>
         </td>
-        <td style="padding:10px 8px; text-align:right">
+        <td style="padding:10px 8px; text-align:right; white-space:nowrap">
+          <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoCapa('${item.id}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Capa</button>
           <button class="sec" style="padding:3px 8px; margin-right:4px" onclick="openInfoParcelaModal('${item.id}')">✏️</button>
           <button class="danger" style="padding:3px 8px" onclick="deleteInfoParcela('${item.id}')">×</button>
         </td>
       </tr>
     `;
   }).join('');
+  setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
 }
 
 function filterInfoParcelasTable() {
@@ -9915,19 +10889,384 @@ async function importStaticInfoParcelas() {
 }
 
 // ═══════════════════════════════════════════
-// CADERNO DE CAMPO (MIP & ORDENS DE PULVERIZAÇÃO)
+// CADERNO DE CAMPO & PLANTIOS (GESTAO ADMIN)
 // ═══════════════════════════════════════════
+
+let webInfoParcelasData = [];
+let webVariedadeRowCount = 0;
+
 function showCcTab(tab) {
-  if (tab === 'mip') {
-    $('ccTabMip').style.display = 'block';
-    $('ccTabOp').style.display = 'none';
-    $('ccTabMipBtn').className = 'btn on';
-    $('ccTabOpBtn').className = 'btn sec';
+  ['plantios','mip','op','defreg','calagem','fert','tratos','mudas','pos'].forEach(t => {
+    const pane = $(`ccTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+    const btn = $(`ccTab${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
+    if (pane) pane.style.display = (tab === t) ? 'block' : 'none';
+    if (btn) btn.className = (tab === t) ? 'btn on' : 'btn sec';
+  });
+
+  if (tab === 'plantios') {
+    loadWebPlantios();
+  }
+}
+
+async function loadWebPlantios() {
+  try {
+    const { data, error } = await sb.from('info_parcelas')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      webInfoParcelasData = data.sort((a, b) => (a.parcela2 || '').localeCompare(b.parcela2 || ''));
+    } else {
+      webInfoParcelasData = [];
+    }
+  } catch (e) {
+    console.error('Erro ao carregar plantios web:', e);
+    webInfoParcelasData = [];
+  }
+  filterWebPlantios();
+}
+
+function filterWebPlantios() {
+  const query = ($('webPlSearch')?.value || '').toLowerCase().trim();
+  const cultura = $('webPlCultura')?.value || '';
+  const status = $('webPlStatus')?.value || 'ativo';
+
+  const filtered = webInfoParcelasData.filter(p => {
+    const isAtivo = p.ativo !== false;
+    if (status === 'ativo' && !isAtivo) return false;
+    if (status === 'inativo' && isAtivo) return false;
+
+    const searchStr = [p.parcela2, p.parcela, p.letra, p.variedade, p.variedade2, p.variedade3, p.cultura, p.idiarn, p.termo]
+      .filter(Boolean).join(' ').toLowerCase();
+    const matchSearch = !query || searchStr.includes(query);
+    const matchCultura = !cultura || p.cultura === cultura;
+    return matchSearch && matchCultura;
+  });
+
+  renderWebPlantiosTable(filtered);
+}
+
+function renderWebPlantiosTable(data) {
+  const tbody = $('webPlantiosTableBody');
+  const counter = $('webPlCounter');
+  if (!tbody) return;
+
+  const totalAtivos = webInfoParcelasData.filter(p => p.ativo !== false).length;
+  if (counter) counter.textContent = `Exibindo ${data.length} de ${webInfoParcelasData.length} plantio(s) • ${totalAtivos} ativos no total`;
+
+  if (!data || data.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--muted)">Nenhum plantio encontrado com os filtros selecionados.</td></tr>`;
+    return;
+  }
+
+  const fmtDate = d => {
+    if (!d) return '—';
+    const dt = new Date(d + (d.includes('T') ? '' : 'T00:00:00'));
+    return dt.toLocaleDateString('pt-BR');
+  };
+
+  const cultBadge = c => {
+    if (c === 'MELÃO') return '<span style="font-size:11px; background:rgba(245,158,11,0.15); color:var(--yellow); border:1px solid rgba(245,158,11,0.3); padding:3px 8px; border-radius:6px; font-weight:700; display:inline-flex; align-items:center; gap:4px"><i data-lucide="sun" style="width:12px;height:12px"></i> MELÃO</span>';
+    if (c === 'MELANCIA') return '<span style="font-size:11px; background:rgba(236,72,153,0.15); color:#ec4899; border:1px solid rgba(236,72,153,0.3); padding:3px 8px; border-radius:6px; font-weight:700; display:inline-flex; align-items:center; gap:4px"><i data-lucide="circle-dot" style="width:12px;height:12px"></i> MELANCIA</span>';
+    if (c === 'MAMÃO') return '<span style="font-size:11px; background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:6px; font-weight:700; display:inline-flex; align-items:center; gap:4px"><i data-lucide="apple" style="width:12px;height:12px"></i> MAMÃO</span>';
+    return `<span style="font-size:11px; background:rgba(255,255,255,0.06); color:var(--muted); padding:3px 8px; border-radius:6px">${c || 'OUTROS'}</span>`;
+  };
+
+  tbody.innerHTML = data.map(p => {
+    const isAtivo = p.ativo !== false;
+    const vars = [p.variedade, p.variedade2, p.variedade3, p.variedade4, p.variedade5].filter(Boolean);
+
+    // Cálculo de dias restantes
+    let diasBadge = '';
+    if (p.previsao_colheita) {
+      const hoje = new Date();
+      const prev = new Date(p.previsao_colheita + 'T00:00:00');
+      const dias = Math.ceil((prev - hoje) / 86400000);
+      if (dias > 0) {
+        diasBadge = `<div style="font-size:10px; color:var(--yellow); font-weight:700; margin-top:2px">${dias}d restantes</div>`;
+      } else {
+        diasBadge = `<div style="font-size:10px; color:var(--red); font-weight:700; margin-top:2px">Vencido / Pronto</div>`;
+      }
+    }
+
+    return `
+      <tr style="border-bottom:1px solid var(--border); opacity:${isAtivo ? 1 : 0.6}">
+        <td style="padding:12px; font-weight:800; color:var(--text)">${p.parcela2 || p.parcela || '—'}</td>
+        <td style="padding:12px">${cultBadge(p.cultura)}</td>
+        <td style="padding:12px">
+          <div style="display:flex; flex-wrap:wrap; gap:4px">
+            ${vars.map(v => `<span style="font-size:11px; background:rgba(16,185,129,0.08); color:var(--green); border:1px solid rgba(16,185,129,0.2); padding:2px 7px; border-radius:6px; font-weight:600">${v}</span>`).join('')}
+          </div>
+        </td>
+        <td style="padding:12px; text-align:center; font-weight:700">${p.area ? p.area + ' ha' : '—'}</td>
+        <td style="padding:12px; text-align:center">${p.transplante ? fmtDate(p.transplante) : (p.plantio ? fmtDate(p.plantio) : '—')}</td>
+        <td style="padding:12px; text-align:center">
+          <div style="font-weight:700">${p.previsao_colheita ? fmtDate(p.previsao_colheita) : '—'}</div>
+          ${diasBadge}
+        </td>
+        <td style="padding:12px; text-align:center; font-size:11px; color:var(--muted)">
+          ${p.idiarn ? `<div>IDIARN: <strong>${p.idiarn}</strong></div>` : ''}
+          ${p.termo ? `<div>Termo: <strong>${p.termo}</strong></div>` : ''}
+          ${!p.idiarn && !p.termo ? '—' : ''}
+        </td>
+        <td style="padding:12px; text-align:center">
+          ${isAtivo 
+            ? '<span style="font-size:10px; background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); padding:2px 7px; border-radius:6px; font-weight:700">ATIVO</span>'
+            : '<span style="font-size:10px; background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.3); padding:2px 7px; border-radius:6px; font-weight:700">ENCERRADO</span>'
+          }
+        </td>
+        <td style="padding:12px; text-align:center">
+          <button onclick="openWebPlantioModal('${p.id}')" class="sec" style="padding:4px 8px; font-size:11px; display:inline-flex; align-items:center; gap:4px" title="Editar"><i data-lucide="edit-3" style="width:13px;height:13px"></i> Editar</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function openWebPlantioModal(editId) {
+  const modal = $('webPlantioModal');
+  const title = $('webPlantioModalTitle');
+  const editIdInput = $('webPlEditId');
+  const encerrarBtn = $('webBtnEncerrarPlantio');
+
+  // Reset form
+  ['webPlParcela','webPlLetra','webPlParcela2Preview','webPlCultura','webPlFileiras',
+   'webPlEspacamento','webPlArea','webPlSemeadura','webPlTransplante','webPlPrevisao',
+   'webPlPlantio','webPlIdiarn','webPlTermo','webPlNf','webPlFornecedor',
+   'webPlFornecedor2','webPlObs'].forEach(id => {
+    const el = $(id);
+    if (el) el.value = '';
+  });
+  $('webPlPrevisaoHint').textContent = '';
+
+  webVariedadeRowCount = 0;
+  $('webVariedadesContainer').innerHTML = '';
+  addWebVariedadeRow();
+
+  if (editId) {
+    const item = webInfoParcelasData.find(x => x.id === editId);
+    if (!item) return;
+
+    if (title) title.innerHTML = `<i data-lucide="sprout" style="color:var(--green); width:22px; height:22px;"></i> Editar Plantio — ${item.parcela2 || item.parcela}`;
+    editIdInput.value = editId;
+    if (encerrarBtn) encerrarBtn.style.display = item.ativo !== false ? 'inline-flex' : 'none';
+
+    $('webPlParcela').value = item.parcela || '';
+    $('webPlLetra').value = item.letra || '';
+    updateWebParcela2Preview();
+
+    $('webPlCultura').value = item.cultura || '';
+    $('webPlFileiras').value = item.linhas || '';
+    $('webPlEspacamento').value = item.espacamento || '';
+    $('webPlArea').value = item.area || '';
+    $('webPlSemeadura').value = item.semeadura || '';
+    $('webPlTransplante').value = item.transplante || item.plantio || '';
+    $('webPlPrevisao').value = item.previsao_colheita || '';
+    $('webPlPlantio').value = item.plantio || '';
+    $('webPlIdiarn').value = item.idiarn || '';
+    $('webPlTermo').value = item.termo || '';
+    $('webPlNf').value = item.nf || '';
+    $('webPlFornecedor').value = item.fornecedor || '';
+    $('webPlFornecedor2').value = item.fornecedor2 || '';
+    $('webPlObs').value = item.obs || '';
+
+    // Load variedades
+    $('webVariedadesContainer').innerHTML = '';
+    webVariedadeRowCount = 0;
+    const varsArr = [
+      { nome: item.variedade, lote: item.lote, qtd: item.quantidade },
+      { nome: item.variedade2, lote: item.lote2, qtd: item.quantidade2 },
+      { nome: item.variedade3, lote: item.lote3, qtd: item.quantidade3 },
+      { nome: item.variedade4, lote: item.lote4, qtd: item.quantidade4 },
+      { nome: item.variedade5, lote: item.lote5, qtd: item.quantidade5 },
+    ].filter(v => v.nome);
+
+    if (varsArr.length === 0) addWebVariedadeRow();
+    else varsArr.forEach(v => addWebVariedadeRow(v.nome, v.lote, v.qtd));
+
   } else {
-    $('ccTabMip').style.display = 'none';
-    $('ccTabOp').style.display = 'block';
-    $('ccTabMipBtn').className = 'btn sec';
-    $('ccTabOpBtn').className = 'btn on';
+    if (title) title.innerHTML = `<i data-lucide="sprout" style="color:var(--green); width:22px; height:22px;"></i> Novo Plantio`;
+    editIdInput.value = '';
+    if (encerrarBtn) encerrarBtn.style.display = 'none';
+  }
+
+  modal.style.display = 'flex';
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeWebPlantioModal() {
+  $('webPlantioModal').style.display = 'none';
+}
+
+function updateWebParcela2Preview() {
+  const p = ($('webPlParcela')?.value || '').trim();
+  const l = ($('webPlLetra')?.value || '').trim().toUpperCase();
+  const prev = $('webPlParcela2Preview');
+  if (prev) prev.value = p && l ? `${p} ${l}` : p;
+}
+
+function calcWebPrevisaoColheita() {
+  const transplante = $('webPlTransplante')?.value;
+  const cultura = $('webPlCultura')?.value;
+  const hint = $('webPlPrevisaoHint');
+
+  if (!transplante || !cultura || cultura === 'MAMÃO') {
+    if (hint) hint.textContent = cultura === 'MAMÃO' ? 'Preencha manualmente para Mamão' : '';
+    return;
+  }
+
+  const dias = cultura === 'MELÃO' ? 65 : 60; // MELANCIA = 60
+  const dt = new Date(transplante + 'T00:00:00');
+  dt.setDate(dt.getDate() + dias);
+  const iso = dt.toISOString().split('T')[0];
+  $('webPlPrevisao').value = iso;
+  if (hint) hint.textContent = `✅ Calculado automaticamente: transplante + ${dias} dias`;
+}
+
+function addWebVariedadeRow(nomeVal = '', loteVal = '', qtdVal = '') {
+  if (webVariedadeRowCount >= 5) { alert('Máximo de 5 variedades por plantio'); return; }
+  webVariedadeRowCount++;
+  const idx = webVariedadeRowCount;
+  const container = $('webVariedadesContainer');
+  const div = document.createElement('div');
+  div.id = `webVarRow${idx}`;
+  div.style.cssText = 'background:var(--input-bg); border:1px solid var(--border); border-radius:10px; padding:12px; position:relative';
+  div.innerHTML = `
+    <div style="font-size:10px; font-weight:800; color:var(--yellow); text-transform:uppercase; margin-bottom:8px">Variedade ${idx}</div>
+    ${idx > 1 ? `<button type="button" onclick="removeWebVariedadeRow(${idx})" style="position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.2);color:var(--red);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center">×</button>` : ''}
+    <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:8px">
+      <div>
+        <label class="flabel">Cultivar / Nome *</label>
+        <input id="webPlVar${idx}" type="text" placeholder="Ex: GOLDMINE" value="${nomeVal}" style="text-transform:uppercase"/>
+      </div>
+      <div>
+        <label class="flabel">Lote Semente</label>
+        <input id="webPlLote${idx}" type="text" placeholder="Ex: 150339" value="${loteVal}"/>
+      </div>
+      <div>
+        <label class="flabel">Qtd. Sementes</label>
+        <input id="webPlQtd${idx}" type="number" placeholder="15000" value="${qtdVal}"/>
+      </div>
+    </div>
+  `;
+  container.appendChild(div);
+  if (window.lucide) lucide.createIcons();
+}
+
+function removeWebVariedadeRow(idx) {
+  const el = $(`webVarRow${idx}`);
+  if (el) { el.remove(); webVariedadeRowCount = Math.max(0, webVariedadeRowCount - 1); }
+}
+
+async function saveWebPlantio() {
+  const btn = $('webBtnSavePlantio');
+  const editId = $('webPlEditId').value;
+
+  const parcela = $('webPlParcela').value.trim();
+  const letra = $('webPlLetra').value.trim().toUpperCase();
+  const cultura = $('webPlCultura').value;
+
+  if (!parcela || !letra) return alert('Informe a Parcela e a Letra.');
+  if (!cultura) return alert('Selecione a Cultura.');
+
+  const parcela2 = `${parcela} ${letra}`;
+
+  const varsData = [];
+  for (let i = 1; i <= 5; i++) {
+    const nome = $(`webPlVar${i}`)?.value?.trim().toUpperCase();
+    if (nome) {
+      varsData.push({
+        nome,
+        lote: $(`webPlLote${i}`)?.value?.trim() || null,
+        qtd: parseInt($(`webPlQtd${i}`)?.value) || null
+      });
+    }
+  }
+  if (varsData.length === 0) return alert('Informe pelo menos 1 variedade.');
+
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  const payload = {
+    tenant_id: tenantId,
+    parcela,
+    letra,
+    parcela2,
+    cultura,
+    variedade: varsData[0]?.nome || null,
+    variedade2: varsData[1]?.nome || null,
+    variedade3: varsData[2]?.nome || null,
+    variedade4: varsData[3]?.nome || null,
+    variedade5: varsData[4]?.nome || null,
+    lote: varsData[0]?.lote || null,
+    lote2: varsData[1]?.lote || null,
+    lote3: varsData[2]?.lote || null,
+    lote4: varsData[3]?.lote || null,
+    lote5: varsData[4]?.lote || null,
+    quantidade: varsData[0]?.qtd || null,
+    quantidade2: varsData[1]?.qtd || null,
+    quantidade3: varsData[2]?.qtd || null,
+    quantidade4: varsData[3]?.qtd || null,
+    quantidade5: varsData[4]?.qtd || null,
+    linhas: parseInt($('webPlFileiras').value) || null,
+    espacamento: parseFloat($('webPlEspacamento').value) || null,
+    area: parseFloat($('webPlArea').value) || null,
+    semeadura: $('webPlSemeadura').value || null,
+    transplante: $('webPlTransplante').value || null,
+    plantio: $('webPlPlantio').value || $('webPlTransplante').value || null,
+    previsao_colheita: $('webPlPrevisao').value || null,
+    idiarn: $('webPlIdiarn').value.trim() || null,
+    termo: $('webPlTermo').value.trim() || null,
+    nf: $('webPlNf').value.trim() || null,
+    fornecedor: $('webPlFornecedor').value.trim() || null,
+    fornecedor2: $('webPlFornecedor2').value.trim() || null,
+    obs: $('webPlObs').value.trim() || null,
+    ativo: true,
+  };
+
+  try {
+    let err;
+    if (editId) {
+      const res = await sb.from('info_parcelas').update(payload).eq('id', editId).eq('tenant_id', tenantId);
+      err = res.error;
+    } else {
+      const res = await sb.from('info_parcelas').insert(payload);
+      err = res.error;
+    }
+
+    if (err) throw err;
+
+    toast(editId ? 'Plantio atualizado com sucesso! ✅' : 'Plantio cadastrado com sucesso! ✅', 'ok');
+    closeWebPlantioModal();
+    await loadWebPlantios();
+  } catch (e) {
+    console.error('Erro ao salvar plantio web:', e);
+    alert('Erro ao salvar plantio: ' + (e.message || 'Verifique sua conexão.'));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Salvar Plantio';
+  }
+}
+
+async function encerrarWebPlantio() {
+  const editId = $('webPlEditId').value;
+  if (!editId) return;
+  if (!confirm('Encerrar este plantio? Ele será mantido no histórico.')) return;
+
+  try {
+    const { error } = await sb.from('info_parcelas')
+      .update({ ativo: false })
+      .eq('id', editId)
+      .eq('tenant_id', tenantId);
+    if (error) throw error;
+    toast('Plantio encerrado! 📦', 'ok');
+    closeWebPlantioModal();
+    await loadWebPlantios();
+  } catch (e) {
+    alert('Erro ao encerrar plantio: ' + e.message);
   }
 }
 
@@ -10090,8 +11429,8 @@ function renderCcOpTable(list) {
         </td>
         <td style="padding:12px 10px; text-align:center">${horarioStr}</td>
         <td style="padding:12px 10px; text-align:center; white-space:nowrap">
-          <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printOpReport('${itemStr}')"><i data-lucide="file-text" style="width:12px; height:12px"></i> O.P</button>
-          <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printColheitaReport('${itemStr}')"><i data-lucide="wheat" style="width:12px; height:12px"></i> Laudo</button>
+          <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoOrdemPulv('${itemStr}')"><i data-lucide="printer" style="width:12px; height:12px"></i> O.P (OC02)</button>
+          <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoAutColheita('${itemStr}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Laudo (PC11)</button>
           <button class="danger" style="font-size:11px; padding:4px 8px" onclick="deleteOpRecord('${item.id}')">×</button>
         </td>
       </tr>

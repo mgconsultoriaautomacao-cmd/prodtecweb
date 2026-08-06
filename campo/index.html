@@ -170,6 +170,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 .toggle-opt.on[data-type="TARDE"]{border-color:var(--orange);background:rgba(249,115,22,.12);color:var(--orange)}
 .toggle-opt.on[data-type="MELANCIA"]{border-color:#ec4899;background:rgba(236,72,153,.12);color:#ec4899}
 .toggle-opt.on[data-type="MELAO"]{border-color:#f59e0b;background:rgba(245,158,11,.12);color:#f59e0b}
+.toggle-opt.on[data-type="MAMAO"]{border-color:#10b981;background:rgba(16,185,129,.12);color:#10b981}
 .toggle-opt:active{transform:scale(.97)}
 
 /* ── ISSUE TYPES GRID ── */
@@ -555,7 +556,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 
 <!-- ══════════════ LOGIN ══════════════ -->
 <div id="screenLogin" class="screen active">
-  <div class="login-card">
+  <form onsubmit="event.preventDefault(); doLogin();" class="login-card">
     <div class="login-logo" style="display:flex; align-items:center; justify-content:center; margin-bottom:8px;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:48px; height:48px; color:var(--green); flex-shrink:0;">
         <path d="M12 22C12 22 20 18 20 12V4L12 2L4 4V12C4 18 12 22 12 22Z" stroke="var(--green)"/>
@@ -574,9 +575,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       <label class="field-label">Senha</label>
       <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password">
     </div>
-    <button class="btn btn-primary btn-full" id="loginBtn" onclick="doLogin()">Entrar</button>
-    <button class="btn btn-sec btn-full" id="loginOfflineBtn" style="margin-top:12px; display:none; border-color:var(--orange); color:var(--orange)" onclick="doOfflineLogin()">Entrar Offline (Usar Cache)</button>
-  </div>
+    <button type="submit" class="btn btn-primary btn-full" id="loginBtn">Entrar</button>
+    <button type="button" class="btn btn-sec btn-full" id="loginOfflineBtn" style="margin-top:12px; display:none; border-color:var(--orange); color:var(--orange)" onclick="doOfflineLogin()">Entrar Offline (Usar Cache)</button>
+  </form>
 </div>
 
 <!-- ══════════════ HOME ══════════════ -->
@@ -652,6 +653,24 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       <span class="module-icon"><i data-lucide="file-text"></i></span>
       <div class="module-name">Aplicação de Defensivos (O.P)</div>
       <div class="module-desc">Registre ordens de pulverização e carências de defensivos</div>
+      <div class="module-arrow">›</div>
+    </div>
+    <div class="module-card" style="--grad:linear-gradient(90deg,#06b6d4,#10b981)" onclick="showScreen('fertirrigacao'); loadFertSelects();">
+      <span class="module-icon"><i data-lucide="droplets"></i></span>
+      <div class="module-name">Fertirrigação</div>
+      <div class="module-desc">Registre receitas de fertirrigação por parcela e controle fertilizantes</div>
+      <div class="module-arrow">›</div>
+    </div>
+    <div class="module-card" style="--grad:linear-gradient(90deg,#ea580c,#f43f5e)" onclick="showScreen('idiarn'); loadIdiarnSelects();">
+      <span class="module-icon"><i data-lucide="file-check"></i></span>
+      <div class="module-name">Visitas IDIARN</div>
+      <div class="module-desc">Registre fiscalizações do IDIARN e laudos fitossanitários</div>
+      <div class="module-arrow">›</div>
+    </div>
+    <div class="module-card" style="--grad:linear-gradient(90deg,#16a34a,#15803d)" onclick="showScreen('plantios')">
+      <span class="module-icon"><i data-lucide="leaf"></i></span>
+      <div class="module-name">Cadastro de Plantios</div>
+      <div class="module-desc">Cadastre e gerencie plantios com variedades, datas e previsão de colheita</div>
       <div class="module-arrow">›</div>
     </div>
   </div>
@@ -1214,7 +1233,42 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   </div>
 </div>
 
-<!-- ══════════════ INFO PARCELAS ══════════════ -->
+<!-- ══════════════ CADASTRO DE PLANTIOS ══════════════ -->
+<div id="screenPlantios" class="screen">
+  <div class="header">
+    <div class="back-btn" onclick="showScreen('home')">‹</div>
+    <div class="header-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="leaf" style="width:20px;height:20px"></i> Cadastro de Plantios</div>
+    <button onclick="openPlantioModal()" style="width:38px;height:38px;border-radius:10px;background:var(--green);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;font-size:22px;font-weight:300;flex-shrink:0;transition:all .15s">+</button>
+  </div>
+
+  <div style="padding:14px 16px 0">
+    <!-- Filtros -->
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:12px">
+      <div class="emp-search" style="margin:0; grid-column:1/-1"><span style="display:inline-flex;align-items:center;justify-content:center;padding:0 4px;color:var(--muted)"><i data-lucide="search" style="width:16px;height:16px"></i></span><input id="plSearch" oninput="filterPlantios()" placeholder="Buscar parcela, variedade..." autocomplete="off"></div>
+      <select id="plCultura" onchange="filterPlantios()" style="font-size:13px; padding:10px 8px">
+        <option value="">Todas as culturas</option>
+        <option value="MELÃO">Melão</option>
+        <option value="MELANCIA">Melancia</option>
+        <option value="MAMÃO">Mamão</option>
+      </select>
+      <select id="plStatus" onchange="filterPlantios()" style="font-size:13px; padding:10px 8px">
+        <option value="ativo">✅ Ativos</option>
+        <option value="todos">📋 Todos</option>
+        <option value="inativo">📦 Encerrados</option>
+      </select>
+    </div>
+
+    <!-- Contador -->
+    <div id="plCounter" style="font-size:11px; color:var(--muted); margin-bottom:10px"></div>
+
+    <!-- Lista de plantios -->
+    <div id="plList" style="display:flex; flex-direction:column; gap:10px; padding-bottom:20px">
+      <div class="loading"><div class="spinner"></div>Carregando plantios...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ INFO PARCELAS (visualização legado) ══════════════ -->
 <div id="screenInfoParcelas" class="screen">
   <div class="header">
     <div class="back-btn" onclick="showScreen('home')">‹</div>
@@ -1227,7 +1281,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       <div style="font-size:12px; color:var(--muted2)">Consulte informações de plantio, sementes e previsões de colheita.</div>
     </div>
     
-    <!-- Search / Filter inputs -->
     <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px; margin-bottom:12px">
       <div class="emp-search" style="margin:0"><span style="display:inline-flex;align-items:center;justify-content:center;padding:0 4px;color:var(--muted)"><i data-lucide="search" style="width:16px;height:16px"></i></span><input id="ipSearch" oninput="filterInfoParcelas()" placeholder="Buscar variedade/parcela..." autocomplete="off"></div>
       <select id="ipCultura" onchange="filterInfoParcelas()" style="font-size:13px; height: 100%; padding: 10px 8px;">
@@ -1238,10 +1291,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       </select>
     </div>
 
-    <!-- Active List -->
-    <div id="ipList" style="margin-bottom:20px; display:flex; flex-direction:column; gap:12px;">
-      <!-- Will be populated dynamically -->
-    </div>
+    <div id="ipList" style="margin-bottom:20px; display:flex; flex-direction:column; gap:12px;"></div>
   </div>
 </div>
 
@@ -1249,40 +1299,194 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 <div id="ipDetailModal" style="display:none; position:fixed; inset:0; background:rgba(3,7,18,0.95); backdrop-filter:blur(8px); z-index:1000; padding:20px; overflow-y:auto;">
   <div style="background:var(--card); border:1px solid var(--border2); border-radius:24px; padding:24px; width:100%; max-width:500px; margin:40px auto; position:relative; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); box-sizing:border-box;">
     <div style="position:absolute; top:20px; right:20px; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:700; font-size:16px;" onclick="closeIpDetail()">✕</div>
-    
-    <div id="ipDetailHeader" style="margin-bottom:20px">
-      <!-- Title, Cultivar, etc -->
-    </div>
-    
-    <!-- Tab system inside Modal -->
+    <div id="ipDetailHeader" style="margin-bottom:20px"></div>
     <div class="tab-bar" style="margin-bottom:16px; position:static; padding:0; background:transparent;">
       <div class="tab-btn on" id="ipTab1Btn" onclick="showIpDetailTab(1)" style="font-size:12px; padding:8px 0">1. Parcela</div>
       <div class="tab-btn" id="ipTab2Btn" onclick="showIpDetailTab(2)" style="font-size:12px; padding:8px 0">2. Semente</div>
       <div class="tab-btn" id="ipTab3Btn" onclick="showIpDetailTab(3)" style="font-size:12px; padding:8px 0">3. Semeio</div>
     </div>
-    
-    <!-- Tab 1 content: Parcela -->
-    <div id="ipTab1" class="tab-pane on" style="padding:0">
-      <div style="display:flex; flex-direction:column; gap:12px" id="ipTab1Content">
-        <!-- Parcela, Letra, Cultura, Variedade, Area, Linhas, Quantidade, Plantio, Previsao -->
-      </div>
-    </div>
-    
-    <!-- Tab 2 content: Semente -->
-    <div id="ipTab2" class="tab-pane" style="padding:0">
-      <div style="display:flex; flex-direction:column; gap:12px" id="ipTab2Content">
-        <!-- NF, Emissao, Lote, Fornecedor -->
-      </div>
-    </div>
-    
-    <!-- Tab 3 content: Semeio -->
-    <div id="ipTab3" class="tab-pane" style="padding:0">
-      <div style="display:flex; flex-direction:column; gap:12px" id="ipTab3Content">
-        <!-- Semeadura, NF2, Fornecedor2, Lote2, Emissao NF2, Quantidade2, Termo, Defensivos, Data Aplicacao, Obs -->
-      </div>
-    </div>
-    
+    <div id="ipTab1" class="tab-pane on" style="padding:0"><div style="display:flex; flex-direction:column; gap:12px" id="ipTab1Content"></div></div>
+    <div id="ipTab2" class="tab-pane" style="padding:0"><div style="display:flex; flex-direction:column; gap:12px" id="ipTab2Content"></div></div>
+    <div id="ipTab3" class="tab-pane" style="padding:0"><div style="display:flex; flex-direction:column; gap:12px" id="ipTab3Content"></div></div>
     <button class="btn btn-sec btn-full" style="margin-top:24px; width:100%;" onclick="closeIpDetail()">Fechar</button>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL CADASTRO/EDIÇÃO DE PLANTIO ══════════════ -->
+<div id="plantioModal" style="display:none; position:fixed; inset:0; background:rgba(3,7,18,0.97); backdrop-filter:blur(10px); z-index:2000; overflow-y:auto; padding:0">
+  <div style="min-height:100dvh; padding:20px; box-sizing:border-box">
+    <div style="background:var(--card); border:1px solid var(--border2); border-radius:20px; padding:24px; width:100%; max-width:560px; margin:0 auto; box-sizing:border-box">
+      
+      <!-- Header do modal -->
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px">
+        <div style="flex:1">
+          <div style="font-size:18px; font-weight:900; color:var(--text)" id="plantioModalTitle">Novo Plantio</div>
+          <div style="font-size:11px; color:var(--muted); margin-top:2px">Preencha as informações do plantio</div>
+        </div>
+        <button onclick="closePlantioModal()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid var(--border2);color:var(--muted);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>
+
+      <input type="hidden" id="plantioEditId">
+
+      <!-- Seção 1: Identificação -->
+      <div style="background:rgba(16,185,129,0.06); border:1px solid var(--border2); border-radius:12px; padding:16px; margin-bottom:14px">
+        <div style="font-size:10px; font-weight:800; color:var(--green); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; display:flex; align-items:center; gap:6px"><i data-lucide="map-pin" style="width:14px;height:14px"></i> Identificação</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+          <div class="form-field" style="margin:0">
+            <label class="field-label">Parcela (nº)</label>
+            <input id="plParcela" type="text" placeholder="Ex: 33" oninput="updateParcela2Preview()">
+          </div>
+          <div class="form-field" style="margin:0">
+            <label class="field-label">Letra / Sequência</label>
+            <input id="plLetra" type="text" placeholder="Ex: G" oninput="updateParcela2Preview()" style="text-transform:uppercase">
+          </div>
+        </div>
+        <div style="margin-top:8px; padding:8px 12px; background:var(--card2); border-radius:8px; font-size:13px; font-weight:700; color:var(--green)">
+          📍 <span id="parcela2Preview">— selecione parcela e letra —</span>
+        </div>
+        <div class="form-field" style="margin-top:12px; margin-bottom:0">
+          <label class="field-label">Cultura</label>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px">
+            <div class="toggle-opt" id="cultMELAO" onclick="selectCultura('MELÃO')" data-type="MELAO" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px"><i data-lucide="sun" style="width:20px;height:20px"></i><span style="font-size:11px">Melão</span></div>
+            <div class="toggle-opt" id="cultMELANCIA" onclick="selectCultura('MELANCIA')" data-type="MELANCIA" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px"><i data-lucide="circle-dot" style="width:20px;height:20px"></i><span style="font-size:11px">Melancia</span></div>
+            <div class="toggle-opt" id="cultMAMAO" onclick="selectCultura('MAMÃO')" data-type="MAMAO" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px"><i data-lucide="apple" style="width:20px;height:20px"></i><span style="font-size:11px">Mamão</span></div>
+          </div>
+          <input type="hidden" id="plCulturaVal">
+        </div>
+      </div>
+
+      <!-- Seção 2: Área -->
+      <div style="background:rgba(59,130,246,0.06); border:1px solid var(--border2); border-radius:12px; padding:16px; margin-bottom:14px">
+        <div style="font-size:10px; font-weight:800; color:#3b82f6; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; display:flex; align-items:center; gap:6px"><i data-lucide="ruler" style="width:14px;height:14px"></i> Área</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px">
+          <div class="form-field" style="margin:0">
+            <label class="field-label">Fileiras</label>
+            <input id="plFileiras" type="number" placeholder="48">
+          </div>
+          <div class="form-field" style="margin:0">
+            <label class="field-label">Espaçamento (m)</label>
+            <input id="plEspacamento" type="number" step="0.01" placeholder="0.04">
+          </div>
+          <div class="form-field" style="margin:0">
+            <label class="field-label">Área (ha)</label>
+            <input id="plArea" type="number" step="0.01" placeholder="1.92">
+          </div>
+        </div>
+      </div>
+
+      <!-- Seção 3: Variedades (dinâmicas) -->
+      <div style="background:rgba(245,158,11,0.06); border:1px solid var(--border2); border-radius:12px; padding:16px; margin-bottom:14px">
+        <div style="font-size:10px; font-weight:800; color:var(--yellow); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; display:flex; align-items:center; gap:6px"><i data-lucide="wheat" style="width:14px;height:14px"></i> Variedades</div>
+        <div id="variedadesContainer" style="display:flex; flex-direction:column; gap:10px"></div>
+        <button type="button" onclick="addVariedadeRow()" style="margin-top:10px; width:100%; padding:10px; border-radius:8px; border:1.5px dashed var(--border2); background:transparent; color:var(--muted2); font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px"><i data-lucide="plus" style="width:14px;height:14px"></i> Adicionar Variedade</button>
+      </div>
+
+      <!-- Seção 4: Datas -->
+      <div style="background:rgba(139,92,246,0.06); border:1px solid var(--border2); border-radius:12px; padding:16px; margin-bottom:14px">
+        <div style="font-size:10px; font-weight:800; color:#8b5cf6; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; display:flex; align-items:center; gap:6px"><i data-lucide="calendar" style="width:14px;height:14px"></i> Datas</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+          <div class="form-field" style="margin:0">
+            <label class="field-label">Semeadura (viveiro)</label>
+            <input id="plSemeadura" type="date">
+          </div>
+          <div class="form-field" style="margin:0">
+            <label class="field-label">Transplante (campo) *</label>
+            <input id="plTransplante" type="date" oninput="calcPrevisaoColheita()">
+          </div>
+        </div>
+        <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:10px">
+          <div class="form-field" style="margin:0">
+            <label class="field-label">Previsão de Colheita</label>
+            <input id="plPrevisao" type="date">
+            <div id="plPrevisaoHint" style="font-size:10px; color:var(--muted); margin-top:3px; font-style:italic"></div>
+          </div>
+          <div class="form-field" style="margin:0">
+            <label class="field-label">Data de Plantio (registro)</label>
+            <input id="plPlantio" type="date">
+          </div>
+        </div>
+      </div>
+
+      <!-- Seção 5: Identificação Oficial -->
+      <div style="background:rgba(236,72,153,0.06); border:1px solid var(--border2); border-radius:12px; padding:16px; margin-bottom:14px">
+        <div style="font-size:10px; font-weight:800; color:#ec4899; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; display:flex; align-items:center; gap:6px"><i data-lucide="file-badge" style="width:14px;height:14px"></i> Identificação Oficial</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+          <div class="form-field" style="margin:0">
+            <label class="field-label">IDIARN</label>
+            <input id="plIdiarn" type="text" placeholder="Ex: 24.08003...">
+          </div>
+          <div class="form-field" style="margin:0">
+            <label class="field-label">Termo / Autorização</label>
+            <input id="plTermo" type="text" placeholder="Ex: 51374">
+          </div>
+        </div>
+      </div>
+
+      <!-- Seção 6: Semente -->
+      <div style="background:rgba(20,184,166,0.06); border:1px solid var(--border2); border-radius:12px; padding:16px; margin-bottom:14px">
+        <div style="font-size:10px; font-weight:800; color:#14b8a6; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; display:flex; align-items:center; gap:6px"><i data-lucide="package" style="width:14px;height:14px"></i> Semente (NF da Compra)</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+          <div class="form-field" style="margin:0">
+            <label class="field-label">NF Semente</label>
+            <input id="plNf" type="text" placeholder="Ex: 14738">
+          </div>
+          <div class="form-field" style="margin:0">
+            <label class="field-label">Emissão NF</label>
+            <input id="plEmissaoNf" type="date">
+          </div>
+        </div>
+        <div class="form-field" style="margin-top:10px; margin-bottom:0">
+          <label class="field-label">Fornecedor Semente</label>
+          <input id="plFornecedor" type="text" placeholder="Ex: SYNGENTA SEEDS LTDA">
+        </div>
+      </div>
+
+      <!-- Seção 7: Semeio (viveiro) -->
+      <div style="background:rgba(99,102,241,0.06); border:1px solid var(--border2); border-radius:12px; padding:16px; margin-bottom:14px">
+        <div style="font-size:10px; font-weight:800; color:#6366f1; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; display:flex; align-items:center; gap:6px"><i data-lucide="sprout" style="width:14px;height:14px"></i> Semeio (Viveiro)</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+          <div class="form-field" style="margin:0">
+            <label class="field-label">NF Viveiro</label>
+            <input id="plNf2" type="text" placeholder="Ex: 20987">
+          </div>
+          <div class="form-field" style="margin:0">
+            <label class="field-label">Emissão NF Viveiro</label>
+            <input id="plEmissaoNf2" type="date">
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px">
+          <div class="form-field" style="margin:0">
+            <label class="field-label">Fornecedor Viveiro</label>
+            <input id="plFornecedor2" type="text" placeholder="Ex: TOP PLANT">
+          </div>
+          <div class="form-field" style="margin:0">
+            <label class="field-label">Produtos na Muda</label>
+            <input id="plProdutosMuda" type="text" placeholder="Ex: Oberon, Score">
+          </div>
+        </div>
+      </div>
+
+      <!-- Seção 8: Obs -->
+      <div class="form-field" style="margin-bottom:20px">
+        <label class="field-label">Observações</label>
+        <textarea id="plObs" rows="3" placeholder="Observações gerais..." style="resize:vertical"></textarea>
+      </div>
+
+      <!-- Botões de ação -->
+      <div style="display:flex; flex-direction:column; gap:10px">
+        <button class="btn btn-primary btn-full" id="btnSavePlantio" onclick="savePlantio()">
+          <i data-lucide="check" style="width:18px;height:18px"></i> Salvar Plantio
+        </button>
+        <div style="display:flex; gap:10px">
+          <button class="btn btn-sec" style="flex:1" onclick="closePlantioModal()">
+            Cancelar
+          </button>
+          <button class="btn btn-danger" style="flex:1" id="btnEncerrarPlantio" onclick="encerrarPlantio()" style="display:none">
+            <i data-lucide="x-circle" style="width:16px;height:16px"></i> Encerrar Plantio
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1525,6 +1729,210 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 </div>
 
 
+<!-- ══════════════ FERTIRRIGAÇÃO ══════════════ -->
+<div id="screenFertirrigacao" class="screen">
+  <div class="header">
+    <div class="back-btn" onclick="showScreen('home')">‹</div>
+    <div class="header-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="droplets" style="width:20px;height:20px"></i> Nova Fertirrigação</div>
+    <div class="online-dot" id="fertOnlineDot"></div>
+  </div>
+
+  <div style="padding:16px; padding-bottom:100px;">
+    <div class="card" style="margin-bottom:16px; border-color:var(--blue)">
+      <div style="font-weight:800; font-size:15px; color:var(--blue); margin-bottom:4px">Lançamento de Fertirrigação</div>
+      <div style="font-size:11px; color:var(--muted2)">Preencha a receita e os fertilizantes aplicados.</div>
+    </div>
+
+    <!-- DADOS DA FERTIRRIGAÇÃO -->
+    <div class="card" style="padding:16px; display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
+      <div style="font-size:13px; font-weight:700; color:var(--text); border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:4px;">1. Dados de Controle</div>
+      <div style="display:grid; grid-template-columns:1fr; gap:8px">
+        <div class="form-field">
+          <label class="field-label">Parcela</label>
+          <select id="fertParcelSelect" style="font-size:14px"></select>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+        <div class="form-field">
+          <label class="field-label">Data Início</label>
+          <input id="fertDateStart" type="date" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Data Fim</label>
+          <input id="fertDateEnd" type="date" style="font-size:13px">
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="field-label">Receita / Fase</label>
+        <input id="fertReceita" type="text" placeholder="Ex: Fase 1 (DAP 1-15)" style="font-size:13px">
+      </div>
+      <div class="form-field">
+        <label class="field-label">Operador</label>
+        <select id="fertOperador" style="font-size:13px"></select>
+      </div>
+    </div>
+
+    <!-- QUANTIDADE DE FERTILIZANTES -->
+    <div class="card" style="padding:16px; display:flex; flex-direction:column; gap:12px">
+      <div style="font-size:13px; font-weight:700; color:var(--text); border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:4px;">
+        2. Fertilizantes Aplicados (kg ou L)
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+        <div class="form-field">
+          <label class="field-label">MAP</label>
+          <input id="fertQty_MAP" type="number" step="0.01" placeholder="0.00" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Ureia</label>
+          <input id="fertQty_UREIA" type="number" step="0.01" placeholder="0.00" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Ácido Bórico</label>
+          <input id="fertQty_ACID_BOR" type="number" step="0.01" placeholder="0.00" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Nitrato de Cálcio</label>
+          <input id="fertQty_NIT_CALCIO" type="number" step="0.01" placeholder="0.00" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Sulfato de Magnésio</label>
+          <input id="fertQty_SULF_MAG" type="number" step="0.01" placeholder="0.00" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Sulfato de Potássio</label>
+          <input id="fertQty_SULF_POT" type="number" step="0.01" placeholder="0.00" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Cloreto de Potássio</label>
+          <input id="fertQty_CLOR_POT" type="number" step="0.01" placeholder="0.00" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Supersoil</label>
+          <input id="fertQty_SUPERSOIL" type="number" step="0.01" placeholder="0.00" style="font-size:13px">
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-full" id="btnSaveFert" onclick="saveFertRecord()" style="margin-top:16px; display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="check" style="width:18px;height:18px"></i> Salvar Fertirrigação</button>
+  </div>
+</div>
+
+<!-- ══════════════ VISITA IDIARN ══════════════ -->
+<div id="screenIdiarn" class="screen">
+  <div class="header">
+    <div class="back-btn" onclick="showScreen('home')">‹</div>
+    <div class="header-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="file-check" style="width:20px;height:20px"></i> Visita IDIARN</div>
+    <div class="online-dot" id="idiarnOnlineDot"></div>
+  </div>
+
+  <div style="padding:16px; padding-bottom:100px;">
+    <!-- Banner -->
+    <div class="card" style="margin-bottom:16px; border-color:var(--orange); background:linear-gradient(135deg,rgba(234,88,12,0.1),rgba(244,63,94,0.05))">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i data-lucide="shield-check" style="width:28px;height:28px;color:var(--orange);flex-shrink:0"></i>
+        <div>
+          <div style="font-weight:800; font-size:15px; color:var(--orange)">Acompanhamento Fitossanitário</div>
+          <div style="font-size:11px; color:var(--muted2)">Os produtos são preenchidos automaticamente das O.P's e MIPs dos últimos 7 dias.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seção 1: Identificação -->
+    <div class="card" style="padding:16px; display:flex; flex-direction:column; gap:12px; margin-bottom:12px;">
+      <div style="font-size:12px; font-weight:700; color:var(--orange); text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:2px;">1. Identificação da Visita</div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+        <div class="form-field">
+          <label class="field-label">Ciclo / Safra *</label>
+          <input id="idiarnCiclo" type="text" placeholder="Ex: 2024/2025" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">N° IDIARN (auto)</label>
+          <div style="display:flex;gap:4px;align-items:center">
+            <input id="idiarnNumero" type="number" placeholder="—" style="font-size:14px;font-weight:800;color:var(--orange)" readonly>
+            <button onclick="reloadIdiarnNumber()" style="flex-shrink:0;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:6px;cursor:pointer;color:var(--muted)"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+        <div class="form-field">
+          <label class="field-label">Parcela *</label>
+          <select id="idiarnParcelSelect" onchange="onIdiarnParcelChange()" style="font-size:14px"></select>
+        </div>
+        <div class="form-field">
+          <label class="field-label">Data da Visita *</label>
+          <input id="idiarnDate" type="date" style="font-size:13px">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+        <div class="form-field">
+          <label class="field-label">Área (ha) <span style="color:var(--muted);font-size:10px">auto</span></label>
+          <input id="idiarnArea" type="number" step="0.01" placeholder="Ex: 2.24" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Variedade <span style="color:var(--muted);font-size:10px">auto</span></label>
+          <input id="idiarnVariedade" type="text" placeholder="Ex: Goldex" style="font-size:13px">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+        <div class="form-field">
+          <label class="field-label">Fazenda *</label>
+          <input id="idiarnFazenda" type="text" value="SANTA HELENA" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Documento *</label>
+          <input id="idiarnDocumento" type="text" placeholder="IDIARN 97 - 30 F - VISITA 1" style="font-size:13px">
+        </div>
+      </div>
+    </div>
+
+    <!-- Seção 2: MIP Alerts (últimos 7 dias) -->
+    <div class="card" style="padding:16px; margin-bottom:12px; display:none" id="idiarnMipSection">
+      <div style="font-size:12px; font-weight:700; color:var(--orange); text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:10px; display:flex;align-items:center;gap:6px">
+        <i data-lucide="bug" style="width:14px;height:14px"></i> Alertas MIP — Últimos 7 Dias
+      </div>
+      <div id="idiarnMipChips" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+
+    <!-- Seção 3: Produtos das OPs (últimos 7 dias) -->
+    <div class="card" style="padding:16px; margin-bottom:12px;">
+      <div style="font-size:12px; font-weight:700; color:var(--orange); text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between">
+        <span style="display:flex;align-items:center;gap:6px"><i data-lucide="flask-conical" style="width:14px;height:14px"></i> Produtos Aplicados</span>
+        <span id="idiarnOpsStatus" style="font-size:10px;color:var(--muted);font-weight:400"></span>
+      </div>
+
+      <!-- Chips de produtos das OPs (selecionáveis) -->
+      <div id="idiarnOpChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+        <div style="font-size:12px;color:var(--muted);font-style:italic">Selecione uma parcela para carregar as aplicações...</div>
+      </div>
+
+      <!-- Campo manual de fallback -->
+      <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:10px">
+        <label class="field-label" style="margin-bottom:4px">Adicionar produto manualmente</label>
+        <div style="display:flex;gap:8px">
+          <input id="idiarnProdutoManual" type="text" placeholder="Ex: Collis 500 SC, Privilege..." style="font-size:13px;flex:1">
+          <button onclick="addIdiarnManualProduct()" style="flex-shrink:0;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;cursor:pointer;color:var(--text);font-size:13px">+ Add</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seção 4: Laudo -->
+    <div class="card" style="padding:16px; margin-bottom:12px;">
+      <div style="font-size:12px; font-weight:700; color:var(--orange); text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:10px">4. Laudo (Opcional)</div>
+      <div class="form-field">
+        <label class="field-label">URL do PDF do Laudo</label>
+        <input id="idiarnPdfUrl" type="url" placeholder="https://..." style="font-size:13px">
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-full" id="btnSaveIdiarn" onclick="saveIdiarnRecord()" style="margin-top:4px; display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="check" style="width:18px;height:18px"></i> Salvar Visita IDIARN</button>
+  </div>
+</div>
+
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -1604,7 +2012,9 @@ function showScreen(name) {
     login:'screenLogin', home:'screenHome', quality:'screenQuality', 
     carrao:'screenCarrao', closure:'screenClosure', bulk:'screenBulk',
     phSign:'screenPhSign', stops:'screenStops', fieldOp:'screenFieldOp',
-    infoParcelas:'screenInfoParcelas', mip:'screenMip', op:'screenOp'
+    infoParcelas:'screenInfoParcelas', mip:'screenMip', op:'screenOp',
+    fertirrigacao:'screenFertirrigacao', idiarn:'screenIdiarn',
+    plantios:'screenPlantios'
   };
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active','behind'));
   const active = $(screens[name]);
@@ -1617,7 +2027,10 @@ function showScreen(name) {
   if (name === 'stops') loadStops();
   if (name === 'fieldOp') loadFieldOpSelects();
   if (name === 'infoParcelas') renderInfoParcelas();
+  if (name === 'plantios') loadPlantiosScreen();
   if (name === 'mip' || name === 'op') initMipAndOpForm();
+  if (name === 'fertirrigacao') loadFertSelects();
+  if (name === 'idiarn') loadIdiarnSelects();
 
   if (window.lucide) lucide.createIcons();
 }
@@ -1648,7 +2061,7 @@ function showCTab(tab) {
 }
 
 function updateOnlineDots() {
-  ['qOnlineDot','cOnlineDot','fOnlineDot'].forEach(id => {
+  ['qOnlineDot','cOnlineDot','fOnlineDot','fertOnlineDot','idiarnOnlineDot'].forEach(id => {
     const el = $(id); if(!el) return;
     el.className = 'online-dot' + (isOnline ? '' : ' offline');
     el.title = isOnline ? 'Online' : 'Offline — dados salvos localmente';
@@ -1749,6 +2162,8 @@ async function syncQueue() {
       if (item.type === 'carrao')  await pushCarrao({ session: item.data.session, workers: item.data.workers, carriageIds: item.data.carriageIds || [] });
       if (item.type === 'field_service') await pushFieldService(item.data);
       if (item.type === 'bulk_sale') await pushBulkSale(item.data);
+      if (item.type === 'fertirrigacao') await pushFertirrigacao(item.data);
+      if (item.type === 'idiarn') await pushIdiarn(item.data);
       await idbDelete(item.id);
       ok++;
     } catch(e) { 
@@ -2109,6 +2524,25 @@ function cacheOfflineData() {
   }
 }
 
+async function loadParcelas() {
+  // Parcelas agora vêm de info_parcelas via loadInfoParcelas()
+  // Mantida para compatibilidade — delega para loadInfoParcelas que reconstrói parcelas e todos os selects
+  if (infoParcelasData && infoParcelasData.length > 0) {
+    parcelas = infoParcelasData
+      .filter(p => p.ativo !== false)
+      .map(p => ({
+        id: p.id,
+        code: p.parcela2 || `${p.parcela} ${p.letra || ''}`.trim(),
+        label: buildParcelaLabel(p),
+        cultura: p.cultura,
+        variedade: p.variedade,
+      }));
+    rebuildAllParcelaSelects();
+  } else {
+    await loadInfoParcelas();
+  }
+}
+
 async function clearSyncQueue(e) {
   if (e) e.stopPropagation();
   if (!confirm('Limpar fila de sincronização offline? Registros pendentes serão perdidos permanentemente.')) return;
@@ -2246,7 +2680,461 @@ let varieties = [];
       .select('*')
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false });
-    infoParcelasData = data || [];
+    infoParcelasData = (data || []).sort((a, b) => (a.parcela2 || '').localeCompare(b.parcela2 || ''));
+
+    // Rebuild parcelas list from info_parcelas (ativos) for all module selects
+    // Each unique parcela2 + info_parcelas.id becomes an entry for selection
+    // Active records only (ativo is null for legacy imported records = treated as active)
+    parcelas = infoParcelasData
+      .filter(p => p.ativo !== false)
+      .map(p => ({
+        id: p.id,
+        code: p.parcela2 || `${p.parcela} ${p.letra || ''}`.trim(),
+        label: buildParcelaLabel(p),
+        cultura: p.cultura,
+        variedade: p.variedade,
+        area: p.area,
+        transplante: p.transplante,
+        previsao_colheita: p.previsao_colheita,
+        ativo: p.ativo !== false
+      }));
+
+    // Rebuild all selects that depend on parcelas
+    rebuildAllParcelaSelects();
+  }
+
+  function buildParcelaLabel(p) {
+    const code = p.parcela2 || `${p.parcela} ${p.letra || ''}`.trim();
+    const vars = [p.variedade, p.variedade2, p.variedade3].filter(Boolean).join(' / ');
+    return vars ? `${code} — ${vars}` : code;
+  }
+
+  function rebuildAllParcelaSelects() {
+    const opts = '<option value="">— Parcela —</option>' +
+      parcelas.map(p => `<option value="${p.id}">${p.label || p.code}</option>`).join('');
+
+    // Carrocões
+    const cSel = $('cParcela');
+    if (cSel) { cSel.innerHTML = opts.replace('— Parcela —', '— Selecionar Parcela —'); cSel.onchange = updateVarietyFilter; }
+
+    // Venda a Granel
+    const bSel = $('bulkParcela');
+    if (bSel) bSel.innerHTML = '<option value="">— Nenhuma Parcela —</option>' +
+      parcelas.map(p => `<option value="${p.id}">${p.label || p.code}</option>`).join('');
+
+    // Qualidade
+    const qSel = $('qParcela');
+    if (qSel) qSel.innerHTML = '<option value="">(Opcional) Selecione Parcela</option>' +
+      parcelas.map(p => `<option value="${p.id}">${p.label || p.code}</option>`).join('');
+
+    // Fertirrigação
+    const fSel = $('fertParcelSelect');
+    if (fSel) fSel.innerHTML = '<option value="">— Parcela —</option>' +
+      parcelas.map(p => `<option value="${p.id}">${p.label || p.code}</option>`).join('');
+
+    // IDIARN
+    const iSel = $('idiarnParcelSelect');
+    if (iSel) iSel.innerHTML = '<option value="">— Parcela —</option>' +
+      parcelas.map(p => `<option value="${p.id}">${p.label || p.code}</option>`).join('');
+
+    // MIP
+    const mSel = $('mipParcelSelect');
+    if (mSel) mSel.innerHTML = '<option value="">— Parcela —</option>' +
+      parcelas.map(p => `<option value="${p.id}">${p.label || p.code}</option>`).join('');
+
+    // OP
+    const opSel = $('opParcelaSelect');
+    if (opSel) opSel.innerHTML = '<option value="">— Parcela —</option>' +
+      parcelas.map(p => `<option value="${p.id}">${p.label || p.code}</option>`).join('');
+
+    // Packing House validação
+    const phSel = $('phParcela');
+    if (phSel) { 
+      const currentVal = phSel.value;
+      phSel.innerHTML = '<option value="">— Todas as Parcelas —</option>' +
+        parcelas.map(p => `<option value="${p.id}">${p.label || p.code}</option>`).join('');
+      phSel.value = currentVal;
+    }
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  // ═══════════════════════════════════════════
+  // CADASTRO DE PLANTIOS — CRUD
+  // ═══════════════════════════════════════════
+
+  let variedadeRowCount = 0;
+
+  function loadPlantiosScreen() {
+    filterPlantios();
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function filterPlantios() {
+    const query = ($('plSearch')?.value || '').toLowerCase().trim();
+    const cultura = $('plCultura')?.value || '';
+    const status = $('plStatus')?.value || 'ativo';
+
+    const filtered = infoParcelasData.filter(p => {
+      const isAtivo = p.ativo !== false;
+      if (status === 'ativo' && !isAtivo) return false;
+      if (status === 'inativo' && isAtivo) return false;
+
+      const searchStr = [p.parcela2, p.parcela, p.letra, p.variedade, p.variedade2, p.variedade3, p.cultura]
+        .filter(Boolean).join(' ').toLowerCase();
+      const matchSearch = !query || searchStr.includes(query);
+      const matchCultura = !cultura || p.cultura === cultura;
+      return matchSearch && matchCultura;
+    });
+
+    renderPlantios(filtered);
+  }
+
+  function renderPlantios(data) {
+    const container = $('plList');
+    const counter = $('plCounter');
+    if (!container) return;
+
+    const total = infoParcelasData.filter(p => p.ativo !== false).length;
+    if (counter) counter.textContent = `${data.length} plantio(s) encontrado(s) • ${total} ativos no total`;
+
+    if (!data.length) {
+      container.innerHTML = '<div class="empty"><div class="empty-icon">🌱</div>Nenhum plantio encontrado</div>';
+      return;
+    }
+
+    const fmtDate = d => {
+      if (!d) return '—';
+      const dt = new Date(d + (d.includes('T') ? '' : 'T00:00:00'));
+      return dt.toLocaleDateString('pt-BR');
+    };
+
+    const cultIconName = c => c === 'MELÃO' ? 'sun' : c === 'MELANCIA' ? 'circle-dot' : c === 'MAMÃO' ? 'apple' : 'sprout';
+    const cultBadge = c => {
+      if (c === 'MELÃO') return 'ip-badge-melon';
+      if (c === 'MELANCIA') return 'ip-badge-watermelon';
+      if (c === 'MAMÃO') return 'ip-badge-papaya';
+      return '';
+    };
+
+    container.innerHTML = data.map(p => {
+      const idx = infoParcelasData.findIndex(x => x.id === p.id);
+      const vars = [p.variedade, p.variedade2, p.variedade3, p.variedade4, p.variedade5]
+        .filter(Boolean);
+      const isAtivo = p.ativo !== false;
+
+      // Dias restantes para colheita
+      let diasRestantesHtml = '';
+      if (p.previsao_colheita) {
+        const hoje = new Date();
+        const prev = new Date(p.previsao_colheita + 'T00:00:00');
+        const dias = Math.ceil((prev - hoje) / 86400000);
+        if (dias > 0) {
+          diasRestantesHtml = `<span style="font-size:10px; background:rgba(245,158,11,0.15); color:var(--yellow); border:1px solid rgba(245,158,11,0.25); padding:2px 7px; border-radius:6px; font-weight:700">${dias}d para colheita</span>`;
+        } else if (dias <= 0) {
+          diasRestantesHtml = `<span style="font-size:10px; background:rgba(239,68,68,0.12); color:var(--red); border:1px solid rgba(239,68,68,0.2); padding:2px 7px; border-radius:6px; font-weight:700">Pronto / Vencido</span>`;
+        }
+      }
+
+      return `
+        <div class="ip-card" style="opacity:${isAtivo ? 1 : 0.55}; position:relative">
+          ${!isAtivo ? '<div style="position:absolute;top:8px;right:8px;font-size:9px;background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.2);padding:2px 7px;border-radius:6px;font-weight:700">ENCERRADO</div>' : ''}
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px">
+            <div style="display:flex; align-items:center; gap:6px">
+              <span class="ip-badge ${cultBadge(p.cultura)}" style="display:inline-flex;align-items:center;gap:4px"><i data-lucide="${cultIconName(p.cultura)}" style="width:12px;height:12px"></i> ${p.cultura || 'OUTROS'}</span>
+              ${diasRestantesHtml}
+            </div>
+            <button onclick="event.stopPropagation(); openPlantioModal('${p.id}')" 
+              style="width:28px;height:28px;border-radius:8px;background:var(--card2);border:1px solid var(--border2);color:var(--muted2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0"
+              title="Editar plantio"><i data-lucide="edit-3" style="width:14px;height:14px"></i></button>
+          </div>
+          <div style="font-weight:800; font-size:17px; margin-bottom:4px; color:var(--text)">${p.parcela2 || p.parcela || '—'}</div>
+          <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px">
+            ${vars.map(v => `<span style="font-size:11px; background:rgba(16,185,129,0.1); color:var(--green); border:1px solid rgba(16,185,129,0.2); padding:2px 8px; border-radius:6px; font-weight:600">${v}</span>`).join('')}
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; font-size:11px; color:var(--muted2)">
+            <span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="ruler" style="width:12px;height:12px"></i> ${p.area ? p.area + ' ha' : '—'}</span>
+            <span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="sprout" style="width:12px;height:12px"></i> Transpl: ${p.transplante ? fmtDate(p.transplante) : (p.plantio ? fmtDate(p.plantio) : '—')}</span>
+            <span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="calendar" style="width:12px;height:12px"></i> Prev: ${p.previsao_colheita ? fmtDate(p.previsao_colheita) : '—'}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function openPlantioModal(editId) {
+    const modal = $('plantioModal');
+    const title = $('plantioModalTitle');
+    const editIdInput = $('plantioEditId');
+    const encerrarBtn = $('btnEncerrarPlantio');
+
+    // Reset form
+    ['plParcela','plLetra','plFileiras','plEspacamento','plArea','plSemeadura',
+     'plTransplante','plPrevisao','plPlantio','plIdiarn','plTermo',
+     'plNf','plEmissaoNf','plFornecedor','plNf2','plEmissaoNf2',
+     'plFornecedor2','plProdutosMuda','plObs'].forEach(id => {
+      const el = $(id);
+      if (el) el.value = '';
+    });
+    $('plCulturaVal').value = '';
+    ['cultMELAO','cultMELANCIA','cultMAMAO'].forEach(id => {
+      const el = $(id);
+      if (el) el.classList.remove('on');
+    });
+    updateParcela2Preview();
+    $('plPrevisaoHint').textContent = '';
+
+    // Init variedades com 1 row
+    variedadeRowCount = 0;
+    $('variedadesContainer').innerHTML = '';
+    addVariedadeRow();
+
+    if (editId) {
+      const item = infoParcelasData.find(x => x.id === editId);
+      if (!item) return;
+      title.textContent = 'Editar Plantio';
+      editIdInput.value = editId;
+      if (encerrarBtn) encerrarBtn.style.display = 'flex';
+
+      $('plParcela').value = item.parcela || '';
+      $('plLetra').value = item.letra || '';
+      updateParcela2Preview();
+
+      if (item.cultura) selectCultura(item.cultura);
+
+      $('plFileiras').value = item.linhas || '';
+      $('plEspacamento').value = item.espacamento || '';
+      $('plArea').value = item.area || '';
+      $('plSemeadura').value = item.semeadura || '';
+      $('plTransplante').value = item.transplante || item.plantio || '';
+      $('plPrevisao').value = item.previsao_colheita || '';
+      $('plPlantio').value = item.plantio || '';
+      $('plIdiarn').value = item.idiarn || '';
+      $('plTermo').value = item.termo || '';
+      $('plNf').value = item.nf || '';
+      $('plEmissaoNf').value = item.emissao_nf || '';
+      $('plFornecedor').value = item.fornecedor || '';
+      $('plNf2').value = item.nf2 || '';
+      $('plEmissaoNf2').value = item.emissao_nf2 || '';
+      $('plFornecedor2').value = item.fornecedor2 || '';
+      $('plProdutosMuda').value = item.produtos_muda || '';
+      $('plObs').value = item.obs || '';
+
+      // Load variedades
+      $('variedadesContainer').innerHTML = '';
+      variedadeRowCount = 0;
+      const varsArr = [
+        { nome: item.variedade, lote: item.lote, qtd: item.quantidade },
+        { nome: item.variedade2, lote: item.lote2, qtd: item.quantidade2 },
+        { nome: item.variedade3, lote: item.lote3, qtd: item.quantidade3 },
+        { nome: item.variedade4, lote: item.lote4, qtd: item.quantidade4 },
+        { nome: item.variedade5, lote: item.lote5, qtd: item.quantidade5 },
+      ].filter(v => v.nome);
+      if (varsArr.length === 0) addVariedadeRow();
+      else varsArr.forEach(v => addVariedadeRow(v.nome, v.lote, v.qtd));
+
+    } else {
+      title.textContent = 'Novo Plantio';
+      editIdInput.value = '';
+      if (encerrarBtn) encerrarBtn.style.display = 'none';
+    }
+
+    modal.style.display = 'block';
+    modal.scrollTop = 0;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function closePlantioModal() {
+    $('plantioModal').style.display = 'none';
+  }
+
+  function updateParcela2Preview() {
+    const p = ($('plParcela')?.value || '').trim();
+    const l = ($('plLetra')?.value || '').trim().toUpperCase();
+    const prev = $('parcela2Preview');
+    if (prev) prev.textContent = p && l ? `${p} ${l}` : (p || '— selecione parcela e letra —');
+  }
+
+  function selectCultura(cultura) {
+    $('plCulturaVal').value = cultura;
+    $('cultMELAO').classList.toggle('on', cultura === 'MELÃO');
+    $('cultMELANCIA').classList.toggle('on', cultura === 'MELANCIA');
+    $('cultMAMAO').classList.toggle('on', cultura === 'MAMÃO');
+    calcPrevisaoColheita();
+  }
+
+  function calcPrevisaoColheita() {
+    const transplante = $('plTransplante')?.value;
+    const cultura = $('plCulturaVal')?.value;
+    const hint = $('plPrevisaoHint');
+
+    if (!transplante || !cultura || cultura === 'MAMÃO') {
+      if (hint) hint.textContent = cultura === 'MAMÃO' ? 'Preencha manualmente para Mamão' : '';
+      return;
+    }
+
+    const dias = cultura === 'MELÃO' ? 65 : 60; // MELANCIA = 60
+    const dt = new Date(transplante + 'T00:00:00');
+    dt.setDate(dt.getDate() + dias);
+    const iso = dt.toISOString().split('T')[0];
+    $('plPrevisao').value = iso;
+    if (hint) hint.textContent = `✅ Calculado automaticamente: transplante + ${dias} dias`;
+  }
+
+  function addVariedadeRow(nomeVal = '', loteVal = '', qtdVal = '') {
+    if (variedadeRowCount >= 5) { toast('Máximo de 5 variedades por plantio', 'err'); return; }
+    variedadeRowCount++;
+    const idx = variedadeRowCount;
+    const container = $('variedadesContainer');
+    const div = document.createElement('div');
+    div.id = `varRow${idx}`;
+    div.style.cssText = 'background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:12px; position:relative';
+    div.innerHTML = `
+      <div style="font-size:10px; font-weight:800; color:var(--yellow); text-transform:uppercase; margin-bottom:8px">Variedade ${idx}</div>
+      ${idx > 1 ? `<button type="button" onclick="removeVariedadeRow(${idx})" style="position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.2);color:var(--red);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center">×</button>` : ''}
+      <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:8px">
+        <div class="form-field" style="margin:0">
+          <label class="field-label">Cultivar / Nome</label>
+          <input id="plVar${idx}" type="text" placeholder="Ex: GOLDMINE" value="${nomeVal}" style="text-transform:uppercase">
+        </div>
+        <div class="form-field" style="margin:0">
+          <label class="field-label">Lote Semente</label>
+          <input id="plLote${idx}" type="text" placeholder="Ex: 150339" value="${loteVal}">
+        </div>
+        <div class="form-field" style="margin:0">
+          <label class="field-label">Qtd. Sementes</label>
+          <input id="plQtd${idx}" type="number" placeholder="15000" value="${qtdVal}">
+        </div>
+      </div>
+    `;
+    container.appendChild(div);
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function removeVariedadeRow(idx) {
+    const el = $(`varRow${idx}`);
+    if (el) { el.remove(); variedadeRowCount = Math.max(0, variedadeRowCount - 1); }
+  }
+
+  async function savePlantio() {
+    const btn = $('btnSavePlantio');
+    const editId = $('plantioEditId').value;
+
+    const parcela = $('plParcela').value.trim();
+    const letra = $('plLetra').value.trim().toUpperCase();
+    const cultura = $('plCulturaVal').value;
+
+    if (!parcela || !letra) return toast('Informe Parcela e Letra', 'err');
+    if (!cultura) return toast('Selecione a Cultura', 'err');
+
+    const parcela2 = `${parcela} ${letra}`;
+
+    // Collect variedades
+    const varsData = [];
+    for (let i = 1; i <= 5; i++) {
+      const nome = $(`plVar${i}`)?.value?.trim().toUpperCase();
+      if (nome) {
+        varsData.push({
+          nome,
+          lote: $(`plLote${i}`)?.value?.trim() || null,
+          qtd: parseInt($(`plQtd${i}`)?.value) || null
+        });
+      }
+    }
+    if (varsData.length === 0) return toast('Informe pelo menos 1 variedade', 'err');
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px"></div> Salvando...';
+
+    const payload = {
+      tenant_id: tenantId,
+      parcela,
+      letra,
+      parcela2,
+      cultura,
+      variedade: varsData[0]?.nome || null,
+      variedade2: varsData[1]?.nome || null,
+      variedade3: varsData[2]?.nome || null,
+      variedade4: varsData[3]?.nome || null,
+      variedade5: varsData[4]?.nome || null,
+      lote: varsData[0]?.lote || null,
+      lote2: varsData[1]?.lote || null,
+      lote3: varsData[2]?.lote || null,
+      lote4: varsData[3]?.lote || null,
+      lote5: varsData[4]?.lote || null,
+      quantidade: varsData[0]?.qtd || null,
+      quantidade2: varsData[1]?.qtd || null,
+      quantidade3: varsData[2]?.qtd || null,
+      quantidade4: varsData[3]?.qtd || null,
+      quantidade5: varsData[4]?.qtd || null,
+      linhas: parseInt($('plFileiras').value) || null,
+      espacamento: parseFloat($('plEspacamento').value) || null,
+      area: parseFloat($('plArea').value) || null,
+      semeadura: $('plSemeadura').value || null,
+      transplante: $('plTransplante').value || null,
+      plantio: $('plPlantio').value || $('plTransplante').value || null,
+      previsao_colheita: $('plPrevisao').value || null,
+      idiarn: $('plIdiarn').value.trim() || null,
+      termo: $('plTermo').value.trim() || null,
+      nf: $('plNf').value.trim() || null,
+      emissao_nf: $('plEmissaoNf').value || null,
+      fornecedor: $('plFornecedor').value.trim() || null,
+      nf2: $('plNf2').value.trim() || null,
+      emissao_nf2: $('plEmissaoNf2').value || null,
+      fornecedor2: $('plFornecedor2').value.trim() || null,
+      produtos_muda: $('plProdutosMuda').value.trim() || null,
+      obs: $('plObs').value.trim() || null,
+      ativo: true,
+    };
+
+    try {
+      let err;
+      if (editId) {
+        const res = await sb.from('info_parcelas').update(payload).eq('id', editId).eq('tenant_id', tenantId);
+        err = res.error;
+      } else {
+        const res = await sb.from('info_parcelas').insert(payload);
+        err = res.error;
+      }
+
+      if (err) throw err;
+
+      toast(editId ? 'Plantio atualizado! ✅' : 'Plantio cadastrado! ✅', 'ok');
+      closePlantioModal();
+      await loadInfoParcelas();
+      cacheOfflineData();
+      filterPlantios();
+    } catch (e) {
+      console.error('Erro ao salvar plantio:', e);
+      toast('Erro ao salvar: ' + (e.message || 'verifique a conexão'), 'err');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="check" style="width:18px;height:18px"></i> Salvar Plantio';
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+
+  async function encerrarPlantio() {
+    const editId = $('plantioEditId').value;
+    if (!editId) return;
+    if (!confirm('Encerrar este plantio? Ele ficará inativo mas não será excluído.')) return;
+
+    try {
+      const { error } = await sb.from('info_parcelas')
+        .update({ ativo: false })
+        .eq('id', editId)
+        .eq('tenant_id', tenantId);
+      if (error) throw error;
+      toast('Plantio encerrado! 📦', 'ok');
+      closePlantioModal();
+      await loadInfoParcelas();
+      cacheOfflineData();
+      filterPlantios();
+    } catch (e) {
+      toast('Erro: ' + e.message, 'err');
+    }
   }
 
   async function loadDefensivos() {
@@ -2255,6 +3143,416 @@ let varieties = [];
       .eq('tenant_id', tenantId)
       .order('produto', { ascending: true });
     defensivosData = data || [];
+  }
+
+  function loadFertSelects() {
+    const pSel = $('fertParcelSelect');
+    if (pSel) {
+      pSel.innerHTML = '<option value="">— Parcela —</option>';
+      parcelas.forEach(p => pSel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`));
+    }
+    
+    const oSel = $('fertOperador');
+    if (oSel) {
+      oSel.innerHTML = '<option value="">— Operador —</option>';
+      employees.forEach(e => oSel.insertAdjacentHTML('beforeend', `<option value="${e.name}">${e.name}</option>`));
+    }
+    
+    $('fertDateStart').value = today();
+    $('fertDateEnd').value = today();
+    $('fertReceita').value = '';
+    
+    const fertilizantes = ['MAP', 'UREIA', 'ACID_BOR', 'NIT_CALCIO', 'SULF_MAG', 'SULF_POT', 'CLOR_POT', 'SUPERSOIL'];
+    fertilizantes.forEach(f => {
+      const el = $('fertQty_' + f);
+      if (el) el.value = '';
+    });
+  }
+
+  // State for IDIARN product chips (selected from OPs + manual)
+  let idiarnSelectedProducts = new Set();
+
+  function loadIdiarnSelects() {
+    const pSel = $('idiarnParcelSelect');
+    if (pSel) {
+      pSel.innerHTML = '<option value="">— Parcela —</option>';
+      parcelas.forEach(p => pSel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`));
+    }
+    
+    // Reset form
+    $('idiarnArea').value = '';
+    $('idiarnVariedade').value = '';
+    $('idiarnDate').value = today();
+    $('idiarnFazenda').value = 'SANTA HELENA';
+    $('idiarnDocumento').value = '';
+    $('idiarnPdfUrl').value = '';
+    $('idiarnProdutoManual').value = '';
+    idiarnSelectedProducts = new Set();
+
+    // Reset product chips
+    const chipsEl = $('idiarnOpChips');
+    if (chipsEl) chipsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);font-style:italic">Selecione uma parcela para carregar as aplicações...</div>';
+    const mipSec = $('idiarnMipSection');
+    if (mipSec) mipSec.style.display = 'none';
+
+    // Default ciclo to current year range
+    const yr = new Date().getFullYear();
+    const cicloEl = $('idiarnCiclo');
+    if (cicloEl && !cicloEl.value) cicloEl.value = `${yr}/${yr+1}`;
+
+    // Pre-fetch next IDIARN number
+    reloadIdiarnNumber();
+  }
+
+  async function reloadIdiarnNumber() {
+    const ciclo = ($('idiarnCiclo') || {}).value || '';
+    if (!ciclo) { 
+      if ($('idiarnNumero')) $('idiarnNumero').value = '';
+      return;
+    }
+    try {
+      const { data } = await sb.from('caderno_campo_idiarn')
+        .select('numero_idiarn')
+        .eq('tenant_id', tenantId)
+        .eq('safra_ciclo', ciclo)
+        .order('numero_idiarn', { ascending: false })
+        .limit(1);
+      
+      const last = data && data[0] ? data[0].numero_idiarn : 0;
+      const next = (last >= 100) ? 1 : (last + 1);
+      if ($('idiarnNumero')) $('idiarnNumero').value = next;
+    } catch(e) {
+      console.warn('Não foi possível buscar próximo número IDIARN:', e);
+    }
+  }
+
+  async function onIdiarnParcelChange() {
+    const pId = $('idiarnParcelSelect').value;
+    if (!pId) {
+      $('idiarnArea').value = '';
+      $('idiarnVariedade').value = '';
+      const chipsEl = $('idiarnOpChips');
+      if (chipsEl) chipsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);font-style:italic">Selecione uma parcela para carregar as aplicações...</div>';
+      const mipSec = $('idiarnMipSection');
+      if (mipSec) mipSec.style.display = 'none';
+      idiarnSelectedProducts = new Set();
+      autoGenerateIdiarnDoc();
+      return;
+    }
+    
+    const pObj = parcelas.find(p => p.id == pId);
+    if (!pObj) return;
+    
+    // Auto-fill area and variety from infoParcelasData cache
+    const info = (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code);
+    $('idiarnArea').value = info ? (info.area || '') : '';
+    $('idiarnVariedade').value = info ? (info.variedade || '') : '';
+    
+    // Auto-generate document name
+    autoGenerateIdiarnDoc();
+
+    // Fetch OPs and MIPs from the last 7 days for this parcel
+    await loadIdiarnAutoProducts(pId, pObj.code);
+  }
+
+  function autoGenerateIdiarnDoc() {
+    const pSel = $('idiarnParcelSelect');
+    const numEl = $('idiarnNumero');
+    const docEl = $('idiarnDocumento');
+    const pCode = pSel && pSel.options[pSel.selectedIndex] ? pSel.options[pSel.selectedIndex].text : '';
+    const num = numEl ? numEl.value : '';
+    if (pCode && num && docEl && !docEl.value) {
+      docEl.value = `IDIARN ${num} - ${pCode} - VISITA 1`;
+    }
+  }
+
+  async function loadIdiarnAutoProducts(parcelId, parcelCode) {
+    const statusEl = $('idiarnOpsStatus');
+    const chipsEl = $('idiarnOpChips');
+    const mipSec = $('idiarnMipSection');
+    const mipChips = $('idiarnMipChips');
+    
+    if (!chipsEl) return;
+    chipsEl.innerHTML = '<div style="font-size:12px;color:var(--muted)">⏳ Buscando aplicações...</div>';
+    if (statusEl) statusEl.textContent = '';
+    
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    // Collect products from OPs of last 7 days
+    const opProducts = new Map(); // key: produto_nome, value: {alvo, datas}
+    
+    try {
+      if (isOnline) {
+        const { data: ops } = await sb.from('caderno_campo_op')
+          .select('id, data_aplicacao, caderno_campo_op_itens(produto_nome, alvo)')
+          .eq('tenant_id', tenantId)
+          .eq('parcel_id', parcelId)
+          .gte('data_aplicacao', sevenDaysAgo)
+          .order('data_aplicacao', { ascending: false });
+        
+        (ops || []).forEach(op => {
+          (op.caderno_campo_op_itens || []).forEach(item => {
+            const key = item.produto_nome;
+            if (!opProducts.has(key)) {
+              opProducts.set(key, { alvo: item.alvo || '', datas: [] });
+            }
+            opProducts.get(key).datas.push(op.data_aplicacao);
+          });
+        });
+
+        if (statusEl) statusEl.textContent = `${ops ? ops.length : 0} O.P's nos últimos 7 dias`;
+      } else {
+        // Fallback to local cache
+        const cached = (opRecordsData || []).filter(op => 
+          (op.parcel_id == parcelId || op.parcela === parcelCode) && op.data_aplicacao >= sevenDaysAgo
+        );
+        cached.forEach(op => {
+          (op.caderno_campo_op_itens || []).forEach(item => {
+            const key = item.produto_nome;
+            if (!opProducts.has(key)) opProducts.set(key, { alvo: item.alvo || '', datas: [] });
+            opProducts.get(key).datas.push(op.data_aplicacao);
+          });
+        });
+        if (statusEl) statusEl.textContent = `${cached.length} O.P's (cache offline)`;
+      }
+    } catch(e) {
+      console.warn('Erro ao buscar OPs para IDIARN:', e);
+    }
+
+    // Render product chips (auto-selected)
+    chipsEl.innerHTML = '';
+    idiarnSelectedProducts = new Set();
+
+    if (opProducts.size === 0) {
+      chipsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);font-style:italic">Nenhuma aplicação encontrada nos últimos 7 dias. Use o campo manual abaixo.</div>';
+    } else {
+      opProducts.forEach((info, nome) => {
+        idiarnSelectedProducts.add(nome);
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.dataset.produto = nome;
+        chip.className = 'idiarn-chip active';
+        chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid var(--orange);background:rgba(234,88,12,0.15);color:var(--orange);cursor:pointer;transition:all .15s';
+        chip.title = `Alvo: ${info.alvo || 'N/A'} | Datas: ${info.datas.join(', ')}`;
+        chip.innerHTML = `<span>✓</span> ${nome}`;
+        chip.onclick = () => toggleIdiarnChip(chip, nome);
+        chipsEl.appendChild(chip);
+      });
+    }
+
+    // Fetch MIP records last 7 days for this parcel
+    try {
+      if (isOnline) {
+        const { data: mips } = await sb.from('caderno_campo_mip')
+          .select('praga, media, data_vistoria')
+          .eq('tenant_id', tenantId)
+          .eq('parcel_id', parcelId)
+          .gte('data_vistoria', sevenDaysAgo)
+          .order('data_vistoria', { ascending: false });
+        
+        if (mips && mips.length > 0) {
+          if (mipSec) mipSec.style.display = '';
+          if (mipChips) {
+            mipChips.innerHTML = '';
+            mips.forEach(m => {
+              const level = m.media > 5 ? '🔴' : m.media > 2 ? '🟡' : '🟢';
+              const chipEl = document.createElement('span');
+              chipEl.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:16px;font-size:11px;font-weight:600;background:rgba(234,88,12,0.08);border:1px solid rgba(234,88,12,0.3);color:var(--text)';
+              chipEl.textContent = `${level} ${m.praga.replace(/_/g,' ')} (média: ${parseFloat(m.media).toFixed(1)})`;
+              mipChips.appendChild(chipEl);
+            });
+          }
+        } else {
+          if (mipSec) mipSec.style.display = 'none';
+        }
+      }
+    } catch(e) {
+      console.warn('Erro ao buscar MIPs para IDIARN:', e);
+      if (mipSec) mipSec.style.display = 'none';
+    }
+  }
+
+  function toggleIdiarnChip(chipEl, produtoNome) {
+    const isActive = idiarnSelectedProducts.has(produtoNome);
+    if (isActive) {
+      idiarnSelectedProducts.delete(produtoNome);
+      chipEl.style.background = 'rgba(0,0,0,0.15)';
+      chipEl.style.borderColor = 'var(--border)';
+      chipEl.style.color = 'var(--muted)';
+      chipEl.querySelector('span').textContent = '○';
+    } else {
+      idiarnSelectedProducts.add(produtoNome);
+      chipEl.style.background = 'rgba(234,88,12,0.15)';
+      chipEl.style.borderColor = 'var(--orange)';
+      chipEl.style.color = 'var(--orange)';
+      chipEl.querySelector('span').textContent = '✓';
+    }
+  }
+
+  function addIdiarnManualProduct() {
+    const input = $('idiarnProdutoManual');
+    const val = input ? input.value.trim() : '';
+    if (!val) return;
+    
+    idiarnSelectedProducts.add(val);
+    const chipsEl = $('idiarnOpChips');
+    
+    // Remove empty state message if present
+    const emptyMsg = chipsEl.querySelector('div');
+    if (emptyMsg) emptyMsg.remove();
+    
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.dataset.produto = val;
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid var(--blue);background:rgba(37,99,235,0.15);color:var(--blue);cursor:pointer;transition:all .15s';
+    chip.innerHTML = `<span>✓</span> ${val} <span style="margin-left:2px;opacity:.7">✕</span>`;
+    chip.onclick = () => { idiarnSelectedProducts.delete(val); chip.remove(); };
+    chipsEl.appendChild(chip);
+    input.value = '';
+  }
+
+  async function saveFertRecord() {
+    const pId = $('fertParcelSelect').value;
+    const dateStart = $('fertDateStart').value;
+    const dateEnd = $('fertDateEnd').value;
+    const receita = $('fertReceita').value.trim();
+    const operador = $('fertOperador').value;
+    
+    if (!pId || !dateStart || !dateEnd) {
+      toast('Preencha Parcela, Data Início e Fim', 'err');
+      return;
+    }
+    
+    const pObj = parcelas.find(p => p.id == pId);
+    const parcelaCode = pObj ? pObj.code : '';
+    
+    const fertilizers = ['MAP', 'UREIA', 'ACID_BOR', 'NIT_CALCIO', 'SULF_MAG', 'SULF_POT', 'CLOR_POT', 'SUPERSOIL'];
+    const items = [];
+    fertilizers.forEach(f => {
+      const qty = parseFloat($('fertQty_' + f).value);
+      if (qty > 0) {
+        items.push({
+          produto_nome: f.replace('_', ' '),
+          quantidade: qty,
+          unidade: 'kg'
+        });
+      }
+    });
+    
+    const session = {
+      tenant_id: tenantId,
+      parcel_id: pId,
+      parcela: parcelaCode,
+      data_inicio: dateStart,
+      data_fim: dateEnd,
+      receita: receita || null,
+      operador: operador || null,
+      synced: true
+    };
+    
+    const btn = $('btnSaveFert');
+    btn.disabled = true;
+    btn.innerHTML = 'Salvando...';
+    
+    try {
+      if (!isOnline) {
+        await idbAdd({ type: 'fertirrigacao', data: { session: { ...session, synced: false }, items } });
+        await updateSyncBadge();
+        toast('📥 Salvo offline — sincronizará quando online', 'ok');
+        showScreen('home');
+      } else {
+        const { data: list, error: e1 } = await sb.from('caderno_campo_fertirrigacao').insert([session]).select('*');
+        if (e1) throw e1;
+        
+        const fertId = list[0].id;
+        if (items.length > 0) {
+          const itemRows = items.map(it => ({
+            ...it,
+            tenant_id: tenantId,
+            fert_id: fertId
+          }));
+          const { error: e2 } = await sb.from('caderno_campo_fertirrigacao_itens').insert(itemRows);
+          if (e2) throw e2;
+        }
+        
+        toast('✓ Fertirrigação registrada!', 'ok');
+        showScreen('home');
+      }
+    } catch(e) {
+      toast('Erro: ' + e.message, 'err');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="check" style="width:18px;height:18px"></i> Salvar Fertirrigação';
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+
+  async function saveIdiarnRecord() {
+    const numero = parseInt($('idiarnNumero').value) || null;
+    const ciclo = $('idiarnCiclo').value.trim();
+    const pId = $('idiarnParcelSelect').value;
+    const area = parseFloat($('idiarnArea').value) || null;
+    const variedade = $('idiarnVariedade').value.trim();
+    const date = $('idiarnDate').value;
+    const fazenda = $('idiarnFazenda').value.trim();
+    const documento = $('idiarnDocumento').value.trim();
+    const pdfUrl = $('idiarnPdfUrl').value.trim();
+    
+    // Collect products from chip selection Set
+    const produtos = [...idiarnSelectedProducts].join(', ');
+    
+    if (!pId || !date || !documento || !ciclo) {
+      toast('Preencha Parcela, Ciclo/Safra, Data e Documento', 'err');
+      return;
+    }
+    if (!produtos) {
+      toast('Selecione ou adicione pelo menos um produto fitossanitário', 'err');
+      return;
+    }
+    
+    const pObj = parcelas.find(p => p.id == pId);
+    const parcelaCode = pObj ? pObj.code : '';
+    
+    const record = {
+      tenant_id: tenantId,
+      numero_idiarn: numero,
+      safra_ciclo: ciclo,
+      parcel_id: pId,
+      parcela: parcelaCode,
+      area_ha: area,
+      variedade: variedade || null,
+      produtos: produtos,
+      data_aplicacao: date,
+      fazenda: fazenda || null,
+      documento: documento,
+      visualizar_url: pdfUrl || null,
+      synced: true
+    };
+    
+    const btn = $('btnSaveIdiarn');
+    btn.disabled = true;
+    btn.innerHTML = 'Salvando...';
+    
+    try {
+      if (!isOnline) {
+        await idbAdd({ type: 'idiarn', data: { ...record, synced: false } });
+        await updateSyncBadge();
+        toast('📥 Salvo offline — sincronizará quando online', 'ok');
+        showScreen('home');
+      } else {
+        const { error } = await sb.from('caderno_campo_idiarn').insert([record]);
+        if (error) throw error;
+        
+        toast('✓ Visita IDIARN registrada!', 'ok');
+        showScreen('home');
+      }
+    } catch(e) {
+      toast('Erro: ' + e.message, 'err');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="check" style="width:18px;height:18px"></i> Salvar Visita IDIARN';
+      if (window.lucide) lucide.createIcons();
+    }
   }
 
   async function loadMipRecords() {
@@ -2291,6 +3589,129 @@ let varieties = [];
     return cMip.includes(cDef) || cDef.includes(cMip);
   }
 
+  /**
+   * Conta quantos dos 10 pontos do MIP têm valor >= 1.
+   * Para pragas de inseto e Oídio, presença em >= 4 pontos justifica aplicação.
+   */
+  function countPositiveMipPoints(mipRecord) {
+    let count = 0;
+    for (let i = 1; i <= 10; i++) {
+      if ((mipRecord['ponto' + i] || 0) >= 1) count++;
+    }
+    return count;
+  }
+
+  /**
+   * Calcula quantos dias ÚTEIS (desconsiderando sábado e domingo) se passaram
+   * entre mipDateStr e opDateStr (formato YYYY-MM-DD).
+   * Nota: o próprio dia do MIP NÃO é contado — o resultado representa quantos
+   * dias CORRIDOS ÚTEIS decorreu após a data do MIP até a data da O.P.
+   */
+  function countWorkingDaysBetween(mipDateStr, opDateStr) {
+    const mipDate = new Date(mipDateStr + 'T00:00:00');
+    const opDate  = new Date(opDateStr  + 'T00:00:00');
+    
+    if (opDate <= mipDate) return 0;
+    
+    let workingDays = 0;
+    const current = new Date(mipDate);
+    current.setDate(current.getDate() + 1); // começa a contar a partir do dia seguinte
+    
+    while (current <= opDate) {
+      const dow = current.getDay(); // 0=Dom, 6=Sab
+      if (dow !== 0 && dow !== 6) workingDays++;
+      current.setDate(current.getDate() + 1);
+    }
+    return workingDays;
+  }
+
+  /**
+   * Valida se um produto/alvo pode ser adicionado à O.P com base nas regras de MIP.
+   * Retorna: { ok: bool, blocked: bool, message: string, mipInfo: {} | null }
+   * 
+   * Regras:
+   *   1. Se é fertilizante/adubo → isento (ok=true, blocked=false)
+   *   2. MIP deve existir para a praga na parcela
+   *   3. MIP deve ter >= 4 pontos positivos (dos 10)
+   *   4. MIP deve ter no máximo 3 dias ÚTEIS de diferença para a data da O.P
+   */
+  function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
+    const cleanAlvo = (alvo || '').toUpperCase();
+    
+    // 1. Isenção para fertilizantes e adubos foliares
+    const isFertilizer = !alvo
+      || cleanAlvo.includes('ADUBO')
+      || cleanAlvo.includes('FOLIAR')
+      || cleanAlvo.includes('NUTRIENTE')
+      || cleanAlvo.includes('FISIOLOGICO')
+      || cleanAlvo === 'N/A'
+      || cleanAlvo === '';
+    
+    if (isFertilizer) {
+      return { ok: true, blocked: false, message: 'Fertilizante/adubo — isento de justificativa MIP', mipInfo: null };
+    }
+    
+    // 2. Filtrar MIPs relevantes (por parcela e praga)
+    const relevantMips = (mipRecordsData || []).filter(m => {
+      const matchesParcel = m.parcel_id == parcelId || m.parcela === parcelCode;
+      const matchesPraga  = isMatchingPraga(m.praga, alvo);
+      return matchesParcel && matchesPraga;
+    });
+    
+    // Pegar o MIP mais recente
+    relevantMips.sort((a, b) => new Date(b.data_vistoria) - new Date(a.data_vistoria));
+    const latestMip = relevantMips[0];
+    
+    if (!latestMip) {
+      return {
+        ok: false,
+        blocked: true,
+        message: `🚫 NÃO CONFORMIDADE: A praga "${alvo}" NÃO foi identificada em nenhum MIP desta parcela. Realize o Monitoramento MIP antes de aplicar o defensivo.`,
+        mipInfo: null
+      };
+    }
+    
+    // 3. Contar pontos positivos
+    const pontosPositivos = countPositiveMipPoints(latestMip);
+    if (pontosPositivos < 4) {
+      return {
+        ok: false,
+        blocked: true,
+        message: `🚫 NÃO CONFORMIDADE: O MIP de ${latestMip.data_vistoria} identificou "${alvo.replace(/_/g,' ')}" em apenas ${pontosPositivos} de 10 pontos. São necessários pelo menos 4 pontos positivos para justificar a aplicação.`,
+        mipInfo: { mip: latestMip, pontosPositivos }
+      };
+    }
+    
+    // 4. Verificar validade (3 dias úteis)
+    const diasUteis = countWorkingDaysBetween(latestMip.data_vistoria, opDate || today());
+    
+    if (diasUteis > 3) {
+      return {
+        ok: false,
+        blocked: true,
+        message: `🚫 NÃO CONFORMIDADE: O MIP de ${latestMip.data_vistoria} expirou — se passaram ${diasUteis} dia(s) útil(eis). O prazo máximo é de 3 dias úteis. Refaça o MIP antes de aplicar.`,
+        mipInfo: { mip: latestMip, pontosPositivos, diasUteis }
+      };
+    }
+    
+    if (diasUteis === 3) {
+      return {
+        ok: true,
+        blocked: false,
+        warning: true,
+        message: `⚠️ ATENÇÃO: Este é o ÚLTIMO DIA de validade do MIP (${latestMip.data_vistoria} — 3 dias úteis). Após hoje, um novo MIP será necessário.`,
+        mipInfo: { mip: latestMip, pontosPositivos, diasUteis }
+      };
+    }
+    
+    return {
+      ok: true,
+      blocked: false,
+      message: `✅ MIP válido: ${latestMip.data_vistoria} — ${pontosPositivos}/10 pontos positivos, ${diasUteis} dia(s) útil(eis) atrás.`,
+      mipInfo: { mip: latestMip, pontosPositivos, diasUteis }
+    };
+  }
+
   // ═══════════════════════════════════════════
   // MÓDULO DE CAMPO (MIP & O.P)
   // ═══════════════════════════════════════════
@@ -2308,28 +3729,31 @@ let varieties = [];
     const mipSel = document.getElementById('mipParcelSelect');
     const opSel = document.getElementById('opParcelSelect');
     
+    // Use parcelas from Supabase (caderno de campo) as the single source of truth
+    const list = Array.isArray(parcelas) ? parcelas : [];
+    
     if (mipSel) {
       mipSel.innerHTML = '<option value="">— Selecione a Parcela —</option>';
-      infoParcelasData.forEach(ip => {
-        mipSel.insertAdjacentHTML('beforeend', `<option value="${ip.id}">${ip.parcela2 || ip.parcela} (${ip.variedade})</option>`);
+      list.forEach(p => {
+        mipSel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`);
       });
     }
     if (opSel) {
       opSel.innerHTML = '<option value="">— Selecione a Parcela —</option>';
-      infoParcelasData.forEach(ip => {
-        opSel.insertAdjacentHTML('beforeend', `<option value="${ip.id}">${ip.parcela2 || ip.parcela} (${ip.variedade})</option>`);
+      list.forEach(p => {
+        opSel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`);
       });
     }
   }
 
   function onMipParcelChange() {
     const pId = document.getElementById('mipParcelSelect').value;
-    const ip = infoParcelasData.find(x => x.id === pId);
+    const pObj = parcelas.find(x => x.id == pId);
     const varInput = document.getElementById('mipVariedadeInput');
-    if (ip && varInput) {
-      varInput.value = `${ip.variedade} (${ip.cultura || 'MELÃO'})`;
-    } else if (varInput) {
-      varInput.value = '';
+    // Try to cross-reference infoParcelasData for variety/culture
+    const info = pObj ? (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code) : null;
+    if (varInput) {
+      varInput.value = info ? `${info.variedade} (${info.cultura || 'MELÃO'})` : (pObj ? pObj.code : '');
     }
   }
 
@@ -2390,14 +3814,15 @@ let varieties = [];
       return;
     }
     
-    const ip = infoParcelasData.find(x => x.id === pId);
+    const pObj = parcelas.find(x => x.id == pId);
+    const info = pObj ? (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code) : null;
     const avg = mipValues.reduce((a, b) => a + b, 0) / 10.0;
     
     const record = {
       tenant_id: tenantId,
-      parcel_id: ip.parcel_id || null,
-      parcela: ip.parcela2 || ip.parcela,
-      variedade: ip.variedade,
+      parcel_id: pId,   // UUID from parcels table (correct)
+      parcela: pObj ? pObj.code : '',
+      variedade: info ? info.variedade : (pObj ? pObj.code : ''),
       data_vistoria: today(),
       praga: praga,
       ponto1: mipValues[0],
@@ -2445,14 +3870,16 @@ let varieties = [];
 
   function onOpParcelChange() {
     const pId = document.getElementById('opParcelSelect').value;
-    const ip = infoParcelasData.find(x => x.id === pId);
+    const pObj = parcelas.find(x => x.id == pId);
+    // Cross-reference infoParcelasData for cultura and area details
+    const info = pObj ? (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code) : null;
     const cultInput = document.getElementById('opCulturaInput');
     const areaInput = document.getElementById('opAreaInput');
-    if (ip) {
-      if (cultInput) cultInput.value = ip.cultura || 'MELÃO';
-      if (areaInput) areaInput.value = ip.area || '1.00';
+    if (info) {
+      if (cultInput) cultInput.value = info.cultura || 'MELÃO';
+      if (areaInput) areaInput.value = info.area || '1.00';
     } else {
-      if (cultInput) cultInput.value = '';
+      if (cultInput) cultInput.value = pObj ? 'MELÃO' : '';
       if (areaInput) areaInput.value = '';
     }
   }
@@ -2502,7 +3929,6 @@ let varieties = [];
     const carencia = parseInt(document.getElementById('opAddCarencia').value) || 0;
     
     // Validação 1: Duplicados por Praga/Alvo
-    const cleanAlvo = (alvo || '').toUpperCase();
     if (alvo) {
       const alreadyHasAlvo = opItems.some(item => (item.alvo || '').trim().toUpperCase() === alvo.trim().toUpperCase());
       if (alreadyHasAlvo) {
@@ -2511,26 +3937,24 @@ let varieties = [];
       }
     }
     
-    // Validação 2: Justificativa de MIP
+    // Validação 2: Conformidade MIP (pragas + pontos + validade)
     const pId = document.getElementById('opParcelSelect').value;
-    const ip = infoParcelasData.find(x => x.id === pId);
-    const parcelName = ip.parcela2 || ip.parcela;
+    const pObj = parcelas.find(x => x.id == pId);
+    const parcelCode = pObj ? pObj.code : '';
+    const opDate = document.getElementById('opDateInput').value || today();
     
-    const isFertilizer = !alvo || cleanAlvo.includes('ADUBO') || cleanAlvo.includes('FOLIARE') || cleanAlvo.includes('NUTRIENTE') || cleanAlvo.includes('FISIOLOGICO') || cleanAlvo === 'N/A';
-    if (!isFertilizer) {
-      const relevantMips = mipRecordsData.filter(m => {
-        const matchesParcel = m.parcela === parcelName;
-        const matchesPraga = isMatchingPraga(m.praga, alvo);
-        return matchesParcel && matchesPraga;
-      });
-      
-      relevantMips.sort((a, b) => new Date(b.data_vistoria) - new Date(a.data_vistoria));
-      const latestMip = relevantMips[0];
-      
-      if (!latestMip || parseFloat(latestMip.media) <= 0) {
-        alert(`Você não pode aplicar o defensivo ${def.produto} para a praga "${alvo}" na parcela ${parcelName} porque ela não foi identificada no MIP (Manejo Integrado de Pragas) recente desta parcela.`);
-        return;
-      }
+    const mipValidation = validateMipForOp(pId, parcelCode, alvo, opDate);
+    
+    if (mipValidation.blocked) {
+      // Mostrar bloqueio com formatação clara
+      alert(mipValidation.message);
+      return;
+    }
+    
+    // Aviso quando está no limite (3 dias úteis)
+    if (mipValidation.warning) {
+      const continuar = confirm(mipValidation.message + '\n\nDeseja continuar mesmo assim?');
+      if (!continuar) return;
     }
     
     opItems.push({
@@ -2540,7 +3964,8 @@ let varieties = [];
       dosagem_real: dosagemReal,
       dosagem_corrigida: dosagemCorrigida,
       unidade: def.unidade || 'L/ha',
-      carencia_dias: carencia
+      carencia_dias: carencia,
+      mipValidation: mipValidation  // Guardar resultado para exibir no card
     });
     
     renderOpItems();
@@ -2561,15 +3986,40 @@ let varieties = [];
       return;
     }
     
+    const opDate = (document.getElementById('opDateInput') || {}).value || today();
+    const pId = (document.getElementById('opParcelSelect') || {}).value;
+    const pObj = pId ? parcelas.find(x => x.id == pId) : null;
+    const parcelCode = pObj ? pObj.code : '';
+    
     opItems.forEach((item, idx) => {
+      // Re-validar MIP para exibir status atualizado (pode ter mudado a data)
+      const validation = validateMipForOp(pId, parcelCode, item.alvo, opDate);
+      
+      let mipBadge = '';
+      if (validation.mipInfo === null && !validation.blocked) {
+        // Fertilizante — sem badge
+        mipBadge = '';
+      } else if (validation.blocked) {
+        mipBadge = `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#f87171;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-top:3px">🚫 MIP INVÁLIDO</span>`;
+      } else if (validation.warning) {
+        const mi = validation.mipInfo;
+        mipBadge = `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(234,179,8,0.15);border:1px solid rgba(234,179,8,0.4);color:#fbbf24;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-top:3px" title="${validation.message}">⚠️ MIP: ${mi.pontosPositivos}/10 pts · Dia 3/${mi.diasUteis} úteis</span>`;
+      } else if (validation.ok && validation.mipInfo) {
+        const mi = validation.mipInfo;
+        mipBadge = `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#4ade80;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-top:3px" title="${validation.message}">✅ MIP: ${mi.pontosPositivos}/10 pts · ${mi.diasUteis} dia(s) útil(eis)</span>`;
+      }
+      
+      const cardBorder = validation.blocked ? 'var(--red)' : validation.warning ? 'rgba(234,179,8,0.5)' : 'var(--border)';
+      
       container.insertAdjacentHTML('beforeend', `
-        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid var(--border)">
-          <div style="display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid ${cardBorder}">
+          <div style="display:flex; flex-direction:column; flex:1; min-width:0;">
             <span style="font-size:13px; font-weight:700; color:var(--text)">${item.produto_nome}</span>
-            <span style="font-size:11px; color:var(--muted)">Alvo: ${item.alvo} | Carência: ${item.carencia_dias} dias</span>
-            <span style="font-size:11px; color:var(--muted2)">Dosagem Aplicada: ${item.dosagem_real} ${item.unidade} ${item.dosagem_real > item.dosagem_corrigida ? '<span style="color:var(--orange)">(Corrigida p/ Laudo: '+item.dosagem_corrigida+')</span>' : ''}</span>
+            <span style="font-size:11px; color:var(--muted)">Alvo: ${item.alvo || '—'} | Carência: ${item.carencia_dias} dias</span>
+            <span style="font-size:11px; color:var(--muted2)">Dosagem: ${item.dosagem_real} ${item.unidade} ${item.dosagem_real > item.dosagem_corrigida ? '<span style="color:var(--orange)">(Corrigida p/ Laudo: '+item.dosagem_corrigida+')</span>' : ''}</span>
+            ${mipBadge}
           </div>
-          <button onclick="removeOpItem(${idx})" class="btn" style="background:var(--red-dim); color:var(--red); padding:6px; border-radius:6px;">
+          <button onclick="removeOpItem(${idx})" class="btn" style="background:var(--red-dim); color:var(--red); padding:6px; border-radius:6px; flex-shrink:0; margin-left:8px;">
             <i data-lucide="trash" style="width:14px;height:14px"></i>
           </button>
         </div>
@@ -2584,7 +4034,12 @@ let varieties = [];
     if (!pId) { alert('Por favor, selecione uma parcela!'); return; }
     if (opItems.length === 0) { alert('Adicione pelo menos um produto na calda!'); return; }
     
-    const ip = infoParcelasData.find(x => x.id === pId);
+    // Use parcelas (Supabase) as source; cross-ref infoParcelasData for culture/area details
+    const pObj = parcelas.find(x => x.id == pId);
+    const ip = pObj ? Object.assign(
+      { id: pObj.id, parcel_id: pObj.id, parcela2: pObj.code, parcela: pObj.code, cultura: 'MELÃO', area: 1.0 },
+      (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code) || {}
+    ) : null;
     const chosenDate = document.getElementById('opDateInput').value || today();
     const tratoristaVal = document.getElementById('opTratoristaInput').value.trim();
     const barristaVal = document.getElementById('opBarristaInput').value.trim();
@@ -2595,6 +4050,22 @@ let varieties = [];
     // Validação 1: Tratorista e Barrista
     if (tratoristaVal && barristaVal && tratoristaVal.toLowerCase() === barristaVal.toLowerCase()) {
       alert("O Tratorista e o Barrista não podem ser a mesma pessoa!");
+      return;
+    }
+    
+    // Validação 3: Conformidade MIP — verificação final antes de salvar
+    const parcelCode = pObj ? pObj.code : '';
+    const nonConformItems = [];
+    for (const item of opItems) {
+      const result = validateMipForOp(pId, parcelCode, item.alvo, chosenDate);
+      if (result.blocked) {
+        nonConformItems.push({ produto: item.produto_nome, alvo: item.alvo, msg: result.message });
+      }
+    }
+    if (nonConformItems.length > 0) {
+      const msgs = nonConformItems.map(nc => `• ${nc.produto} (${nc.alvo || 'sem alvo'})`).join('\n');
+      alert(`🚫 NÃO É POSSÍVEL SALVAR — Não conformidade de MIP detectada nos seguintes produtos:\n\n${msgs}\n\nRemova estes produtos ou refaça o MIP da parcela antes de registrar a O.P.`);
+      renderOpItems(); // Atualiza badges de status
       return;
     }
     
@@ -2642,8 +4113,8 @@ let varieties = [];
     
     const recordOP = {
       tenant_id: tenantId,
-      parcel_id: ip.parcel_id || null,
-      parcela: ip.parcela2 || ip.parcela,
+      parcel_id: pId,    // UUID from parcels table
+      parcela: ip ? (ip.parcela2 || ip.parcela) : (pObj ? pObj.code : ''),
       variedade: ip.variedade,
       data_aplicacao: chosenDate,
       cultura: ip.cultura || 'MELÃO',
@@ -4633,6 +6104,31 @@ async function pushFieldService({ session, workers }) {
   if (e2) throw e2;
   
   return sessList[0];
+}
+
+async function pushFertirrigacao({ session, items }) {
+  const cleanSession = { ...session, synced: true };
+  const { data: list, error: e1 } = await sb.from('caderno_campo_fertirrigacao').insert([cleanSession]).select('*');
+  if (e1) throw e1;
+  
+  const fertId = list[0].id;
+  if (items && items.length > 0) {
+    const itemRows = items.map(it => ({
+      ...it,
+      tenant_id: tenantId,
+      fert_id: fertId
+    }));
+    const { error: e2 } = await sb.from('caderno_campo_fertirrigacao_itens').insert(itemRows);
+    if (e2) throw e2;
+  }
+  return list[0];
+}
+
+async function pushIdiarn(record) {
+  const cleanRecord = { ...record, synced: true };
+  const { data, error } = await sb.from('caderno_campo_idiarn').insert([cleanRecord]).select('*');
+  if (error) throw error;
+  return data;
 }
 
 async function submitFieldOp() {

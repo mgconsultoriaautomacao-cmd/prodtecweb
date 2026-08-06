@@ -56,3 +56,6 @@ checkFile('campo/index.html');
 if (fs.existsSync('mapeiro.html')) {
   checkFile('mapeiro.html');
 }
+if (fs.existsSync('bomjesus.html')) {
+  checkFile('bomjesus.html');
+}

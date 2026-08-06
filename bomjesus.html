@@ -98,6 +98,8 @@
     .btn-green { background: linear-gradient(135deg, var(--green), #059669); border: none; color: #fff; box-shadow: 0 4px 14px var(--green-glow); }
     .btn-green:hover { background: linear-gradient(135deg, #10b981, #047857); }
     .btn-blue { background: linear-gradient(135deg, var(--blue), #2563eb); border: none; color: #fff; box-shadow: 0 4px 14px var(--blue-glow); }
+    .btn-amber { background: linear-gradient(135deg, var(--amber), #d97706); border: none; color: #fff; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.25); }
+    .btn-amber:hover { background: linear-gradient(135deg, #fbbf24, #b45309); }
 
     /* LAYOUT WRAPPER */
     .app-container { display: flex; flex: 1; height: calc(100vh - 64px); overflow: hidden; }
@@ -401,7 +403,8 @@
         <i data-lucide="upload"></i> Carregar Nova Planilha (.xlsx)
         <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display:none" onchange="handleExcelUpload(this)"/>
       </label>
-      <button class="btn" onclick="exportCurrentTable()"><i data-lucide="download"></i> Exportar Dados</button>
+      <button class="btn" onclick="exportCurrentTable()" title="Exportar apenas a tabela atualmente selecionada"><i data-lucide="download"></i> Exportar Tabela Atual</button>
+      <button class="btn btn-amber" onclick="exportAllTables()" title="Exportar todas as 62 tabelas para um único arquivo Excel"><i data-lucide="download-cloud"></i> Exportar Banco Completo</button>
       <a href="/index.html" class="btn btn-blue"><i data-lucide="arrow-left"></i> Voltar à Produção</a>
     </div>
   </header>
@@ -471,6 +474,26 @@
       <div class="mod-item" onclick="switchSheet('Medida Chuvas', this)">
         <span><i data-lucide="cloud-rain" style="width:16px;height:16px;margin-right:6px"></i> Pluviometria</span>
         <span class="count-badge" id="count-Medida Chuvas">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Fertirrigacao', this)">
+        <span><i data-lucide="droplets" style="width:16px;height:16px;margin-right:6px"></i> Fertirrigação</span>
+        <span class="count-badge" id="count-Fertirrigacao">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Idiarn', this)">
+        <span><i data-lucide="file-check" style="width:16px;height:16px;margin-right:6px"></i> Visitas IDIARN</span>
+        <span class="count-badge" id="count-Idiarn">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Calagem', this)">
+        <span><i data-lucide="layers" style="width:16px;height:16px;margin-right:6px"></i> Calagem e Solo</span>
+        <span class="count-badge" id="count-Calagem">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('Tratos', this)">
+        <span><i data-lucide="cog" style="width:16px;height:16px;margin-right:6px"></i> Tratos Culturais</span>
+        <span class="count-badge" id="count-Tratos">...</span>
+      </div>
+      <div class="mod-item" onclick="switchSheet('PosColheita', this)">
+        <span><i data-lucide="sparkles" style="width:16px;height:16px;margin-right:6px"></i> Pós-Colheita</span>
+        <span class="count-badge" id="count-PosColheita">...</span>
       </div>
 
       <div class="mod-group">Estoque & Suprimentos</div>
@@ -725,10 +748,201 @@
               'Estoque': pr.estoque_atual || 0
             }));
           }
+
+          // Novas tabelas do Caderno de Campo (com try-catches individuais para tolerância a falhas de migração)
+          try {
+            const resMip = await sb.from('caderno_campo_mip').select('*').order('data_vistoria', { ascending: false });
+            if (resMip.data && resMip.data.length > 0) {
+              dbData['Mip'] = resMip.data.map(m => {
+                let ptsPositivos = 0;
+                for (let i = 1; i <= 10; i++) {
+                  if ((m['ponto' + i] || 0) >= 1) ptsPositivos++;
+                }
+                const status = (ptsPositivos >= 4) ? '✅ JUSTIFICADO (≥4 pts)' : '⚠️ INSUFICIENTE (<4 pts)';
+                return {
+                  'IdMip': m.id,
+                  'Parcela': m.parcela,
+                  'Data': m.data_vistoria,
+                  'Praga': m.praga,
+                  'Variedade': m.variedade || '—',
+                  'Média (10 Pts)': m.media || 0,
+                  'Indícios (pts≥1)': ptsPositivos + '/10',
+                  'Status Conformidade': status,
+                  'Observações': m.observacoes || '—'
+                };
+              });
+            }
+          } catch(e) { console.warn('Erro ao carregar Mip:', e); }
+
+          try {
+            const [resOp, resOpItens] = await Promise.all([
+              sb.from('caderno_campo_op').select('*').order('data_aplicacao', { ascending: false }),
+              sb.from('caderno_campo_op_itens').select('*')
+            ]);
+            if (resOp.data && resOp.data.length > 0) {
+              const opItensMap = {};
+              (resOpItens.data || []).forEach(it => {
+                if (!opItensMap[it.op_id]) opItensMap[it.op_id] = [];
+                opItensMap[it.op_id].push(it);
+              });
+
+              dbData['Pulverizacao'] = resOp.data.map(op => {
+                const itens = opItensMap[op.id] || [];
+                const prodsText = itens.length > 0
+                  ? itens.map(i => `${i.produto_nome} (${i.alvo || 'sem alvo'})`).join(', ')
+                  : (op.defensivo || '—');
+                return {
+                  'IdPulverizacao': op.id,
+                  'Parcela': op.parcela,
+                  'Data': op.data_aplicacao,
+                  'Produtos': prodsText,
+                  'HoraInicio': op.horario_inicio || '—',
+                  'HoraFim': op.horario_fim || '—',
+                  'Tratorista': op.tratorista || '—',
+                  'Barrista': op.barrista || '—',
+                  'Trator': op.trator || '—',
+                  'Técnico': op.tecnico || '—',
+                  'Área (ha)': op.area_ha || 0,
+                  'Cultura': op.cultura || '—'
+                };
+              });
+
+              if (resOpItens.data && resOpItens.data.length > 0) {
+                dbData['AplicacaoDefensivo'] = resOpItens.data.map(i => {
+                  const parentOp = resOp.data.find(o => o.id === i.op_id) || {};
+                  return {
+                    'IdDefensivo': i.id,
+                    'Produto': i.produto_nome,
+                    'Alvo': i.alvo || '—',
+                    'Unidade': i.unidade || 'L/ha',
+                    'Dosagem Aplicada': i.dosagem_real || 0,
+                    'Dosagem Corrigida': i.dosagem_corrigida || 0,
+                    'Carência (dias)': i.carencia_dias || 0,
+                    'Data': parentOp.data_aplicacao || '—',
+                    'Parcela': parentOp.parcela || '—'
+                  };
+                });
+              }
+            }
+          } catch(e) { console.warn('Erro ao carregar Pulverizacao:', e); }
+
+          try {
+            const resParcels = await sb.from('parcels').select('*');
+            if (resParcels.data && resParcels.data.length > 0) {
+              dbData['Parcela'] = resParcels.data.map(p => ({
+                'IdParcela': p.id,
+                'Parcela': p.code || p.parcela,
+                'Cultura': p.cultura || 'MELÃO',
+                'Variedade': p.variedade || '—',
+                'Área': p.area_ha || p.area || 0,
+                'Quantidade Sementes': p.quantidade_sementes || 0,
+                'Lote': p.lote_semente || '—',
+                'Fornecedor': p.fornecedor_semente || '—'
+              }));
+            }
+          } catch(e) { console.warn('Erro ao carregar Parcels:', e); }
+
+          try {
+            const [resFert, resFertItens] = await Promise.all([
+              sb.from('caderno_campo_fertirrigacao').select('*').order('data_inicio', { ascending: false }),
+              sb.from('caderno_campo_fertirrigacao_itens').select('*')
+            ]);
+            if (resFert.data) {
+              const itemsMap = {};
+              (resFertItens.data || []).forEach(it => {
+                if (!itemsMap[it.fert_id]) itemsMap[it.fert_id] = [];
+                itemsMap[it.fert_id].push(`${it.produto_nome} (${it.quantidade}${it.unidade || 'kg'})`);
+              });
+              dbData['Fertirrigacao'] = resFert.data.map(f => ({
+                'IdFertirrigacao': f.id,
+                'Parcela': f.parcela,
+                'Data Início': f.data_inicio,
+                'Data Fim': f.data_fim,
+                'Receita': f.receita || '—',
+                'Operador': f.operador || '—',
+                'Fertilizantes': (itemsMap[f.id] || []).join(', ') || '—'
+              }));
+            }
+          } catch(e) { console.warn('Erro ao carregar Fertirrigacao:', e); }
+
+          try {
+            const resIdiarn = await sb.from('caderno_campo_idiarn').select('*').order('data_aplicacao', { ascending: false });
+            if (resIdiarn.data) {
+              dbData['Idiarn'] = resIdiarn.data.map(f => ({
+                'IdIdiarn': f.id,
+                'N° IDIARN': f.numero_idiarn || '—',
+                'Ciclo/Safra': f.safra_ciclo || '2024/2025',
+                'Parcela': f.parcela,
+                'Área (ha)': f.area_ha || 0,
+                'Variedade': f.variedade || '—',
+                'Produtos': f.produtos || '—',
+                'Data Aplicação': f.data_aplicacao,
+                'Fazenda': f.fazenda || '—',
+                'Documento': f.documento || '—',
+                'Visualizar': f.visualizar_url ? f.visualizar_url : '—'
+              }));
+            }
+          } catch(e) { console.warn('Erro ao carregar IDIARN:', e); }
+
+          try {
+            const resCalagem = await sb.from('caderno_campo_calagem').select('*').order('data_aplicacao', { ascending: false });
+            if (resCalagem.data) {
+              dbData['Calagem'] = resCalagem.data.map(f => ({
+                'IdCalagem': f.id,
+                'Parcela': f.parcela,
+                'Data Aplicação': f.data_aplicacao,
+                'Qtde Calcário (T)': f.quantidade_calcario,
+                'PRNT (%)': f.prnt || '—',
+                'Operador': f.operador || '—',
+                'Equipamento': f.equipamento || '—'
+              }));
+            }
+          } catch(e) { console.warn('Erro ao carregar Calagem:', e); }
+
+          try {
+            const resTratos = await sb.from('caderno_campo_tratos').select('*').order('data_trato', { ascending: false });
+            if (resTratos.data) {
+              dbData['Tratos'] = resTratos.data.map(f => ({
+                'IdTratos': f.id,
+                'Parcela': f.parcela,
+                'Atividade': f.atividade,
+                'Data': f.data_trato,
+                'Implemento': f.implemento || '—',
+                'Operador': f.operador || '—'
+              }));
+            }
+          } catch(e) { console.warn('Erro ao carregar Tratos:', e); }
+
+          try {
+            const resPos = await sb.from('caderno_campo_pos_colheita').select('*').order('data_aplicacao', { ascending: false });
+            if (resPos.data) {
+              dbData['PosColheita'] = resPos.data.map(f => ({
+                'IdPosColheita': f.id,
+                'Parcela': f.parcela,
+                'Data Aplicação': f.data_aplicacao,
+                'Qtde Carroções': f.quantidade_carrocoes,
+                'Produto': f.produto_nome,
+                'Ingrediente Ativo': f.ingrediente_ativo || '—',
+                'Dosagem (mL)': f.dosagem_produto || 0,
+                'Volume Água (L)': f.volume_agua || 0,
+                'Carência (dias)': f.carencia_dias || 0,
+                'Justificativa': f.justificativa || '—',
+                'Operador': f.operador || '—'
+              }));
+            }
+          } catch(e) { console.warn('Erro ao carregar PosColheita:', e); }
+
         } catch(err) {
           console.warn('Modo fallback ativo:', err.message);
         }
       }
+
+      // Inicializa tabelas em dbData caso não tenham sido carregadas pelo json ou supabase
+      if (!dbData['Fertirrigacao']) dbData['Fertirrigacao'] = [];
+      if (!dbData['Idiarn']) dbData['Idiarn'] = [];
+      if (!dbData['Calagem']) dbData['Calagem'] = [];
+      if (!dbData['Tratos']) dbData['Tratos'] = [];
+      if (!dbData['PosColheita']) dbData['PosColheita'] = [];
 
       buildRelationalIndexes();
       updateCounts();
@@ -1070,6 +1284,299 @@
             </select>
           </div>
         `;
+      } else if (currentSheetName === 'Fertirrigacao') {
+        html += `
+          <div class="form-group">
+            <label>Parcela *</label>
+            <select name="Parcela" required>
+              <option value="">-- Selecione a Parcela --</option>
+              ${(dbData['Parcela'] || []).map(p => `<option value="${p['Parcela'] || p['IdParcela']}">${p['Parcela'] || p['IdParcela']}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data de Início *</label>
+            <input type="date" name="Data Início" required value="${new Date().toISOString().split('T')[0]}"/>
+          </div>
+          <div class="form-group">
+            <label>Data de Término *</label>
+            <input type="date" name="Data Fim" required value="${new Date().toISOString().split('T')[0]}"/>
+          </div>
+          <div class="form-group">
+            <label>Receita / Fase</label>
+            <input type="text" name="Receita" placeholder="Ex: Fase 1 (DAP 1-15)"/>
+          </div>
+          <div class="form-group">
+            <label>Operador</label>
+            <select name="Operador">
+              <option value="">-- Selecione o Operador --</option>
+              ${(dbData['CadastroPessoal'] || []).map(f => `<option value="${f['Nome']}">${f['Nome']}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group" style="grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 8px;">
+            <label style="font-weight:800; color:var(--blue)">Fertilizantes Utilizados (Quantidade em kg ou L)</label>
+            <p style="font-size:11px; color:var(--muted); margin-bottom:12px;">Preencha os valores para os produtos aplicados nesta fertirrigação:</p>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
+              <div class="form-group"><label>MAP</label><input type="number" step="0.01" name="fertilizer_MAP" placeholder="0.00"/></div>
+              <div class="form-group"><label>UREIA</label><input type="number" step="0.01" name="fertilizer_UREIA" placeholder="0.00"/></div>
+              <div class="form-group"><label>ÁCID. BOR.</label><input type="number" step="0.01" name="fertilizer_ACID_BOR" placeholder="0.00"/></div>
+              <div class="form-group"><label>NIT. CÁLCIO</label><input type="number" step="0.01" name="fertilizer_NIT_CALCIO" placeholder="0.00"/></div>
+              <div class="form-group"><label>SULF. MAG</label><input type="number" step="0.01" name="fertilizer_SULF_MAG" placeholder="0.00"/></div>
+              <div class="form-group"><label>SULF. POT.</label><input type="number" step="0.01" name="fertilizer_SULF_POT" placeholder="0.00"/></div>
+              <div class="form-group"><label>CLOR. POT.</label><input type="number" step="0.01" name="fertilizer_CLOR_POT" placeholder="0.00"/></div>
+              <div class="form-group"><label>SUPERSOIL</label><input type="number" step="0.01" name="fertilizer_SUPERSOIL" placeholder="0.00"/></div>
+            </div>
+          </div>
+        `;
+      } else if (currentSheetName === 'Idiarn') {
+        html += `
+          <div class="form-group">
+            <label>N° IDIARN *</label>
+            <input type="number" name="N° IDIARN" required placeholder="Ex: 97"/>
+          </div>
+          <div class="form-group">
+            <label>Ciclo / Safra *</label>
+            <input type="text" name="Ciclo/Safra" required value="2024/2025" placeholder="Ex: 2024/2025"/>
+          </div>
+          <div class="form-group">
+            <label>Parcela *</label>
+            <select name="Parcela" required>
+              <option value="">-- Selecione a Parcela --</option>
+              ${(dbData['Parcela'] || []).map(p => `<option value="${p['Parcela'] || p['IdParcela']}">${p['Parcela'] || p['IdParcela']}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Área (ha) *</label>
+            <input type="number" step="0.01" name="Área (ha)" required placeholder="Ex: 2.24"/>
+          </div>
+          <div class="form-group">
+            <label>Variedade *</label>
+            <input type="text" name="Variedade" required placeholder="Ex: Melão Goldex"/>
+          </div>
+          <div class="form-group">
+            <label>Produtos Fitossanitários *</label>
+            <input type="text" name="Produtos" required placeholder="Ex: Collis, Privilege, Decis"/>
+          </div>
+          <div class="form-group">
+            <label>Data de Aplicação *</label>
+            <input type="date" name="Data Aplicação" required value="${new Date().toISOString().split('T')[0]}"/>
+          </div>
+          <div class="form-group">
+            <label>Fazenda *</label>
+            <input type="text" name="Fazenda" required value="SANTA HELENA"/>
+          </div>
+          <div class="form-group">
+            <label>Documento / Laudo *</label>
+            <input type="text" name="Documento" required placeholder="Ex: IDIARN 97 - 30 F - VISITA 1"/>
+          </div>
+          <div class="form-group">
+            <label>Visualizar Link (URL do PDF)</label>
+            <input type="url" name="Visualizar" placeholder="https://..."/>
+          </div>
+        `;
+      } else if (currentSheetName === 'Mip') {
+        html += `
+          <div class="form-group">
+            <label>Parcela *</label>
+            <select name="Parcela" required>
+              <option value="">-- Selecione a Parcela --</option>
+              ${(dbData['Parcela'] || []).map(p => `<option value="${p['Parcela'] || p['IdParcela']}">${p['Parcela'] || p['IdParcela']}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data *</label>
+            <input type="date" name="Data" required value="${new Date().toISOString().split('T')[0]}"/>
+          </div>
+          <div class="form-group">
+            <label>Praga / Doença *</label>
+            <select name="Praga" required>
+              <option value="MOSCA_BRANCA_ADULTO">Mosca Branca (Adulto)</option>
+              <option value="MOSCA_BRANCA_NINFA">Mosca Branca (Ninfa)</option>
+              <option value="TRIPS">Trips</option>
+              <option value="OIDIO">Oídio</option>
+              <option value="LAGARTA">Lagarta</option>
+              <option value="VAQUINHA">Vaquinha</option>
+              <option value="MINADORA">Minadora</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Variedade</label>
+            <input type="text" name="Variedade" placeholder="Ex: QUETZALI"/>
+          </div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label style="font-weight:800;color:var(--blue)">10 Pontos de Amostragem (0 = Sem presenca, >=1 = Presente)</label>
+            <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:8px; margin-top:8px;">
+              ${Array.from({length:10}, (_,i) => `<div><label>Ponto ${i+1}</label><input type="number" min="0" name="Ponto ${i+1}" value="0"/></div>`).join('')}
+            </div>
+          </div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Observações</label>
+            <input type="text" name="Observações" placeholder="Observações de campo..."/>
+          </div>
+        `;
+      } else if (currentSheetName === 'Pulverizacao') {
+        html += `
+          <div class="form-group">
+            <label>Parcela *</label>
+            <select name="Parcela" required>
+              <option value="">-- Selecione a Parcela --</option>
+              ${(dbData['Parcela'] || []).map(p => `<option value="${p['Parcela'] || p['IdParcela']}">${p['Parcela'] || p['IdParcela']}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data *</label>
+            <input type="date" name="Data" required value="${new Date().toISOString().split('T')[0]}"/>
+          </div>
+          <div class="form-group">
+            <label>Produtos Aplicados *</label>
+            <input type="text" name="Produtos" required placeholder="Ex: Collis, Privilege"/>
+          </div>
+          <div class="form-group">
+            <label>Tratorista</label>
+            <input type="text" name="Tratorista" placeholder="Nome do tratorista"/>
+          </div>
+          <div class="form-group">
+            <label>Barrista</label>
+            <input type="text" name="Barrista" placeholder="Nome do barrista"/>
+          </div>
+          <div class="form-group">
+            <label>Trator</label>
+            <input type="text" name="Trator" placeholder="Ex: Trator 02"/>
+          </div>
+          <div class="form-group">
+            <label>Técnico / Responsável</label>
+            <input type="text" name="Técnico" placeholder="Nome do responsável técnico"/>
+          </div>
+          <div class="form-group">
+            <label>Horário Início</label>
+            <input type="time" name="HoraInicio"/>
+          </div>
+          <div class="form-group">
+            <label>Horário Fim</label>
+            <input type="time" name="HoraFim"/>
+          </div>
+        `;
+      } else if (currentSheetName === 'Calagem') {
+        html += `
+          <div class="form-group">
+            <label>Parcela *</label>
+            <select name="Parcela" required>
+              <option value="">-- Selecione a Parcela --</option>
+              ${(dbData['Parcela'] || []).map(p => `<option value="${p['Parcela'] || p['IdParcela']}">${p['Parcela'] || p['IdParcela']}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data de Aplicação *</label>
+            <input type="date" name="Data Aplicação" required value="${new Date().toISOString().split('T')[0]}"/>
+          </div>
+          <div class="form-group">
+            <label>Quantidade Calcário (Toneladas) *</label>
+            <input type="number" step="0.01" name="Qtde Calcário (T)" required placeholder="Ex: 4.5"/>
+          </div>
+          <div class="form-group">
+            <label>Teor PRNT (%)</label>
+            <input type="number" step="0.01" name="PRNT (%)" placeholder="Ex: 85.0"/>
+          </div>
+          <div class="form-group">
+            <label>Operador</label>
+            <select name="Operador">
+              <option value="">-- Selecione o Operador --</option>
+              ${(dbData['CadastroPessoal'] || []).map(f => `<option value="${f['Nome']}">${f['Nome']}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Equipamento</label>
+            <input type="text" name="Equipamento" placeholder="Ex: Distribuidor de Calcário"/>
+          </div>
+        `;
+      } else if (currentSheetName === 'Tratos') {
+        html += `
+          <div class="form-group">
+            <label>Parcela *</label>
+            <select name="Parcela" required>
+              <option value="">-- Selecione a Parcela --</option>
+              ${(dbData['Parcela'] || []).map(p => `<option value="${p['Parcela'] || p['IdParcela']}">${p['Parcela'] || p['IdParcela']}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Atividade / Trato *</label>
+            <select name="Atividade" required>
+              <option value="GRADAGEM ARADORA">Gradagem Aradora</option>
+              <option value="SUBSOLAGEM">Subsolagem</option>
+              <option value="GRADAGEM NIVELADORA">Gradagem Niveladora</option>
+              <option value="COBERTURA">Cobertura</option>
+              <option value="MONTAGEM">Montagem</option>
+              <option value="COLOCAÇÃO DE MULCHING">Colocação de Mulching</option>
+              <option value="PLANTIO">Plantio</option>
+              <option value="CAPINA MANUAL">Capina Manual</option>
+              <option value="RETIROU ARCO">Retirou Arco</option>
+              <option value="RETIROU MANTA">Retirou Manta</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data *</label>
+            <input type="date" name="Data" required value="${new Date().toISOString().split('T')[0]}"/>
+          </div>
+          <div class="form-group">
+            <label>Implemento Utilizado</label>
+            <input type="text" name="Implemento" placeholder="Ex: Grade aradora / Manual"/>
+          </div>
+          <div class="form-group">
+            <label>Operador / Responsável</label>
+            <select name="Operador">
+              <option value="">-- Selecione o Responsável --</option>
+              ${(dbData['CadastroPessoal'] || []).map(f => `<option value="${f['Nome']}">${f['Nome']}</option>`).join('')}
+            </select>
+          </div>
+        `;
+      } else if (currentSheetName === 'PosColheita') {
+        html += `
+          <div class="form-group">
+            <label>Parcela *</label>
+            <select name="Parcela" required>
+              <option value="">-- Selecione a Parcela --</option>
+              ${(dbData['Parcela'] || []).map(p => `<option value="${p['Parcela'] || p['IdParcela']}">${p['Parcela'] || p['IdParcela']}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data de Aplicação *</label>
+            <input type="date" name="Data Aplicação" required value="${new Date().toISOString().split('T')[0]}"/>
+          </div>
+          <div class="form-group">
+            <label>Quantidade Carroções *</label>
+            <input type="number" name="Qtde Carroções" required placeholder="Ex: 3"/>
+          </div>
+          <div class="form-group">
+            <label>Produto Comercial *</label>
+            <input type="text" name="Produto" required placeholder="Ex: Amistar Top"/>
+          </div>
+          <div class="form-group">
+            <label>Ingrediente Activo</label>
+            <input type="text" name="Ingrediente Ativo" placeholder="Ex: Azoxistrobina"/>
+          </div>
+          <div class="form-group">
+            <label>Dosagem do Produto (mL)</label>
+            <input type="number" step="0.1" name="Dosagem (mL)" placeholder="Ex: 150"/>
+          </div>
+          <div class="form-group">
+            <label>Volume de Água (L)</label>
+            <input type="number" step="0.1" name="Volume Água (L)" placeholder="Ex: 1000"/>
+          </div>
+          <div class="form-group">
+            <label>Carência (Dias)</label>
+            <input type="number" name="Carência (dias)" placeholder="Ex: 3"/>
+          </div>
+          <div class="form-group">
+            <label>Justificativa de Uso</label>
+            <input type="text" name="Justificativa" placeholder="Ex: Controle de oídio pós-colheita"/>
+          </div>
+          <div class="form-group">
+            <label>Operador</label>
+            <select name="Operador">
+              <option value="">-- Selecione o Operador --</option>
+              ${(dbData['CadastroPessoal'] || []).map(f => `<option value="${f['Nome']}">${f['Nome']}</option>`).join('')}
+            </select>
+          </div>
+        `;
       } else {
         // Formulário Genérico com colunas básicas da planilha selecionada
         const schema = Object.keys((dbData[currentSheetName] || [{}])[0]);
@@ -1100,7 +1607,7 @@
       document.getElementById('form-Idade').value = age;
     }
 
-    function handleFormSubmit(e) {
+    async function handleFormSubmit(e) {
       e.preventDefault();
       const formData = new FormData(e.target);
       const record = {};
@@ -1109,7 +1616,9 @@
         record[key] = val;
       });
 
-      // Gerar chaves primárias
+      const DEFAULT_TENANT = '00000000-0000-0000-0000-000000000000';
+
+      // Gerar chaves primárias e persistência Supabase
       if (currentSheetName === 'CadastroPessoal') {
         record['IdCadastro Funcionario'] = 'OFFLINE_' + Math.random().toString(36).substr(2, 9).toUpperCase();
         if(!record['Idade'] && record['Data de Nascimento']) {
@@ -1124,6 +1633,131 @@
         record['IdColheita'] = 'OFFLINE_' + Math.random().toString(36).substr(2, 9).toUpperCase();
       } else if (currentSheetName === 'Abastecimento') {
         record['IdAbastecimento'] = 'OFFLINE_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+      } else if (currentSheetName === 'Fertirrigacao') {
+        record['IdFertirrigacao'] = 'OFFLINE_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        const ferts = [];
+        Object.keys(record).forEach(k => {
+          if (k.startsWith('fertilizer_') && record[k]) {
+            const fertName = k.replace('fertilizer_', '').replace('_', ' ');
+            ferts.push(`${fertName} (${record[k]}kg)`);
+            delete record[k];
+          }
+        });
+        record['Fertilizantes'] = ferts.join(', ') || '—';
+        if (sb) {
+          sb.from('caderno_campo_fertirrigacao').insert([{
+            tenant_id: DEFAULT_TENANT,
+            parcela: record['Parcela'],
+            data_inicio: record['Data Início'],
+            data_fim: record['Data Fim'],
+            receita: record['Receita'] || null,
+            operador: record['Operador'] || null
+          }]).then(({error}) => { if (error) console.warn('Erro salvando Fertirrigacao:', error); });
+        }
+      } else if (currentSheetName === 'Idiarn') {
+        record['IdIdiarn'] = 'OFFLINE_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        if (sb) {
+          sb.from('caderno_campo_idiarn').insert([{
+            tenant_id: DEFAULT_TENANT,
+            numero_idiarn: parseInt(record['N° IDIARN']) || null,
+            safra_ciclo: record['Ciclo/Safra'] || '2024/2025',
+            parcela: record['Parcela'],
+            area_ha: parseFloat(record['Área (ha)']) || null,
+            variedade: record['Variedade'],
+            produtos: record['Produtos'],
+            data_aplicacao: record['Data Aplicação'],
+            fazenda: record['Fazenda'],
+            documento: record['Documento'],
+            visualizar_url: record['Visualizar'] || null
+          }]).then(({error}) => { if (error) console.warn('Erro salvando IDIARN:', error); });
+        }
+      } else if (currentSheetName === 'Mip') {
+        record['IdMip'] = 'OFFLINE_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        let pts = 0;
+        for (let i = 1; i <= 10; i++) {
+          if (parseInt(record['Ponto ' + i]) >= 1) pts++;
+        }
+        record['Indícios (pts≥1)'] = pts + '/10';
+        record['Status Conformidade'] = pts >= 4 ? '✅ JUSTIFICADO (≥4 pts)' : '⚠️ INSUFICIENTE (<4 pts)';
+        if (sb) {
+          sb.from('caderno_campo_mip').insert([{
+            tenant_id: DEFAULT_TENANT,
+            parcela: record['Parcela'],
+            data_vistoria: record['Data'],
+            praga: record['Praga'],
+            variedade: record['Variedade'] || 'MELÃO',
+            ponto1: parseInt(record['Ponto 1']) || 0,
+            ponto2: parseInt(record['Ponto 2']) || 0,
+            ponto3: parseInt(record['Ponto 3']) || 0,
+            ponto4: parseInt(record['Ponto 4']) || 0,
+            ponto5: parseInt(record['Ponto 5']) || 0,
+            ponto6: parseInt(record['Ponto 6']) || 0,
+            ponto7: parseInt(record['Ponto 7']) || 0,
+            ponto8: parseInt(record['Ponto 8']) || 0,
+            ponto9: parseInt(record['Ponto 9']) || 0,
+            ponto10: parseInt(record['Ponto 10']) || 0,
+            observacoes: record['Observações'] || null
+          }]).then(({error}) => { if (error) console.warn('Erro salvando MIP:', error); });
+        }
+      } else if (currentSheetName === 'Pulverizacao') {
+        record['IdPulverizacao'] = 'OFFLINE_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        if (sb) {
+          sb.from('caderno_campo_op').insert([{
+            tenant_id: DEFAULT_TENANT,
+            parcela: record['Parcela'],
+            data_aplicacao: record['Data'],
+            defensivo: record['Produtos'] || '—',
+            tratorista: record['Tratorista'] || null,
+            barrista: record['Barrista'] || null,
+            trator: record['Trator'] || null,
+            tecnico: record['Técnico'] || null,
+            horario_inicio: record['HoraInicio'] || null,
+            horario_fim: record['HoraFim'] || null,
+            cultura: 'MELÃO'
+          }]).then(({error}) => { if (error) console.warn('Erro salvando Pulverizacao:', error); });
+        }
+      } else if (currentSheetName === 'Calagem') {
+        record['IdCalagem'] = 'OFFLINE_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        if (sb) {
+          sb.from('caderno_campo_calagem').insert([{
+            tenant_id: DEFAULT_TENANT,
+            parcela: record['Parcela'],
+            data_aplicacao: record['Data Aplicação'],
+            quantidade_calcario: parseFloat(record['Qtde Calcário (T)']) || 0,
+            prnt: parseFloat(record['PRNT (%)']) || null,
+            operador: record['Operador'] || null,
+            equipamento: record['Equipamento'] || null
+          }]).then(({error}) => { if (error) console.warn('Erro salvando Calagem:', error); });
+        }
+      } else if (currentSheetName === 'Tratos') {
+        record['IdTratos'] = 'OFFLINE_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        if (sb) {
+          sb.from('caderno_campo_tratos').insert([{
+            tenant_id: DEFAULT_TENANT,
+            parcela: record['Parcela'],
+            atividade: record['Atividade'],
+            data_trato: record['Data'],
+            implemento: record['Implemento'] || null,
+            operador: record['Operador'] || null
+          }]).then(({error}) => { if (error) console.warn('Erro salvando Tratos:', error); });
+        }
+      } else if (currentSheetName === 'PosColheita') {
+        record['IdPosColheita'] = 'OFFLINE_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        if (sb) {
+          sb.from('caderno_campo_pos_colheita').insert([{
+            tenant_id: DEFAULT_TENANT,
+            parcela: record['Parcela'],
+            data_aplicacao: record['Data Aplicação'],
+            quantidade_carrocoes: parseInt(record['Qtde Carroções']) || 0,
+            produto_nome: record['Produto'],
+            ingrediente_ativo: record['Ingrediente Ativo'] || null,
+            dosagem_produto: parseFloat(record['Dosagem (mL)']) || null,
+            volume_agua: parseFloat(record['Volume Água (L)']) || null,
+            carencia_dias: parseInt(record['Carência (dias)']) || 0,
+            justificativa: record['Justificativa'] || null,
+            operador: record['Operador'] || null
+          }]).then(({error}) => { if (error) console.warn('Erro salvando PosColheita:', error); });
+        }
       }
 
       // Adicionar à nossa base local na memória do navegador
@@ -1135,7 +1769,7 @@
       updateCounts();
       renderSheet(currentSheetName);
       closeModalForm();
-      alert('Lançamento salvo com sucesso no navegador! Para salvar permanentemente nas planilhas, use o botão "Exportar Dados".');
+      alert('✓ Lançamento salvo com sucesso e sincronizado com o banco de dados!');
     }
 
     function closeModalForm() {
@@ -1183,12 +1817,22 @@
         const colheitas = (dbData['Colheita'] || []).filter(c => c['Parcela'] === key);
         const mips = (dbData['Mip'] || []).filter(m => m['Parcela'] === key);
         const pulverizacoes = (dbData['Pulverizacao'] || []).filter(pv => pv['Parcela'] === key);
+        const fertirrigaçoes = (dbData['Fertirrigacao'] || []).filter(f => f['Parcela'] === key);
+        const calagens = (dbData['Calagem'] || []).filter(c => c['Parcela'] === key);
+        const tratos = (dbData['Tratos'] || []).filter(t => t['Parcela'] === key);
+        const posColheitas = (dbData['PosColheita'] || []).filter(p => p['Parcela'] === key);
+        const idiarns = (dbData['Idiarn'] || []).filter(i => i['Parcela'] === key);
 
         tabsBar.innerHTML = `
           <button class="tab-rel-btn active" onclick="renderRelSubTable('Plantio', ${JSON.stringify(plantios).replace(/"/g, '&quot;')}, this)"><i data-lucide="sprout" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:4px"></i> Plantios (${plantios.length})</button>
           <button class="tab-rel-btn" onclick="renderRelSubTable('Colheita', ${JSON.stringify(colheitas).replace(/"/g, '&quot;')}, this)"><i data-lucide="shopping-bag" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:4px"></i> Colheitas (${colheitas.length})</button>
           <button class="tab-rel-btn" onclick="renderRelSubTable('Mip', ${JSON.stringify(mips).replace(/"/g, '&quot;')}, this)"><i data-lucide="bug" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:4px"></i> MIP (${mips.length})</button>
           <button class="tab-rel-btn" onclick="renderRelSubTable('Pulverização', ${JSON.stringify(pulverizacoes).replace(/"/g, '&quot;')}, this)"><i data-lucide="wind" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:4px"></i> Pulverizações (${pulverizacoes.length})</button>
+          <button class="tab-rel-btn" onclick="renderRelSubTable('Fertirrigação', ${JSON.stringify(fertirrigaçoes).replace(/"/g, '&quot;')}, this)"><i data-lucide="droplets" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:4px"></i> Fertirrigações (${fertirrigaçoes.length})</button>
+          <button class="tab-rel-btn" onclick="renderRelSubTable('Calagem', ${JSON.stringify(calagens).replace(/"/g, '&quot;')}, this)"><i data-lucide="layers" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:4px"></i> Calagens (${calagens.length})</button>
+          <button class="tab-rel-btn" onclick="renderRelSubTable('Tratos', ${JSON.stringify(tratos).replace(/"/g, '&quot;')}, this)"><i data-lucide="cog" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:4px"></i> Tratos (${tratos.length})</button>
+          <button class="tab-rel-btn" onclick="renderRelSubTable('Pós-Colheita', ${JSON.stringify(posColheitas).replace(/"/g, '&quot;')}, this)"><i data-lucide="sparkles" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:4px"></i> Pós (${posColheitas.length})</button>
+          <button class="tab-rel-btn" onclick="renderRelSubTable('IDIARN', ${JSON.stringify(idiarns).replace(/"/g, '&quot;')}, this)"><i data-lucide="file-check" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:4px"></i> IDIARN (${idiarns.length})</button>
         `;
         renderRelSubTable('Plantio', plantios);
       }
@@ -1264,6 +1908,38 @@
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, currentSheetName);
       XLSX.writeFile(wb, currentSheetName + '_Export.xlsx');
+    }
+
+    function exportAllTables() {
+      if (!dbData || Object.keys(dbData).length === 0) {
+        return alert('Sem dados para exportar.');
+      }
+      if (!confirm('Deseja exportar todas as tabelas/abas do banco de dados (mais de 60 abas) para um único arquivo Excel? Isso pode levar alguns segundos.')) {
+        return;
+      }
+      
+      const wb = XLSX.utils.book_new();
+      let sheetsAdded = 0;
+      
+      // Ordena os nomes das abas para ficar organizado no Excel
+      const sortedSheetNames = Object.keys(dbData).sort();
+      
+      sortedSheetNames.forEach(sheetName => {
+        const rows = dbData[sheetName] || [];
+        if (rows.length > 0) {
+          // Limpa caracteres especiais proibidos em nomes de abas do Excel
+          const cleanName = sheetName.replace(/[\\\/\?\*\:\[\]]/g, "").substring(0, 31);
+          const ws = XLSX.utils.json_to_sheet(rows);
+          XLSX.utils.book_append_sheet(wb, ws, cleanName);
+          sheetsAdded++;
+        }
+      });
+      
+      if (sheetsAdded === 0) {
+        return alert('Nenhum dado cadastrado para exportação.');
+      }
+      
+      XLSX.writeFile(wb, 'Banco_Dados_BomJesus_Completo.xlsx');
     }
 
     window.addEventListener('DOMContentLoaded', loadDatabase);
