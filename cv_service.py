@@ -1,5 +1,5 @@
 import cv2
-import mediapipe as mp
+import numpy as np
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import threading
@@ -7,6 +7,13 @@ import time
 import subprocess
 import os
 import sys
+import unicodedata
+
+def remove_accents(input_str):
+    if not input_str:
+        return ""
+    nfkd_form = unicodedata.normalize('NFKD', str(input_str))
+    return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
 
 # Tenta importar o pytesseract para suporte cross-platform (Windows, Raspberry Pi, macOS)
 try:
@@ -18,16 +25,6 @@ except ImportError:
 app = Flask(__name__)
 CORS(app) # Libera acesso para o Electron
 
-# Inicializa o Mediapipe para reconhecimento de mãos
-mp_hands = mp.solutions.hands
-mp_drawing = mp.solutions.drawing_utils
-hands = mp_hands.Hands(
-    static_image_mode=False, 
-    max_num_hands=1, 
-    min_detection_confidence=0.7,
-    min_tracking_confidence=0.5
-)
-
 current_count = 0
 current_frame = None
 lock = threading.Lock()
@@ -36,7 +33,7 @@ lock = threading.Lock()
 OCR_PATH = "/Users/manoelgoncalo/.gemini/antigravity-ide/brain/94a3a46d-01a4-46b2-be76-4bb94970fbdb/scratch/ocr"
 TEMP_FRAME_PATH = "/Users/manoelgoncalo/Downloads/packinghouse-web/scratch/current_frame.jpg"
 
-def analyze_box_ocr(frame):
+def analyze_box_ocr(frame, registered_boxes=None):
     output = ""
     used_engine = "NONE"
 
@@ -44,7 +41,7 @@ def analyze_box_ocr(frame):
     if HAS_PYTESSERACT:
         try:
             # Em sistemas Windows, se o executável do tesseract não estiver no PATH,
-            # o desenvolvedor pode descomentar a linha abaixo para apontar para o executável:
+            # o desenvolvedor pode apontar para o executável:
             # pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
             img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             output = pytesseract.image_to_string(img_rgb)
@@ -55,7 +52,6 @@ def analyze_box_ocr(frame):
     # 2. Se o Pytesseract falhar ou não estiver disponível, tenta o OCR nativo do Mac se estiver em macOS
     if not output.strip() and sys.platform == "darwin":
         if os.path.exists(OCR_PATH):
-            # Salva o frame temporariamente em arquivo
             os.makedirs(os.path.dirname(TEMP_FRAME_PATH), exist_ok=True)
             cv2.imwrite(TEMP_FRAME_PATH, frame)
             
@@ -74,73 +70,134 @@ def analyze_box_ocr(frame):
 
     # 3. Processa a saída para achar modelo/marca e peso
     detected_weights = []
-    # Procura por pesos explícitos (ex: "13KG", "15 KG", etc.), adicionando calibre 12
+    # Procura por pesos explícitos (ex: "13KG", "15 KG", etc.)
     for w in [18, 16, 15, 13, 12, 10, 5]:
         if f"{w}KG" in output_upper or f"{w} KG" in output_upper or f" {w} KG" in output_upper:
             detected_weights.append(w)
             
     detected_weight = detected_weights[0] if detected_weights else 0
-            
     detected_model = "NÃO IDENTIF."
-    if "DELISSIUM" in output_upper:
-        detected_model = "Delissium"
-        if detected_weight == 0:
-            detected_weight = 15
-    elif "SAMBA" in output_upper:
-        if "+DOCE" in output_upper or "DOCE" in output_upper:
-            detected_model = "Samba +Doce"
-        else:
-            detected_model = "Samba Preta"
-        if detected_weight == 0:
-            detected_weight = 13
-    elif "VERDE" in output_upper:
-        detected_model = "Caixa Verde"
-        if detected_weight == 0:
-            detected_weight = 13
-    elif "GENERICA" in output_upper or "GENÉRICA" in output_upper:
-        detected_model = "Generica"
-        if detected_weight == 0:
-            detected_weight = 18
+
+    # Matching dinâmico com caixas cadastradas no Electron
+    if registered_boxes:
+        # Ordena caixas pelo comprimento do nome em ordem decrescente para priorizar nomes específicos/compostos
+        sorted_boxes = sorted(registered_boxes, key=lambda x: len(str(x.get('name', ''))), reverse=True)
+        normalized_output = remove_accents(output_upper)
+        for box in sorted_boxes:
+            box_name = remove_accents(str(box.get('name', ''))).upper()
+            if box_name and box_name in normalized_output:
+                detected_model = box.get('name')
+                if detected_weight == 0:
+                    detected_weight = box.get('weight_kg', 0)
+                break
+
+    # Fallbacks fixos se nenhum registro dinâmico bater (retrocompatibilidade)
+    if detected_model == "NÃO IDENTIF.":
+        if "DELISSIUM" in output_upper:
+            detected_model = "Delissium"
+            if detected_weight == 0:
+                detected_weight = 15
+        elif "SAMBA" in output_upper:
+            if "+DOCE" in output_upper or "DOCE" in output_upper:
+                detected_model = "Samba +Doce"
+            else:
+                detected_model = "Samba Preta"
+            if detected_weight == 0:
+                detected_weight = 13
+        elif "VERDE" in output_upper:
+            detected_model = "Caixa Verde"
+            if detected_weight == 0:
+                detected_weight = 13
+        elif "GENERICA" in output_upper or "GENÉRICA" in output_upper:
+            detected_model = "Generica"
+            if detected_weight == 0:
+                detected_weight = 18
             
     return detected_model, detected_weight, detected_weights
 
-def count_fingers(results, frame):
-    if not results.multi_hand_landmarks:
-        cv2.putText(frame, "AGUARDANDO MAO...", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-        return 0, frame
+def count_fruits(frame, fruit_type):
+    """
+    Identifica e conta melões/melancias usando filtragem de cores HSV
+    e transformada de círculos/contornos.
+    """
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    fruit_type = str(fruit_type).upper()
     
-    landmarks = results.multi_hand_landmarks[0].landmark
-    fingers = []
-    
-    # Lógica para o Polegar
-    if landmarks[4].x < landmarks[3].x:
-        fingers.append(1)
+    # Define intervalos HSV para segmentar as cores da fruta
+    if "MELON" in fruit_type or "MELAO" in fruit_type or "MELÃO" in fruit_type:
+        # Canal amarelo/laranja para melão amarelo
+        lower_color = np.array([10, 40, 40])
+        upper_color = np.array([40, 255, 255])
     else:
-        fingers.append(0)
+        # Canal verde para melancia/outros frutos verdes
+        lower_color = np.array([30, 30, 30])
+        upper_color = np.array([90, 255, 255])
         
-    # Lógica para os outros 4 dedos
-    tips = [8, 12, 16, 20]
-    pips = [6, 10, 14, 18]
-    for tip, pip in zip(tips, pips):
-        if landmarks[tip].y < landmarks[pip].y:
-            fingers.append(1)
-        else:
-            fingers.append(0)
-            
-    count = sum(fingers)
+    mask = cv2.inRange(hsv, lower_color, upper_color)
     
-    # Desenhar esqueleto e o resultado na imagem
-    mp_drawing.draw_landmarks(frame, results.multi_hand_landmarks[0], mp_hands.HAND_CONNECTIONS)
+    # Limpeza morfológica para separar frutos colados
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=2)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=2)
+    mask = cv2.GaussianBlur(mask, (5, 5), 0)
     
-    # Cria uma caixa de fundo para o texto
-    cv2.rectangle(frame, (5, 10), (350, 70), (0, 0, 0), -1)
-    cv2.putText(frame, f"CALIBRE: {count}", (15, 55), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
+    # Encontra contornos na máscara binária
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
-    return count, frame
+    fruit_count = 0
+    annotated_frame = frame.copy()
+    
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        # Filtra ruídos pequenos e áreas excessivamente grandes
+        if 800 < area < 40000:
+            perimeter = cv2.arcLength(cnt, True)
+            if perimeter > 0:
+                circularity = 4 * np.pi * area / (perimeter * perimeter)
+                # Aceita formatos de circularidade de circular a elíptico (>= 0.45)
+                if circularity > 0.45:
+                    fruit_count += 1
+                    # Desenha contorno em azul
+                    cv2.drawContours(annotated_frame, [cnt], -1, (255, 0, 0), 2)
+                    
+                    # Coloca o índice no centro do fruto
+                    M = cv2.moments(cnt)
+                    if M["m00"] != 0:
+                        cX = int(M["m10"] / M["m00"])
+                        cY = int(M["m01"] / M["m00"])
+                        cv2.putText(annotated_frame, str(fruit_count), (cX - 10, cY + 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+                                    
+    # Fallback: Transformada de Hough para círculos caso os contornos falhem totalmente (retornando 0)
+    if fruit_count == 0:
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray = cv2.medianBlur(gray, 5)
+        circles = cv2.HoughCircles(
+            gray, 
+            cv2.HOUGH_GRADIENT, 
+            dp=1.2, 
+            minDist=40, 
+            param1=50, 
+            param2=30, 
+            minRadius=25, 
+            maxRadius=120
+        )
+        if circles is not None:
+            circles = np.round(circles[0, :]).astype("int")
+            for (x, y, r) in circles:
+                cv2.circle(annotated_frame, (x, y), r, (0, 255, 0), 2)
+                fruit_count += 1
+                cv2.putText(annotated_frame, f"H{fruit_count}", (x - 10, y + 5),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+    # Cria caixa visual do calibre na tela do visor
+    cv2.rectangle(annotated_frame, (5, 10), (350, 70), (0, 0, 0), -1)
+    cv2.putText(annotated_frame, f"CALIBRE: {fruit_count}", (15, 55), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
+
+    return fruit_count, annotated_frame
 
 def video_loop():
-    global current_count, current_frame
-    
+    global current_frame
     cap = None
     camera_error_logged = False
     
@@ -167,19 +224,10 @@ def video_loop():
             time.sleep(1.0)
             continue
             
-        # Converte para RGB para o Mediapipe
-        img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = hands.process(img_rgb)
-        
-        # Pega a contagem e desenha no frame
-        count, annotated_frame = count_fingers(results, frame)
-        
         with lock:
-            current_count = count
-            current_frame = annotated_frame.copy()
+            current_frame = frame.copy()
             
         time.sleep(0.03) # Limita a ~30 fps para não usar muita CPU
-
 
 last_box_model = "NÃO IDENTIF."
 last_detected_weight = 0
@@ -195,7 +243,8 @@ def ocr_worker():
             
         if frame_copy is not None:
             try:
-                model, weight, weights = analyze_box_ocr(frame_copy)
+                # OCR em background usa fallback vazio para caixas dinâmicas
+                model, weight, weights = analyze_box_ocr(frame_copy, None)
                 if model != "NÃO IDENTIF.":
                     with lock:
                         last_box_model = model
@@ -203,33 +252,55 @@ def ocr_worker():
                         last_detected_weights = weights
             except Exception as e:
                 print(f"⚠️ Erro na thread de OCR: {e}")
-        # Roda OCR a cada 800ms em segundo plano para não pesar a CPU
-        time.sleep(0.8)
+        # Roda OCR a cada 1.2s em segundo plano para não pegar muita CPU
+        time.sleep(1.2)
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
+    global current_frame
     data = request.get_json(silent=True) or {}
     fruit = str(data.get("fruit", "")).upper()
+    registered_boxes = data.get("registered_boxes", [])
 
+    frame_copy = None
     with lock:
-        count = current_count
-        box_model = last_box_model
-        detected_weight = last_detected_weight
-        detected_weights = list(last_detected_weights)
+        if current_frame is not None:
+            frame_copy = current_frame.copy()
+            
+    if frame_copy is not None:
+        try:
+            # Analisa o modelo e peso da caixa com base no cadastro do DB
+            box_model, detected_weight, detected_weights = analyze_box_ocr(frame_copy, registered_boxes)
+            # Conta as frutas e gera o frame anotado
+            count, annotated_frame = count_fruits(frame_copy, fruit)
+            
+            # Atualiza o visor com o frame anotado (com os círculos e contornos pintados)
+            with lock:
+                current_frame = annotated_frame.copy()
+        except Exception as e:
+            print(f"⚠️ Falha durante a análise síncrona: {e}")
+            count = 0
+            box_model = "NÃO IDENTIF."
+            detected_weight = 0
+            detected_weights = []
+    else:
+        # Fallback para o estado em cache
+        with lock:
+            count = 0
+            box_model = last_box_model
+            detected_weight = last_detected_weight
+            detected_weights = list(last_detected_weights)
         
     # Lógica de peso condicional para caixas Samba
     if box_model == "Samba +Doce" or (box_model == "Samba Preta" and 16 in detected_weights and 15 in detected_weights):
-        # Se for melancia/watermelon, o peso correto é 16
         if "MELANCIA" in fruit or "WATERMELON" in fruit:
             detected_weight = 16
         else:
-            # Caso contrário, assume melão com 15
             detected_weight = 15
     elif box_model == "Samba Preta" and not detected_weights:
-        # Se for Samba Preta padrão sem peso detectado, fallback é 13
         detected_weight = 13
         
-    print(f"✅ Análise instantânea solicitada. Fruta: {fruit} | Retornando calibre: {count} | Caixa: {box_model} | Peso: {detected_weight} (lidos: {detected_weights})")
+    print(f"✅ Análise instantânea disparada pelo leitor. Fruta: {fruit} | Retornando calibre: {count} | Caixa: {box_model} | Peso: {detected_weight}")
     
     return jsonify({
         "ok": True,

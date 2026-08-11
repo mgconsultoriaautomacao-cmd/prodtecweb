@@ -16,6 +16,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -1022,7 +1023,13 @@
     <div style="background:var(--modal-bg); color:var(--modal-text); padding:24px; border-radius:12px; width:450px; max-width:95%; border:1px solid var(--border);">
       <h3 style="margin-top:0; color:#fff; margin-bottom:20px; display:flex; align-items:center; gap:8px"><i data-lucide="user-cog" style="width:20px; height:20px; color:var(--blue)"></i> Editar Funcionário</h3>
       <input type="hidden" id="editEmpId">
-      <div style="margin-bottom:12px"><label class="flabel">Barcode</label><input id="editEmpBarcode"/></div>
+      <div style="margin-bottom:12px">
+        <label class="flabel">Barcode</label>
+        <div style="display:flex; gap:6px;">
+          <input id="editEmpBarcode" style="flex:1"/>
+          <button onclick="openEmpBarcodeScanner('editEmpBarcode')" type="button" style="width:42px; height:42px; background:var(--blue); border:none; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:white; flex-shrink:0;" title="Escanear com Câmera"><i data-lucide="scan-line" style="width:18px;height:18px"></i></button>
+        </div>
+      </div>
       <div style="margin-bottom:12px"><label class="flabel">Nome</label><input id="editEmpName"/></div>
       <div style="margin-bottom:12px"><label class="flabel">Função</label>
         <select id="editEmpRole"></select>
@@ -1033,8 +1040,13 @@
       <div style="margin-bottom:12px"><label class="flabel">WhatsApp</label><input id="editEmpWhatsapp" placeholder="55..."/></div>
       <div style="margin-bottom:20px">
         <label class="flabel">Foto do Colaborador</label>
-        <input type="file" id="editEmpPhotoFile" accept="image/*" style="display:none" onchange="$('editEmpPhotoBtn').textContent='Nova Foto Selecionada'">
-        <button id="editEmpPhotoBtn" onclick="$('editEmpPhotoFile').click()" style="width:100%; padding:11px; background:rgba(59,130,246,0.1); color:var(--blue); border:1px dashed var(--blue); border-radius:10px; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px"><i data-lucide="camera" style="width:16px; height:16px"></i> TROCAR FOTO</button>
+        <div style="display:flex; gap:6px;">
+          <input type="file" id="editEmpPhotoFile" accept="image/*" style="display:none" onchange="$('editEmpPhotoBtn').textContent='✓ Galeria'; $('editEmpPhotoCamera').value=''">
+          <button id="editEmpPhotoBtn" onclick="$('editEmpPhotoFile').click()" type="button" style="flex:1; padding:11px 6px; background:rgba(59,130,246,0.06); color:var(--blue); border:1px dashed var(--blue); border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:4px" title="Carregar da Galeria"><i data-lucide="upload" style="width:14px;height:14px"></i> Galeria</button>
+          
+          <input type="file" id="editEmpPhotoCamera" accept="image/*" capture="environment" style="display:none" onchange="$('editEmpPhotoCamBtn').textContent='✓ Câmera'; $('editEmpPhotoFile').value=''">
+          <button id="editEmpPhotoCamBtn" onclick="$('editEmpPhotoCamera').click()" type="button" style="flex:1; padding:11px 6px; background:rgba(34,197,94,0.06); color:var(--green); border:1px dashed var(--green); border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:4px" title="Tirar Foto com a Câmera"><i data-lucide="camera" style="width:14px;height:14px"></i> Câmera</button>
+        </div>
         <input type="hidden" id="editEmpPhotoUrl">
       </div>
       <div style="display:flex; gap:10px; justify-content:flex-end">
@@ -1539,8 +1551,14 @@
     <h1 class="ptitle"><i data-lucide="users"></i> Funcionários</h1>
     <div class="card">
       <div class="title"><i data-lucide="user-plus" class="btn-i"></i> Novo Funcionário</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
-        <div><label class="flabel">Barcode</label><input id="empBarcode"/></div>
+      <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
+        <div>
+          <label class="flabel">Barcode</label>
+          <div style="display:flex; gap:6px;">
+            <input id="empBarcode" style="flex:1"/>
+            <button onclick="openEmpBarcodeScanner('empBarcode')" type="button" style="width:42px; height:42px; background:var(--blue); border:none; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:white; flex-shrink:0;" title="Escanear com Câmera"><i data-lucide="scan-line" style="width:18px;height:18px"></i></button>
+          </div>
+        </div>
         <div><label class="flabel">Nome</label><input id="empName"/></div>
         <div><label class="flabel">Função</label>
           <select id="empRole">
@@ -1566,8 +1584,13 @@
         <div><label class="flabel">WhatsApp</label><input id="empWhatsapp" placeholder="5511999999999"/></div>
         <div>
           <label class="flabel">Foto do Colaborador</label>
-          <input type="file" id="empPhotoFile" accept="image/*" style="display:none" onchange="$('empPhotoBtn').textContent='Foto Selecionada'">
-          <button id="empPhotoBtn" onclick="$('empPhotoFile').click()" style="width:100%; padding:11px; background:rgba(59,130,246,0.1); color:var(--blue); border:1px dashed var(--blue); border-radius:10px; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px"><i data-lucide="upload" style="width:16px;height:16px"></i> CARREGAR FOTO</button>
+          <div style="display:flex; gap:6px;">
+            <input type="file" id="empPhotoFile" accept="image/*" style="display:none" onchange="$('empPhotoBtn').textContent='✓ Galeria'; $('empPhotoCamera').value=''">
+            <button id="empPhotoBtn" onclick="$('empPhotoFile').click()" type="button" style="flex:1; padding:11px 6px; background:rgba(59,130,246,0.06); color:var(--blue); border:1px dashed var(--blue); border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:4px" title="Carregar da Galeria"><i data-lucide="upload" style="width:14px;height:14px"></i> Galeria</button>
+            
+            <input type="file" id="empPhotoCamera" accept="image/*" capture="environment" style="display:none" onchange="$('empPhotoCamBtn').textContent='✓ Câmera'; $('empPhotoFile').value=''">
+            <button id="empPhotoCamBtn" onclick="$('empPhotoCamera').click()" type="button" style="flex:1; padding:11px 6px; background:rgba(34,197,94,0.06); color:var(--green); border:1px dashed var(--green); border-radius:8px; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:4px" title="Tirar Foto com a Câmera"><i data-lucide="camera" style="width:14px;height:14px"></i> Câmera</button>
+          </div>
         </div>
         <button onclick="addEmp()" style="background:var(--blue); font-weight:800; display:flex; align-items:center; gap:6px"><i data-lucide="save" style="width:16px;height:16px"></i> Salvar</button>
       </div>
@@ -5313,13 +5336,19 @@ async function addEmp(){
   btn.disabled = true; btn.textContent = 'Enviando...';
   
   try {
-    const photoUrl = await uploadFileToSupabase($('empPhotoFile'));
+    let fileInput = $('empPhotoFile');
+    if ($('empPhotoCamera') && $('empPhotoCamera').files && $('empPhotoCamera').files.length > 0) {
+      fileInput = $('empPhotoCamera');
+    }
+    const photoUrl = await uploadFileToSupabase(fileInput);
     const {error}=await sb.from('employees').insert([{barcode:b,name:n,role:r,sector:s,whatsapp:w||null,photo_path:photoUrl,active:true,tenant_id:tenantId,updated_at:new Date().toISOString()}]);
     if(error) throw error;
     
     ['empBarcode','empName','empWhatsapp'].forEach(id=>$(id).value='');
     $('empPhotoFile').value = '';
-    $('empPhotoBtn').textContent = '📁 CARREGAR FOTO';
+    if ($('empPhotoCamera')) $('empPhotoCamera').value = '';
+    $('empPhotoBtn').textContent = 'Galeria';
+    if ($('empPhotoCamBtn')) $('empPhotoCamBtn').textContent = 'Câmera';
     await loadEmps();await loadEmpSelectAll();
     toast('✓ Funcionário cadastrado!', 'ok');
   } catch(err) {
@@ -5347,7 +5376,10 @@ async function openEditEmpModal(id, name, role, sector, whatsapp, barcode, photo
   $('editEmpWhatsapp').value = whatsapp;
   $('editEmpBarcode').value = barcode;
   $('editEmpPhotoUrl').value = photo;
-  $('editEmpPhotoBtn').textContent = photo ? '📷 ALTERAR FOTO' : '📁 CARREGAR FOTO';
+  $('editEmpPhotoFile').value = '';
+  if ($('editEmpPhotoCamera')) $('editEmpPhotoCamera').value = '';
+  $('editEmpPhotoBtn').textContent = photo ? '✓ Galeria (Subst.)' : 'Galeria';
+  if ($('editEmpPhotoCamBtn')) $('editEmpPhotoCamBtn').textContent = 'Câmera';
   $('empModal').style.display = 'flex';
 }
 
@@ -5359,7 +5391,11 @@ async function saveEmpEdit(e) {
   btn.disabled = true; btn.textContent = 'Salvando...';
   
   try {
-    let photoUrl = await uploadFileToSupabase($('editEmpPhotoFile'));
+    let fileInput = $('editEmpPhotoFile');
+    if ($('editEmpPhotoCamera') && $('editEmpPhotoCamera').files && $('editEmpPhotoCamera').files.length > 0) {
+      fileInput = $('editEmpPhotoCamera');
+    }
+    let photoUrl = await uploadFileToSupabase(fileInput);
     if(!photoUrl) photoUrl = $('editEmpPhotoUrl').value;
     
     const {error}=await sb.from('employees').update({name:n,role:r,sector:s,whatsapp:w||null,barcode:b,photo_path:photoUrl,updated_at:new Date().toISOString()}).eq('id',id);
@@ -5367,6 +5403,7 @@ async function saveEmpEdit(e) {
     
     $('empModal').style.display='none';
     $('editEmpPhotoFile').value = '';
+    if ($('editEmpPhotoCamera')) $('editEmpPhotoCamera').value = '';
     await loadEmps();
     await loadEmpSelectAll();
     
@@ -12171,6 +12208,57 @@ function printColheitaReport(itemStr) {
   
   doc.save(`Laudo_PC11_Liberacao_${item.parcela.replace(/\s+/g, '_')}_${item.data_aplicacao}.pdf`);
 }
+
+let empHtml5QrCode = null;
+
+function openEmpBarcodeScanner(targetInputId) {
+  const modal = document.getElementById('empScannerModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  
+  if (empHtml5QrCode) {
+    empHtml5QrCode.clear();
+  }
+  
+  empHtml5QrCode = new Html5Qrcode("empReader");
+  
+  const config = {
+    fps: 10,
+    qrbox: { width: 250, height: 150 },
+    aspectRatio: 1.0
+  };
+  
+  empHtml5QrCode.start(
+    { facingMode: "environment" },
+    config,
+    (decodedText) => {
+      document.getElementById(targetInputId).value = decodedText;
+      stopEmpScanner();
+      if (window.navigator.vibrate) window.navigator.vibrate(100);
+    },
+    (errorMessage) => {
+      // Ignorar erros de escaneamento silencioso
+    }
+  ).catch(err => {
+    console.error("Erro ao iniciar câmera de scan:", err);
+    alert("Não foi possível acessar a câmera. Verifique as permissões de acesso.");
+    modal.style.display = 'none';
+  });
+}
+
+function stopEmpScanner() {
+  const modal = document.getElementById('empScannerModal');
+  if (modal) modal.style.display = 'none';
+  
+  if (empHtml5QrCode) {
+    empHtml5QrCode.stop().then(() => {
+      empHtml5QrCode = null;
+    }).catch(err => {
+      console.error("Erro ao parar scanner:", err);
+      empHtml5QrCode = null;
+    });
+  }
+}
 </script><!-- DRAWER DE DESEMPENHO DO COLABORADOR -->
 <div id="empDrawer" class="drawer">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:32px">
@@ -12356,6 +12444,16 @@ function printColheitaReport(itemStr) {
       <button class="btn btn-primary" style="flex:2" onclick="saveInfoParcela()">Salvar Alterações</button>
     </div>
   </div>
+<!-- BARCODE SCANNER MODAL FOR WEB EMPLOYEES -->
+<div id="empScannerModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:10000; flex-direction:column; align-items:center; justify-content:center; padding:20px">
+  <div style="width:100%; max-width:400px; border:2px solid var(--blue); border-radius:16px; overflow:hidden; background:#000; position:relative">
+    <div id="empReader" style="width:100%"></div>
+    <div style="position:absolute; inset:0; border:2px solid rgba(59,130,246,0.3); pointer-events:none; display:flex; align-items:center; justify-content:center">
+      <div style="width:250px; height:150px; border:2px solid var(--blue); box-shadow:0 0 0 4000px rgba(0,0,0,0.5)"></div>
+    </div>
+  </div>
+  <div style="margin-top:24px; color:white; font-weight:700; text-align:center">Posicione o código de barras no centro</div>
+  <button class="btn btn-danger" onclick="stopEmpScanner()" style="margin-top:32px; width:200px; padding:12px; border-radius:8px; border:none; background:#ef4444; color:white; font-weight:bold; cursor:pointer;">✖ Fechar Câmera</button>
 </div>
 
 </body>
