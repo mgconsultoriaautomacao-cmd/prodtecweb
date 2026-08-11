@@ -11198,6 +11198,15 @@ function removeWebVariedadeRow(idx) {
   if (el) { el.remove(); webVariedadeRowCount = Math.max(0, webVariedadeRowCount - 1); }
 }
 
+function isSunday(dateStr) {
+  if (!dateStr) return false;
+  const s = String(dateStr).split('T')[0];
+  const parts = s.split('-');
+  if (parts.length !== 3) return false;
+  const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 12, 0, 0);
+  return d.getDay() === 0;
+}
+
 async function saveWebPlantio() {
   const btn = $('webBtnSavePlantio');
   const editId = $('webPlEditId').value;
@@ -11208,6 +11217,11 @@ async function saveWebPlantio() {
 
   if (!parcela || !letra) return alert('Informe a Parcela e a Letra.');
   if (!cultura) return alert('Selecione a Cultura.');
+
+  const plantioDate = $('webPlTransplante').value || $('webPlPlantio').value || $('webPlSemeadura').value;
+  if (isSunday(plantioDate)) {
+    return alert('🚫 Trava de Auditoria: Não é permitido registrar plantio com data de domingo!');
+  }
 
   const parcela2 = `${parcela} ${letra}`;
 
@@ -11226,6 +11240,8 @@ async function saveWebPlantio() {
 
   btn.disabled = true;
   btn.textContent = 'Salvando...';
+
+  const areaVal = parseFloat($('webPlArea').value) || null;
 
   const payload = {
     tenant_id: tenantId,
@@ -11250,7 +11266,8 @@ async function saveWebPlantio() {
     quantidade5: varsData[4]?.qtd || null,
     linhas: parseInt($('webPlFileiras').value) || null,
     espacamento: parseFloat($('webPlEspacamento').value) || null,
-    area: parseFloat($('webPlArea').value) || null,
+    area: areaVal,
+    area_ha: areaVal,
     semeadura: $('webPlSemeadura').value || null,
     transplante: $('webPlTransplante').value || null,
     plantio: $('webPlPlantio').value || $('webPlTransplante').value || null,
@@ -11265,16 +11282,24 @@ async function saveWebPlantio() {
   };
 
   try {
-    let err;
+    let res;
     if (editId) {
-      const res = await sb.from('info_parcelas').update(payload).eq('id', editId).eq('tenant_id', tenantId);
-      err = res.error;
+      res = await sb.from('info_parcelas').update(payload).eq('id', editId).eq('tenant_id', tenantId);
     } else {
-      const res = await sb.from('info_parcelas').insert(payload);
-      err = res.error;
+      res = await sb.from('info_parcelas').insert(payload);
     }
 
-    if (err) throw err;
+    if (res.error) {
+      if (res.error.message && (res.error.message.includes("'area'") || res.error.message.includes('area'))) {
+        delete payload.area;
+        if (editId) {
+          res = await sb.from('info_parcelas').update(payload).eq('id', editId).eq('tenant_id', tenantId);
+        } else {
+          res = await sb.from('info_parcelas').insert(payload);
+        }
+      }
+      if (res.error) throw res.error;
+    }
 
     toast(editId ? 'Plantio atualizado com sucesso! ✅' : 'Plantio cadastrado com sucesso! ✅', 'ok');
     closeWebPlantioModal();
@@ -11684,6 +11709,11 @@ async function saveNewOpDashboard() {
   
   const ip = _infoParcelas.find(x => x.id === pId);
   const chosenDate = $('newOpDate').value || today();
+
+  if (isSunday(chosenDate)) {
+    return alert('🚫 Trava de Auditoria: Não é permitido registrar Ordem de Pulverização (O.P) em domingos!');
+  }
+
   const startVal = $('newOpHoraInicio').value;
   const endVal = $('newOpHoraFim').value;
   const tratoristaVal = $('newOpTratorista').value.trim();

@@ -2399,6 +2399,15 @@ window.chooseTenantByIndex = async (idx) => {
   await selectTenantAndContinue(tu);
 };
 
+function isSunday(dateStr) {
+  if (!dateStr) return false;
+  const s = String(dateStr).split('T')[0];
+  const parts = s.split('-');
+  if (parts.length !== 3) return false;
+  const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 12, 0, 0);
+  return d.getDay() === 0;
+}
+
 async function selectTenantAndContinue(tu) {
   tenantId   = tu.tenant_id;
   tenantName = tu.tenants?.name || 'Empresa';
@@ -3029,6 +3038,11 @@ let varieties = [];
     if (!parcela || !letra) return toast('Informe Parcela e Letra', 'err');
     if (!cultura) return toast('Selecione a Cultura', 'err');
 
+    const plantioDate = $('plTransplante')?.value || $('plPlantio')?.value || $('plSemeadura')?.value;
+    if (isSunday(plantioDate)) {
+      return toast('🚫 Trava de Auditoria: Não é permitido registrar plantio com data de domingo!', 'err');
+    }
+
     const parcela2 = `${parcela} ${letra}`;
 
     // Collect variedades
@@ -3047,6 +3061,8 @@ let varieties = [];
 
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px"></div> Salvando...';
+
+    const areaVal = parseFloat($('plArea').value) || null;
 
     const payload = {
       tenant_id: tenantId,
@@ -3071,7 +3087,8 @@ let varieties = [];
       quantidade5: varsData[4]?.qtd || null,
       linhas: parseInt($('plFileiras').value) || null,
       espacamento: parseFloat($('plEspacamento').value) || null,
-      area: parseFloat($('plArea').value) || null,
+      area: areaVal,
+      area_ha: areaVal,
       semeadura: $('plSemeadura').value || null,
       transplante: $('plTransplante').value || null,
       plantio: $('plPlantio').value || $('plTransplante').value || null,
@@ -3090,16 +3107,24 @@ let varieties = [];
     };
 
     try {
-      let err;
+      let res;
       if (editId) {
-        const res = await sb.from('info_parcelas').update(payload).eq('id', editId).eq('tenant_id', tenantId);
-        err = res.error;
+        res = await sb.from('info_parcelas').update(payload).eq('id', editId).eq('tenant_id', tenantId);
       } else {
-        const res = await sb.from('info_parcelas').insert(payload);
-        err = res.error;
+        res = await sb.from('info_parcelas').insert(payload);
       }
 
-      if (err) throw err;
+      if (res.error) {
+        if (res.error.message && (res.error.message.includes("'area'") || res.error.message.includes('area'))) {
+          delete payload.area;
+          if (editId) {
+            res = await sb.from('info_parcelas').update(payload).eq('id', editId).eq('tenant_id', tenantId);
+          } else {
+            res = await sb.from('info_parcelas').insert(payload);
+          }
+        }
+        if (res.error) throw res.error;
+      }
 
       toast(editId ? 'Plantio atualizado! ✅' : 'Plantio cadastrado! ✅', 'ok');
       closePlantioModal();
@@ -4041,6 +4066,12 @@ let varieties = [];
       (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code) || {}
     ) : null;
     const chosenDate = document.getElementById('opDateInput').value || today();
+
+    if (isSunday(chosenDate)) {
+      alert('🚫 Trava de Auditoria: Não é permitido registrar Ordem de Pulverização (O.P) em domingos!');
+      return;
+    }
+
     const tratoristaVal = document.getElementById('opTratoristaInput').value.trim();
     const barristaVal = document.getElementById('opBarristaInput').value.trim();
     const tratorVal = document.getElementById('opTratorInput').value.trim();
@@ -4682,6 +4713,7 @@ async function submitCarrao() {
   const regBy    = $('cRegisteredBy').value.trim();
 
   if (!date)              { toast('Informe a data', 'err'); return; }
+  if (isSunday(date))     { toast('🚫 Trava de Auditoria: Registro de colheita não permitido em domingos!', 'err'); return; }
   if (!regBy)             { toast('Informe quem está registrando', 'err'); return; }
   if (cState.workers.size === 0) { toast('Selecione ao menos 1 funcionário', 'err'); return; }
 
