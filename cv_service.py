@@ -40,9 +40,17 @@ def analyze_box_ocr(frame, registered_boxes=None):
     # 1. Tenta usar o Pytesseract (Windows / Raspberry Pi / Mac com Tesseract instalado)
     if HAS_PYTESSERACT:
         try:
-            # Em sistemas Windows, se o executável do tesseract não estiver no PATH,
-            # o desenvolvedor pode apontar para o executável:
-            # pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+            if sys.platform == "win32":
+                possible_tesseract_paths = [
+                    r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+                    r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+                    os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs", "Tesseract-OCR", "tesseract.exe")
+                ]
+                for p in possible_tesseract_paths:
+                    if os.path.exists(p):
+                        pytesseract.pytesseract.tesseract_cmd = p
+                        break
+
             img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             output = pytesseract.image_to_string(img_rgb)
             used_engine = "TESSERACT"
