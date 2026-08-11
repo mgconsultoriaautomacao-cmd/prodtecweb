@@ -4772,7 +4772,70 @@ async function submitCarrao() {
   }
 }
 
-// ── Ordem de Colheita PDF ──
+// ── Helper rendering single Ordem de Colheita Card ──
+function renderSingleOrdemCard(item, nowStr, dateStr, timeStr) {
+  const { session, workers } = item;
+  const parcela = parcelas.find(p => p.id == session.parcel_id);
+  const variety = varieties.find(v => v.id == session.variety_id);
+  const parcelaCode = parcela?.code || '—';
+  const varietyName = variety?.name || '—';
+  const shiftLabel = session.shift === 'MANHA' ? 'Manhã' : 'Tarde';
+  const fruitIcon  = session.fruit_type === 'MELANCIA' ? 'Melancia' : 'Melão';
+  const seqNum = (() => {
+    const carriageObj = carriages.find(c => c.id == session.carriage_id);
+    return carriageObj ? carriageObj.code : (session.carrao_seq ? `#${session.carrao_seq}` : (session.qty_carrocoes || '—'));
+  })();
+
+  const workerRows = (workers || []).map(w =>
+    `<tr><td style="padding:4px 6px;font-size:11px">${w.employee_name}</td><td style="text-align:right;padding:4px 6px;font-size:11px;font-weight:bold;color:#059669">Colhido</td></tr>`
+  ).join('');
+
+  const julCode = session.julian_lot || '—';
+  const formattedDate = session.date ? session.date.split('-').reverse().join('/') : '—';
+
+  return `
+    <div class="ordem-card">
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0f172a;padding-bottom:6px;margin-bottom:10px">
+          <div>
+            <h2 style="margin:0;font-size:17px;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;color:#0f172a">Ordem de Colheita</h2>
+            <p style="margin:2px 0 0;font-size:10px;color:#64748b">${tenantName} — Emitida em ${dateStr} às ${timeStr}</p>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase">Nº DO CARROÇÃO</div>
+            <div style="font-size:24px;font-weight:900;color:#0f172a;line-height:1">${seqNum}</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:10px">
+          <div style="background:#f1f5f9;border-radius:6px;padding:6px"><div style="font-size:8px;text-transform:uppercase;color:#64748b;font-weight:700;margin-bottom:2px">Fruta</div><div style="font-size:12px;font-weight:800;color:#0f172a">${fruitIcon}</div></div>
+          <div style="background:#f1f5f9;border-radius:6px;padding:6px"><div style="font-size:8px;text-transform:uppercase;color:#64748b;font-weight:700;margin-bottom:2px">Variedade</div><div style="font-size:12px;font-weight:800;color:#0f172a">${varietyName}</div></div>
+          <div style="background:#f1f5f9;border-radius:6px;padding:6px"><div style="font-size:8px;text-transform:uppercase;color:#64748b;font-weight:700;margin-bottom:2px">Parcela</div><div style="font-size:12px;font-weight:800;color:#0f172a">${parcelaCode}</div></div>
+          <div style="background:#f1f5f9;border-radius:6px;padding:6px"><div style="font-size:8px;text-transform:uppercase;color:#64748b;font-weight:700;margin-bottom:2px">Turno</div><div style="font-size:12px;font-weight:800;color:#0f172a">${shiftLabel}</div></div>
+          <div style="background:#f1f5f9;border-radius:6px;padding:6px"><div style="font-size:8px;text-transform:uppercase;color:#64748b;font-weight:700;margin-bottom:2px">Data</div><div style="font-size:12px;font-weight:800;color:#0f172a">${formattedDate}</div></div>
+          <div style="background:#f1f5f9;border-radius:6px;padding:6px"><div style="font-size:8px;text-transform:uppercase;color:#64748b;font-weight:700;margin-bottom:2px">Qtd</div><div style="font-size:12px;font-weight:800;color:#0f172a">1 un</div></div>
+        </div>
+
+        <div style="background:#0f172a;color:#fff;text-align:center;padding:8px;border-radius:6px;margin-bottom:10px">
+          <div style="font-size:9px;color:#94a3b8;margin-bottom:2px">Código de Rastreabilidade Juliano</div>
+          <div style="font-size:22px;font-weight:900;letter-spacing:4px">${julCode}</div>
+        </div>
+
+        <table style="width:100%;border-collapse:collapse;margin-top:4px">
+          <thead><tr><th style="background:#0f172a;color:#fff;padding:4px 6px;font-size:10px;text-align:left">Equipe de Colheita</th><th style="background:#0f172a;color:#fff;padding:4px 6px;font-size:10px;text-align:right">Status</th></tr></thead>
+          <tbody>${workerRows}</tbody>
+        </table>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:12px;padding-top:10px;border-top:1px solid #cbd5e1">
+        <div><div style="border-bottom:1px solid #0f172a;height:30px"></div><div style="font-size:9px;color:#64748b;margin-top:4px;text-align:center;font-weight:700">Assinatura: Resp. Colheita</div></div>
+        <div><div style="border-bottom:1px solid #0f172a;height:30px"></div><div style="font-size:9px;color:#64748b;margin-top:4px;text-align:center;font-weight:700">Assinatura: Packing House</div></div>
+      </div>
+    </div>
+  `;
+}
+
+// ── Ordem de Colheita PDF (Layout 2 por folha A4 com linha de corte) ──
 function showOrdemColheita(list) {
   if (!list || list.length === 0) return;
 
@@ -4782,604 +4845,100 @@ function showOrdemColheita(list) {
 
   let pagesHtml = '';
 
-  list.forEach((item, index) => {
-    const { session, workers } = item;
-    const parcela = parcelas.find(p => p.id == session.parcel_id);
-    const variety = varieties.find(v => v.id == session.variety_id);
-    const parcelaCode = parcela?.code || '—';
-    const varietyName = variety?.name || '—';
-    const shiftLabel = session.shift === 'MANHA' ? 'Manhã' : 'Tarde';
-    const fruitIcon  = session.fruit_type === 'MELANCIA' ? 'Melancia' : 'Melão';
-    const seqNum = (() => {
-      const carriageObj = carriages.find(c => c.id == session.carriage_id);
-      return carriageObj ? carriageObj.code : (session.carrao_seq || session.qty_carrocoes || '—');
-    })();
+  for (let i = 0; i < list.length; i += 2) {
+    const item1 = list[i];
+    const item2 = list[i + 1];
+    const isLastPage = (i + 2) >= list.length;
 
-    const workerRows = (workers || []).map(w =>
-      `<tr><td>${w.employee_name}</td><td style="text-align:right">Colhido</td></tr>`
-    ).join('');
+    const card1Html = renderSingleOrdemCard(item1, now, dateStr, timeStr);
+    const card2Html = item2 ? renderSingleOrdemCard(item2, now, dateStr, timeStr) : '';
 
-    const julCode = session.julian_lot || '—';
-    const pageBreak = index < list.length - 1 ? 'page-break-after: always;' : '';
+    const cutLineHtml = item2 ? `
+      <div class="cut-line">
+        ---------------------------------------------------- LINHA DE CORTE (2 ORDENS POR FOLHA A4) ----------------------------------------------------
+      </div>
+    ` : '';
 
     pagesHtml += `
-      <div style="${pageBreak} padding:24px; font-family:Arial,sans-serif; color:#111;">
-        <div style="text-align:center;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:16px">
-          <h1 style="margin:0;font-size:22px">Ordem de Colheita</h1>
-          <p style="margin:4px 0;font-size:12px;color:#555">${tenantName} — Emitida em ${dateStr} às ${timeStr}</p>
-        </div>
-        
-        <div style="text-align:center; margin-bottom: 16px;">
-          <div style="font-size:14px; font-weight:800; color:#555;">Nº DO CARROÇÃO</div>
-          <div style="font-size:36px; font-weight:900; color:#111;">${seqNum}</div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
-          <div style="background:#f5f5f5;border-radius:6px;padding:10px"><div style="font-size:10px;text-transform:uppercase;color:#777;font-weight:700;margin-bottom:4px">Fruta</div><div style="font-size:16px;font-weight:800">${fruitIcon}</div></div>
-          <div style="background:#f5f5f5;border-radius:6px;padding:10px"><div style="font-size:10px;text-transform:uppercase;color:#777;font-weight:700;margin-bottom:4px">Variedade</div><div style="font-size:16px;font-weight:800">${varietyName}</div></div>
-          <div style="background:#f5f5f5;border-radius:6px;padding:10px"><div style="font-size:10px;text-transform:uppercase;color:#777;font-weight:700;margin-bottom:4px">Parcela</div><div style="font-size:16px;font-weight:800">${parcelaCode}</div></div>
-          <div style="background:#f5f5f5;border-radius:6px;padding:10px"><div style="font-size:10px;text-transform:uppercase;color:#777;font-weight:700;margin-bottom:4px">Turno</div><div style="font-size:16px;font-weight:800">${shiftLabel}</div></div>
-          <div style="background:#f5f5f5;border-radius:6px;padding:10px"><div style="font-size:10px;text-transform:uppercase;color:#777;font-weight:700;margin-bottom:4px">Data</div><div style="font-size:16px;font-weight:800">${session.date.split('-').reverse().join('/')}</div></div>
-          <div style="background:#f5f5f5;border-radius:6px;padding:10px"><div style="font-size:10px;text-transform:uppercase;color:#777;font-weight:700;margin-bottom:4px">Qtd de Carrões</div><div style="font-size:16px;font-weight:800">1</div></div>
-        </div>
-        <div style="background:#111;color:#fff;text-align:center;padding:12px;border-radius:8px;margin:16px 0">
-          <div style="font-size:11px;color:#aaa;margin-bottom:4px">Código de Rastreabilidade Juliano</div>
-          <div style="font-size:28px;font-weight:900;letter-spacing:4px">${julCode}</div>
-        </div>
-        <table style="width:100%;border-collapse:collapse;margin-top:8px">
-          <thead><tr><th style="background:#111;color:#fff;padding:8px 10px;font-size:12px;text-align:left">Funcionário</th><th style="background:#111;color:#fff;padding:8px 10px;font-size:12px;text-align:right">Status</th></tr></thead>
-          <tbody>${workerRows}</tbody>
-        </table>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px;padding-top:16px;border-top:1px solid #ddd">
-          <div><div style="border-bottom:1px solid #111;height:50px;margin-top:24px"></div><div style="font-size:11px;color:#777;margin-top:6px;text-align:center">Assinatura: Colheita</div></div>
-          <div><div style="border-bottom:1px solid #111;height:50px;margin-top:24px"></div><div style="font-size:11px;color:#777;margin-top:6px;text-align:center">Assinatura: Packing House</div></div>
-        </div>
+      <div class="page-a4" style="${!isLastPage ? 'page-break-after: always;' : ''}">
+        ${card1Html}
+        ${cutLineHtml}
+        ${card2Html}
       </div>
     `;
-  });
+  }
 
   const html = `
     <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-    <title>Ordem de Colheita</title>
+    <title>Ordem de Colheita (2 por folha)</title>
     <style>
-      body{margin:0;padding:0;font-family:sans-serif;}
-      .page{width:100%; max-width:800px; margin:20px auto; border:1px solid #ddd; padding:20px; box-sizing:border-box; background:#fff;}
-      @media print{ button{display:none!important}; .page{margin:0; border:none; padding:10px} }
-    
-/* ── ESTOQUE 3D STYLES ── */
-    #e3d-root { display:grid; grid-template-columns:1fr 340px; gap:24px; min-height:80vh; }
-    @media(max-width:1440px){ #e3d-root{ grid-template-columns:1fr 280px; gap:16px; } }
-    @media(max-width:1200px){ #e3d-root{ grid-template-columns:1fr; } } /* Switch to 1 column below 1200px */
-
-    #e3d-zones-wrap {
-      display: flex; 
-      gap: 24px; 
-      min-height: 600px; 
-      padding: 24px; 
-      background: linear-gradient(135deg, #020810 0%, #0a1628 40%, #060d1c 100%); 
-      border-radius: 20px; 
-      border: 1px solid rgba(59,130,246,0.2); 
-      box-shadow: 0 0 60px rgba(59,130,246,0.08);
-      flex-wrap: wrap; /* Allows stacking on smaller screens */
-    }
-    
-    .e3d-zone {
-      flex: 1; 
-      min-width: 300px; /* Forces stacking if screen is too narrow */
-      display: flex; 
-      flex-direction: column; 
-      background: rgba(0,0,0,0.25); 
-      border-radius: 16px; 
-      padding: 20px;
-      box-shadow: inset 0 0 20px rgba(0,0,0,0.4);
-      transition: all 0.3s ease;
-    }
-    
-    #e3d-grid-packing, #e3d-grid-cold {
-      display: grid; 
-      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
-      grid-auto-rows: minmax(110px, auto); 
-      gap: 12px; 
-      flex: 1;
-    }
-
-    @media(max-width:768px) {
-      #e3d-zones-wrap { padding: 12px; gap: 16px; min-height: auto; }
-      .e3d-zone { padding: 12px; min-width: 100%; }
-      #e3d-grid-packing, #e3d-grid-cold { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
-    }
-
-    /* AI Camera panel */
-    #e3d-camera-card { background:rgba(15,23,42,.9); border-radius:16px; border:1px solid rgba(59,130,246,.15); padding:20px; margin-bottom:16px; }
-    #e3d-camera-feed { width:100%; aspect-ratio:4/3; background:#000; border-radius:12px; overflow:hidden; border:1px solid rgba(59,130,246,.2); position:relative; display:flex; align-items:center; justify-content:center; }
-    #e3d-camera-feed img { width:100%; height:100%; object-fit:cover; display:none; }
-    #e3d-cam-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#334155; font-size:13px; font-weight:600; height:100%; }
-    #e3d-cam-placeholder svg { width:40px; height:40px; opacity:.3; }
-    .e3d-ai-badge {
-      position:absolute; top:10px; right:10px; padding:3px 10px; border-radius:99px;
-      font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:1px;
-    }
-    .e3d-ai-badge.sim { background:rgba(245,158,11,.15); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
-    .e3d-ai-badge.live { background:rgba(16,185,129,.15); color:#10b981; border:1px solid rgba(16,185,129,.3); animation:blink 2s infinite; }
-
-    /* Count cards */
-    #e3d-count-area { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
-    .e3d-count-card {
-      background:rgba(15,23,42,.95); border-radius:12px; border:1px solid rgba(255,255,255,.05);
-      padding:14px; text-align:center;
-    }
-    .e3d-count-num { font-size:28px; font-weight:900; line-height:1; margin-bottom:4px; }
-    .e3d-count-lbl { font-size:10px; color:#64748b; text-transform:uppercase; letter-spacing:1px; font-weight:700; }
-
-    /* Config card */
-    #e3d-cfg-card {
-      background:rgba(15,23,42,.9); border-radius:16px; border:1px solid rgba(255,255,255,.06);
-      padding:20px; margin-bottom:16px;
-    }
-    #e3d-cfg-card .cfg-title { font-size:12px; font-weight:800; color:var(--blue); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
-
-    /* Pallet detail modal */
-    #e3d-pallet-modal {
-      display:none; position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:3000;
-      align-items:center; justify-content:center; backdrop-filter:blur(6px);
-    }
-    #e3d-pallet-modal.open { display:flex; }
-    #e3d-pallet-inner {
-      background:linear-gradient(135deg, #0f1c33 0%, #0a1220 100%);
-      border:1px solid rgba(59,130,246,.25); border-radius:24px; padding:32px;
-      width:520px; max-width:95%; box-shadow:0 40px 100px rgba(0,0,0,.8);
-      animation: slideUp .3s ease;
-    }
-    @keyframes slideUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
-    #e3d-pallet-inner h3 { font-size:18px; font-weight:900; margin-bottom:20px; display:flex; align-items:center; gap:10px; }
-
-    /* Queue list */
-    #e3d-queue { background:rgba(15,23,42,.9); border-radius:16px; border:1px solid rgba(255,255,255,.06); padding:20px; }
-    #e3d-queue .q-title { font-size:12px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px; }
-    .e3d-queue-item {
-      display:flex; align-items:center; gap:12px; padding:10px 12px;
-      background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.05); border-radius:10px; margin-bottom:8px;
-    }
-    .e3d-queue-icon { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
-    .e3d-queue-info { flex:1; min-width:0; }
-    .e3d-queue-name { font-size:13px; font-weight:700; }
-    .e3d-queue-meta { font-size:11px; color:#64748b; margin-top:2px; }
-    .e3d-queue-progress { width:100%; height:5px; background:rgba(255,255,255,.06); border-radius:99px; overflow:hidden; margin-top:6px; }
-    .e3d-queue-fill { height:100%; border-radius:99px; transition:width .5s ease; background:linear-gradient(90deg,#3b82f6,#10b981); }
-
-    /* progress ring */
-    .e3d-pbar { position:absolute; bottom:20px; right:20px; }
-    .e3d-pbar-ring { transform:rotate(-90deg); }
-
-    /* ── Visual 3D de Pallet Empilhado ─────────────────────────── */
-    .pallet-3d-wrap {
-      width: 100%; height: 100%;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: flex-end;
-      position: relative; gap: 2px;
-    }
-    .pallet-base {
-      width: 85%; height: 8px;
-      background: linear-gradient(90deg, #78350f, #92400e, #78350f);
-      border-radius: 2px;
-      box-shadow: 0 3px 6px rgba(0,0,0,0.6);
-      position: relative;
-    }
-    .pallet-base::before {
-      content: '';
-      position: absolute; top: -3px; left: 10%; width: 80%; height: 3px;
-      background: #a16207; border-radius: 1px;
-    }
-    .pallet-stack {
-      width: 85%;
-      display: flex; flex-direction: column;
-      gap: 2px; align-items: center;
-    }
-    .pallet-row {
-      width: 100%; display: flex; gap: 2px;
-    }
-    .pallet-box {
-      flex: 1; height: 16px; border-radius: 2px;
-      position: relative;
-      box-shadow: inset 0 -2px 4px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4);
-      transition: all 0.3s ease;
-    }
-    .pallet-box::after {
-      content: '';
-      position: absolute; top: 0; left: 0; right: 0; height: 4px;
-      background: rgba(255,255,255,0.15); border-radius: 2px 2px 0 0;
-    }
-    /* ── Card do Pallet: Layout sem sobreposição ─────────────── */
-    .pallet-card {
-      width: 100%; height: 100%;
-      display: flex; flex-direction: column;
-      gap: 0; overflow: hidden; border-radius: 10px;
-    }
-    /* Zona de informações (topo) */
-    .pallet-card-header {
-      flex-shrink: 0;
-      padding: 6px 7px 5px;
-      background: rgba(0,0,0,0.35);
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-    .pallet-card-num {
-      font-size: 14px; font-weight: 900; color: #fff;
-      line-height: 1; letter-spacing: -0.5px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .pallet-card-status-dot {
-      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
-    }
-    .pallet-card-variety {
-      font-size: 11px; font-weight: 800; color: #f8fafc;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      margin-top: 2px;
-    }
-    .pallet-card-meta {
-      display: flex; gap: 4px; align-items: center;
-      margin-top: 3px; flex-wrap: wrap;
-    }
-    .pallet-card-chip {
-      font-size: 9.5px; font-weight: 800;
-      padding: 2px 6px; border-radius: 4px;
-      background: rgba(255,255,255,0.12);
-      color: #cbd5e1;
-    }
-    .pallet-card-chip.accent { background: rgba(6,182,212,0.25); color: #38bdf8; font-family: monospace; font-weight: 900; }
-    /* Zona da pilha 3D (rodapé) */
-    .pallet-card-stack {
-      flex: 1;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: flex-end;
-      padding: 4px 6px 6px;
-      position: relative;
-    }
-    /* Badge de caixas (canto sup. direito do card inteiro) */
-    .pallet-cx-badge {
-      position: absolute; top: -11px; right: -9px;
-      font-size: 11px; font-weight: 900; padding: 3px 8px; border-radius: 10px; color: #fff;
-      z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.7);
-    }
-    /* Badge de idade (canto sup. esquerdo do card inteiro) */
-    .pallet-age-badge {
-      position: absolute; top: -11px; left: -9px;
-      display: flex; align-items: center; gap: 4px;
-      background: #0f172a; border-radius: 8px;
-      font-size: 11px; font-weight: 900; color: #fff;
-      padding: 3px 8px; z-index: 10;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.7);
-      border: 1.5px solid var(--border-color, #10b981);
-    }
-    .pallet-error-badge {
-      position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
-      background: #ef4444; color: #fff; font-size: 9px; font-weight: 900;
-      padding: 2px 7px; border-radius: 8px; z-index: 12; white-space: nowrap;
-      box-shadow: 0 2px 6px rgba(239,68,68,0.5); animation: blink 1.5s infinite;
-    }
-    .pallet-stack {
-      width: 85%;
-      display: flex; flex-direction: column;
-      gap: 2px; align-items: center;
-    }
-    .pallet-row {
-      width: 100%; display: flex; gap: 2px;
-    }
-    .pallet-box {
-      flex: 1; height: 12px; border-radius: 2px;
-      position: relative;
-      box-shadow: inset 0 -2px 4px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4);
-    }
-    .pallet-box::after {
-      content: '';
-      position: absolute; top: 0; left: 0; right: 0; height: 3px;
-      background: rgba(255,255,255,0.18); border-radius: 2px 2px 0 0;
-    }
-    .pallet-base {
-      width: 85%; height: 6px;
-      background: linear-gradient(90deg, #78350f, #92400e, #78350f);
-      border-radius: 2px;
-      box-shadow: 0 3px 6px rgba(0,0,0,0.6);
-      position: relative; margin-top: 2px;
-    }
-    .pallet-base::before {
-      content: '';
-      position: absolute; top: -3px; left: 10%; width: 80%; height: 3px;
-      background: #a16207; border-radius: 1px;
-    }
-    /* Barra de progresso no rodapé da pilha */
-    .pallet-card-bar {
-      width: 85%; height: 3px; border-radius: 2px;
-      background: rgba(255,255,255,0.08); margin-top: 5px; overflow: hidden;
-    }
-    .pallet-card-bar-fill {
-      height: 100%; border-radius: 2px; transition: width 0.5s ease;
-    }
-
-
-    /* ── Modo Seleção em Lote ─────────────────────────────────── */
-    .slot-selectable:hover { cursor: pointer; filter: brightness(1.3); }
-    .slot-selected {
-      outline: 2.5px solid #22d3ee !important;
-      box-shadow: 0 0 20px rgba(34,211,238,0.5), inset 0 0 20px rgba(34,211,238,0.1) !important;
-    }
-    .slot-selected .selection-check {
-      display: flex !important;
-    }
-    .selection-check {
-      display: none;
-      position: absolute; top: 4px; right: 4px;
-      width: 20px; height: 20px; border-radius: 50%;
-      background: #22d3ee; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 900; color: #000; z-index: 20;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-    }
-    #e3d-selection-banner {
-      display: none; align-items: center; justify-content: space-between;
-      gap: 12px; padding: 10px 16px; border-radius: 10px;
-      background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.3);
-      margin-bottom: 12px; flex-wrap: wrap;
-    }
-    #e3d-selection-banner.visible { display: flex; }
-    #e3d-batch-panel {
-      display: none; background: rgba(15,23,42,0.95);
-      border: 1px solid rgba(34,211,238,0.3); border-radius: 14px; padding: 16px;
-    }
-    #e3d-batch-panel.visible { display: block; }
-    .batch-field { margin-bottom: 10px; }
-    .batch-field label { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px; }
-    .batch-field input, .batch-field select { width: 100%; padding: 7px 10px; border-radius: 7px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 12px; }
-
-    /* ── Botão modo seleção ──────────────────────────────────── */
-    #e3d-select-mode-btn.active {
-      background: rgba(34,211,238,0.15) !important;
-      border-color: #22d3ee !important;
-      color: #22d3ee !important;
-    }
-  
-</style></head><body>
-    ${pagesHtml}
-    <div style="text-align:center;margin-top:16px;margin-bottom:32px;">
-      <button onclick="window.print()" style="padding:12px 32px;background:#111;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨 Imprimir / Salvar PDF</button>
-    </div>
-    
-<!-- ══════════════ ESTOQUE 3D ══════════════ -->
-<div id="screenE3d" class="screen" style="padding-top: calc(48px + var(--safe-top)); height: 100vh; overflow-y: auto;">
-  <div class="header">
-    <div class="back-btn" onclick="showScreen('home')">‹</div>
-    <div class="header-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="warehouse" style="width:20px;height:20px"></i> Estoque 3D</div>
-    <div class="online-dot"></div>
-  </div>
-  <div style="padding: 16px;">
-    <h1 class="ptitle"><i data-lucide="warehouse"></i> Estoque Virtual 3D</h1>
-  <p style="color:var(--muted);font-size:13px;margin-bottom:24px">
-    Acompanhe em tempo real o crescimento dos pallets no estoque. A IA identifica automaticamente o tipo de caixa e calibre de cada fruto e fecha pallets quando atingem a capacidade configurada.
-  </p>
-
-  <!-- KPI bar -->
-  <div class="kgrid" id="e3d-kpi-bar" style="margin-bottom:24px">
-    <div class="kcard">
-      <div class="klabel">Pallets no Estoque</div>
-      <div id="e3d-kpi-pallets" class="kval blue">0</div>
-      <div class="ksub">posições ocupadas</div>
-    </div>
-    <div class="kcard green">
-      <div class="klabel">Caixas Acumuladas</div>
-      <div id="e3d-kpi-caixas" class="kval green">0</div>
-      <div class="ksub">desde o início da sessão</div>
-    </div>
-    <div class="kcard yellow">
-      <div class="klabel">Capacidade do Armazém</div>
-      <div id="e3d-kpi-cap" class="kval yellow">0%</div>
-      <div class="ksub">pallets vs. capacidade máx.</div>
-    </div>
-    <div class="kcard orange">
-      <div class="klabel">Pallet em Formação</div>
-      <div id="e3d-kpi-forming" class="kval orange">0 cx</div>
-      <div class="ksub">aguardando fechamento</div>
-    </div>
-  </div>
-
-  <div id="e3d-root">
-
-    <!-- 3D Canvas -->
-    <!-- 2D Grid UI -->
-    <div id="e3d-zones-wrap">
-      
-      <!-- Zone 1: Packing House -->
-      <div class="e3d-zone" style="border: 1px dashed rgba(245,158,11,0.3);">
-        <div style="font-size: 15px; font-weight: 900; color: #f59e0b; margin-bottom: 14px; letter-spacing: 1px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <span style="display:flex;align-items:center;gap:8px;"><i data-lucide="warehouse" style="width:16px;height:16px"></i> PACKING HOUSE</span>
-          <button id="e3d-select-mode-btn" onclick="e3dToggleSelectionMode()" style="margin-left:auto; font-size:10px; font-weight:800; padding:5px 12px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.2s;">
-            <i data-lucide="check-square" style="width:13px;height:13px"></i> Seleção em Lote
-          </button>
-        </div>
-        <!-- Banner de seleção -->
-        <div id="e3d-selection-banner">
-          <span style="font-size:12px; font-weight:700; color:#22d3ee;" id="e3d-selection-count">0 pallets selecionados</span>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <button onclick="e3dClearSelection()" style="font-size:11px; padding:5px 10px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer;">Limpar</button>
-            <button id="e3d-unify-btn" onclick="e3dUnifySelectedPallets()" style="font-size:11px; padding:5px 12px; border-radius:6px; background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; cursor:pointer; font-weight:700; display:none;">🔗 Unificar Pallets</button>
-            <button onclick="e3dToggleBatchPanel()" style="font-size:11px; padding:5px 12px; border-radius:6px; background:rgba(34,211,238,0.15); border:1px solid #22d3ee; color:#22d3ee; cursor:pointer; font-weight:700;">✈️ Expedir Selecionados</button>
-          </div>
-        </div>
-        <div id="e3d-grid-packing">
-          <!-- slots rendered via JS -->
-        </div>
+      @page {
+        size: A4 portrait;
+        margin: 8mm 8mm;
+      }
+      * { box-sizing: border-box; }
+      body { margin:0; padding:0; font-family: Arial, sans-serif; background: #f1f5f9; color: #111; }
+      .page-a4 {
+        width: 210mm;
+        max-width: 100%;
+        min-height: 275mm;
+        margin: 15px auto;
+        padding: 10px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        page-break-after: always;
+        page-break-inside: avoid;
+      }
+      .ordem-card {
+        border: 1.5px dashed #64748b;
+        border-radius: 8px;
+        padding: 14px 18px;
+        background: #fff;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .cut-line {
+        text-align: center;
+        font-size: 10px;
+        font-weight: bold;
+        color: #64748b;
+        margin: 8px 0;
+        user-select: none;
+        letter-spacing: 0.5px;
+      }
+      @media print {
+        body { background: #fff !important; margin: 0 !important; }
+        .page-a4 {
+          margin: 0 !important;
+          border: none !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+          width: 100% !important;
+          height: 275mm !important;
+          padding: 0 !important;
+        }
+        button { display: none !important; }
+      }
+    </style></head><body>
+      ${pagesHtml}
+      <div style="text-align:center;margin:16px 0 32px 0;">
+        <button onclick="window.print()" style="padding:12px 32px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:800;cursor:pointer">Imprimir / Salvar PDF (A4 - 2 por folha)</button>
       </div>
-
-      <!-- Zone 2: Câmara Fria -->
-      <div class="e3d-zone" style="border: 1px dashed rgba(6,182,212,0.3);">
-        <div style="font-size: 15px; font-weight: 900; color: #06b6d4; margin-bottom: 20px; letter-spacing: 1px; display:flex; align-items:center; gap:8px;">
-          <i data-lucide="snowflake" style="width:16px;height:16px"></i> CÂMARA FRIA
-        </div>
-        <div id="e3d-grid-cold">
-          <!-- slots rendered via JS -->
-        </div>
-        <!-- Sensor Widget -->
-        <div style="margin-top: 20px; padding: 12px; background: rgba(6,182,212,0.06); border: 1px solid rgba(6,182,212,0.15); border-radius: 12px; display: flex; flex-direction: column; gap: 8px;">
-          <div style="font-size: 11px; font-weight: 800; color: #06b6d4; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 6px;">
-            <span style="width: 6px; height: 6px; background: #06b6d4; border-radius: 50%; animation: blink 2s infinite;"></span>
-            Sensores Remotos (Câmara Fria)
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.03);">
-              <div style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Temperatura</div>
-              <div id="e3d-sensor-temp" style="font-size: 18px; font-weight: 900; color: #06b6d4; margin-top: 2px;">4.2 °C</div>
-            </div>
-            <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.03);">
-              <div style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Umidade</div>
-              <div id="e3d-sensor-humidity" style="font-size: 18px; font-weight: 900; color: #38bdf8; margin-top: 2px;">85.4 %</div>
-            </div>
-          </div>
-          <div style="font-size: 8.5px; color: #64748b; text-align: center;">
-            Status: Conectado (Sensor DHT22 / Modbus TCP)
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Right Panel -->
-    <div id="e3d-right-panel" style="display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:85vh">
-      <!-- Painel de Expedição em Lote -->
-      <div id="e3d-batch-panel">
-        <div style="font-size:11px; font-weight:800; color:#22d3ee; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; display:flex;align-items:center;gap:6px;">
-          <i data-lucide="send" style="width:14px;height:14px"></i> Expedição em Lote
-        </div>
-        <div id="e3d-batch-summary" style="font-size:11px; color:#94a3b8; margin-bottom:12px; padding:8px 10px; background:rgba(34,211,238,0.05); border-radius:6px; border:1px solid rgba(34,211,238,0.1);"></div>
-        <div class="batch-field">
-          <label>Cliente / Destinatário</label>
-          <input id="e3d-batch-cliente" placeholder="Ex: Supermercado BH" list="e3d-clientes-list">
-          <datalist id="e3d-clientes-list"></datalist>
-        </div>
-        <div class="batch-field">
-          <label>Fazenda de Origem</label>
-          <input id="e3d-batch-fazenda" placeholder="Ex: Fazenda Coopyfrutas">
-        </div>
-        <div class="batch-field">
-          <label>Tipo de Mercado</label>
-          <select id="e3d-batch-market">
-            <option value="Mercado Interno">🇧🇷 Mercado Interno</option>
-            <option value="Exportação USA">🇺🇸 Exportação USA</option>
-            <option value="Exportação Europa">🇪🇺 Exportação Europa</option>
-            <option value="Exportação Argentina">🇦🇷 Exportação Argentina</option>
-          </select>
-        </div>
-        <button onclick="e3dConfirmBatchDispatch()" style="width:100%; padding:10px; border-radius:8px; background:linear-gradient(135deg,#0ea5e9,#06b6d4); border:none; color:#fff; font-size:12px; font-weight:800; cursor:pointer; display:flex;align-items:center;justify-content:center;gap:6px; transition:all 0.2s;">
-          <i data-lucide="send" style="width:14px;height:14px"></i> Confirmar Expedição e Gerar Romaneio
-        </button>
-      </div>
-
-      <!-- Queue list -->
-      <div id="e3d-queue" style="background:rgba(15,23,42,.9);border-radius:14px;border:1px solid rgba(255,255,255,.06);padding:16px;">
-        <div class="q-title" style="display:flex;align-items:center;gap:6px"><i data-lucide="package-open" style="width:18px;height:18px"></i> Pallets Ativos</div>
-        <div id="e3d-queue-list"></div>
-      </div>
-
-      <!-- WMS Config Panel -->
-      <div id="e3d-config-panel" style="background:rgba(15,23,42,.9);border-radius:14px;border:1px solid rgba(255,255,255,.06);padding:16px;">
-        <div class="q-title" style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
-          <i data-lucide="settings" style="width:18px;height:18px"></i> Configurações WMS
-        </div>
-        
-        <!-- Tabs for config panel -->
-        <div style="display:flex; gap:8px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:12px;">
-          <button id="e3d-cfg-tab-cap-btn" onclick="e3dSwitchCfgTab('cap')" style="background:none; border:none; color:#3b82f6; font-size:11px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:4px; transition:all 0.2s;">Capacidades</button>
-          <button id="e3d-cfg-tab-labels-btn" onclick="e3dSwitchCfgTab('labels')" style="background:none; border:none; color:#64748b; font-size:11px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:4px; transition:all 0.2s;">Etiquetas</button>
-          <button id="e3d-cfg-tab-galpao-btn" onclick="e3dSwitchCfgTab('galpao')" style="background:none; border:none; color:#64748b; font-size:11px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:4px; transition:all 0.2s;">Galpão</button>
-        </div>
-
-        <!-- Tab 1: Capacidades -->
-        <div id="e3d-cfg-tab-cap" style="display:block;">
-          <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
-              <select id="e3d-add-cap-variety" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%"></select>
-              <input type="number" id="e3d-add-cap-caliber" placeholder="Calibre" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
-            </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
-              <input type="text" id="e3d-add-cap-boxmodel" placeholder="Ex: Samba, Forro" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
-              <input type="number" id="e3d-add-cap-limit" placeholder="Qtd Caixas" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
-            </div>
-            <button class="btn blue" onclick="e3dAddCapRule()" style="padding:6px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer">Adicionar Regra</button>
-          </div>
-          <div id="e3d-cap-rules-list" style="max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding-right:4px;">
-            <!-- list of capacity rules -->
-          </div>
-        </div>
-
-        <!-- Tab 2: Etiquetas -->
-        <div id="e3d-cfg-tab-labels" style="display:none;">
-          <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
-              <input type="text" id="e3d-add-label-key" placeholder="Chave (Ex: EXP_CHINA)" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
-              <input type="text" id="e3d-add-label-name" placeholder="Nome (Ex: 🇨🇳 China)" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
-            </div>
-            <button class="btn blue" onclick="e3dAddLabel()" style="padding:6px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer">Cadastrar Etiqueta</button>
-          </div>
-          <div id="e3d-labels-list" style="max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding-right:4px;">
-            <!-- list of custom labels -->
-          </div>
-        </div>
-
-        <!-- Tab 3: Galpão -->
-        <div id="e3d-cfg-tab-galpao" style="display:none;">
-          <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:12px;">
-            <div>
-              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Posições Packing House</label>
-              <input type="number" id="e3d-cfg-packing-cap" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
-            </div>
-            <div>
-              <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px">Posições Câmara Fria</label>
-              <input type="number" id="e3d-cfg-cold-cap" style="padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:11px; width:100%">
-            </div>
-            <button class="btn blue" onclick="e3dSaveGalpaoCapacities()" style="padding:8px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer">Salvar Capacidades</button>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /right panel -->
-  </div><!-- /e3d-root -->
-
-  <div id="e3d-view-cold" class="e3d-view">
-    <div style="background:rgba(15,23,42,.9);border-radius:16px;border:1px solid rgba(255,255,255,.06);padding:20px;min-height:60vh;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <h3 style="color:var(--blue);display:flex;align-items:center;gap:8px"><i data-lucide="snowflake"></i> Pallets na Câmara Fria</h3>
-        <button class="btn" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--text);padding:6px 12px;font-size:12px;border-radius:6px;cursor:pointer" onclick="e3dLoadColdRoom()">Atualizar</button>
-      </div>
-      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
-        <table style="width:100%;border-collapse:collapse;text-align:left;font-size:13px">
-          <thead>
-            <tr style="border-bottom:1px solid rgba(255,255,255,.1);color:var(--muted)">
-              <th style="padding:10px">Pallet #</th>
-              <th style="padding:10px">Variedade</th>
-              <th style="padding:10px">Parcela</th>
-              <th style="padding:10px">Calibre</th>
-              <th style="padding:10px">Tipo Caixa</th>
-              <th style="padding:10px">Qtd</th>
-              <th style="padding:10px">Etiqueta</th>
-              <th style="padding:10px">Ações</th>
-            </tr>
-          </thead>
-          <tbody id="e3d-cold-tbody">
-            <!-- preenchido via JS -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div><!-- /e3d-view-cold -->
-
-</div>
-  </div>
-</div>
-
-</body></html>
+    </body></html>
   `;
 
-
-  const w = window.open('', '_blank', 'width=700,height=900');
+  const w = window.open('', '_blank');
   if (w) { w.document.write(html); w.document.close(); }
   else toast('Permita pop-ups para imprimir a ordem', 'err');
 }
+    
+
 
 async function pushCarrao({ session, workers, carriageIds = [] }) {
   // Busca o último seq para este tenant (independente da data, para ser sequencial global)
@@ -5470,7 +5029,7 @@ async function loadPhPending() {
   
   if (pid) query = query.eq('parcel_id', pid);
 
-  const { data, error } = await query.limit(20);
+  const { data, error } = await query.limit(100);
   if (error || !data?.length) {
     el.innerHTML = '<div class="empty" style="display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--green)"><i data-lucide="check-circle" style="width:24px;height:24px"></i> Nenhum carrocão pendente de validação</div>';
     if (window.lucide) lucide.createIcons();
@@ -5478,22 +5037,71 @@ async function loadPhPending() {
   }
 
   phRecords = data;
-  el.innerHTML = data.map(r => {
-    const pCode = r.parcels?.code || '—';
-    const vName = r.varieties?.name || '—';
+
+  // Agrupa os carrocões pendentes por Data + Parcela + Variedade + Tipo de Fruta
+  const groupsMap = {};
+  data.forEach(r => {
+    const pId = r.parcel_id || 'no_parcel';
+    const vId = r.variety_id || 'no_variety';
+    const fType = r.fruit_type || 'FRUTA';
+    const dStr = r.date || 'no_date';
+    const groupKey = `${dStr}_${pId}_${vId}_${fType}`;
+
+    if (!groupsMap[groupKey]) {
+      groupsMap[groupKey] = {
+        date: r.date,
+        parcelCode: r.parcels?.code || '—',
+        varietyName: r.varieties?.name || '—',
+        fruitType: fType,
+        julianLot: r.julian_lot || '—',
+        registrants: new Set(),
+        seqs: [],
+        totalQty: 0
+      };
+    }
+
+    groupsMap[groupKey].totalQty += (r.qty_carrocoes || 1);
+    if (r.registered_by) groupsMap[groupKey].registrants.add(r.registered_by);
+    if (r.carrao_seq) groupsMap[groupKey].seqs.push(parseInt(r.carrao_seq));
+  });
+
+  const groups = Object.values(groupsMap);
+
+  el.innerHTML = groups.map(g => {
+    const regStr = Array.from(g.registrants).join(', ') || '—';
+    const iconName = g.fruitType === 'MELANCIA' ? 'leaf' : 'citrus';
+    const fruitIcon = `<i data-lucide="${iconName}" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"></i>`;
+    const formattedDate = g.date ? g.date.split('-').reverse().join('/') : '—';
+
+    let seqText = '—';
+    if (g.seqs.length > 0) {
+      g.seqs.sort((a, b) => a - b);
+      if (g.seqs.length === 1) {
+        seqText = `#${g.seqs[0]}`;
+      } else {
+        seqText = `#${g.seqs[0]} ao #${g.seqs[g.seqs.length - 1]}`;
+      }
+    }
+
     return `
-      <div class="hist-item" style="padding:10px;margin-bottom:6px;border-style:dashed">
-        <div style="display:flex;justify-content:space-between">
-          <span style="font-weight:700;color:var(--blue)">${r.fruit_type} — ${vName}</span>
-          <span style="font-size:11px;color:var(--muted)">${r.qty_carrocoes} un</span>
+      <div class="hist-item" style="padding:12px;margin-bottom:8px;border:1px solid rgba(59,130,246,0.3);background:rgba(59,130,246,0.06);border-radius:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:800;font-size:14px;color:var(--blue);display:inline-flex;align-items:center">${fruitIcon} ${g.fruitType} — ${g.varietyName}</span>
+          <span class="pill pill-blue" style="font-size:12px;font-weight:800;padding:4px 10px">${g.totalQty} Carroção(ões)</span>
         </div>
-        <div style="font-size:11px;color:var(--text);margin-top:4px;line-height:1.4">
-          <b>Parcela:</b> ${pCode} | <b>Lote:</b> ${r.julian_lot || '—'}
+        <div style="font-size:12px;color:var(--text);margin-top:6px;line-height:1.5">
+          <b>Parcela:</b> ${g.parcelCode} | <b>Data:</b> ${formattedDate}
         </div>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px">Responsável Colheita: ${r.registered_by || '—'}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">
+          <b>Lote:</b> ${g.julianLot} ${seqText !== '—' ? `| <b>Sequência:</b> ${seqText}` : ''}
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">
+          <b>Resp. Colheita:</b> ${regStr}
+        </div>
       </div>
     `;
   }).join('');
+  if (window.lucide) lucide.createIcons();
   $('phSignArea').style.display = 'block';
 }
 
