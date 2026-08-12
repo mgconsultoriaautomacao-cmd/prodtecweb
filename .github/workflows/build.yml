@@ -1,5 +1,8 @@
 name: Build & Release Electron App
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [main]
@@ -31,7 +34,7 @@ jobs:
         run: npm install
 
       - name: Make Windows installer (.exe NSIS)
-        run: npm run build:win
+        run: npx electron-builder --win --x64 -c.publish=never
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
