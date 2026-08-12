@@ -2883,7 +2883,7 @@ let varieties = [];
     let totalArea = 0;
     let totalLinhas = 0;
 
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 10; i++) {
       const linhasEl = $(`plLinhas${i}`);
       const areaEl = $(`plAreaVar${i}`);
       const badgeEl = $(`plAreaVarBadge${i}`);
@@ -2928,7 +2928,7 @@ let varieties = [];
   }
 
   function addVariedadeRow(nomeVal = '', loteVal = '', qtdVal = '', linhasVal = '', dataVal = '', areaVal = '') {
-    if (variedadeRowCount >= 5) { toast('Máximo de 5 variedades por plantio', 'err'); return; }
+    if (variedadeRowCount >= 10) { toast('Máximo de 10 variedades por plantio', 'err'); return; }
     variedadeRowCount++;
     const idx = variedadeRowCount;
     const container = $('variedadesContainer');
@@ -3032,13 +3032,18 @@ let varieties = [];
       $('plProdutosMuda').value = item.produtos_muda || '';
       $('plObs').value = item.obs || '';
 
-      // Load variedades com linhas, data de plantio e área
+      // Load variedades com linhas, data de plantio e área para até 10 variedades
       const varsArr = [
         { nome: item.variedade, lote: item.lote, qtd: item.quantidade, linhas: item.linhas1 || item.linhas, data: item.data_plantio1 || item.plantio, area: item.area1 },
         { nome: item.variedade2, lote: item.lote2, qtd: item.quantidade2, linhas: item.linhas2, data: item.data_plantio2, area: item.area2 },
         { nome: item.variedade3, lote: item.lote3, qtd: item.quantidade3, linhas: item.linhas3, data: item.data_plantio3, area: item.area3 },
         { nome: item.variedade4, lote: item.lote4, qtd: item.quantidade4, linhas: item.linhas4, data: item.data_plantio4, area: item.area4 },
         { nome: item.variedade5, lote: item.lote5, qtd: item.quantidade5, linhas: item.linhas5, data: item.data_plantio5, area: item.area5 },
+        { nome: item.variedade6, lote: item.lote6, qtd: item.quantidade6, linhas: item.linhas6, data: item.data_plantio6, area: item.area6 },
+        { nome: item.variedade7, lote: item.lote7, qtd: item.quantidade7, linhas: item.linhas7, data: item.data_plantio7, area: item.area7 },
+        { nome: item.variedade8, lote: item.lote8, qtd: item.quantidade8, linhas: item.linhas8, data: item.data_plantio8, area: item.area8 },
+        { nome: item.variedade9, lote: item.lote9, qtd: item.quantidade9, linhas: item.linhas9, data: item.data_plantio9, area: item.area9 },
+        { nome: item.variedade10, lote: item.lote10, qtd: item.quantidade10, linhas: item.linhas10, data: item.data_plantio10, area: item.area10 },
       ].filter(v => v.nome);
 
       if (varsArr.length === 0) addVariedadeRow();
@@ -3074,6 +3079,11 @@ let varieties = [];
       { nome: item.variedade3, lote: item.lote3, qtd: item.quantidade3, linhas: item.linhas3, data: item.data_plantio3, area: item.area3 },
       { nome: item.variedade4, lote: item.lote4, qtd: item.quantidade4, linhas: item.linhas4, data: item.data_plantio4, area: item.area4 },
       { nome: item.variedade5, lote: item.lote5, qtd: item.quantidade5, linhas: item.linhas5, data: item.data_plantio5, area: item.area5 },
+      { nome: item.variedade6, lote: item.lote6, qtd: item.quantidade6, linhas: item.linhas6, data: item.data_plantio6, area: item.area6 },
+      { nome: item.variedade7, lote: item.lote7, qtd: item.quantidade7, linhas: item.linhas7, data: item.data_plantio7, area: item.area7 },
+      { nome: item.variedade8, lote: item.lote8, qtd: item.quantidade8, linhas: item.linhas8, data: item.data_plantio8, area: item.area8 },
+      { nome: item.variedade9, lote: item.lote9, qtd: item.quantidade9, linhas: item.linhas9, data: item.data_plantio9, area: item.area9 },
+      { nome: item.variedade10, lote: item.lote10, qtd: item.quantidade10, linhas: item.linhas10, data: item.data_plantio10, area: item.area10 },
     ].filter(v => v.nome);
 
     const tamLinha = item.tamanho_linha || 0;
@@ -3238,9 +3248,9 @@ let varieties = [];
     const parcela2 = `${parcela} ${letra}`;
     const tamanhoL = parseFloat($('plTamanhoLinha').value) || 0;
 
-    // Collect variedades com linhas, data de plantio e área
+    // Collect ate 10 variedades com linhas, data de plantio e área
     const varsData = [];
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 10; i++) {
       const nome = $(`plVar${i}`)?.value?.trim().toUpperCase();
       if (nome) {
         const linhasV = parseInt($(`plLinhas${i}`)?.value) || null;
@@ -3271,36 +3281,16 @@ let varieties = [];
       letra,
       parcela2,
       cultura,
-      variedade: varsData[0]?.nome || null,
-      variedade2: varsData[1]?.nome || null,
-      variedade3: varsData[2]?.nome || null,
-      variedade4: varsData[3]?.nome || null,
-      variedade5: varsData[4]?.nome || null,
-      lote: varsData[0]?.lote || null,
-      lote2: varsData[1]?.lote || null,
-      lote3: varsData[2]?.lote || null,
-      lote4: varsData[3]?.lote || null,
-      lote5: varsData[4]?.lote || null,
-      quantidade: varsData[0]?.qtd || null,
-      quantidade2: varsData[1]?.qtd || null,
-      quantidade3: varsData[2]?.qtd || null,
-      quantidade4: varsData[3]?.qtd || null,
-      quantidade5: varsData[4]?.qtd || null,
-      linhas1: varsData[0]?.linhas || null,
-      data_plantio1: varsData[0]?.data_plantio || null,
-      area1: varsData[0]?.area || null,
-      linhas2: varsData[1]?.linhas || null,
-      data_plantio2: varsData[1]?.data_plantio || null,
-      area2: varsData[1]?.area || null,
-      linhas3: varsData[2]?.linhas || null,
-      data_plantio3: varsData[2]?.data_plantio || null,
-      area3: varsData[2]?.area || null,
-      linhas4: varsData[3]?.linhas || null,
-      data_plantio4: varsData[3]?.data_plantio || null,
-      area4: varsData[3]?.area || null,
-      linhas5: varsData[4]?.linhas || null,
-      data_plantio5: varsData[4]?.data_plantio || null,
-      area5: varsData[4]?.area || null,
+      variedade: varsData[0]?.nome || null, lote: varsData[0]?.lote || null, quantidade: varsData[0]?.qtd || null, linhas1: varsData[0]?.linhas || null, data_plantio1: varsData[0]?.data_plantio || null, area1: varsData[0]?.area || null,
+      variedade2: varsData[1]?.nome || null, lote2: varsData[1]?.lote || null, quantidade2: varsData[1]?.qtd || null, linhas2: varsData[1]?.linhas || null, data_plantio2: varsData[1]?.data_plantio || null, area2: varsData[1]?.area || null,
+      variedade3: varsData[2]?.nome || null, lote3: varsData[2]?.lote || null, quantidade3: varsData[2]?.qtd || null, linhas3: varsData[2]?.linhas || null, data_plantio3: varsData[2]?.data_plantio || null, area3: varsData[2]?.area || null,
+      variedade4: varsData[3]?.nome || null, lote4: varsData[3]?.lote || null, quantidade4: varsData[3]?.qtd || null, linhas4: varsData[3]?.linhas || null, data_plantio4: varsData[3]?.data_plantio || null, area4: varsData[3]?.area || null,
+      variedade5: varsData[4]?.nome || null, lote5: varsData[4]?.lote || null, quantidade5: varsData[4]?.qtd || null, linhas5: varsData[4]?.linhas || null, data_plantio5: varsData[4]?.data_plantio || null, area5: varsData[4]?.area || null,
+      variedade6: varsData[5]?.nome || null, lote6: varsData[5]?.lote || null, quantidade6: varsData[5]?.qtd || null, linhas6: varsData[5]?.linhas || null, data_plantio6: varsData[5]?.data_plantio || null, area6: varsData[5]?.area || null,
+      variedade7: varsData[6]?.nome || null, lote7: varsData[6]?.lote || null, quantidade7: varsData[6]?.qtd || null, linhas7: varsData[6]?.linhas || null, data_plantio7: varsData[6]?.data_plantio || null, area7: varsData[6]?.area || null,
+      variedade8: varsData[7]?.nome || null, lote8: varsData[7]?.lote || null, quantidade8: varsData[7]?.qtd || null, linhas8: varsData[7]?.linhas || null, data_plantio8: varsData[7]?.data_plantio || null, area8: varsData[7]?.area || null,
+      variedade9: varsData[8]?.nome || null, lote9: varsData[8]?.lote || null, quantidade9: varsData[8]?.qtd || null, linhas9: varsData[8]?.linhas || null, data_plantio9: varsData[8]?.data_plantio || null, area9: varsData[8]?.area || null,
+      variedade10: varsData[9]?.nome || null, lote10: varsData[9]?.lote || null, quantidade10: varsData[9]?.qtd || null, linhas10: varsData[9]?.linhas || null, data_plantio10: varsData[9]?.data_plantio || null, area10: varsData[9]?.area || null,
       linhas: parseInt($('plFileiras').value) || null,
       tamanho_linha: tamanhoL || null,
       espacamento: parseFloat($('plEspacamento').value) || null,
