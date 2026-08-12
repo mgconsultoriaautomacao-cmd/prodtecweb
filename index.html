@@ -1856,6 +1856,55 @@
         </div>
       </div>
     </div>
+
+    <!-- ABA 3: CADASTRO DE DEFENSIVOS E CONTROLE DE ESTOQUE -->
+    <div id="ccTabDefreg" class="tab-pane-cc" style="display:none">
+      <div class="card" style="margin-bottom:24px">
+        <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+          <div style="display:flex; align-items:center; gap:8px"><i data-lucide="shield" class="btn-i" style="color:var(--yellow)"></i> Cadastro Geral de Defensivos & Carência</div>
+          <div style="display:flex; gap:8px">
+            <button onclick="downloadDefensivosTemplateCSV()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="download" style="width:14px;height:14px"></i> Baixar Modelo CSV</button>
+            <button onclick="openImportDefensivosModal()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="upload" style="width:14px;height:14px"></i> Importar Planilha</button>
+            <button onclick="openDefensivoModal()" class="green" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; background:var(--green)"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> + Novo Defensivo</button>
+          </div>
+        </div>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:15px">Cadastre ou importe produtos fitossanitários com prazos de carência, intervalo de dias entre aplicações e dosagens por cultura/variedade.</p>
+
+        <!-- Filtro de Defensivos -->
+        <div class="fbar" style="margin-bottom:16px; padding:12px; gap:12px">
+          <div class="f" style="flex:2"><div class="flabel">Buscar Produto ou Princípio Ativo</div><input id="defSearch" oninput="filterDefensivosTable()" placeholder="Ex: Abamectina, Azoxistrobina, Ortus..." /></div>
+          <div class="f"><div class="flabel">Cultura</div>
+            <select id="defCulturaFilter" onchange="filterDefensivosTable()">
+              <option value="">Todas</option>
+              <option value="MELÃO">Melão</option>
+              <option value="MELANCIA">Melancia</option>
+              <option value="MAMÃO">Mamão</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:left; padding:10px">Produto (Nome Comercial)</th>
+                <th style="text-align:left; padding:10px">Ingrediente Ativo</th>
+                <th style="text-align:center; padding:10px">Reg. MAPA</th>
+                <th style="text-align:left; padding:10px">Alvo / Praga</th>
+                <th style="text-align:center; padding:10px">Dose</th>
+                <th style="text-align:center; padding:10px">Carência (Dias)</th>
+                <th style="text-align:center; padding:10px">Intervalo Aplicação</th>
+                <th style="text-align:center; padding:10px">Cultura</th>
+                <th style="text-align:center; padding:10px">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="ccDefensivosTableBody">
+              <tr><td colspan="9" style="text-align:center; padding:20px; color:var(--muted)">Carregando cadastro de defensivos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- MODAL: NOVA ORDEM DE PULVERIZAÇÃO (WEB DASHBOARD) -->
@@ -1982,6 +2031,105 @@
       <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px">
         <button class="sec" onclick="closeNewOpModal()">Cancelar</button>
         <button onclick="saveNewOpDashboard()" style="background:var(--blue); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:700; cursor:pointer">Salvar e Registrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CADASTRO / EDIÇÃO DE DEFENSIVO INDIVIDUAL -->
+  <div id="defensivoModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:28px; border-radius:18px; width:680px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5)">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px">
+        <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px" id="defensivoModalTitle"><i data-lucide="shield" style="width:22px; height:22px; color:var(--yellow)"></i> Novo Defensivo</h3>
+        <button onclick="closeDefensivoModal()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); border-radius:50%; width:32px; height:32px; cursor:pointer">✕</button>
+      </div>
+      <input type="hidden" id="defEditId"/>
+      <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:12px; margin-bottom:12px">
+        <div><label class="flabel">Produto (Nome Comercial) *</label><input type="text" id="defProduto" placeholder="Ex: ORTUS 50 SC" required style="text-transform:uppercase"/></div>
+        <div><label class="flabel">Ingrediente Ativo / Princípio *</label><input type="text" id="defIngredienteAtivo" placeholder="Ex: FENPIROXIMATO" required style="text-transform:uppercase"/></div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
+        <div><label class="flabel">Nº Registro MAPA</label><input type="text" id="defRegistroMapa" placeholder="Ex: 03893"/></div>
+        <div><label class="flabel">Dose Recomendada</label><input type="number" step="0.01" id="defDose" placeholder="Ex: 1.00"/></div>
+        <div><label class="flabel">Unidade Dose</label>
+          <select id="defUnidadeDose">
+            <option value="L/ha">L/ha</option>
+            <option value="kg/ha">kg/ha</option>
+            <option value="mL/100L">mL/100L</option>
+            <option value="g/100L">g/100L</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
+        <div><label class="flabel" style="color:var(--yellow); font-weight:700">Carência (Dias) *</label><input type="number" id="defCarencia" placeholder="Ex: 7" required style="font-weight:700"/></div>
+        <div><label class="flabel">Intervalo Aplicação (Dias)</label><input type="number" id="defIntervalo" placeholder="Ex: 7" value="7"/></div>
+        <div><label class="flabel">Cultura Alvo</label>
+          <select id="defCultura">
+            <option value="MELÃO">MELÃO</option>
+            <option value="MELANCIA">MELANCIA</option>
+            <option value="MAMÃO">MAMÃO</option>
+            <option value="TODAS">TODAS AS CULTURAS</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <label class="flabel">Alvo / Praga / Doença</label>
+        <input type="text" id="defAlvo" placeholder="Ex: Ácaro rajado, Mosca branca, Oídio..." style="text-transform:uppercase"/>
+      </div>
+      <div style="margin-bottom:20px">
+        <label class="flabel">Observações / Recomendações</label>
+        <textarea id="defObs" rows="2" placeholder="Instruções de diluição, reentrada ou restrição de mistura..." style="width:100%; font-family:inherit"></textarea>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:8px">
+        <button class="sec" onclick="closeDefensivoModal()">Cancelar</button>
+        <button onclick="saveDefensivo()" style="background:var(--green); color:#fff; border:none; padding:8px 18px; border-radius:8px; font-weight:700; cursor:pointer">Salvar Defensivo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: IMPORTAR PLANILHA DE DEFENSIVOS (CSV / EXCEL) -->
+  <div id="importDefensivosModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:28px; border-radius:18px; width:750px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5)">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px">
+        <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px"><i data-lucide="upload" style="width:22px; height:22px; color:var(--blue)"></i> Importar Planilha de Defensivos & Carência</h3>
+        <button onclick="closeImportDefensivosModal()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); border-radius:50%; width:32px; height:32px; cursor:pointer">✕</button>
+      </div>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:16px">Selecione ou arraste um arquivo de planilha (formato <strong>.CSV</strong>) contendo a lista de produtos fitossanitários com suas respectivas carências em dias, intervalos e dosagens.</p>
+
+      <div style="border:2px dashed var(--border); border-radius:14px; padding:30px 20px; text-align:center; background:rgba(255,255,255,0.02); margin-bottom:16px" id="dropAreaDefensivos">
+        <i data-lucide="file-spreadsheet" style="width:40px; height:40px; color:var(--blue); margin-bottom:8px"></i>
+        <div style="font-weight:700; font-size:14px; margin-bottom:4px">Arraste seu arquivo CSV aqui ou clique para selecionar</div>
+        <div style="font-size:11px; color:var(--muted); margin-bottom:14px">Formato suportado: .CSV (separado por vírgula ou ponto-e-vírgula)</div>
+        <input type="file" id="fileInputDefensivos" accept=".csv, .txt" style="display:none" onchange="handleDefensivosFile(event)"/>
+        <button onclick="$('fileInputDefensivos').click()" class="btn sec" style="font-size:12px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px"><i data-lucide="folder-open" style="width:14px;height:14px"></i> Escolher Arquivo</button>
+      </div>
+
+      <div id="importDefPreviewContainer" style="display:none; margin-bottom:16px">
+        <div style="font-size:12px; font-weight:700; color:var(--green); margin-bottom:8px" id="importDefCountMsg"></div>
+        <div style="max-height:220px; overflow-y:auto; border:1px solid var(--border); border-radius:8px">
+          <table style="width:100%; border-collapse:collapse; font-size:11px">
+            <thead>
+              <tr style="background:rgba(255,255,255,0.05); border-bottom:1px solid var(--border)">
+                <th style="padding:6px; text-align:left">Produto</th>
+                <th style="padding:6px; text-align:left">Ingrediente Ativo</th>
+                <th style="padding:6px; text-align:center">MAPA</th>
+                <th style="padding:6px; text-align:left">Alvo</th>
+                <th style="padding:6px; text-align:center">Dose</th>
+                <th style="padding:6px; text-align:center">Carência</th>
+                <th style="padding:6px; text-align:center">Intervalo</th>
+                <th style="padding:6px; text-align:center">Cultura</th>
+              </tr>
+            </thead>
+            <tbody id="importDefPreviewTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px">
+        <button onclick="downloadDefensivosTemplateCSV()" class="btn sec" style="font-size:11px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="download" style="width:12px;height:12px"></i> Baixar Exemplo (.CSV)</button>
+        <div style="display:flex; gap:8px">
+          <button class="sec" onclick="closeImportDefensivosModal()">Cancelar</button>
+          <button id="btnConfirmImportDef" disabled onclick="confirmImportDefensivos()" style="background:var(--green); color:#fff; border:none; padding:8px 18px; border-radius:8px; font-weight:700; cursor:pointer; opacity:0.5">Confirmar Importação</button>
+        </div>
       </div>
     </div>
   </div>
@@ -10933,6 +11081,8 @@ function showCcTab(tab) {
 
   if (tab === 'plantios') {
     loadWebPlantios();
+  } else if (tab === 'defreg') {
+    loadDefensivosTable();
   }
 }
 
@@ -11224,29 +11374,29 @@ function addWebVariedadeRow(nomeVal = '', loteVal = '', qtdVal = '', linhasVal =
     </div>
     ${idx > 1 ? `<button type="button" onclick="removeWebVariedadeRow(${idx})" style="position:absolute;top:10px;right:10px;width:24px;height:24px;border-radius:50%;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.2);color:var(--red);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>` : ''}
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; align-items:end">
-      <div style="min-width:180px; flex:2">
+      <div>
         <label class="flabel">Cultivar / Nome *</label>
-        <input id="webPlVar${idx}" type="text" placeholder="Ex: GOLDMINE" value="${nomeVal}" style="text-transform:uppercase; font-weight:700; font-size:13px" oninput="calcWebAreaHectares()"/>
+        <input id="webPlVar${idx}" type="text" placeholder="Ex: GOLDMINE" value="${nomeVal || ''}" style="text-transform:uppercase; font-weight:700; font-size:13px" oninput="calcWebAreaHectares()"/>
       </div>
       <div>
         <label class="flabel">Lote Semente</label>
-        <input id="webPlLote${idx}" type="text" placeholder="Ex: 150339" value="${loteVal}"/>
+        <input id="webPlLote${idx}" type="text" placeholder="Ex: 150339" value="${loteVal || ''}"/>
       </div>
       <div>
         <label class="flabel">Qtd. Sementes</label>
-        <input id="webPlQtd${idx}" type="number" placeholder="15000" value="${qtdVal}"/>
+        <input id="webPlQtd${idx}" type="number" placeholder="15000" value="${qtdVal || ''}"/>
       </div>
       <div>
         <label class="flabel">Linhas *</label>
-        <input id="webPlLinhas${idx}" type="number" placeholder="24" value="${linhasVal}" oninput="calcWebAreaHectares()"/>
+        <input id="webPlLinhas${idx}" type="number" placeholder="24" value="${linhasVal || ''}" oninput="calcWebAreaHectares()"/>
       </div>
       <div>
         <label class="flabel">Data Plantio</label>
-        <input id="webPlDataPlantio${idx}" type="date" value="${dataVal}"/>
+        <input id="webPlDataPlantio${idx}" type="date" value="${dataVal && dataVal !== 'null' ? dataVal : ''}"/>
       </div>
       <div>
         <label class="flabel" style="color:#3b82f6; font-weight:800">Área (ha)</label>
-        <input id="webPlAreaVar${idx}" type="number" step="0.01" placeholder="0.96" value="${areaVal}" style="font-weight:800; color:#3b82f6; background:rgba(59,130,246,0.08); border-color:rgba(59,130,246,0.3)" oninput="calcWebAreaHectares(true)"/>
+        <input id="webPlAreaVar${idx}" type="number" step="0.01" placeholder="0.96" value="${areaVal || ''}" style="font-weight:800; color:#3b82f6; background:rgba(59,130,246,0.08); border-color:rgba(59,130,246,0.3)" oninput="calcWebAreaHectares(true)"/>
       </div>
     </div>
   `;
@@ -11568,6 +11718,354 @@ function renderCcOpTable(list) {
   }).join('');
   
   setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
+}
+
+// ═══════════════════════════════════════════
+// CADASTRO DE DEFENSIVOS & IMPORTAÇÃO DE PLANILHA
+// ═══════════════════════════════════════════
+
+let webDefensivosData = [];
+let pendingImportDefensivos = [];
+
+async function loadDefensivosTable() {
+  try {
+    const { data, error } = await sb.from('caderno_campo_defensivos_cadastro')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('produto', { ascending: true });
+
+    if (!error && data) {
+      webDefensivosData = data;
+    } else {
+      webDefensivosData = [];
+    }
+  } catch (e) {
+    console.error('Erro ao carregar defensivos:', e);
+    webDefensivosData = [];
+  }
+  filterDefensivosTable();
+}
+
+function filterDefensivosTable() {
+  const query = ($('defSearch')?.value || '').toLowerCase().trim();
+  const cultura = $('defCulturaFilter')?.value || '';
+
+  const filtered = webDefensivosData.filter(d => {
+    const searchStr = [d.produto, d.ingrediente_ativo, d.registro_mapa, d.alvo, d.cultura]
+      .filter(Boolean).join(' ').toLowerCase();
+    const matchQuery = !query || searchStr.includes(query);
+    const matchCultura = !cultura || d.cultura === cultura || d.cultura === 'TODAS';
+    return matchQuery && matchCultura;
+  });
+
+  renderDefensivosTable(filtered);
+}
+
+function renderDefensivosTable(data) {
+  const tbody = $('ccDefensivosTableBody');
+  if (!tbody) return;
+
+  if (!data || data.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--muted)">Nenhum defensivo cadastrado com os filtros selecionados.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = data.map(d => {
+    const carenciaVal = d.carencia_dias || 0;
+    const carenciaBadge = carenciaVal === 0 
+      ? `<span style="font-size:11px; background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:6px; font-weight:700">Isento (0d)</span>`
+      : `<span style="font-size:11px; background:rgba(245,158,11,0.15); color:var(--yellow); border:1px solid rgba(245,158,11,0.3); padding:3px 8px; border-radius:6px; font-weight:700">${carenciaVal} dias</span>`;
+
+    const doseStr = d.dose ? `${d.dose} ${d.unidade_dose || 'L/ha'}` : '—';
+
+    return `
+      <tr style="border-bottom:1px solid var(--border); font-size:13px">
+        <td style="padding:12px; font-weight:800; color:var(--text)">${d.produto || '—'}</td>
+        <td style="padding:12px; color:var(--blue); font-weight:600">${d.ingrediente_ativo || '—'}</td>
+        <td style="padding:12px; text-align:center; font-size:11px">${d.registro_mapa || '—'}</td>
+        <td style="padding:12px; font-size:12px">${d.alvo || '—'}</td>
+        <td style="padding:12px; text-align:center; font-weight:700">${doseStr}</td>
+        <td style="padding:12px; text-align:center">${carenciaBadge}</td>
+        <td style="padding:12px; text-align:center; font-weight:600">${d.intervalo_dias ? d.intervalo_dias + ' dias' : '7 dias'}</td>
+        <td style="padding:12px; text-align:center; font-size:11px; color:var(--muted)">${d.cultura || 'TODAS'}</td>
+        <td style="padding:12px; text-align:center; white-space:nowrap">
+          <button onclick="openDefensivoModal('${d.id}')" class="sec" style="padding:4px 8px; font-size:11px; display:inline-flex; align-items:center; gap:3px" title="Editar"><i data-lucide="edit-3" style="width:12px;height:12px"></i> Editar</button>
+          <button onclick="deleteDefensivo('${d.id}')" class="danger" style="padding:4px 8px; font-size:11px; margin-left:4px" title="Excluir">✕</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function openDefensivoModal(editId) {
+  const modal = $('defensivoModal');
+  const title = $('defensivoModalTitle');
+  const editIdInput = $('defEditId');
+
+  // Reset form
+  ['defProduto','defIngredienteAtivo','defRegistroMapa','defDose','defCarencia','defIntervalo','defAlvo','defObs'].forEach(id => {
+    const el = $(id);
+    if (el) el.value = '';
+  });
+  $('defUnidadeDose').value = 'L/ha';
+  $('defCultura').value = 'MELÃO';
+  $('defIntervalo').value = '7';
+
+  if (editId) {
+    const item = webDefensivosData.find(x => x.id === editId);
+    if (!item) return;
+
+    if (title) title.innerHTML = `<i data-lucide="shield" style="color:var(--yellow); width:22px; height:22px;"></i> Editar Defensivo — ${item.produto}`;
+    editIdInput.value = editId;
+
+    $('defProduto').value = item.produto || '';
+    $('defIngredienteAtivo').value = item.ingrediente_ativo || '';
+    $('defRegistroMapa').value = item.registro_mapa || '';
+    $('defDose').value = item.dose || '';
+    $('defUnidadeDose').value = item.unidade_dose || 'L/ha';
+    $('defCarencia').value = item.carencia_dias ?? '';
+    $('defIntervalo').value = item.intervalo_dias || 7;
+    $('defCultura').value = item.cultura || 'MELÃO';
+    $('defAlvo').value = item.alvo || '';
+    $('defObs').value = item.obs || '';
+  } else {
+    if (title) title.innerHTML = `<i data-lucide="shield" style="color:var(--yellow); width:22px; height:22px;"></i> Novo Defensivo`;
+    editIdInput.value = '';
+  }
+
+  modal.style.display = 'flex';
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeDefensivoModal() {
+  $('defensivoModal').style.display = 'none';
+}
+
+async function saveDefensivo() {
+  const editId = $('defEditId').value;
+  const produto = $('defProduto').value.trim().toUpperCase();
+  const ingrediente_ativo = $('defIngredienteAtivo').value.trim().toUpperCase();
+  const carencia_dias = parseInt($('defCarencia').value);
+
+  if (!produto) return alert('Informe o Nome Comercial do Produto.');
+  if (!ingrediente_ativo) return alert('Informe o Ingrediente Ativo.');
+  if (isNaN(carencia_dias)) return alert('Informe o Prazo de Carência em dias.');
+
+  const payload = {
+    tenant_id: tenantId,
+    produto,
+    ingrediente_ativo,
+    registro_mapa: $('defRegistroMapa').value.trim() || null,
+    dose: parseFloat($('defDose').value) || null,
+    unidade_dose: $('defUnidadeDose').value || 'L/ha',
+    carencia_dias: carencia_dias,
+    intervalo_dias: parseInt($('defIntervalo').value) || 7,
+    cultura: $('defCultura').value || 'MELÃO',
+    alvo: $('defAlvo').value.trim().toUpperCase() || null,
+    obs: $('defObs').value.trim() || null,
+  };
+
+  try {
+    let res;
+    if (editId) {
+      res = await sb.from('caderno_campo_defensivos_cadastro').update(payload).eq('id', editId).eq('tenant_id', tenantId);
+    } else {
+      res = await sb.from('caderno_campo_defensivos_cadastro').insert(payload);
+    }
+    if (res.error) throw res.error;
+
+    toast(editId ? 'Defensivo atualizado! ✅' : 'Defensivo cadastrado com sucesso! ✅', 'ok');
+    closeDefensivoModal();
+    await loadDefensivosTable();
+  } catch (e) {
+    alert('Erro ao salvar defensivo: ' + (e.message || 'Erro de conexão.'));
+  }
+}
+
+async function deleteDefensivo(id) {
+  if (!confirm('Deseja excluir este defensivo do cadastro?')) return;
+  try {
+    const { error } = await sb.from('caderno_campo_defensivos_cadastro').delete().eq('id', id).eq('tenant_id', tenantId);
+    if (error) throw error;
+    toast('Defensivo removido! 🗑️', 'ok');
+    await loadDefensivosTable();
+  } catch (e) {
+    alert('Erro ao excluir: ' + e.message);
+  }
+}
+
+// ═══════════════════════════════════════════
+// IMPORTADOR DE PLANILHA CSV DE DEFENSIVOS
+// ═══════════════════════════════════════════
+
+function openImportDefensivosModal() {
+  pendingImportDefensivos = [];
+  $('importDefPreviewContainer').style.display = 'none';
+  $('btnConfirmImportDef').disabled = true;
+  $('btnConfirmImportDef').style.opacity = '0.5';
+  $('fileInputDefensivos').value = '';
+  $('importDefensivosModal').style.display = 'flex';
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeImportDefensivosModal() {
+  $('importDefensivosModal').style.display = 'none';
+}
+
+function downloadDefensivosTemplateCSV() {
+  const csvHeaders = 'PRODUTO,INGREDIENTE_ATIVO,REGISTRO_MAPA,ALVO,DOSE,UNIDADE_DOSE,CARENCIA_DIAS,INTERVALO_DIAS,CULTURA\n';
+  const csvRows = [
+    'ORTUS 50 SC,FENPIROXIMATO,03893,ÁCARO RAJADO,1.0,L/ha,7,7,MELÃO',
+    'RANMAN,CIAZOFAMIDA,008104,MÍLDIO,0.5,L/ha,3,7,MELÃO',
+    'CERCONIL WP,TIOFANATO METÍLICO,04889,OÍDIO,1.5,kg/ha,7,7,MELÃO',
+    'AMPLIGO,CHLORANTRANILIPROLE,05110,LAGARTA,0.2,L/ha,1,5,MELANCIA',
+    'KARATE ZEON 50 CS,LAMBDA CIALOTRINA,02908,VAQUINHA,0.15,L/ha,3,7,MELÃO',
+    'AMISTAR TOP,AZOXISTROBINA + DIFEOCONAZOL,05709,OÍDIO E CRESPAMENTO,0.5,L/ha,7,7,MELÃO',
+    'NATIVO,TEBUCONAZOL + TRIFLOXISTROBINA,08807,MÍLDIO,0.6,L/ha,7,7,MELÃO',
+    'VERTIMEC 18 EC,ABAMECTINA,009096,MOSCA MINADORA,1.0,L/ha,3,7,MELÃO',
+  ].join('\n');
+
+  const blob = new Blob([csvHeaders + csvRows], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', 'Modelo_Importacao_Defensivos.csv');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  toast('Planilha modelo baixada com sucesso! 📄', 'ok');
+}
+
+function handleDefensivosFile(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    parseDefensivosCSVText(text);
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseDefensivosCSVText(text) {
+  const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+  if (lines.length <= 1) {
+    alert('Arquivo CSV vazio ou sem dados.');
+    return;
+  }
+
+  const separator = lines[0].includes(';') ? ';' : ',';
+  const headers = lines[0].split(separator).map(h => h.trim().toUpperCase().replace(/["']/g, ''));
+
+  const getColIdx = (nameArr) => {
+    return headers.findIndex(h => nameArr.some(n => h.includes(n)));
+  };
+
+  const pIdx = getColIdx(['PRODUTO', 'NOME', 'COMERCIAL']);
+  const iIdx = getColIdx(['INGREDIENTE', 'PRINCIPIO', 'ATIVO']);
+  const mIdx = getColIdx(['MAPA', 'REGISTRO']);
+  const aIdx = getColIdx(['ALVO', 'PRAGA', 'DOENCA']);
+  const dIdx = getColIdx(['DOSE', 'DOSAGEM']);
+  const uIdx = getColIdx(['UNIDADE']);
+  const cIdx = getColIdx(['CARENCIA', 'DIAS']);
+  const intIdx = getColIdx(['INTERVALO', 'REENTRADA']);
+  const culIdx = getColIdx(['CULTURA']);
+
+  pendingImportDefensivos = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(separator).map(c => c.trim().replace(/["']/g, ''));
+    if (cols.length < 2) continue;
+
+    const produto = (pIdx >= 0 ? cols[pIdx] : cols[0] || '').toUpperCase();
+    const ingrediente = (iIdx >= 0 ? cols[iIdx] : cols[1] || '').toUpperCase();
+    if (!produto || !ingrediente) continue;
+
+    const mapa = mIdx >= 0 ? cols[mIdx] : (cols[2] || '');
+    const alvo = (aIdx >= 0 ? cols[aIdx] : (cols[3] || '')).toUpperCase();
+    const dose = parseFloat(dIdx >= 0 ? cols[dIdx] : cols[4]) || null;
+    const unidade = uIdx >= 0 ? cols[uIdx] : 'L/ha';
+    const carencia = parseInt(cIdx >= 0 ? cols[cIdx] : cols[6]) || 0;
+    const intervalo = parseInt(intIdx >= 0 ? cols[intIdx] : cols[7]) || 7;
+    const cultura = (culIdx >= 0 ? cols[culIdx] : (cols[8] || 'MELÃO')).toUpperCase();
+
+    pendingImportDefensivos.push({
+      tenant_id: tenantId,
+      produto,
+      ingrediente_ativo: ingrediente,
+      registro_mapa: mapa || null,
+      alvo: alvo || null,
+      dose,
+      unidade_dose: unidade || 'L/ha',
+      carencia_dias: carencia,
+      intervalo_dias: intervalo,
+      cultura: cultura || 'MELÃO'
+    });
+  }
+
+  if (pendingImportDefensivos.length === 0) {
+    alert('Nenhum defensivo válido foi encontrado na planilha. Verifique o cabeçalho.');
+    return;
+  }
+
+  // Render preview table
+  const tbody = $('importDefPreviewTable');
+  const msg = $('importDefCountMsg');
+  if (msg) msg.textContent = `✅ ${pendingImportDefensivos.length} defensivos identificados prontos para importar:`;
+
+  if (tbody) {
+    tbody.innerHTML = pendingImportDefensivos.map((item, idx) => `
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:5px; font-weight:700; color:var(--text)">${item.produto}</td>
+        <td style="padding:5px; color:var(--blue)">${item.ingrediente_ativo}</td>
+        <td style="padding:5px; text-align:center">${item.registro_mapa || '—'}</td>
+        <td style="padding:5px">${item.alvo || '—'}</td>
+        <td style="padding:5px; text-align:center">${item.dose ? item.dose + ' ' + item.unidade_dose : '—'}</td>
+        <td style="padding:5px; text-align:center; font-weight:700; color:var(--yellow)">${item.carencia_dias}d</td>
+        <td style="padding:5px; text-align:center">${item.intervalo_dias}d</td>
+        <td style="padding:5px; text-align:center">${item.cultura}</td>
+      </tr>
+    `).join('');
+  }
+
+  $('importDefPreviewContainer').style.display = 'block';
+  const btn = $('btnConfirmImportDef');
+  if (btn) {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.textContent = `Confirmar Importação (${pendingImportDefensivos.length} defensivos)`;
+  }
+}
+
+async function confirmImportDefensivos() {
+  if (pendingImportDefensivos.length === 0) return;
+
+  const btn = $('btnConfirmImportDef');
+  btn.disabled = true;
+  btn.textContent = 'Importando...';
+
+  try {
+    const batchSize = 50;
+    let count = 0;
+    for (let i = 0; i < pendingImportDefensivos.length; i += batchSize) {
+      const batch = pendingImportDefensivos.slice(i, i + batchSize);
+      const { error } = await sb.from('caderno_campo_defensivos_cadastro').insert(batch);
+      if (error) throw error;
+      count += batch.length;
+    }
+
+    toast(`✓ ${count} defensivos importados com sucesso! 🛡️`, 'ok');
+    closeImportDefensivosModal();
+    await loadDefensivosTable();
+  } catch (e) {
+    console.error('Erro na importação:', e);
+    alert('Erro ao importar planilha: ' + (e.message || 'Verifique a conexão.'));
+    btn.disabled = false;
+    btn.textContent = 'Tentar Novamente';
+  }
 }
 
 async function deleteMipRecord(id) {

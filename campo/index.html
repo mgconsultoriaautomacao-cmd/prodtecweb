@@ -2942,29 +2942,29 @@ let varieties = [];
       </div>
       ${idx > 1 ? `<button type="button" onclick="removeVariedadeRow(${idx})" style="position:absolute;top:10px;right:10px;width:24px;height:24px;border-radius:50%;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.2);color:var(--red);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>` : ''}
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; align-items:end">
-        <div class="form-field" style="margin:0; min-width:180px; flex:2">
+        <div class="form-field" style="margin:0">
           <label class="field-label">Cultivar / Nome *</label>
-          <input id="plVar${idx}" type="text" placeholder="Ex: GOLDMINE" value="${nomeVal}" style="text-transform:uppercase; font-weight:700; font-size:13px" oninput="calcAreaHectares()">
+          <input id="plVar${idx}" type="text" placeholder="Ex: GOLDMINE" value="${nomeVal || ''}" style="text-transform:uppercase; font-weight:700; font-size:13px" oninput="calcAreaHectares()">
         </div>
         <div class="form-field" style="margin:0">
           <label class="field-label">Lote Semente</label>
-          <input id="plLote${idx}" type="text" placeholder="Ex: 150339" value="${loteVal}">
+          <input id="plLote${idx}" type="text" placeholder="Ex: 150339" value="${loteVal || ''}">
         </div>
         <div class="form-field" style="margin:0">
           <label class="field-label">Qtd. Sementes</label>
-          <input id="plQtd${idx}" type="number" placeholder="15000" value="${qtdVal}">
+          <input id="plQtd${idx}" type="number" placeholder="15000" value="${qtdVal || ''}">
         </div>
         <div class="form-field" style="margin:0">
           <label class="field-label">Linhas *</label>
-          <input id="plLinhas${idx}" type="number" placeholder="24" value="${linhasVal}" oninput="calcAreaHectares()">
+          <input id="plLinhas${idx}" type="number" placeholder="24" value="${linhasVal || ''}" oninput="calcAreaHectares()">
         </div>
         <div class="form-field" style="margin:0">
           <label class="field-label">Data Plantio</label>
-          <input id="plDataPlantio${idx}" type="date" value="${dataVal}">
+          <input id="plDataPlantio${idx}" type="date" value="${dataVal && dataVal !== 'null' ? dataVal : ''}">
         </div>
         <div class="form-field" style="margin:0">
           <label class="field-label" style="color:#3b82f6; font-weight:800">Área (ha)</label>
-          <input id="plAreaVar${idx}" type="number" step="0.01" placeholder="0.96" value="${areaVal}" style="font-weight:800; color:#3b82f6; background:rgba(59,130,246,0.08); border-color:rgba(59,130,246,0.3)" oninput="calcAreaHectares(true)">
+          <input id="plAreaVar${idx}" type="number" step="0.01" placeholder="0.96" value="${areaVal || ''}" style="font-weight:800; color:#3b82f6; background:rgba(59,130,246,0.08); border-color:rgba(59,130,246,0.3)" oninput="calcAreaHectares(true)">
         </div>
       </div>
     `;
@@ -3153,10 +3153,18 @@ let varieties = [];
       </style>
     </head>
     <body onload="window.print()">
-      <!-- CABEÇALHO MODELO 1 -->
-      <div class="header-box">
-        <div class="header-title">PASTA DE CAMPO (MODELO 1) — CADERNO DE CAMPO</div>
-        <div class="header-sub">REGISTRO GERAL DA PARCELA E CULTIVAR | ${tenantName.toUpperCase()}</div>
+      <!-- CABEÇALHO MODELO 1 COM LOGO DA EMPRESA -->
+      <div class="header-box" style="display:flex; align-items:center; justify-content:space-between; gap:16px;">
+        <div style="flex:0 0 140px; text-align:left;">
+          <img src="logo.png" style="max-height:55px; max-width:130px; object-fit:contain;" alt="Logo" onerror="this.style.display='none'"/>
+        </div>
+        <div style="flex:1; text-align:center;">
+          <div class="header-title">PASTA DE CAMPO (MODELO 1) — CADERNO DE CAMPO</div>
+          <div class="header-sub">REGISTRO GERAL DA PARCELA E CULTIVAR | ${tenantName.toUpperCase()}</div>
+        </div>
+        <div style="flex:0 0 140px; text-align:right; font-size:8pt; font-weight:bold; color:#475569;">
+          PC01 — CADERNO<br/>DE CAMPO
+        </div>
       </div>
 
       <!-- DADOS DA PARCELA -->
