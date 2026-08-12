@@ -11066,15 +11066,41 @@ function renderWebPlantiosTable(data) {
 }
 
 function calcWebAreaHectares() {
-  const fileiras = parseFloat($('webPlFileiras')?.value) || 0;
-  const tamanho = parseFloat($('webPlTamanhoLinha')?.value) || 0;
+  const tamanhoLinha = parseFloat($('webPlTamanhoLinha')?.value) || 0;
+  let totalArea = 0;
+  let totalLinhas = 0;
+
+  for (let i = 1; i <= 5; i++) {
+    const linhasEl = $(`webPlLinhas${i}`);
+    const badgeEl = $(`webPlAreaVarBadge${i}`);
+    const linhasVar = parseFloat(linhasEl?.value) || 0;
+    
+    if (linhasVar > 0) {
+      totalLinhas += linhasVar;
+      const areaVar = (tamanhoLinha > 0) ? (linhasVar * tamanhoLinha) / 5000 : 0;
+      totalArea += areaVar;
+      if (badgeEl) badgeEl.textContent = `${areaVar.toFixed(2)} ha (${linhasVar} lin)`;
+    } else {
+      if (badgeEl) badgeEl.textContent = '0,00 ha';
+    }
+  }
+
+  if (totalLinhas === 0) {
+    totalLinhas = parseFloat($('webPlFileiras')?.value) || 0;
+    if (totalLinhas > 0 && tamanhoLinha > 0) {
+      totalArea = (totalLinhas * tamanhoLinha) / 5000;
+    }
+  } else {
+    if ($('webPlFileiras')) $('webPlFileiras').value = totalLinhas;
+  }
+
   const areaInput = $('webPlArea');
   const hint = $('webPlAreaHint');
-
-  if (fileiras > 0 && tamanho > 0 && areaInput) {
-    const areaCalc = (fileiras * tamanho) / 5000;
-    areaInput.value = areaCalc.toFixed(2);
-    if (hint) hint.textContent = `✅ Calculado: (${fileiras} linhas × ${tamanho}m) / 5.000 = ${areaCalc.toFixed(2)} ha`;
+  if (areaInput && totalArea > 0) {
+    areaInput.value = totalArea.toFixed(2);
+  }
+  if (hint) {
+    hint.textContent = `📐 Total: ${totalLinhas} linhas | (${totalLinhas} lin × ${tamanhoLinha}m) / 5.000 = ${totalArea.toFixed(2)} ha`;
   }
 }
 
@@ -11097,7 +11123,6 @@ function openWebPlantioModal(editId) {
 
   webVariedadeRowCount = 0;
   $('webVariedadesContainer').innerHTML = '';
-  addWebVariedadeRow();
 
   if (editId) {
     const item = webInfoParcelasData.find(x => x.id === editId);
