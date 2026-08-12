@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' http://localhost:5000 https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' file: data: http://localhost:5000 https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' http://localhost:5000 https:;">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Core Agro | Controle de Produção</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="./lucide.min.js"></script>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="../assets/core_agro_logo.png" alt="Core Agro" class="brand-logo" />
+      <div>
+        <div id="tenantName" class="brandName">Core Agro</div>
+        <div id="tenantSub" class="brandSub">Inteligência no Campo</div>
+      </div>
+    </div>
+
+    <nav class="menu" aria-label="Menu">
+      <a class="menuItem" href="#/inicio" data-route="/inicio">Tela inicial</a>
+      <a class="menuItem" href="#/painel" data-route="/painel">Painel</a>
+      <a class="menuItem" href="#/admin" data-route="/admin">Admin</a>
+      <a class="menuItem" href="#/financeiro" data-route="/financeiro">Financeiro</a>
+      <a class="menuItem" href="#/dashboards" data-route="/dashboards">Dashboards</a>
+      <a class="menuItem" href="#/config" data-route="/config">Configurações</a>
+    </nav>
+
+    <div class="meta">
+      <button id="btnUnlock"
+        style="display:none; background:transparent; border:none; cursor:pointer; font-size:18px; padding: 0 5px;"
+        title="Desbloquear Admin">🔒</button>
+      <select id="roleSelect">
+        <option value="EMBALADOR">Embalador</option>
+        <option value="EMPILHADOR">Empilhador</option>
+      </select>
+      <span id="clock">--/--/----</span>
+      <button id="btnHeaderLogout"
+        style="background:transparent; border:1px solid rgba(255,255,255,0.1); color:var(--red); padding:4px 8px; font-size:11px; cursor:pointer; border-radius:6px; margin-left:10px;">Sair</button>
+    </div>
+  </header>
+
+  <main id="app" class="appMount"></main>
+
+  <template id="tpl-inicio">
+    <div class="agro-stage glass">
+      <div class="agro-bg"></div>
+      <div class="agro-tractor"></div>
+      <div class="agro-overlay">
+        <img src="../assets/core_agro_logo.png" alt="Core Agro" class="hero-logo" />
+        <h1 class="agro-title">Core Agro</h1>
+        <p class="agro-sub">Inteligência no Campo</p>
+        <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: center;">
+          <div class="agro-stat" style="display:flex; align-items:center; gap:6px"><i data-lucide="tractor"
+              style="width:16px; height:16px"></i> Agro Tech</div>
+          <div class="agro-stat" style="display:flex; align-items:center; gap:6px"><i data-lucide="sprout"
+              style="width:16px; height:16px"></i> Sustentável</div>
+          <div class="agro-stat" style="display:flex; align-items:center; gap:6px"><i data-lucide="bar-chart-3"
+              style="width:16px; height:16px"></i> Alta Performance</div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-painel">
+    <div class="tvGrid">
+      <!-- Left Column: Scan & Info -->
+      <section class="card tvLeft" style="display: flex; flex-direction: column; height: 100%; padding: 12px;">
+        <div style="flex-shrink: 0;">
+          <div class="title"
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 14px;">Leitura Ativa</span>
+            <span id="clock" style="font-size: 12px; font-weight: 400; color: var(--muted);"></span>
+          </div>
+          <input id="scanInput" class="scanInput"
+            style="height: 38px; font-size: 16px; background: rgba(0,0,0,0.3); border-color: var(--blue);"
+            placeholder="Bipe aqui..." />
+          <div id="status" class="status"
+            style="margin-top: 8px; padding: 6px; font-size: 12px; font-weight: 600; color: var(--blue);">Pronto.</div>
+
+          <!-- CV Results Panel (Integrated) -->
+          <div id="cvResults"
+            style="display: none; margin-top: 10px; padding: 10px; background: rgba(59, 130, 246, 0.05); border: 1px dashed var(--blue); border-radius: 8px;">
+            <div
+              style="font-size: 11px; color: var(--blue); font-weight: 700; margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 5px;">
+                <span style="display:flex; align-items:center; gap:4px"><i data-lucide="scan-eye"
+                    style="width:12px; height:12px"></i> ANÁLISE POR IA</span>
+                <span id="cvStatus" style="font-size: 9px; opacity: 0.7;">(Ativa)</span>
+              </div>
+              <button onclick="toggleCvViewer()"
+                style="background:transparent; border:1px solid var(--blue); color:var(--blue); font-size:9px; padding:2px 6px; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:3px"><i
+                  data-lucide="eye" style="width:10px; height:10px"></i> Visor</button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div>
+                <div class="muted" style="font-size: 10px;">Calibre</div>
+                <div id="cvCaliber" style="font-size: 16px; font-weight: 900;">--</div>
+              </div>
+              <div>
+                <div class="muted" style="font-size: 10px;">Confiança</div>
+                <div id="cvConfidence" style="font-size: 16px; font-weight: 900;">0%</div>
+              </div>
+              <div>
+                <div class="muted" style="font-size: 10px;">Caixa (Lida)</div>
+                <div id="cvBoxModel" style="font-size: 14px; font-weight: 900; color: var(--blue);">--</div>
+              </div>
+              <div>
+                <div class="muted" style="font-size: 10px;">Peso (Lido)</div>
+                <div id="cvWeight" style="font-size: 14px; font-weight: 900; color: var(--green);">--</div>
+              </div>
+            </div>
+            <div style="margin-top: 5px; font-size: 10px; color: var(--muted);">
+              Contagem: <span id="cvCount" style="font-weight: 700; color: var(--text);">--</span> frutos
+            </div>
+          </div>
+
+          <div id="traceContext" style="display: none; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 8px;">
+            <select id="ctxParcel" style="font-size: 11px; padding: 6px;">
+              <option value="">Parc...</option>
+            </select>
+            <select id="ctxFruit" style="font-size: 11px; padding: 6px;">
+              <option value="">Frut...</option>
+            </select>
+            <select id="ctxVariety" style="font-size: 11px; padding: 6px;">
+              <option value="">Var...</option>
+            </select>
+          </div>
+
+          <div id="totals"
+            style="margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid var(--line);">
+            -
+          </div>
+        </div>
+
+        <!-- Animated Box Stats -->
+        <div id="boxStatsBlock"
+          style="margin-top: 12px; flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+          <div class="title"
+            style="font-size: 11px; margin-bottom: 4px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px;">
+            Registro de Caixas</div>
+          <div class="scroll-roll-container" style="flex: 1;">
+            <div id="boxStatsList" class="scroll-roll-content" style="display: flex; flex-direction: column; gap: 4px;">
+              <div class="muted" style="font-size: 11px;">Aguardando...</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="finalizeBlock" style="margin-top: 10px; flex-shrink: 0;">
+          <button id="btnFinalizeDay" type="button"
+            style="width: 100%; background: var(--green); font-size: 13px; font-weight: 700; height: 38px; border-radius: 10px;">Finalizar
+            Dia</button>
+        </div>
+      </section>
+
+      <!-- Center Column: Top Performer -->
+      <section class="card tvCenter"
+        style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid var(--blue); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center;">
+        <div style="position: absolute; top: -20px; right: -20px; opacity: 0.05; transform: rotate(15deg);"><i
+            data-lucide="trophy" style="width:100px; height:100px"></i></div>
+        <div class="title"
+          style="text-transform: uppercase; color: var(--blue); font-weight: 800; letter-spacing: 2px; text-align: center; margin-bottom: 30px; display:flex; align-items:center; justify-content:center; gap:8px">
+          <i data-lucide="crown" style="width:20px; height:20px; color:var(--yellow)"></i> Top 1 Líder</div>
+        <div class="leaderWrap" style="flex-direction: column; text-align: center; gap: 20px;">
+          <div id="leaderPhoto" class="photo"
+            style="width: 180px; height: 180px; border: 4px solid var(--blue); box-shadow: 0 0 30px rgba(59, 130, 246, 0.3); border-radius: 50%; margin: 0 auto;">
+          </div>
+          <div>
+            <div id="leaderName" style="font-size: 32px; font-weight: 900; line-height: 1.2; margin-bottom: 10px;">-
+            </div>
+            <div id="leaderBoxes" style="font-size: 36px; font-weight: 800; color: var(--green);">-</div>
+            <div id="leaderProd" style="font-size: 16px; color: var(--muted); margin-top: 10px;">-</div>
+            <div id="leaderQual" style="font-size: 14px; opacity: 0.5; margin-top: 5px;">-</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Full Ranking -->
+      <section class="card tvRight" style="display: flex; flex-direction: column; overflow: hidden;">
+        <div class="title"
+          style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <span>Ranking da Estação</span>
+          <span
+            style="font-size: 12px; color: var(--muted); background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 6px;">TOP
+            10</span>
+        </div>
+        <div class="scroll-roll-container">
+          <div id="rankList" class="rankList scroll-roll-content"
+            style="display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+      </section>
+    </div>
+  </template>
+
+  <template id="tpl-admin">
+    <div class="adminGrid">
+      
+      <!-- Funcionários -->
+      <section class="card glass">
+        <div class="card-header-icon">
+          <i data-lucide="users" style="width:20px; height:20px"></i>
+          <div class="title" style="margin:0;">Funcionários</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Código de barras</label>
+            <input id="empBarcode" placeholder="Ex: 1001" />
+          </div>
+          <div class="form-group">
+            <label>Nome</label>
+            <input id="empName" placeholder="Ex: João Silva" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Função</label>
+            <select id="empRole">
+              <option value="EMBALADOR">Embalador</option>
+              <option value="EMPILHADOR">Empilhador</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Foto URL</label>
+            <input id="empPhoto" placeholder="Opcional" />
+          </div>
+          <div class="form-group" style="flex: 0; justify-content: flex-end;">
+            <button id="empAdd" type="button" style="height:42px; padding: 0 20px;">Adicionar</button>
+          </div>
+        </div>
+        <div class="list-container" style="margin-top: 10px;">
+          <div id="empList" class="list"></div>
+        </div>
+      </section>
+
+      <!-- Pesos de Caixa -->
+      <section class="card glass">
+        <div class="card-header-icon">
+          <i data-lucide="package" style="width:20px; height:20px"></i>
+          <div class="title" style="margin:0;">Pesos de Caixa</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Identificação / Tipo</label>
+            <input id="weightName" placeholder="Ex: CAIXA P ou 7,5kg" />
+          </div>
+          <div class="form-group">
+            <label>Peso (Kg)</label>
+            <input id="weightKg" type="number" step="0.1" placeholder="Opcional" />
+          </div>
+          <div class="form-group" style="flex: 0; justify-content: flex-end;">
+            <button id="weightAdd" type="button" style="height:42px; padding: 0 20px;">Adicionar</button>
+          </div>
+        </div>
+        <div class="list-container" style="margin-top: 10px;">
+          <div id="weightList" class="list"></div>
+        </div>
+      </section>
+
+      <!-- Mapeamento de Etiquetas -->
+      <section class="card glass" style="grid-column: 1 / -1; border-top: 2px solid var(--accent);">
+        <div class="card-header-icon">
+          <i data-lucide="tag" style="width:20px; height:20px"></i>
+          <div class="title" style="margin:0;">Mapeamento de Etiquetas (Combinados)</div>
+        </div>
+        <div class="muted" style="margin-bottom:15px; font-size:12px;">Associe uma etiqueta (ex: da caixa) a um Embalador e Peso específico.</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Código da Etiqueta</label>
+            <input id="mapBarcode" placeholder="Bipe aqui" />
+          </div>
+          <div class="form-group">
+            <label>Embalador Vinculado</label>
+            <select id="mapEmployee"></select>
+          </div>
+          <div class="form-group">
+            <label>Caixa / Peso</label>
+            <select id="mapWeight"></select>
+          </div>
+          <div class="form-group" style="flex: 0; justify-content: flex-end;">
+            <button id="mapAdd" type="button" style="height:42px; padding: 0 20px;">Mapear</button>
+          </div>
+        </div>
+        <div class="list-container">
+          <div id="mapList" class="list"></div>
+        </div>
+      </section>
+
+      <!-- Metas de Produção -->
+      <section class="card glass" style="grid-column: 1 / -1; border-left: 5px solid var(--blue);">
+        <div class="card-header-icon">
+          <i data-lucide="target" style="width:20px; height:20px; color:var(--blue)"></i>
+          <div class="title" style="margin:0;">Metas de Produção e Valores (Insigma)</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Meta Packer (cx/h)</label>
+            <input id="metaPacker" type="number" step="1" placeholder="Ex: 50" />
+          </div>
+          <div class="form-group">
+            <label>Meta Stacker (cx/h)</label>
+            <input id="metaStacker" type="number" step="1" placeholder="Ex: 200" />
+          </div>
+          <div class="form-group">
+            <label>Valor Packer (R$/cx)</label>
+            <input id="valPacker" type="number" step="0.01" placeholder="Ex: 0.50" />
+          </div>
+          <div class="form-group">
+            <label>Valor Stacker (R$/cx)</label>
+            <input id="valStacker" type="number" step="0.01" placeholder="Ex: 0.15" />
+          </div>
+          <div class="form-group" style="flex: 0; flex-direction: row; align-items: flex-end; gap: 10px;">
+            <button id="metaSave" type="button" style="height:42px; padding: 0 16px;">Salvar</button>
+            <button id="syncNow" type="button" style="height:42px; padding: 0 16px; background: #334155;">Sincronizar Nuvem</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Rastreabilidade -->
+      <section id="traceAdmin" class="card glass" style="grid-column: 1 / -1; display: none;">
+        <div class="card-header-icon">
+          <i data-lucide="leaf" style="width:20px; height:20px"></i>
+          <div class="title" style="margin:0;">Rastreabilidade (Melão/Melancia)</div>
+        </div>
+        <div class="adminGrid" style="grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+          <!-- Frutas -->
+          <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 10px;">
+            <div class="title" style="font-size: 13px; color:var(--muted); margin-bottom: 8px;">Frutas</div>
+            <div class="form-row" style="margin-bottom: 8px;">
+              <div class="form-group">
+                <input id="fruitName" placeholder="Nova Fruta" style="font-size: 12px;" />
+              </div>
+              <div class="form-group" style="flex: 0;">
+                <button id="fruitAdd" type="button" style="height:38px; padding: 0 14px;">+</button>
+              </div>
+            </div>
+            <div id="fruitList" class="list" style="max-height: 150px; overflow-y: auto;"></div>
+          </div>
+          
+          <!-- Variedades -->
+          <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 10px;">
+            <div class="title" style="font-size: 13px; color:var(--muted); margin-bottom: 8px;">Variedades</div>
+            <div class="form-row" style="margin-bottom: 8px;">
+              <div class="form-group">
+                <input id="varName" placeholder="Nova Variedade" style="font-size: 12px;" />
+              </div>
+              <div class="form-group" style="flex: 0;">
+                <button id="varAdd" type="button" style="height:38px; padding: 0 14px;">+</button>
+              </div>
+            </div>
+            <div id="varList" class="list" style="max-height: 150px; overflow-y: auto;"></div>
+          </div>
+          
+          <!-- Parcelas -->
+          <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 10px;">
+            <div class="title" style="font-size: 13px; color:var(--muted); margin-bottom: 8px;">Parcelas</div>
+            <div class="form-row" style="margin-bottom: 8px;">
+              <div class="form-group">
+                <input id="parcelCode" placeholder="Nova Parcela" style="font-size: 12px;" />
+              </div>
+              <div class="form-group" style="flex: 0;">
+                <button id="parcelAdd" type="button" style="height:38px; padding: 0 14px;">+</button>
+              </div>
+            </div>
+            <div id="parcelList" class="list" style="max-height: 150px; overflow-y: auto;"></div>
+          </div>
+        </div>
+
+        <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
+          <div class="title" style="font-size: 13px; color:var(--muted); margin-bottom: 12px;">Vincular Parcela/Fruta/Variedade à Estação</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Parcela</label>
+              <select id="linkParcel"></select>
+            </div>
+            <div class="form-group">
+              <label>Fruta</label>
+              <select id="linkFruit"></select>
+            </div>
+            <div class="form-group">
+              <label>Variedade</label>
+              <select id="linkVariety"></select>
+            </div>
+            <div class="form-group" style="flex: 0; justify-content: flex-end;">
+              <button id="linkAdd" type="button" style="height:42px; padding: 0 20px;">Vincular</button>
+            </div>
+          </div>
+          <div id="linkList" class="list" style="margin-top: 10px;"></div>
+        </div>
+      </section>
+      
+    </div>
+  </template>
+
+  <template id="tpl-financeiro">
+    <div class="bentoGrid">
+      <div class="card kpiCard glass">
+        <div class="kpiLabel">Custo Produção (Dia)</div>
+        <div id="finKpiTotal" class="kpiValue">R$ 0,00</div>
+      </div>
+      <div class="card kpiCard glass">
+        <div class="kpiLabel">Total de Caixas</div>
+        <div id="finKpiBoxes" class="kpiValue">0</div>
+      </div>
+      <div class="card kpiCard glass">
+        <div class="kpiLabel">Custo Médio / Hora</div>
+        <div id="finKpiHourly" class="kpiValue" style="color:var(--green-neon)">R$ 0,00</div>
+      </div>
+      <div class="card kpiCard glass">
+        <div class="kpiLabel">Média por Caixa</div>
+        <div id="finKpiAvgBox" class="kpiValue">R$ 0,00</div>
+      </div>
+
+      <div class="card glass" style="grid-column: 1 / -1;">
+        <div class="row" style="align-items: center; justify-content: space-between;">
+          <div class="title" style="margin-bottom:0">Filtros Financeiros</div>
+          <div class="row">
+            <select id="finRole" style="max-width:150px;">
+              <option value="EMBALADOR">Embalador</option>
+              <option value="EMPILHADOR">Empilhador</option>
+            </select>
+            <input id="finStart" type="date" />
+            <input id="finEnd" type="date" />
+            <button id="finCalc" type="button">Gerar Dashboard</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card chartCard glass" style="grid-column: span 2;">
+        <div class="card-header">
+          <div class="title" style="display:flex; align-items:center; gap:8px"><i data-lucide="trending-up"
+              style="width:18px; height:18px; color:var(--green)"></i> Evolução de Gastos por Hora</div>
+        </div>
+        <div style="height: 250px;"><canvas id="chartFinanceHourly"></canvas></div>
+      </div>
+
+      <div class="card chartCard glass" style="grid-column: span 2;">
+        <div class="card-header">
+          <div class="title" style="display:flex; align-items:center; gap:8px"><i data-lucide="users"
+              style="width:18px; height:18px; color:var(--blue)"></i> Gastos por Colaborador</div>
+        </div>
+        <div style="height: 250px;"><canvas id="chartFinanceCollab"></canvas></div>
+      </div>
+
+      <div class="card glass" style="grid-column: 1 / -1;">
+        <div class="title" style="display:flex; align-items:center; gap:8px"><i data-lucide="file-text"
+            style="width:18px; height:18px; color:var(--blue)"></i> Detalhamento por Funcionário</div>
+        <div id="finOut" class="list"></div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-dashboards">
+    <div class="bentoGrid">
+      <div class="card kpiCard glass">
+        <div class="kpiLabel">Produção Total (Dia)</div>
+        <div id="kpiTotalDia" class="kpiValue">0</div>
+      </div>
+      <div class="card kpiCard glass">
+        <div class="kpiLabel">Total em Quilos (Dia)</div>
+        <div id="kpiTotalKg" class="kpiValue">0</div>
+      </div>
+      <div class="card kpiCard glass">
+        <div class="kpiLabel">Velocidade Média</div>
+        <div id="kpiCadencia" class="kpiValue" style="color:var(--yellow)">--</div>
+        <div class="muted" style="font-size:12px; margin-top:4px;">Média: <span id="kpiMediaHora">0</span> cx/h</div>
+      </div>
+      <div class="card kpiCard glass" id="cardConsistencia">
+        <div class="kpiLabel">Consistência (E/E)</div>
+        <div id="kpiConsistencia" class="kpiValue" style="color:var(--green)">100%</div>
+        <div class="muted" style="font-size:10px; margin-top:4px;">Dif: <span id="kpiConsistenciaDif">0</span> cx</div>
+      </div>
+
+
+      <div class="card glass" style="grid-column: 1 / -1;">
+        <div class="row" style="align-items: center; justify-content: space-between;">
+          <div class="title" style="margin-bottom:0">Filtros do Dashboard</div>
+          <div class="row">
+            <input id="dashStart" type="date" />
+            <input id="dashEnd" type="date" />
+            <select id="dashEmployee" style="max-width:200px;">
+              <option value="">Todos</option>
+            </select>
+            <button id="dashRefresh" type="button">Filtrar</button>
+            <button id="dashFinalize" type="button" style="background: var(--green); margin-left:10px;">Finalizar
+              Dia</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card chartCard glass" style="grid-column: span 2;">
+        <div class="card-header">
+          <div class="title" style="display:flex; align-items:center; gap:8px"><i data-lucide="box"
+              style="width:18px; height:18px; color:var(--blue)"></i> Caixas Produzidas</div>
+          <div class="muted" style="font-size:10px;">Distribuição e Detalhes</div>
+        </div>
+        <div style="display:flex; gap:15px; align-items:center; height: 250px;">
+          <div style="flex:1; height: 250px; position: relative;"><canvas id="chartWeightDist"></canvas></div>
+          <div id="boxWeightDetailList"
+            style="flex:1; display:flex; flex-direction:column; gap:8px; overflow-y:auto; max-height:240px; padding-right:5px;">
+          </div>
+        </div>
+      </div>
+
+      <div class="card chartCard glass" style="grid-column: span 2;">
+        <div class="card-header">
+          <div class="title" style="display:flex; align-items:center; gap:8px"><i data-lucide="users"
+              style="width:18px; height:18px; color:var(--blue)"></i> Produção por Colaborador</div>
+          <div class="muted" style="font-size:10px;">Top 10 Geral</div>
+        </div>
+        <div style="height: 250px;"><canvas id="chartCollab"></canvas></div>
+      </div>
+
+      <div id="parcelStatsCard" class="card glass" style="grid-column: 1 / -1; display: none;">
+        <div class="card-header">
+          <div class="title" style="display:flex; align-items:center; gap:8px"><i data-lucide="tractor"
+              style="width:18px; height:18px; color:var(--green)"></i> Produção por Parcela / Variedade</div>
+          <div class="muted" style="font-size:10px;">Detalhamento de colheita e tonelagem</div>
+        </div>
+        <div id="parcelStatsList" class="list"
+          style="margin-top:15px; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">
+        </div>
+      </div>
+
+      <div class="card feedCard glass" style="grid-column: 1 / -1;">
+        <div class="title" style="display:flex; align-items:center; gap:8px"><i data-lucide="trophy"
+            style="width:18px; height:18px; color:var(--orange)"></i> Ranking Detalhado (Produtividade e Qualidade)
+        </div>
+        <div id="collabDetailList"
+          style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-top: 15px;">
+        </div>
+      </div>
+
+      <div class="card chartCard glass" style="grid-column: span 2;">
+        <div class="card-header">
+          <div class="title" style="display:flex; align-items:center; gap:8px"><i data-lucide="bar-chart-3"
+              style="width:18px; height:18px; color:var(--blue)"></i> Comparativo de Produção</div>
+          <div class="muted" style="font-size:10px;">Período Atual vs Anterior</div>
+        </div>
+        <div style="height: 250px;"><canvas id="chartComparison"></canvas></div>
+      </div>
+
+      <div class="card chartCard glass" style="grid-column: span 2;">
+        <div class="card-header">
+          <div class="title" style="display:flex; align-items:center; gap:8px"><i data-lucide="trending-up"
+              style="width:18px; height:18px; color:var(--green)"></i> Produção por Hora</div>
+          <div class="muted" style="font-size:10px;">Últimas 8h</div>
+        </div>
+        <div style="height: 250px;"><canvas id="chartProdHora"></canvas></div>
+      </div>
+
+      <div class="card chartCard glass" style="grid-column: span 2;">
+        <div class="card-header">
+          <div class="title" style="display:flex; align-items:center; gap:8px"><i data-lucide="search-check"
+              style="width:18px; height:18px; color:var(--yellow)"></i> Auditoria de Qualidade</div>
+          <div class="muted" style="font-size:10px;">Análise de Defeitos e Ofensores</div>
+        </div>
+        <div style="display:flex; gap:20px;">
+          <div style="flex:1; height: 200px; position: relative;"><canvas id="chartQualityDist"></canvas></div>
+          <div style="flex:1;">
+            <div class="muted" style="font-size:11px; margin-bottom:8px; text-transform:uppercase;">Top Defeitos</div>
+            <div id="qualityIssueList"
+              style="font-size:11px; display:flex; flex-direction:column; gap:4px; margin-bottom:15px;"></div>
+
+            <div class="muted"
+              style="font-size:11px; margin-bottom:8px; text-transform:uppercase; border-top:1px solid rgba(255,255,255,0.05); padding-top:8px;">
+              Maiores Ofensores</div>
+            <div id="qualityPenaltyLeaders" style="font-size:11px; display:flex; flex-direction:column; gap:4px;"></div>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="card chartCard glass" style="grid-column: 1 / -1;">
+        <div class="card-header">
+          <div class="title" style="display:flex; align-items:center; gap:8px"><i data-lucide="clock"
+              style="width:18px; height:18px; color:var(--blue)"></i> Produtividade por Funcionário / Hora</div>
+          <div class="muted" style="font-size:10px;">Monitoramento Horário</div>
+        </div>
+        <div style="height: 300px;"><canvas id="chartCollabHour"></canvas></div>
+      </div>
+
+      <div class="card feedCard glass" style="grid-column: 1 / -1;">
+        <div class="title">Feed de Produção Tempo Real</div>
+        <div id="liveFeed" class="list"></div>
+      </div>
+
+      <div class="card" style="grid-column: 1 / -1; background: transparent; border: none; padding: 0;">
+        <details class="card glass" style="opacity:0.7">
+          <summary style="cursor:pointer; font-weight:600;">Logs Detalhados e Filtros</summary>
+          <div class="row" style="margin-top:15px">
+            <input id="logStart" type="date" />
+            <input id="logEnd" type="date" />
+            <button id="logLoad" type="button">Carregar Logs</button>
+          </div>
+          <div id="logOut" class="list" style="margin-top:10px"></div>
+        </details>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-config">
+    <section class="card">
+      <div class="title">Configurações</div>
+      <div class="row">
+        <input id="cfgTenant" placeholder="Nome da empresa" />
+        <input id="cfgLogo" placeholder="Logo path (opcional)" />
+        <select id="cfgTheme">
+          <option value="dark">dark</option>
+          <option value="light">light</option>
+        </select>
+        <select id="cfgCultureType" style="border: 1px solid var(--blue);">
+          <option value="MAMAO">Versão: MAMÃO</option>
+          <option value="MELAO_MELANCIA">Versão: MELÃO / MELANCIA</option>
+        </select>
+        <label
+          style="display: flex; align-items: center; gap: 8px; background: rgba(59, 130, 246, 0.1); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--blue); cursor: pointer;">
+          <input type="checkbox" id="cfgCvEnabled" />
+          <span style="font-size: 11px; font-weight: 700; color: var(--blue);">ATIVAR VISÃO COMPUTACIONAL</span>
+        </label>
+      </div>
+      <div class="row" style="margin-top:10px">
+      </div>
+      <div class="row" style="margin-top:10px">
+        <label style="flex:1">
+          <span style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px">MODO DESTE TERMINAL</span>
+          <select id="cfgTerminalMode" style="width:100%">
+            <option value="full">Console Administrativo (Completo)</option>
+            <option value="kiosk">Terminal de Produção (Apenas Painel)</option>
+          </select>
+        </label>
+        <label style="flex:1">
+          <span style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px">SENHA ADMINISTRATIVA</span>
+          <input id="cfgAdminPass" type="password" placeholder="Vazio = Sem senha" style="width:100%" />
+        </label>
+      </div>
+      <div class="row" style="margin-top:15px; border-top: 1px solid rgba(255,255,255,.1); padding-top:15px;">
+        <div style="font-weight:600;width:100%;margin-bottom:8px;">Supabase Sync</div>
+        <input id="cfgSupaUrl" placeholder="URL Supabase" style="flex:2" />
+        <input id="cfgSupaKey" type="password" placeholder="Key Supabase" style="flex:3" />
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <input id="cfgTenantId" placeholder="Tenant ID (UUID da empresa no Supabase)" style="flex:1; font-size:11px;" />
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button id="cfgSyncNow" type="button" class="secondary" style="margin-right:10px">Sincronizar Agora</button>
+        <button id="cfgSave" type="button">Salvar Configurações</button>
+        <button id="btnConfigLogout" type="button" style="background: var(--red); margin-left: 10px;">Sair da
+          Conta</button>
+        <button id="btnResetLocalDb" type="button" style="background: var(--red); margin-left: 10px; opacity:0.5;">Zerar
+          Banco Local</button>
+      </div>
+      <pre class="codeBlock" id="cfgExample"></pre>
+      <div id="cfgStatus" class="status">—</div>
+    </section>
+  </template>
+
+  <div id="loginOverlay"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.98); z-index:9999; flex-direction:column; align-items:center; justify-content:center; backdrop-filter:blur(10px);">
+    <div class="card glass" style="width:400px; padding:40px; text-align:center; box-shadow: 0 0 50px rgba(0,0,0,0.5);">
+      <img src="../assets/core_agro_logo.png" alt="Core Agro" style="width:80px; margin-bottom:20px;" />
+      <h2 style="margin-bottom:10px;">Vincular Terminal</h2>
+      <p class="muted" style="font-size:13px; margin-bottom:25px;">Faça login com sua conta ProdTech para sincronizar
+        este terminal.</p>
+
+      <div style="text-align:left; margin-bottom:15px;">
+        <label class="muted" style="font-size:11px; display:block; margin-bottom:5px;">E-MAIL</label>
+        <input id="loginEmail" type="email" placeholder="seu@email.com"
+          style="width:100%; height:45px; background:rgba(0,0,0,0.2);" />
+      </div>
+
+      <div style="text-align:left; margin-bottom:25px;">
+        <label class="muted" style="font-size:11px; display:block; margin-bottom:5px;">SENHA</label>
+        <input id="loginPass" type="password" placeholder="••••••••"
+          style="width:100%; height:45px; background:rgba(0,0,0,0.2);" />
+      </div>
+
+      <button id="btnLoginAction" type="button"
+        style="width:100%; height:48px; background:var(--blue); font-weight:700; font-size:15px; border-radius:12px;">Entrar
+        e Sincronizar</button>
+
+      <div id="loginStatus" style="margin-top:20px; font-size:12px; color:var(--red);"></div>
+    </div>
+  </div>
+
+
+
+  <script src="./renderer.js"></script>
+</body>
+
+</html>

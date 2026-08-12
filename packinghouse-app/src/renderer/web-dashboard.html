@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Core Agro | Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Desktop styles consolidated */
+    :root {
+      --bg: #030712;
+      --bg2: #0a1628;
+      --bg3: #132136;
+      --line: rgba(46, 204, 113, 0.12);
+      --text: #f0fdf4;
+      --muted: #86efac;
+      --green: #2ECC71;
+      --green-dark: #14A832;
+      --green-neon: #00FFB8;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+      --accent: #2ECC71;
+      --blue: #2ECC71;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 'Poppins', sans-serif; }
+    
+    .topbar { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; border-bottom: 1px solid rgba(46, 204, 113, 0.15); background: #050d1a; position: fixed; top:0; left:0; right:0; z-index: 1000; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-logo { width: 38px; height: 38px; filter: drop-shadow(0 0 8px rgba(46, 204, 113, 0.4)); }
+    .brandName { font-size: 16px; font-weight: 700; background: linear-gradient(135deg, #fff, var(--green-neon)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    
+    .menu { display: flex; gap: 6px; }
+    .menuItem { color: var(--text); text-decoration: none; padding: 8px 14px; border: 1px solid rgba(46, 204, 113, 0.15); border-radius: 10px; background: rgba(20, 168, 50, 0.04); font-size: 12px; cursor: pointer; }
+    .menuItem.active { background: linear-gradient(135deg, var(--green-dark), var(--green)); border-color: var(--green); color: #fff; box-shadow: 0 0 15px rgba(46, 204, 113, 0.2); }
+    
+    .appMount { padding: 80px 20px 20px; min-height: 100vh; }
+    .card { background: rgba(10, 22, 40, 0.85); backdrop-filter: blur(16px); border: 1px solid rgba(46, 204, 113, 0.1); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+    .title { font-size: 16px; font-weight: 700; margin-bottom: 15px; color: var(--text); display: flex; align-items: center; gap: 10px; }
+    
+    .bentoGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .kpiCard { text-align: center; padding: 20px; display: flex; flex-direction: column; justify-content: center; }
+    .kpiLabel { color: var(--green); text-transform: uppercase; font-size: 10px; font-weight: 600; letter-spacing: 1px; margin-bottom: 5px; }
+    .kpiValue { font-size: 32px; font-weight: 800; background: linear-gradient(135deg, #fff, var(--green-neon)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+    input, select, button { font-family: inherit; background: rgba(5, 13, 26, 0.8); color: #fff; border: 1px solid rgba(46, 204, 113, 0.15); border-radius: 10px; padding: 10px; }
+    button { background: linear-gradient(135deg, var(--green-dark), var(--green)); border: none; font-weight: 600; cursor: pointer; transition: 0.3s; }
+    button:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3); }
+    button.danger { background: rgba(239, 68, 68, 0.1); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.2); }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th { text-align: left; color: var(--green); font-size: 10px; text-transform: uppercase; padding: 12px; border-bottom: 1px solid var(--line); }
+    td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+
+    .setup-screen { position: fixed; inset:0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+    .badge { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .badge-packer { background: rgba(46, 204, 113, 0.15); color: var(--green-neon); }
+    .badge-stacker { background: rgba(245, 158, 11, 0.15); color: var(--yellow); }
+
+    .agro-stage { height: 350px; background: #030712; border-radius: 20px; overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; }
+    .agro-overlay { text-align: center; position: relative; z-index: 10; padding: 40px; background: rgba(5,13,26,0.7); backdrop-filter: blur(12px); border-radius: 30px; border: 1px solid rgba(46,204,113,0.1); }
+    .agro-title { font-size: 42px; font-weight: 900; background: linear-gradient(135deg, #fff, var(--green-neon)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; margin:0; }
+    
+    .status-cloud { position: fixed; bottom: 20px; right: 20px; padding: 8px 15px; background: rgba(0,0,0,0.5); border: 1px solid var(--line); border-radius: 20px; font-size: 11px; color: var(--muted); }
+
+    @media (max-width: 1000px) { .bentoGrid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) { .bentoGrid { grid-template-columns: 1fr; } .topbar { flex-direction: column; height: auto; padding: 15px; } .appMount { padding-top: 140px; } .menu { overflow-x: auto; width: 100%; padding-bottom: 5px; } }
+  </style>
+</head>
+<body>
+  <div id="setup" class="setup-screen" style="display: none;">
+    <div class="card" style="width: 400px; text-align: center;">
+      <h2 class="agro-title" style="font-size: 28px;">Core Agro</h2>
+      <p class="muted">Acesso Remoto Administrativo</p>
+      <input id="supaUrl" type="text" placeholder="URL do Supabase" style="width:100%; margin-top:20px;" />
+      <input id="supaKey" type="password" placeholder="Chave de API" style="width:100%; margin-top:10px;" />
+      <button onclick="saveAndStart()" style="width: 100%; margin-top: 20px;">Conectar</button>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brandName">CORE AGRO</div>
+      <div id="stationIdLabel" style="font-size: 10px; color: var(--green-neon); border: 1px solid var(--green); padding: 2px 6px; border-radius: 4px;">CLOUD</div>
+    </div>
+    <nav class="menu">
+      <div class="menuItem active" onclick="routeTo('inicio', this)">Início</div>
+      <div class="menuItem" onclick="routeTo('dashboards', this)">Dashboards</div>
+      <div class="menuItem" onclick="routeTo('financeiro', this)">Financeiro</div>
+      <div class="menuItem" onclick="routeTo('admin', this)">Cadastros</div>
+    </nav>
+    <button onclick="logout()" class="danger" style="font-size: 10px; padding: 5px 10px;">Sair</button>
+  </header>
+
+  <main id="app" class="appMount"></main>
+
+  <div class="status-cloud" id="syncStatus">☁️ Cloud Parallel Sync</div>
+
+  <!-- TEMPLATES (Matching Desktop exactly) -->
+  <template id="tpl-inicio">
+    <div class="agro-stage">
+      <div class="agro-overlay">
+        <h1 class="agro-title">Core Agro</h1>
+        <div class="agro-sub" style="margin-top: 10px; color: var(--green-neon); letter-spacing: 2px; text-transform: uppercase; font-size: 12px; font-weight: 600;">Inteligência no Campo</div>
+        <div style="margin-top: 30px; display: flex; gap: 10px; justify-content: center;">
+          <div style="padding: 8px 15px; background: rgba(46,204,113,0.1); border-radius: 99px; font-size: 12px;">🚜 Gestão Remota</div>
+          <div style="padding: 8px 15px; background: rgba(0,255,184,0.1); border-radius: 99px; font-size: 12px;">⚡ Tempo Real</div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-dashboards">
+    <div class="bentoGrid">
+      <div class="card kpiCard">
+        <div class="kpiLabel">Pode Produzir (Dia)</div>
+        <div id="kpiTotalDia" class="kpiValue">0</div>
+      </div>
+      <div class="card kpiCard">
+        <div class="kpiLabel">Volume Total (Kg)</div>
+        <div id="kpiTotalKg" class="kpiValue">0</div>
+      </div>
+      <div class="card kpiCard">
+        <div class="kpiLabel">Cadência Média</div>
+        <div id="kpiCadencia" class="kpiValue" style="color:var(--yellow)">--</div>
+        <div class="muted" style="font-size:10px; margin-top:4px;">Velocidade: <span id="kpiMediaHora">0</span> cx/h</div>
+      </div>
+      <div class="card kpiCard" style="border: 2px solid rgba(46,204,113,0.2);">
+        <div class="kpiLabel">Consistência (E/E)</div>
+        <div id="kpiConsistencia" class="kpiValue" style="color:var(--green)">100%</div>
+        <div class="muted" style="font-size:10px; margin-top:4px;">Diferença: <span id="kpiConsistenciaDif">0</span> cx</div>
+      </div>
+
+      <div class="card" style="grid-column: 1 / -1;">
+        <div class="row" style="align-items: center; justify-content: space-between;">
+          <div class="title" style="margin:0">Filtros Avançados</div>
+          <div class="row">
+            <input id="dashStart" type="date" />
+            <input id="dashEnd" type="date" />
+            <button onclick="refreshData()">Filtrar Dados</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="grid-column: span 2; min-height: 300px;">
+        <div class="title">👥 Produção por Colaborador</div>
+        <div style="height: 250px;"><canvas id="chartCollab"></canvas></div>
+      </div>
+      
+      <div class="card" style="grid-column: span 2; min-height: 300px;">
+        <div class="title">🕵️ Auditoria de Qualidade</div>
+        <div style="display: flex; gap: 15px;">
+           <div style="flex:1; height: 180px;"><canvas id="chartQualityDist"></canvas></div>
+           <div style="flex:1;">
+             <div class="muted" style="font-size:10px; margin-bottom:10px;">MAIORES OFENSORES</div>
+             <div id="qualityPenaltyLeaders" style="font-size:11px; display:flex; flex-direction:column; gap:5px;"></div>
+           </div>
+        </div>
+      </div>
+
+      <div class="card" style="grid-column: 1 / -1;">
+        <div class="title">📦 Produção por Parcela / Variedade</div>
+        <div id="parcelStatsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;"></div>
+      </div>
+
+      <div class="card" style="grid-column: 1 / -1;">
+        <div class="title">Leituras Recentes (Sync Feed)</div>
+        <div id="liveFeed" style="display: flex; flex-direction: column; gap: 8px;"></div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-financeiro">
+    <div class="bentoGrid">
+      <div class="card kpiCard"><div class="kpiLabel">Faturamento Bruto</div><div id="finKpiTotal" class="kpiValue">R$ 0,00</div></div>
+      <div class="card kpiCard"><div class="kpiLabel">Total de Caixas</div><div id="finKpiBoxes" class="kpiValue">0</div></div>
+      <div class="card kpiCard"><div class="kpiLabel">Custo por Hora</div><div id="finKpiHourly" class="kpiValue">R$ 0,00</div></div>
+      <div class="card kpiCard"><div class="kpiLabel">Média por Caixa</div><div id="finKpiAvgBox" class="kpiValue">R$ 0,00</div></div>
+
+      <div class="card" style="grid-column: 1 / -1;">
+        <div class="row">
+           <input id="finStart" type="date" />
+           <input id="finEnd" type="date" />
+           <button onclick="refreshFinance()">Gerar Relatório</button>
+        </div>
+        <table id="financeTable"><thead><tr><th>Data</th><th>Colaborador</th><th>Papel</th><th>Caixas</th><th>Total Bruto</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-admin">
+    <div class="bentoGrid">
+      <div class="card" style="grid-column: span 2;">
+        <div class="title">Equipe</div>
+        <div class="row">
+          <input id="empBarcode" placeholder="Barcode" style="flex:1" />
+          <input id="empName" placeholder="Nome" style="flex:2" />
+          <select id="empRole"><option value="EMBALADOR">Packer</option><option value="EMPILHADOR">Stacker</option></select>
+          <button onclick="addEmployee()">Add</button>
+        </div>
+        <div id="empList" style="margin-top:15px; max-height: 400px; overflow-y: auto;"></div>
+      </div>
+      
+      <div class="card" style="grid-column: span 2;">
+        <div class="title">Rastreabilidade (Parcelas/Variedades)</div>
+        <div class="row"><input id="parcelCode" placeholder="Nova Parcela" /><button onclick="addParcel()">Add</button></div>
+        <div id="parcelList" style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;"></div>
+        <div class="row" style="margin-top:20px;"><input id="varName" placeholder="Nova Variedade" /><button onclick="addVariety()">Add</button></div>
+        <div id="varList" style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;"></div>
+      </div>
+
+      <div class="card" style="grid-column: 1 / -1;">
+        <div class="title">Mapeamento de Etiquetas (Combinada ao colaborador)</div>
+        <div class="row">
+          <input id="mapBarcode" placeholder="Código Único" />
+          <select id="mapEmployee"></select>
+          <select id="mapWeight"></select>
+          <button onclick="addMapping()">Vincular</button>
+        </div>
+        <table id="mappingsTable"><thead><tr><th>Código</th><th>Funcionário</th><th>Caixa</th><th>Ação</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    let supabaseClient = null;
+    let charts = {};
+    let currentTab = 'inicio';
+
+    // SUPABASE BRIDGE (Mimics appService.js)
+    const CloudBridge = {
+      async getStats(start, end) {
+        const { data: scans } = await supabaseClient.from('production_scans').select('*').gte('ts', start).lte('ts', end);
+        const { data: audits } = await supabaseClient.from('quality_audits').select('*').gte('ts', start).lte('ts', end);
+        
+        if (!scans) return null;
+
+        const penalty = (audits || []).reduce((n, a) => n + (a.penalty_boxes || 0), 0);
+        const packers = scans.filter(s => s.role === 'EMBALADOR').length;
+        const stackers = scans.filter(s => s.role === 'EMPILHADOR').length;
+        
+        const collabMap = {};
+        scans.forEach(s => {
+          if (!collabMap[s.employee_name]) collabMap[s.employee_name] = { name: s.employee_name, boxes: 0, role: s.role };
+          collabMap[s.employee_name].boxes++;
+        });
+
+        const parcelMap = {};
+        scans.forEach(s => {
+          const key = s.parcel_code || 'Geral';
+          if (!parcelMap[key]) parcelMap[key] = { label: key, boxes: 0, kg: 0 };
+          parcelMap[key].boxes++;
+          parcelMap[key].kg += (s.weight_kg || 0);
+        });
+
+        const qMap = {}; (audits || []).forEach(a => { 
+          const key = a.issue_type || 'Geral';
+          qMap[key] = (qMap[key] || 0) + (a.penalty_boxes || 0); 
+        });
+
+        const wMap = {}; (audits || []).forEach(a => {
+          const key = a.employee_barcode || 'ID: '+a.id;
+          wMap[key] = (wMap[key] || 0) + (a.penalty_boxes || 0);
+        });
+
+        return {
+          totalBoxes: Math.max(0, scans.length - penalty),
+          totalKg: scans.reduce((n, s) => n + (s.weight_kg || 0), 0),
+          packerTotal: packers,
+          stackerTotal: stackers,
+          collaboratorStats: Object.values(collabMap),
+          parcelStats: Object.values(parcelMap),
+          qualityBreakdown: Object.entries(qMap).map(([label, count]) => ({ label, count })),
+          qualityWorstPerformers: Object.entries(wMap).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([name, penalty_count]) => ({ name, penalty_count })),
+          scans: scans.slice(0, 15)
+        };
+      }
+    };
+
+    function routeTo(tab, el) {
+      currentTab = tab;
+      document.querySelectorAll('.menuItem').forEach(m => m.classList.remove('active'));
+      if(el) el.classList.add('active');
+      
+      const app = document.getElementById('app');
+      const tpl = document.getElementById('tpl-' + tab);
+      app.innerHTML = tpl.innerHTML;
+
+      if(tab === 'dashboards') {
+         const today = new Date().toISOString().split('T')[0];
+         document.getElementById('dashStart').value = today;
+         document.getElementById('dashEnd').value = today;
+         refreshData();
+      }
+      if(tab === 'financeiro') {
+         const today = new Date().toISOString().split('T')[0];
+         document.getElementById('finStart').value = today;
+         document.getElementById('finEnd').value = today;
+         refreshFinance();
+      }
+      if(tab === 'admin') refreshAdmin();
+    }
+
+    async function refreshData() {
+      const s = document.getElementById('dashStart').value + 'T00:00:00Z';
+      const e = document.getElementById('dashEnd').value + 'T23:59:59Z';
+      const stats = await CloudBridge.getStats(s, e);
+      if(!stats) return;
+
+      document.getElementById('kpiTotalDia').textContent = stats.totalBoxes;
+      document.getElementById('kpiTotalKg').textContent = stats.totalKg.toFixed(1);
+      
+      const diff = Math.abs(stats.packerTotal - stats.stackerTotal);
+      const ratio = stats.packerTotal > 0 ? Math.round((stats.stackerTotal / stats.packerTotal) * 100) : 100;
+      document.getElementById('kpiConsistencia').textContent = ratio + '%';
+      document.getElementById('kpiConsistenciaDif').textContent = diff;
+      document.getElementById('kpiConsistencia').style.color = diff > 10 ? 'var(--red)' : 'var(--green-neon)';
+
+      // Charts
+      updateCharts(stats);
+
+      // Lists
+      document.getElementById('parcelStatsList').innerHTML = stats.parcelStats.map(p => `
+        <div class="card" style="margin-bottom:0; display:flex; justify-content:space-between; align-items:center;">
+          <b>${p.label}</b><span>${p.boxes} cx • ${p.kg.toFixed(1)}kg</span>
+        </div>
+      `).join('') || '<div class="muted">Sem dados.</div>';
+
+      document.getElementById('liveFeed').innerHTML = stats.scans.map(s => `
+        <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:12px;">
+          <span>${new Date(s.ts).toLocaleTimeString()}</span><b>${s.employee_name}</b><span>${s.weight_name}</span>
+        </div>
+      `).join('');
+
+      document.getElementById('qualityPenaltyLeaders').innerHTML = stats.qualityWorstPerformers.map(p => `
+        <div style="display:flex; justify-content:space-between;"><span>${p.name}</span><b style="color:var(--red)">-${p.penalty_count} cx</b></div>
+      `).join('');
+    }
+
+    function updateCharts(stats) {
+      const cCtx = document.getElementById('chartCollab').getContext('2d');
+      const cLabels = stats.collaboratorStats.map(c => c.name);
+      const cData = stats.collaboratorStats.map(c => c.boxes);
+      if(charts.collab) charts.collab.destroy();
+      charts.collab = new Chart(cCtx, { type: 'bar', data: { labels: cLabels, datasets: [{ label:'Caixas', data:cData, backgroundColor:'#2ECC71' }] }, options: { responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{grid:{display:false}},y:{grid:{display:false}}} } });
+
+      const qCtx = document.getElementById('chartQualityDist').getContext('2d');
+      const qLabels = stats.qualityBreakdown.map(q => q.label);
+      const qData = stats.qualityBreakdown.map(q => q.count);
+      if(charts.qual) charts.qual.destroy();
+      charts.qual = new Chart(qCtx, { type: 'doughnut', data: { labels:qLabels, datasets:[{ data:qData, backgroundColor:['#ef4444', '#f59e0b', '#3b82f6'] }] }, options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, cutout:'70%' } });
+    }
+
+    async function refreshFinance() {
+      const s = document.getElementById('finStart').value;
+      const e = document.getElementById('finEnd').value;
+      const { data } = await supabaseClient.from('daily_summaries').select('*').gte('date', s).lte('date', e).order('date', {ascending:false});
+      if(!data) return;
+      
+      const total = data.reduce((n, d) => n + (d.total_value || 0), 0);
+      const boxes = data.reduce((n, d) => n + (d.total_boxes || 0), 0);
+      document.getElementById('finKpiTotal').textContent = 'R$ ' + total.toLocaleString('pt-BR', {minimumFractionDigits:2});
+      document.getElementById('finKpiBoxes').textContent = boxes;
+      document.getElementById('finKpiAvgBox').textContent = 'R$ ' + (boxes > 0 ? (total/boxes).toFixed(2) : '0,00');
+
+      document.getElementById('financeTable').querySelector('tbody').innerHTML = data.map(d => `
+        <tr><td>${d.date}</td><td><b>${d.employee_name}</b></td><td><span class="badge badge-${d.role.toLowerCase()}">${d.role}</span></td><td>${d.total_boxes}</td><td>R$ ${d.total_value.toFixed(2)}</td></tr>
+      `).join('');
+    }
+
+    async function refreshAdmin() {
+      const { data: emps } = await supabaseClient.from('employees').select('*').order('name');
+      const { data: ps } = await supabaseClient.from('parcels').select('*').order('code');
+      const { data: vs } = await supabaseClient.from('varieties').select('*').order('name');
+      const { data: maps } = await supabaseClient.from('barcode_mappings').select('*, employees(name), box_weights(name)');
+      const { data: weights } = await supabaseClient.from('box_weights').select('*');
+
+      document.getElementById('empList').innerHTML = (emps || []).map(e => `<div class="card" style="margin-bottom:5px; padding:10px; display:flex; justify-content:space-between;"><span>${e.name} (${e.role})</span><button onclick="deleteObj('employees', '${e.id}', refreshAdmin)">X</button></div>`).join('');
+      document.getElementById('parcelList').innerHTML = (ps || []).map(x => `<div class="badge" style="background:rgba(255,255,255,0.1); display:flex; gap:5px;">${x.code}<span onclick="deleteObj('parcels', '${x.id}', refreshAdmin)" style="cursor:pointer">x</span></div>`).join('');
+      document.getElementById('varList').innerHTML = (vs || []).map(x => `<div class="badge" style="background:rgba(255,255,255,0.1); display:flex; gap:5px;">${x.name}<span onclick="deleteObj('varieties', '${x.id}', refreshAdmin)" style="cursor:pointer">x</span></div>`).join('');
+      
+      document.getElementById('mapEmployee').innerHTML = emps.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+      document.getElementById('mapWeight').innerHTML = weights.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+
+      document.getElementById('mappingsTable').querySelector('tbody').innerHTML = (maps || []).map(m => `
+        <tr><td>${m.barcode}</td><td>${m.employees?.name}</td><td>${m.box_weights?.name}</td><td><button onclick="deleteObj('barcode_mappings', '${m.id}', refreshAdmin)">Remover</button></td></tr>
+      `).join('');
+    }
+
+    async function addEmployee() { await supabaseClient.from('employees').insert([{barcode:document.getElementById('empBarcode').value, name:document.getElementById('empName').value, role:document.getElementById('empRole').value, active:1}]); refreshAdmin(); }
+    async function addParcel() { await supabaseClient.from('parcels').insert([{code:document.getElementById('parcelCode').value, active:1}]); refreshAdmin(); }
+    async function addVariety() { await supabaseClient.from('varieties').insert([{name:document.getElementById('varName').value, active:1}]); refreshAdmin(); }
+    async function addMapping() { await supabaseClient.from('barcode_mappings').insert([{barcode:document.getElementById('mapBarcode').value, employee_id:document.getElementById('mapEmployee').value, weight_id:document.getElementById('mapWeight').value}]); refreshAdmin(); }
+    async function deleteObj(t, id, cb) { if(confirm('Excluir?')) { await supabaseClient.from(t).delete().eq('id', id); cb(); } }
+
+    async function init() {
+      const url = localStorage.getItem('supaUrl');
+      const key = localStorage.getItem('supaKey');
+      if (!url || !key) { document.getElementById('setup').style.display = 'flex'; return; }
+      supabaseClient = window.supabase.createClient(url, key);
+      document.getElementById('setup').style.display = 'none';
+      routeTo('inicio');
+    }
+
+    function saveAndStart() { localStorage.setItem('supaUrl', document.getElementById('supaUrl').value); localStorage.setItem('supaKey', document.getElementById('supaKey').value); init(); }
+    function logout() { localStorage.clear(); location.reload(); }
+    init();
+  </script>
+</body>
+</html>

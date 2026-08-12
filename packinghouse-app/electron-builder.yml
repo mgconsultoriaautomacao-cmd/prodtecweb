@@ -1,0 +1,78 @@
+appId: com.mgconsultoria.prodtec-packinghouse
+productName: PRODTEC Packinghouse
+copyright: Copyright © 2024 MG Consultoria e Automação
+
+publish:
+  provider: github
+  owner: mgconsultoriaautomacao-cmd
+  repo: prodtecweb
+
+# Hook para substituir o binário nativo do SQLite3 pelo do Windows
+afterPack: "afterPack.js"
+
+# Rebuild nativo
+npmRebuild: true
+buildDependenciesFromSource: false
+
+# Arquivos a incluir no build
+files:
+  - src/**/*
+  - node_modules/**/*
+  - "!node_modules/.cache/**/*"
+  - "!node_modules/**/{CHANGELOG.md,README.md,readme.md,*.map}"
+
+# Recursos extras (Python CV Service + Python Runtime embutido)
+extraResources:
+  - from: cv_service.py
+    to: cv_service.py
+  - from: setup_windows.bat
+    to: setup_windows.bat
+  - from: dist-win/python-embed/runtime
+    to: python-runtime
+    filter:
+      - "**/*"
+
+# Diretório de saída
+directories:
+  output: dist-win
+  buildResources: assets
+
+# ── Windows NSIS Installer ─────────────────────────────────────────────────
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: assets/icon.ico
+  requestedExecutionLevel: asInvoker
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: PRODTEC Packinghouse
+  uninstallDisplayName: PRODTEC Packinghouse
+  language: "1046"
+
+# ── macOS DMG ─────────────────────────────────────────────────────────────
+mac:
+  target:
+    - dmg
+  icon: assets/icon.png
+  category: public.app-category.business
+
+# ── Linux (.deb & AppImage) ────────────────────────────────────────────────
+linux:
+  target:
+    - target: deb
+      arch:
+        - x64
+        - arm64
+    - target: AppImage
+      arch:
+        - x64
+  icon: assets/icon.png
+  category: Utility
+  description: Sistema de gestão de packinghouse — rastreabilidade, qualidade e estoque
+
