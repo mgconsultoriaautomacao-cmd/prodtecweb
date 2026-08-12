@@ -29,9 +29,9 @@ current_count = 0
 current_frame = None
 lock = threading.Lock()
 
-# Caminho absoluto para o utilitário OCR nativo do Mac (fallback)
-OCR_PATH = "/Users/manoelgoncalo/.gemini/antigravity-ide/brain/94a3a46d-01a4-46b2-be76-4bb94970fbdb/scratch/ocr"
-TEMP_FRAME_PATH = "/Users/manoelgoncalo/Downloads/packinghouse-web/scratch/current_frame.jpg"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OCR_PATH = os.path.join(BASE_DIR, "scratch", "ocr")
+TEMP_FRAME_PATH = os.path.join(BASE_DIR, "scratch", "current_frame.jpg")
 
 def analyze_box_ocr(frame, registered_boxes=None):
     output = ""
