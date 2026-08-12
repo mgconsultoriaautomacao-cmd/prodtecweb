@@ -93,16 +93,18 @@ jobs:
           npm_config_arch: arm64
           npm_config_target_arch: arm64
 
-      - name: Make Linux ARM64 .deb
-        run: npm run make -- --platform linux --arch arm64
+      - name: Make Linux .deb / AppImage
+        run: npm run build:linux
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Linux ARM64 artifacts
+      - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-arm64-deb
-          path: packinghouse-app/out/make/deb/arm64/*.deb
+          name: linux-packages
+          path: |
+            packinghouse-app/dist-win/*.deb
+            packinghouse-app/dist-win/*.AppImage
           retention-days: 30
 
   # ─────────────────────────────────────────────────────────────────────
@@ -121,11 +123,11 @@ jobs:
           name: windows-installer
           path: dist/windows
 
-      - name: Download Linux ARM64 artifact
+      - name: Download Linux artifact
         uses: actions/download-artifact@v4
         with:
-          name: linux-arm64-deb
-          path: dist/linux-arm64
+          name: linux-packages
+          path: dist/linux
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -135,13 +137,15 @@ jobs:
             ## PRODTEC Packinghouse ${{ github.ref_name }}
 
             ### Downloads
-            - **Windows**: instale o arquivo `.exe` (Squirrel installer)
-            - **Raspberry Pi 4/5**: instale o arquivo `.deb` com `sudo dpkg -i prodtec-packinghouse_*.deb`
+            - **Windows**: Instale o arquivo `.exe` (Instalador automático NSIS)
+            - **Linux (Ubuntu/Debian)**: Instale o arquivo `.deb` (`sudo dpkg -i prodtec-packinghouse_*.deb`)
+            - **Linux (Universal AppImage)**: Execute o arquivo `.AppImage` (`chmod +x ... && ./...AppImage`)
 
-            > ⚠️ No Windows, se aparecer alerta de segurança clique em "Mais informações → Executar assim mesmo"
+            > ⚠️ No Windows, se aparecer alerta de segurança, clique em "Mais informações → Executar assim mesmo".
           files: |
             dist/windows/*.exe
-            dist/linux-arm64/*.deb
+            dist/linux/*.deb
+            dist/linux/*.AppImage
           draft: false
           prerelease: false
         env:
