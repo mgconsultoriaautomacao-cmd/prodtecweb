@@ -1315,7 +1315,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 <!-- ══════════════ MODAL CADASTRO/EDIÇÃO DE PLANTIO ══════════════ -->
 <div id="plantioModal" style="display:none; position:fixed; inset:0; background:rgba(3,7,18,0.97); backdrop-filter:blur(10px); z-index:2000; overflow-y:auto; padding:0">
   <div style="min-height:100dvh; padding:20px; box-sizing:border-box">
-    <div style="background:var(--card); border:1px solid var(--border2); border-radius:20px; padding:24px; width:100%; max-width:560px; margin:0 auto; box-sizing:border-box">
+    <div style="background:var(--card); border:1px solid var(--border2); border-radius:20px; padding:24px; width:100%; max-width:880px; margin:0 auto; box-sizing:border-box">
       
       <!-- Header do modal -->
       <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px">
@@ -2934,17 +2934,17 @@ let varieties = [];
     const container = $('variedadesContainer');
     const div = document.createElement('div');
     div.id = `varRow${idx}`;
-    div.style.cssText = 'background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:12px; position:relative';
+    div.style.cssText = 'background:var(--card2); border:1px solid var(--border); border-radius:12px; padding:14px; position:relative';
     div.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
-        <span style="font-size:10px; font-weight:800; color:var(--yellow); text-transform:uppercase">Variedade ${idx}</span>
-        <span id="plAreaVarBadge${idx}" style="font-size:10px; font-weight:700; color:#3b82f6; background:rgba(59,130,246,0.12); padding:2px 7px; border-radius:6px">0,00 ha</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+        <span style="font-size:11px; font-weight:800; color:var(--yellow); text-transform:uppercase; letter-spacing:0.5px">Variedade ${idx}</span>
+        <span id="plAreaVarBadge${idx}" style="font-size:11px; font-weight:700; color:#3b82f6; background:rgba(59,130,246,0.14); border:1px solid rgba(59,130,246,0.3); padding:2px 8px; border-radius:6px">0,00 ha</span>
       </div>
-      ${idx > 1 ? `<button type="button" onclick="removeVariedadeRow(${idx})" style="position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.2);color:var(--red);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center">×</button>` : ''}
-      <div style="display:grid; grid-template-columns:1.8fr 1fr 1fr 0.9fr 1.1fr 1fr; gap:8px">
-        <div class="form-field" style="margin:0">
+      ${idx > 1 ? `<button type="button" onclick="removeVariedadeRow(${idx})" style="position:absolute;top:10px;right:10px;width:24px;height:24px;border-radius:50%;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.2);color:var(--red);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>` : ''}
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; align-items:end">
+        <div class="form-field" style="margin:0; min-width:180px; flex:2">
           <label class="field-label">Cultivar / Nome *</label>
-          <input id="plVar${idx}" type="text" placeholder="Ex: GOLDMINE" value="${nomeVal}" style="text-transform:uppercase" oninput="calcAreaHectares()">
+          <input id="plVar${idx}" type="text" placeholder="Ex: GOLDMINE" value="${nomeVal}" style="text-transform:uppercase; font-weight:700; font-size:13px" oninput="calcAreaHectares()">
         </div>
         <div class="form-field" style="margin:0">
           <label class="field-label">Lote Semente</label>
@@ -2963,8 +2963,8 @@ let varieties = [];
           <input id="plDataPlantio${idx}" type="date" value="${dataVal}">
         </div>
         <div class="form-field" style="margin:0">
-          <label class="field-label" style="color:#3b82f6; font-weight:700">Área (ha)</label>
-          <input id="plAreaVar${idx}" type="number" step="0.01" placeholder="0.96" value="${areaVal}" style="font-weight:700; color:#3b82f6; background:rgba(59,130,246,0.06)" oninput="calcAreaHectares(true)">
+          <label class="field-label" style="color:#3b82f6; font-weight:800">Área (ha)</label>
+          <input id="plAreaVar${idx}" type="number" step="0.01" placeholder="0.96" value="${areaVal}" style="font-weight:800; color:#3b82f6; background:rgba(59,130,246,0.08); border-color:rgba(59,130,246,0.3)" oninput="calcAreaHectares(true)">
         </div>
       </div>
     `;
