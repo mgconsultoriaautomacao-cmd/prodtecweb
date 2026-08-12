@@ -2009,7 +2009,7 @@
       
       <!-- Seção 3: Calda -->
       <div style="font-weight:700; color:#fff; margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px; margin-top:16px">3. Calda de Defensivos</div>
-      <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:12px; margin-bottom:12px; align-items:end">
+      <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap:10px; margin-bottom:12px; align-items:end">
         <div>
           <label class="flabel">Defensivo</label>
           <select id="newOpDefensivoSelect" onchange="onNewOpDefensivoChange()" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px"></select>
@@ -2017,6 +2017,10 @@
         <div>
           <label class="flabel">Dosagem (L/ha)</label>
           <input id="newOpDosagemReal" type="number" step="0.01" value="1.00" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Alvo / Praga</label>
+          <input id="newOpAlvo" type="text" placeholder="Ex: MOSCA BRANCA" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
         </div>
         <div>
           <button onclick="addNewOpItem()" style="background:var(--green); color:#fff; border:none; padding:7px 12px; border-radius:6px; width:100%; font-weight:700; cursor:pointer">+ Adicionar</button>
@@ -11771,14 +11775,18 @@ async function loadDefensivosTable() {
 
     if (!error && data) {
       webDefensivosData = data;
+      _defensivos = data;
     } else {
       webDefensivosData = [];
+      _defensivos = [];
     }
   } catch (e) {
     console.error('Erro ao carregar defensivos:', e);
     webDefensivosData = [];
+    _defensivos = [];
   }
   filterDefensivosTable();
+  if (typeof populateNewOpDefensivesSelect === 'function') populateNewOpDefensivesSelect();
 }
 
 function filterDefensivosTable() {
@@ -12189,30 +12197,52 @@ function onNewOpParcelChange() {
 function populateNewOpDefensivesSelect() {
   const select = $('newOpDefensivoSelect');
   if (!select) return;
+
+  if ((!_defensivos || _defensivos.length === 0) && window.webDefensivosData && window.webDefensivosData.length > 0) {
+    _defensivos = window.webDefensivosData;
+  }
+
   select.innerHTML = '<option value="">Selecione um defensivo</option>';
   
-  const pId = $('newOpParcelSelect').value;
-  const ip = _infoParcelas.find(x => x.id === pId);
+  const pId = $('newOpParcelSelect')?.value;
+  const ip = (_infoParcelas || []).find(x => x.id === pId);
   const cultura = ip ? ip.cultura : '';
   
-  let listToUse = _defensivos;
-  if (cultura) {
-    const filtered = _defensivos.filter(d => d.cultura && d.cultura.toUpperCase() === cultura.toUpperCase());
+  const norm = s => (s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+
+  let listToUse = _defensivos || [];
+  if (cultura && listToUse.length > 0) {
+    const normCult = norm(cultura);
+    const filtered = listToUse.filter(d => {
+      if (!d.cultura || d.cultura === 'TODAS' || d.cultura === 'TODOS') return true;
+      return norm(d.cultura) === normCult;
+    });
     if (filtered.length > 0) listToUse = filtered;
   }
   
   listToUse.forEach(d => {
-    select.insertAdjacentHTML('beforeend', `<option value="${d.id}">${d.produto} (${d.ingrediente_ativo || ''})</option>`);
+    const doseVal = d.dose || d.dosagem_recomendada;
+    const doseStr = doseVal ? ` | Dose: ${doseVal} ${d.unidade_dose || 'L/ha'}` : '';
+    const alvoStr = d.alvo ? ` | Alvo: ${d.alvo}` : '';
+    const ingStr = d.ingrediente_ativo ? ` (${d.ingrediente_ativo})` : '';
+    select.insertAdjacentHTML('beforeend', `<option value="${d.id}">${d.produto}${ingStr}${doseStr}${alvoStr}</option>`);
   });
   
-  $('newOpDosagemReal').value = '1.00';
+  onNewOpDefensivoChange();
 }
 
 function onNewOpDefensivoChange() {
-  const id = $('newOpDefensivoSelect').value;
-  const def = _defensivos.find(d => d.id === id);
+  const select = $('newOpDefensivoSelect');
+  if (!select) return;
+  const id = select.value;
+  const def = (_defensivos || []).find(d => d.id === id);
   if (def) {
-    $('newOpDosagemReal').value = def.dosagem_recomendada || '1.00';
+    const doseVal = def.dose || def.dosagem_recomendada || 1.00;
+    if ($('newOpDosagemReal')) $('newOpDosagemReal').value = doseVal;
+    if ($('newOpAlvo')) $('newOpAlvo').value = def.alvo || '';
+  } else {
+    if ($('newOpDosagemReal')) $('newOpDosagemReal').value = '1.00';
+    if ($('newOpAlvo')) $('newOpAlvo').value = '';
   }
 }
 
@@ -12224,14 +12254,17 @@ function addNewOpItem() {
   if (!id) { alert('Selecione o defensivo'); return; }
   
   const def = _defensivos.find(d => d.id === id);
+  if (!def) return;
+
   const dosagemReal = parseFloat($('newOpDosagemReal').value) || 0;
-  const dosagemLimite = parseFloat(def.dosagem_recomendada) || dosagemReal;
+  const dosagemLimite = parseFloat(def.dose || def.dosagem_recomendada) || dosagemReal;
   const dosagemCorrigida = dosagemReal > dosagemLimite ? dosagemLimite : dosagemReal;
+  const inputAlvo = ($('newOpAlvo')?.value || def.alvo || '').trim().toUpperCase();
   
   const ip = _infoParcelas.find(x => x.id === pId);
   
   // Validação 1: Duplicados por Praga/Alvo
-  const targetAlvo = def.alvo || '';
+  const targetAlvo = inputAlvo || def.alvo || '';
   const cleanAlvo = targetAlvo.toUpperCase();
   if (targetAlvo) {
     const alreadyHasAlvo = _newOpItems.some(item => item.alvo.trim().toUpperCase() === targetAlvo.trim().toUpperCase());
@@ -12244,7 +12277,7 @@ function addNewOpItem() {
   // Validação 2: Justificativa de MIP
   const isFertilizer = !targetAlvo || cleanAlvo.includes('ADUBO') || cleanAlvo.includes('FOLIARE') || cleanAlvo.includes('NUTRIENTE') || cleanAlvo.includes('FISIOLOGICO') || cleanAlvo === 'N/A';
   if (!isFertilizer) {
-    const parcelName = ip.parcela2 || ip.parcela;
+    const parcelName = ip ? (ip.parcela2 || ip.parcela) : '';
     const relevantMips = _mipRecords.filter(m => {
       const matchesParcel = m.parcela === parcelName;
       const matchesPraga = isMatchingPraga(m.praga, targetAlvo);
@@ -12263,10 +12296,11 @@ function addNewOpItem() {
   _newOpItems.push({
     produto_id: def.id,
     produto_nome: def.produto,
+    ingrediente_ativo: def.ingrediente_ativo || '',
     alvo: targetAlvo,
     dosagem_real: dosagemReal,
     dosagem_corrigida: dosagemCorrigida,
-    unidade: def.unidade || 'L/ha',
+    unidade: def.unidade_dose || def.unidade || 'L/ha',
     carencia_dias: def.carencia_dias || 0
   });
   
@@ -12290,11 +12324,16 @@ function renderNewOpItems() {
   
   _newOpItems.forEach((item, idx) => {
     container.insertAdjacentHTML('beforeend', `
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding:6px 0; font-size:13px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding:8px 0; font-size:13px;">
         <div>
-          <strong>${item.produto_nome}</strong> - ${item.dosagem_real} ${item.unidade} <span style="color:var(--muted)">(Alvo: ${item.alvo || '—'})</span>
+          <strong style="color:var(--text); font-size:14px">${item.produto_nome}</strong> ${item.ingrediente_ativo ? `<span style="font-size:11px; color:var(--muted)">(${item.ingrediente_ativo})</span>` : ''}
+          <div style="font-size:11px; color:var(--muted2); margin-top:2px">
+            <span style="color:var(--green); font-weight:700">Dose: ${item.dosagem_real} ${item.unidade}</span> • 
+            <span style="color:var(--yellow); font-weight:700">Alvo: ${item.alvo || 'N/A'}</span> • 
+            <span>Carência: ${item.carencia_dias} dias</span>
+          </div>
         </div>
-        <button onclick="removeNewOpItem(${idx})" style="background:var(--red-dim); color:var(--red); border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:700;">Remover</button>
+        <button onclick="removeNewOpItem(${idx})" style="background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.3); padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:700;">Remover</button>
       </div>
     `);
   });

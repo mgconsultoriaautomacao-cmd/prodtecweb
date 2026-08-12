@@ -4170,11 +4170,18 @@ let varieties = [];
     select.innerHTML = '<option value="">Selecione um defensivo</option>';
     
     const cultura = document.getElementById('opCulturaInput').value;
-    const filtered = defensivosData.filter(d => d.cultura && d.cultura.toUpperCase() === cultura.toUpperCase());
+    const norm = s => (s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+    const filtered = defensivosData.filter(d => {
+      if (!d.cultura || d.cultura === 'TODAS' || d.cultura === 'TODOS') return true;
+      return norm(d.cultura) === norm(cultura);
+    });
     const listToUse = filtered.length > 0 ? filtered : defensivosData;
     
     listToUse.forEach(d => {
-      select.insertAdjacentHTML('beforeend', `<option value="${d.id}">${d.produto} (${d.ingrediente_ativo || ''})</option>`);
+      const doseVal = d.dose || d.dosagem_recomendada;
+      const doseStr = doseVal ? ` | Dose: ${doseVal} ${d.unidade_dose || 'L/ha'}` : '';
+      const alvoStr = d.alvo ? ` | Alvo: ${d.alvo}` : '';
+      select.insertAdjacentHTML('beforeend', `<option value="${d.id}">${d.produto} (${d.ingrediente_ativo || ''})${doseStr}${alvoStr}</option>`);
     });
     
     document.getElementById('opAddDosagemReal').value = '1.0';
@@ -4192,7 +4199,9 @@ let varieties = [];
     const id = document.getElementById('opAddDefensivoSelect').value;
     const def = defensivosData.find(d => d.id === id);
     if(def) {
-      document.getElementById('opAddDosagemLimite').value = def.dosagem_recomendada || 0;
+      const doseVal = def.dose || def.dosagem_recomendada || 1.0;
+      document.getElementById('opAddDosagemLimite').value = doseVal;
+      document.getElementById('opAddDosagemReal').value = doseVal;
       document.getElementById('opAddCarencia').value = def.carencia_dias || 0;
       document.getElementById('opAddAlvo').value = def.alvo || '';
     }
@@ -4204,10 +4213,10 @@ let varieties = [];
     
     const def = defensivosData.find(d => d.id === id);
     const dosagemReal = parseFloat(document.getElementById('opAddDosagemReal').value) || 0;
-    const dosagemLimite = parseFloat(def.dosagem_recomendada) || dosagemReal;
+    const dosagemLimite = parseFloat(def.dose || def.dosagem_recomendada) || dosagemReal;
     const dosagemCorrigida = dosagemReal > dosagemLimite ? dosagemLimite : dosagemReal;
-    const alvo = document.getElementById('opAddAlvo').value;
-    const carencia = parseInt(document.getElementById('opAddCarencia').value) || 0;
+    const alvo = document.getElementById('opAddAlvo').value || def.alvo || '';
+    const carencia = parseInt(document.getElementById('opAddCarencia').value) || def.carencia_dias || 0;
     
     // Validação 1: Duplicados por Praga/Alvo
     if (alvo) {
