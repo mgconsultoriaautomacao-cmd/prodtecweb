@@ -11,7 +11,7 @@
     "make": "electron-forge make",
     "make:win": "electron-forge make --platform win32 --arch x64",
     "make:linux-arm64": "electron-forge make --platform linux --arch arm64",
-    "build:win": "electron-builder --win --x64 -c.publish=never",
+    "build:win": "electron-rebuild -f -w sqlite3 && electron-builder --win --x64 -c.publish=never",
     "build:win:dir": "electron-builder --win --x64 --dir",
     "build:linux": "electron-builder --linux deb AppImage --x64 --arm64",
     "build:all": "electron-builder --win --linux"
@@ -33,6 +33,7 @@
     "@electron-forge/plugin-auto-unpack-natives": "^7.4.0",
     "@electron-forge/plugin-fuses": "^7.4.0",
     "@electron/fuses": "^1.8.0",
+    "@electron/rebuild": "^3.6.0",
     "electron": "^28.0.0",
     "electron-builder": "^26.15.3",
     "electron-reloader": "^1.2.3"
