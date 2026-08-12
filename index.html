@@ -10877,17 +10877,6 @@ async function importStaticInfoParcelas() {
     }
     
     records.push({
-      tenant_id: tenantId,
-      parcel_id: pId,
-      parcela: item.parcela || '',
-      letra: item.letra || '',
-      parcela2: item.parcela2 || '',
-      variedade: item.variedade || '',
-      cultura: item.cultura || '',
-      quantidade: item.quantidade ? parseInt(item.quantidade) : null,
-      linhas: item.linhas ? parseInt(item.linhas) : null,
-      plantio: parseDate(item.plantio),
-      previsao_colheita: parseDate(item.previsao_colheita),
       area: item.area ? parseFloat(item.area) : null,
       nf: item.nf ? String(item.nf) : '',
       emissao_nf: parseDate(item.emissao_nf),
@@ -11055,184 +11044,14 @@ function renderWebPlantiosTable(data) {
             : '<span style="font-size:10px; background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.3); padding:2px 7px; border-radius:6px; font-weight:700">ENCERRADO</span>'
           }
         </td>
-        <td style="padding:12px; text-align:center">
+        <td style="padding:12px; text-align:center; white-space:nowrap">
+          <button onclick="printPastaCampoCapa('${p.id}')" class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:12px; height:12px"></i> Capa</button>
           <button onclick="openWebPlantioModal('${p.id}')" class="sec" style="padding:4px 8px; font-size:11px; display:inline-flex; align-items:center; gap:4px" title="Editar"><i data-lucide="edit-3" style="width:13px;height:13px"></i> Editar</button>
         </td>
       </tr>
     `;
   }).join('');
 
-  if (window.lucide) lucide.createIcons();
-}
-
-function calcWebAreaHectares() {
-  const tamanhoLinha = parseFloat($('webPlTamanhoLinha')?.value) || 0;
-  let totalArea = 0;
-  let totalLinhas = 0;
-
-  for (let i = 1; i <= 5; i++) {
-    const linhasEl = $(`webPlLinhas${i}`);
-    const badgeEl = $(`webPlAreaVarBadge${i}`);
-    const linhasVar = parseFloat(linhasEl?.value) || 0;
-    
-    if (linhasVar > 0) {
-      totalLinhas += linhasVar;
-      const areaVar = (tamanhoLinha > 0) ? (linhasVar * tamanhoLinha) / 5000 : 0;
-      totalArea += areaVar;
-      if (badgeEl) badgeEl.textContent = `${areaVar.toFixed(2)} ha (${linhasVar} lin)`;
-    } else {
-      if (badgeEl) badgeEl.textContent = '0,00 ha';
-    }
-  }
-
-  if (totalLinhas === 0) {
-    totalLinhas = parseFloat($('webPlFileiras')?.value) || 0;
-    if (totalLinhas > 0 && tamanhoLinha > 0) {
-      totalArea = (totalLinhas * tamanhoLinha) / 5000;
-    }
-  } else {
-    if ($('webPlFileiras')) $('webPlFileiras').value = totalLinhas;
-  }
-
-  const areaInput = $('webPlArea');
-  const hint = $('webPlAreaHint');
-  if (areaInput && totalArea > 0) {
-    areaInput.value = totalArea.toFixed(2);
-  }
-  if (hint) {
-    hint.textContent = `📐 Total: ${totalLinhas} linhas | (${totalLinhas} lin × ${tamanhoLinha}m) / 5.000 = ${totalArea.toFixed(2)} ha`;
-  }
-}
-
-function openWebPlantioModal(editId) {
-  const modal = $('webPlantioModal');
-  const title = $('webPlantioModalTitle');
-  const editIdInput = $('webPlEditId');
-  const encerrarBtn = $('webBtnEncerrarPlantio');
-
-  // Reset form
-  ['webPlParcela','webPlLetra','webPlParcela2Preview','webPlCultura','webPlFileiras','webPlTamanhoLinha',
-   'webPlEspacamento','webPlArea','webPlSemeadura','webPlTransplante','webPlPrevisao',
-   'webPlPlantio','webPlIdiarn','webPlTermo','webPlNf','webPlFornecedor',
-   'webPlFornecedor2','webPlObs'].forEach(id => {
-    const el = $(id);
-    if (el) el.value = '';
-  });
-  $('webPlPrevisaoHint').textContent = '';
-  if ($('webPlAreaHint')) $('webPlAreaHint').textContent = '📐 Cálculo automático: (Qtd. Linhas × Tamanho da Linha) / 5.000';
-
-  webVariedadeRowCount = 0;
-  $('webVariedadesContainer').innerHTML = '';
-
-  if (editId) {
-    const item = webInfoParcelasData.find(x => x.id === editId);
-    if (!item) return;
-
-    if (title) title.innerHTML = `<i data-lucide="sprout" style="color:var(--green); width:22px; height:22px;"></i> Editar Plantio — ${item.parcela2 || item.parcela}`;
-    editIdInput.value = editId;
-    if (encerrarBtn) encerrarBtn.style.display = item.ativo !== false ? 'inline-flex' : 'none';
-
-    $('webPlParcela').value = item.parcela || '';
-    $('webPlLetra').value = item.letra || '';
-    updateWebParcela2Preview();
-
-    $('webPlCultura').value = item.cultura || '';
-    $('webPlFileiras').value = item.linhas || '';
-    $('webPlTamanhoLinha').value = item.tamanho_linha || '';
-    $('webPlEspacamento').value = item.espacamento || '';
-    $('webPlArea').value = item.area || '';
-    calcWebAreaHectares();
-    $('webPlSemeadura').value = item.semeadura || '';
-    $('webPlTransplante').value = item.transplante || item.plantio || '';
-    $('webPlPrevisao').value = item.previsao_colheita || '';
-    $('webPlPlantio').value = item.plantio || '';
-    $('webPlIdiarn').value = item.idiarn || '';
-    $('webPlTermo').value = item.termo || '';
-    $('webPlNf').value = item.nf || '';
-    $('webPlFornecedor').value = item.fornecedor || '';
-    $('webPlFornecedor2').value = item.fornecedor2 || '';
-    $('webPlObs').value = item.obs || '';
-
-    // Load variedades
-    $('webVariedadesContainer').innerHTML = '';
-    webVariedadeRowCount = 0;
-    const varsArr = [
-      { nome: item.variedade, lote: item.lote, qtd: item.quantidade },
-      { nome: item.variedade2, lote: item.lote2, qtd: item.quantidade2 },
-      { nome: item.variedade3, lote: item.lote3, qtd: item.quantidade3 },
-      { nome: item.variedade4, lote: item.lote4, qtd: item.quantidade4 },
-      { nome: item.variedade5, lote: item.lote5, qtd: item.quantidade5 },
-    ].filter(v => v.nome);
-
-    if (varsArr.length === 0) addWebVariedadeRow();
-    else varsArr.forEach(v => addWebVariedadeRow(v.nome, v.lote, v.qtd));
-
-  } else {
-    if (title) title.innerHTML = `<i data-lucide="sprout" style="color:var(--green); width:22px; height:22px;"></i> Novo Plantio`;
-    editIdInput.value = '';
-    if (encerrarBtn) encerrarBtn.style.display = 'none';
-  }
-
-  modal.style.display = 'flex';
-  if (window.lucide) lucide.createIcons();
-}
-
-function closeWebPlantioModal() {
-  $('webPlantioModal').style.display = 'none';
-}
-
-function updateWebParcela2Preview() {
-  const p = ($('webPlParcela')?.value || '').trim();
-  const l = ($('webPlLetra')?.value || '').trim().toUpperCase();
-  const prev = $('webPlParcela2Preview');
-  if (prev) prev.value = p && l ? `${p} ${l}` : p;
-}
-
-function calcWebPrevisaoColheita() {
-  const transplante = $('webPlTransplante')?.value;
-  const cultura = $('webPlCultura')?.value;
-  const hint = $('webPlPrevisaoHint');
-
-  if (!transplante || !cultura || cultura === 'MAMÃO') {
-    if (hint) hint.textContent = cultura === 'MAMÃO' ? 'Preencha manualmente para Mamão' : '';
-    return;
-  }
-
-  const dias = cultura === 'MELÃO' ? 65 : 60; // MELANCIA = 60
-  const dt = new Date(transplante + 'T00:00:00');
-  dt.setDate(dt.getDate() + dias);
-  const iso = dt.toISOString().split('T')[0];
-  $('webPlPrevisao').value = iso;
-  if (hint) hint.textContent = `✅ Calculado automaticamente: transplante + ${dias} dias`;
-}
-
-function addWebVariedadeRow(nomeVal = '', loteVal = '', qtdVal = '') {
-  if (webVariedadeRowCount >= 5) { alert('Máximo de 5 variedades por plantio'); return; }
-  webVariedadeRowCount++;
-  const idx = webVariedadeRowCount;
-  const container = $('webVariedadesContainer');
-  const div = document.createElement('div');
-  div.id = `webVarRow${idx}`;
-  div.style.cssText = 'background:var(--input-bg); border:1px solid var(--border); border-radius:10px; padding:12px; position:relative';
-  div.innerHTML = `
-    <div style="font-size:10px; font-weight:800; color:var(--yellow); text-transform:uppercase; margin-bottom:8px">Variedade ${idx}</div>
-    ${idx > 1 ? `<button type="button" onclick="removeWebVariedadeRow(${idx})" style="position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.2);color:var(--red);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center">×</button>` : ''}
-    <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:8px">
-      <div>
-        <label class="flabel">Cultivar / Nome *</label>
-        <input id="webPlVar${idx}" type="text" placeholder="Ex: GOLDMINE" value="${nomeVal}" style="text-transform:uppercase"/>
-      </div>
-      <div>
-        <label class="flabel">Lote Semente</label>
-        <input id="webPlLote${idx}" type="text" placeholder="Ex: 150339" value="${loteVal}"/>
-      </div>
-      <div>
-        <label class="flabel">Qtd. Sementes</label>
-        <input id="webPlQtd${idx}" type="number" placeholder="15000" value="${qtdVal}"/>
-      </div>
-    </div>
-  `;
-  container.appendChild(div);
   if (window.lucide) lucide.createIcons();
 }
 

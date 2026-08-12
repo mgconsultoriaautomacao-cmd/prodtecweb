@@ -2878,21 +2878,31 @@ let varieties = [];
     if (window.lucide) lucide.createIcons();
   }
 
-  function calcAreaHectares() {
+  function calcAreaHectares(isManualAreaEdit = false) {
     const tamanhoLinha = parseFloat($('plTamanhoLinha')?.value) || 0;
     let totalArea = 0;
     let totalLinhas = 0;
 
     for (let i = 1; i <= 5; i++) {
       const linhasEl = $(`plLinhas${i}`);
+      const areaEl = $(`plAreaVar${i}`);
       const badgeEl = $(`plAreaVarBadge${i}`);
       const linhasVar = parseFloat(linhasEl?.value) || 0;
       
-      if (linhasVar > 0) {
-        totalLinhas += linhasVar;
-        const areaVar = (tamanhoLinha > 0) ? (linhasVar * tamanhoLinha) / 5000 : 0;
+      let areaVar = 0;
+      if (isManualAreaEdit && areaEl && areaEl.value !== '') {
+        areaVar = parseFloat(areaEl.value) || 0;
+      } else if (linhasVar > 0) {
+        areaVar = (tamanhoLinha > 0) ? (linhasVar * tamanhoLinha) / 5000 : 0;
+        if (areaEl) areaEl.value = areaVar > 0 ? areaVar.toFixed(2) : '';
+      } else if (areaEl && areaEl.value !== '') {
+        areaVar = parseFloat(areaEl.value) || 0;
+      }
+
+      if (linhasVar > 0) totalLinhas += linhasVar;
+      if (areaVar > 0) {
         totalArea += areaVar;
-        if (badgeEl) badgeEl.textContent = `${areaVar.toFixed(2)} ha (${linhasVar} lin)`;
+        if (badgeEl) badgeEl.textContent = `${areaVar.toFixed(2)} ha`;
       } else {
         if (badgeEl) badgeEl.textContent = '0,00 ha';
       }
@@ -2900,7 +2910,7 @@ let varieties = [];
 
     if (totalLinhas === 0) {
       totalLinhas = parseFloat($('plFileiras')?.value) || 0;
-      if (totalLinhas > 0 && tamanhoLinha > 0) {
+      if (totalArea === 0 && totalLinhas > 0 && tamanhoLinha > 0) {
         totalArea = (totalLinhas * tamanhoLinha) / 5000;
       }
     } else {
@@ -2913,11 +2923,11 @@ let varieties = [];
       areaInput.value = totalArea.toFixed(2);
     }
     if (hint) {
-      hint.textContent = `📐 Total: ${totalLinhas} linhas | (${totalLinhas} lin × ${tamanhoLinha}m) / 5.000 = ${totalArea.toFixed(2)} ha`;
+      hint.textContent = `📐 Total: ${totalLinhas} linhas | Área Total Soma Variedades: ${totalArea.toFixed(2)} ha`;
     }
   }
 
-  function addVariedadeRow(nomeVal = '', loteVal = '', qtdVal = '', linhasVal = '', dataVal = '') {
+  function addVariedadeRow(nomeVal = '', loteVal = '', qtdVal = '', linhasVal = '', dataVal = '', areaVal = '') {
     if (variedadeRowCount >= 5) { toast('Máximo de 5 variedades por plantio', 'err'); return; }
     variedadeRowCount++;
     const idx = variedadeRowCount;
@@ -2931,7 +2941,7 @@ let varieties = [];
         <span id="plAreaVarBadge${idx}" style="font-size:10px; font-weight:700; color:#3b82f6; background:rgba(59,130,246,0.12); padding:2px 7px; border-radius:6px">0,00 ha</span>
       </div>
       ${idx > 1 ? `<button type="button" onclick="removeVariedadeRow(${idx})" style="position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.2);color:var(--red);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center">×</button>` : ''}
-      <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1.2fr; gap:8px">
+      <div style="display:grid; grid-template-columns:1.8fr 1fr 1fr 0.9fr 1.1fr 1fr; gap:8px">
         <div class="form-field" style="margin:0">
           <label class="field-label">Cultivar / Nome *</label>
           <input id="plVar${idx}" type="text" placeholder="Ex: GOLDMINE" value="${nomeVal}" style="text-transform:uppercase" oninput="calcAreaHectares()">
@@ -2945,12 +2955,16 @@ let varieties = [];
           <input id="plQtd${idx}" type="number" placeholder="15000" value="${qtdVal}">
         </div>
         <div class="form-field" style="margin:0">
-          <label class="field-label">Qtd. Linhas *</label>
+          <label class="field-label">Linhas *</label>
           <input id="plLinhas${idx}" type="number" placeholder="24" value="${linhasVal}" oninput="calcAreaHectares()">
         </div>
         <div class="form-field" style="margin:0">
           <label class="field-label">Data Plantio</label>
           <input id="plDataPlantio${idx}" type="date" value="${dataVal}">
+        </div>
+        <div class="form-field" style="margin:0">
+          <label class="field-label" style="color:#3b82f6; font-weight:700">Área (ha)</label>
+          <input id="plAreaVar${idx}" type="number" step="0.01" placeholder="0.96" value="${areaVal}" style="font-weight:700; color:#3b82f6; background:rgba(59,130,246,0.06)" oninput="calcAreaHectares(true)">
         </div>
       </div>
     `;
@@ -3018,17 +3032,17 @@ let varieties = [];
       $('plProdutosMuda').value = item.produtos_muda || '';
       $('plObs').value = item.obs || '';
 
-      // Load variedades com linhas e data de plantio
+      // Load variedades com linhas, data de plantio e área
       const varsArr = [
-        { nome: item.variedade, lote: item.lote, qtd: item.quantidade, linhas: item.linhas1 || item.linhas, data: item.data_plantio1 || item.plantio },
-        { nome: item.variedade2, lote: item.lote2, qtd: item.quantidade2, linhas: item.linhas2, data: item.data_plantio2 },
-        { nome: item.variedade3, lote: item.lote3, qtd: item.quantidade3, linhas: item.linhas3, data: item.data_plantio3 },
-        { nome: item.variedade4, lote: item.lote4, qtd: item.quantidade4, linhas: item.linhas4, data: item.data_plantio4 },
-        { nome: item.variedade5, lote: item.lote5, qtd: item.quantidade5, linhas: item.linhas5, data: item.data_plantio5 },
+        { nome: item.variedade, lote: item.lote, qtd: item.quantidade, linhas: item.linhas1 || item.linhas, data: item.data_plantio1 || item.plantio, area: item.area1 },
+        { nome: item.variedade2, lote: item.lote2, qtd: item.quantidade2, linhas: item.linhas2, data: item.data_plantio2, area: item.area2 },
+        { nome: item.variedade3, lote: item.lote3, qtd: item.quantidade3, linhas: item.linhas3, data: item.data_plantio3, area: item.area3 },
+        { nome: item.variedade4, lote: item.lote4, qtd: item.quantidade4, linhas: item.linhas4, data: item.data_plantio4, area: item.area4 },
+        { nome: item.variedade5, lote: item.lote5, qtd: item.quantidade5, linhas: item.linhas5, data: item.data_plantio5, area: item.area5 },
       ].filter(v => v.nome);
 
       if (varsArr.length === 0) addVariedadeRow();
-      else varsArr.forEach(v => addVariedadeRow(v.nome, v.lote, v.qtd, v.linhas, v.data));
+      else varsArr.forEach(v => addVariedadeRow(v.nome, v.lote, v.qtd, v.linhas, v.data, v.area));
 
     } else {
       title.textContent = 'Novo Plantio';
@@ -3224,14 +3238,15 @@ let varieties = [];
     const parcela2 = `${parcela} ${letra}`;
     const tamanhoL = parseFloat($('plTamanhoLinha').value) || 0;
 
-    // Collect variedades com linhas e data de plantio
+    // Collect variedades com linhas, data de plantio e área
     const varsData = [];
     for (let i = 1; i <= 5; i++) {
       const nome = $(`plVar${i}`)?.value?.trim().toUpperCase();
       if (nome) {
         const linhasV = parseInt($(`plLinhas${i}`)?.value) || null;
         const dataV = $(`plDataPlantio${i}`)?.value || null;
-        const areaV = (linhasV && tamanhoL > 0) ? parseFloat(((linhasV * tamanhoL) / 5000).toFixed(2)) : null;
+        const areaVInput = parseFloat($(`plAreaVar${i}`)?.value);
+        const areaV = !isNaN(areaVInput) ? areaVInput : ((linhasV && tamanhoL > 0) ? parseFloat(((linhasV * tamanhoL) / 5000).toFixed(2)) : null);
 
         varsData.push({
           nome,
