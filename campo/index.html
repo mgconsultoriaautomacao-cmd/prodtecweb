@@ -1358,20 +1358,25 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       <!-- Seção 2: Área -->
       <div style="background:rgba(59,130,246,0.06); border:1px solid var(--border2); border-radius:12px; padding:16px; margin-bottom:14px">
         <div style="font-size:10px; font-weight:800; color:#3b82f6; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; display:flex; align-items:center; gap:6px"><i data-lucide="ruler" style="width:14px;height:14px"></i> Área</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px">
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px">
           <div class="form-field" style="margin:0">
-            <label class="field-label">Fileiras</label>
-            <input id="plFileiras" type="number" placeholder="48">
+            <label class="field-label">Qtd. Linhas *</label>
+            <input id="plFileiras" type="number" placeholder="48" oninput="calcAreaHectares()">
+          </div>
+          <div class="form-field" style="margin:0">
+            <label class="field-label">Tam. Linha (m) *</label>
+            <input id="plTamanhoLinha" type="number" step="0.1" placeholder="200" oninput="calcAreaHectares()">
           </div>
           <div class="form-field" style="margin:0">
             <label class="field-label">Espaçamento (m)</label>
             <input id="plEspacamento" type="number" step="0.01" placeholder="0.04">
           </div>
           <div class="form-field" style="margin:0">
-            <label class="field-label">Área (ha)</label>
+            <label class="field-label">Área (ha) *</label>
             <input id="plArea" type="number" step="0.01" placeholder="1.92">
           </div>
         </div>
+        <div id="plAreaHint" style="font-size:10px; color:#3b82f6; margin-top:8px; font-weight:600">📐 Cálculo automático: (Linhas × Tamanho da Linha) / 5.000</div>
       </div>
 
       <!-- Seção 3: Variedades (dinâmicas) -->
@@ -2873,6 +2878,19 @@ let varieties = [];
     if (window.lucide) lucide.createIcons();
   }
 
+  function calcAreaHectares() {
+    const fileiras = parseFloat($('plFileiras')?.value) || 0;
+    const tamanho = parseFloat($('plTamanhoLinha')?.value) || 0;
+    const areaInput = $('plArea');
+    const hint = $('plAreaHint');
+
+    if (fileiras > 0 && tamanho > 0 && areaInput) {
+      const areaCalc = (fileiras * tamanho) / 5000;
+      areaInput.value = areaCalc.toFixed(2);
+      if (hint) hint.textContent = `✅ Calculado: (${fileiras} linhas × ${tamanho}m) / 5.000 = ${areaCalc.toFixed(2)} ha`;
+    }
+  }
+
   function openPlantioModal(editId) {
     const modal = $('plantioModal');
     const title = $('plantioModalTitle');
@@ -2880,7 +2898,7 @@ let varieties = [];
     const encerrarBtn = $('btnEncerrarPlantio');
 
     // Reset form
-    ['plParcela','plLetra','plFileiras','plEspacamento','plArea','plSemeadura',
+    ['plParcela','plLetra','plFileiras','plTamanhoLinha','plEspacamento','plArea','plSemeadura',
      'plTransplante','plPrevisao','plPlantio','plIdiarn','plTermo',
      'plNf','plEmissaoNf','plFornecedor','plNf2','plEmissaoNf2',
      'plFornecedor2','plProdutosMuda','plObs'].forEach(id => {
@@ -2894,6 +2912,7 @@ let varieties = [];
     });
     updateParcela2Preview();
     $('plPrevisaoHint').textContent = '';
+    if ($('plAreaHint')) $('plAreaHint').textContent = '📐 Cálculo automático: (Linhas × Tamanho da Linha) / 5.000';
 
     // Init variedades com 1 row
     variedadeRowCount = 0;
@@ -2914,8 +2933,10 @@ let varieties = [];
       if (item.cultura) selectCultura(item.cultura);
 
       $('plFileiras').value = item.linhas || '';
+      $('plTamanhoLinha').value = item.tamanho_linha || '';
       $('plEspacamento').value = item.espacamento || '';
       $('plArea').value = item.area || '';
+      calcAreaHectares();
       $('plSemeadura').value = item.semeadura || '';
       $('plTransplante').value = item.transplante || item.plantio || '';
       $('plPrevisao').value = item.previsao_colheita || '';
@@ -3086,6 +3107,7 @@ let varieties = [];
       quantidade4: varsData[3]?.qtd || null,
       quantidade5: varsData[4]?.qtd || null,
       linhas: parseInt($('plFileiras').value) || null,
+      tamanho_linha: parseFloat($('plTamanhoLinha').value) || null,
       espacamento: parseFloat($('plEspacamento').value) || null,
       area: areaVal,
       area_ha: areaVal,
