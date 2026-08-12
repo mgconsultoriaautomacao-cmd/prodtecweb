@@ -11909,7 +11909,18 @@ async function saveDefensivo() {
     } else {
       res = await sb.from('caderno_campo_defensivos_cadastro').insert(payload);
     }
-    if (res.error) throw res.error;
+
+    if (res.error) {
+      if (res.error.message && (res.error.message.includes("'dose'") || res.error.message.includes('dose'))) {
+        delete payload.dose;
+        if (editId) {
+          res = await sb.from('caderno_campo_defensivos_cadastro').update(payload).eq('id', editId).eq('tenant_id', tenantId);
+        } else {
+          res = await sb.from('caderno_campo_defensivos_cadastro').insert(payload);
+        }
+      }
+      if (res.error) throw res.error;
+    }
 
     toast(editId ? 'Defensivo atualizado! ✅' : 'Defensivo cadastrado com sucesso! ✅', 'ok');
     closeDefensivoModal();
