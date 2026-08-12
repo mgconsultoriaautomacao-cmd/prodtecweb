@@ -868,7 +868,10 @@
 
         <!-- Botões de Ação -->
         <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; border-top:1px solid var(--border); padding-top:20px">
-          <button type="button" class="danger" id="webBtnEncerrarPlantio" onclick="encerrarWebPlantio()" style="display:none; padding:10px 18px">Encerrar Plantio</button>
+          <div style="display:flex; gap:8px">
+            <button type="button" class="danger" id="webBtnEncerrarPlantio" onclick="encerrarWebPlantio()" style="display:none; padding:10px 18px">Encerrar Plantio</button>
+            <button type="button" class="danger" id="webBtnDeletePlantio" onclick="deleteWebPlantioFromModal()" style="display:none; padding:10px 18px; background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:var(--red); border-radius:8px; font-weight:700">Excluir Definitivamente</button>
+          </div>
           <div style="display:flex; gap:12px; margin-left:auto">
             <button type="button" class="sec" onclick="closeWebPlantioModal()" style="padding:10px 20px">Cancelar</button>
             <button type="submit" id="webBtnSavePlantio" class="green" style="background:var(--green); padding:10px 28px; font-weight:800; font-size:14px">Salvar Plantio</button>
@@ -11196,7 +11199,8 @@ function renderWebPlantiosTable(data) {
         </td>
         <td style="padding:12px; text-align:center; white-space:nowrap">
           <button onclick="printPastaCampoCapa('${p.id}')" class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:12px; height:12px"></i> Capa</button>
-          <button onclick="openWebPlantioModal('${p.id}')" class="sec" style="padding:4px 8px; font-size:11px; display:inline-flex; align-items:center; gap:4px" title="Editar"><i data-lucide="edit-3" style="width:13px;height:13px"></i> Editar</button>
+          <button onclick="openWebPlantioModal('${p.id}')" class="sec" style="padding:4px 8px; font-size:11px; margin-right:4px; display:inline-flex; align-items:center; gap:4px" title="Editar"><i data-lucide="edit-3" style="width:13px;height:13px"></i> Editar</button>
+          <button onclick="deleteWebPlantio('${p.id}')" class="danger" style="padding:4px 8px; font-size:11px; display:inline-flex; align-items:center; gap:4px; background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:var(--red); border-radius:6px; cursor:pointer" title="Excluir Definitivamente"><i data-lucide="trash-2" style="width:13px;height:13px"></i> Excluir</button>
         </td>
       </tr>
     `;
@@ -11259,6 +11263,7 @@ function openWebPlantioModal(editId) {
   const title = $('webPlantioModalTitle');
   const editIdInput = $('webPlEditId');
   const encerrarBtn = $('webBtnEncerrarPlantio');
+  const deleteBtn = $('webBtnDeletePlantio');
 
   // Reset form
   ['webPlParcela','webPlLetra','webPlParcela2Preview','webPlCultura','webPlFileiras','webPlTamanhoLinha',
@@ -11281,6 +11286,7 @@ function openWebPlantioModal(editId) {
     if (title) title.innerHTML = `<i data-lucide="sprout" style="color:var(--green); width:22px; height:22px;"></i> Editar Plantio — ${item.parcela2 || item.parcela}`;
     editIdInput.value = editId;
     if (encerrarBtn) encerrarBtn.style.display = item.ativo !== false ? 'inline-flex' : 'none';
+    if (deleteBtn) deleteBtn.style.display = 'inline-flex';
 
     $('webPlParcela').value = item.parcela || '';
     $('webPlLetra').value = item.letra || '';
@@ -11323,6 +11329,7 @@ function openWebPlantioModal(editId) {
     if (title) title.innerHTML = `<i data-lucide="sprout" style="color:var(--green); width:22px; height:22px;"></i> Novo Plantio`;
     editIdInput.value = '';
     if (encerrarBtn) encerrarBtn.style.display = 'none';
+    if (deleteBtn) deleteBtn.style.display = 'none';
     addWebVariedadeRow();
   }
 
@@ -11548,6 +11555,34 @@ async function encerrarWebPlantio() {
   } catch (e) {
     alert('Erro ao encerrar plantio: ' + e.message);
   }
+}
+
+async function deleteWebPlantio(id) {
+  if (!id) return;
+  const item = webInfoParcelasData.find(x => x.id === id);
+  const name = item ? (item.parcela2 || item.parcela) : 'este plantio';
+  if (!confirm(`⚠️ ATENÇÃO: Deseja realmente EXCLUIR DEFINITIVAMENTE o plantio da parcela "${name}"?\n\nEsta ação é irreversível e removerá permanentemente todos os dados deste ciclo.`)) return;
+
+  try {
+    const { error } = await sb.from('info_parcelas')
+      .delete()
+      .eq('id', id)
+      .eq('tenant_id', tenantId);
+    if (error) throw error;
+    toast('✓ Plantio excluído definitivamente com sucesso!', 'ok');
+    if ($('webPlantioModal') && $('webPlantioModal').style.display !== 'none') {
+      closeWebPlantioModal();
+    }
+    await loadWebPlantios();
+  } catch (e) {
+    console.error('Erro ao excluir plantio web:', e);
+    alert('Erro ao excluir plantio: ' + (e.message || 'Verifique sua conexão.'));
+  }
+}
+
+function deleteWebPlantioFromModal() {
+  const editId = $('webPlEditId')?.value;
+  if (editId) deleteWebPlantio(editId);
 }
 
 async function loadCadernoCampo() {

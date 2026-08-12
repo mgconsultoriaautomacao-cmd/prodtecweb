@@ -1489,6 +1489,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
           <button class="btn btn-danger" style="flex:1" id="btnEncerrarPlantio" onclick="encerrarPlantio()" style="display:none">
             <i data-lucide="x-circle" style="width:16px;height:16px"></i> Encerrar Plantio
           </button>
+          <button class="btn btn-danger" style="flex:1; background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:var(--red)" id="btnDeletePlantio" onclick="deletePlantioFromModal()" style="display:none">
+            <i data-lucide="trash-2" style="width:16px;height:16px"></i> Excluir
+          </button>
         </div>
       </div>
     </div>
@@ -2858,9 +2861,14 @@ let varieties = [];
               <span class="ip-badge ${cultBadge(p.cultura)}" style="display:inline-flex;align-items:center;gap:4px"><i data-lucide="${cultIconName(p.cultura)}" style="width:12px;height:12px"></i> ${p.cultura || 'OUTROS'}</span>
               ${diasRestantesHtml}
             </div>
-            <button onclick="event.stopPropagation(); openPlantioModal('${p.id}')" 
-              style="width:28px;height:28px;border-radius:8px;background:var(--card2);border:1px solid var(--border2);color:var(--muted2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0"
-              title="Editar plantio"><i data-lucide="edit-3" style="width:14px;height:14px"></i></button>
+            <div style="display:flex; gap:4px">
+              <button onclick="event.stopPropagation(); openPlantioModal('${p.id}')" 
+                style="width:28px;height:28px;border-radius:8px;background:var(--card2);border:1px solid var(--border2);color:var(--muted2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0"
+                title="Editar plantio"><i data-lucide="edit-3" style="width:14px;height:14px"></i></button>
+              <button onclick="event.stopPropagation(); deletePlantio('${p.id}')" 
+                style="width:28px;height:28px;border-radius:8px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.25);color:var(--red);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0"
+                title="Excluir plantio definitivamente"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+            </div>
           </div>
           <div style="font-weight:800; font-size:17px; margin-bottom:4px; color:var(--text)">${p.parcela2 || p.parcela || '—'}</div>
           <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px">
@@ -2978,6 +2986,7 @@ let varieties = [];
     const title = $('plantioModalTitle');
     const editIdInput = $('plantioEditId');
     const encerrarBtn = $('btnEncerrarPlantio');
+    const deleteBtn = $('btnDeletePlantio');
 
     // Reset form
     ['plParcela','plLetra','plFileiras','plTamanhoLinha','plEspacamento','plArea','plSemeadura',
@@ -3006,6 +3015,7 @@ let varieties = [];
       title.textContent = 'Editar Plantio';
       editIdInput.value = editId;
       if (encerrarBtn) encerrarBtn.style.display = 'flex';
+      if (deleteBtn) deleteBtn.style.display = 'flex';
 
       $('plParcela').value = item.parcela || '';
       $('plLetra').value = item.letra || '';
@@ -3053,6 +3063,7 @@ let varieties = [];
       title.textContent = 'Novo Plantio';
       editIdInput.value = '';
       if (encerrarBtn) encerrarBtn.style.display = 'none';
+      if (deleteBtn) deleteBtn.style.display = 'none';
       addVariedadeRow();
     }
 
@@ -3375,6 +3386,36 @@ let varieties = [];
     } catch (e) {
       toast('Erro: ' + e.message, 'err');
     }
+  }
+
+  async function deletePlantio(id) {
+    if (!id) return;
+    const item = infoParcelasData.find(x => x.id === id);
+    const name = item ? (item.parcela2 || item.parcela) : 'este plantio';
+    if (!confirm(`⚠️ ATENÇÃO: Deseja realmente EXCLUIR DEFINITIVAMENTE o plantio da parcela "${name}"?\n\nEsta ação é irreversível e excluirá todos os dados deste registro.`)) return;
+
+    try {
+      const { error } = await sb.from('info_parcelas')
+        .delete()
+        .eq('id', id)
+        .eq('tenant_id', tenantId);
+      if (error) throw error;
+      toast('Plantio excluído definitivamente! 🗑️', 'ok');
+      if ($('plantioModal') && $('plantioModal').style.display !== 'none') {
+        closePlantioModal();
+      }
+      await loadInfoParcelas();
+      cacheOfflineData();
+      filterPlantios();
+    } catch (e) {
+      console.error('Erro ao excluir plantio:', e);
+      toast('Erro ao excluir: ' + (e.message || 'verifique a conexão'), 'err');
+    }
+  }
+
+  function deletePlantioFromModal() {
+    const editId = $('plantioEditId')?.value;
+    if (editId) deletePlantio(editId);
   }
 
   async function loadDefensivos() {
