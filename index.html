@@ -12258,22 +12258,39 @@ function openEmpBarcodeScanner(targetInputId) {
     aspectRatio: 1.0
   };
   
-  empHtml5QrCode.start(
-    { facingMode: "environment" },
-    config,
-    (decodedText) => {
-      document.getElementById(targetInputId).value = decodedText;
-      stopEmpScanner();
-      if (window.navigator.vibrate) window.navigator.vibrate(100);
-    },
-    (errorMessage) => {
-      // Ignorar erros de escaneamento silencioso
-    }
-  ).catch(err => {
-    console.error("Erro ao iniciar câmera de scan:", err);
-    alert("Não foi possível acessar a câmera. Verifique as permissões de acesso.");
-    modal.style.display = 'none';
-  });
+  const onScanSuccess = (decodedText) => {
+    document.getElementById(targetInputId).value = decodedText;
+    stopEmpScanner();
+    if (window.navigator.vibrate) window.navigator.vibrate(100);
+  };
+  
+  const onScanError = (errorMessage) => { /* ignora erros silenciosos */ };
+
+  // Tenta câmera traseira (celular)
+  empHtml5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanError)
+    .catch(err => {
+      console.warn("Câmera traseira indisponível. Tentando câmera frontal/Mac...", err);
+      // Tenta câmera frontal (Mac/PC)
+      empHtml5QrCode.start({ facingMode: "user" }, config, onScanSuccess, onScanError)
+        .catch(err2 => {
+          console.warn("Câmera frontal falhou. Tentando ID padrão...", err2);
+          Html5Qrcode.getCameras().then(devices => {
+            if (devices && devices.length > 0) {
+              empHtml5QrCode.start(devices[0].id, config, onScanSuccess, onScanError)
+                .catch(e => {
+                  alert("Não foi possível acessar nenhuma câmera. Verifique as permissões do navegador.");
+                  modal.style.display = 'none';
+                });
+            } else {
+              alert("Nenhuma câmera encontrada no seu dispositivo.");
+              modal.style.display = 'none';
+            }
+          }).catch(err3 => {
+            alert("Erro ao listar câmeras. Verifique as permissões de segurança.");
+            modal.style.display = 'none';
+          });
+        });
+    });
 }
 
 function stopEmpScanner() {

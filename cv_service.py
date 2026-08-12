@@ -120,14 +120,41 @@ def analyze_box_ocr(frame, registered_boxes=None):
             detected_model = "Generica"
             if detected_weight == 0:
                 detected_weight = 18
+        elif "NERO" in output_upper:
+            detected_model = "Nero"
+            if detected_weight == 0:
+                detected_weight = 15
+        elif "COOPYFRUTAS" in output_upper:
+            detected_model = "Coopyfrutas"
+            if detected_weight == 0:
+                detected_weight = 13
+        elif "MIX MELON" in output_upper:
+            detected_model = "Mix Melon"
+            if detected_weight == 0:
+                detected_weight = 13
             
     return detected_model, detected_weight, detected_weights
+
+def is_solid_green_frame(frame):
+    if frame is None:
+        return False
+    # OpenCV uses BGR. Channels: 0=Blue, 1=Green, 2=Red. Mean returns (B, G, R, Alpha)
+    mean_b, mean_g, mean_r, _ = cv2.mean(frame)
+    # Virtual camera standby screens or driver failures often output a solid green frame (G > 150, B/R < 60)
+    if mean_g > 150 and mean_b < 60 and mean_r < 60:
+        std_dev = np.std(frame)
+        if std_dev < 30: # very low variance, i.e., solid uniform color
+            return True
+    return False
 
 def count_fruits(frame, fruit_type):
     """
     Identifica e conta melões/melancias usando filtragem de cores HSV
     e transformada de círculos/contornos.
     """
+    if frame is None:
+        return 0, frame
+
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     fruit_type = str(fruit_type).upper()
     
@@ -180,55 +207,142 @@ def count_fruits(frame, fruit_type):
     if fruit_count == 0:
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         gray = cv2.medianBlur(gray, 5)
+        # Aumentamos o param2 de 30 para 45 para evitar detecção excessiva de ruído/falso-positivos no fundo
         circles = cv2.HoughCircles(
             gray, 
             cv2.HOUGH_GRADIENT, 
             dp=1.2, 
             minDist=40, 
             param1=50, 
-            param2=30, 
+            param2=45, 
             minRadius=25, 
             maxRadius=120
         )
         if circles is not None:
             circles = np.round(circles[0, :]).astype("int")
-            for (x, y, r) in circles:
-                cv2.circle(annotated_frame, (x, y), r, (0, 255, 0), 2)
-                fruit_count += 1
-                cv2.putText(annotated_frame, f"H{fruit_count}", (x - 10, y + 5),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            # Se encontrar mais do que 20 círculos via Hough, quase certamente é ruído/fundo
+            if len(circles) <= 20:
+                for (x, y, r) in circles:
+                    cv2.circle(annotated_frame, (x, y), r, (0, 255, 0), 2)
+                    fruit_count += 1
+                    cv2.putText(annotated_frame, f"H{fruit_count}", (x - 10, y + 5),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            else:
+                print(f"⚠️ HoughCircles detectou excesso de círculos ({len(circles)}). Provável ruído. Ignorando fallback Hough.")
 
-    # Cria caixa visual do calibre na tela do visor
-    cv2.rectangle(annotated_frame, (5, 10), (350, 70), (0, 0, 0), -1)
-    cv2.putText(annotated_frame, f"CALIBRE: {fruit_count}", (15, 55), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
+    # Limite prático de segurança: calibres de melão/melancia reais são no máximo 15 (raramente 18)
+    # Se der mais de 20, com certeza é ruído (ex: caixa com textura/fundo) ou a tela verde/mismatch.
+    if fruit_count > 20:
+        print(f"⚠️ Calibre detectado muito alto ({fruit_count}). Provável ruído ou erro de leitura. Descartando.")
+        fruit_count = 0
+        annotated_frame = frame.copy()
+        cv2.rectangle(annotated_frame, (5, 10), (350, 70), (0, 0, 0), -1)
+        cv2.putText(annotated_frame, "CALIBRE: NAO IDENTIF.", (15, 55), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
+    else:
+        # Cria caixa visual do calibre na tela do visor
+        cv2.rectangle(annotated_frame, (5, 10), (350, 70), (0, 0, 0), -1)
+        cv2.putText(annotated_frame, f"CALIBRE: {fruit_count}" if fruit_count > 0 else "CALIBRE: NAO IDENTIF.", 
+                    (15, 55), cv2.FONT_HERSHEY_SIMPLEX, 1.2 if fruit_count == 0 else 1.5, 
+                    (0, 255, 0) if fruit_count > 0 else (0, 0, 255), 3)
 
     return fruit_count, annotated_frame
 
+camera_change_requested = False
+target_camera_index = 0
+is_manual_selection = False
+
 def video_loop():
-    global current_frame
+    global current_frame, camera_change_requested, target_camera_index, is_manual_selection
     cap = None
     camera_error_logged = False
+    current_index = 0
+    tried_indices = [0, 1, 2, 3]
     
     while True:
+        # Se o usuário solicitou uma mudança manual de câmera via interface (API /set_camera)
+        if camera_change_requested:
+            print(f"🔄 Mudança manual de câmera solicitada. Trocando do índice {current_index} para {target_camera_index}...")
+            if cap is not None:
+                cap.release()
+                cap = None
+            current_index = target_camera_index
+            is_manual_selection = True
+            camera_change_requested = False
+            
         if cap is None or not cap.isOpened():
             if cap is not None:
                 cap.release()
-            cap = cv2.VideoCapture(0)
+            
+            # Tenta abrir no índice atual
+            print(f"📡 Tentando abrir câmera no índice {current_index}...")
+            cap = cv2.VideoCapture(current_index)
             if not cap.isOpened():
-                if not camera_error_logged:
-                    print("❌ ERRO: Não foi possível abrir a câmera. Verifique se ela está sendo usada por outro app ou se as permissões foram concedidas ao Terminal.")
-                    camera_error_logged = True
-                time.sleep(2.0)
-                continue
-            else:
-                print("✅ Câmera aberta com sucesso!")
-                camera_error_logged = False
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                # Se falhar, procura outros índices disponíveis
+                next_index_found = False
+                for idx in tried_indices:
+                    if idx != current_index:
+                        print(f"🔄 Câmera no índice {current_index} falhou. Tentando índice alternativo {idx}...")
+                        test_cap = cv2.VideoCapture(idx)
+                        if test_cap.isOpened():
+                            cap = test_cap
+                            current_index = idx
+                            next_index_found = True
+                            # Se mudou automaticamente devido a falha, resetamos o flag manual
+                            is_manual_selection = False
+                            break
+                        else:
+                            test_cap.release()
+                
+                if not next_index_found:
+                    if not camera_error_logged:
+                        print("❌ ERRO: Não foi possível abrir nenhuma câmera (índices 0, 1, 2, 3). Verifique conexões/permissões.")
+                        camera_error_logged = True
+                    time.sleep(2.0)
+                    continue
+            
+            print(f"✅ Câmera no índice {current_index} aberta. Configurando resolução...")
+            camera_error_logged = False
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            
+            # Se for uma seleção manual do usuário, NÃO fazemos o desvio automático por tela verde
+            # (pois o usuário escolheu essa câmera especificamente e pode querer ver o visor dela mesmo assim)
+            if not is_manual_selection:
+                # Espera a câmera estabilizar e faz uma leitura de teste para verificar se é tela verde (dummy virtual camera)
+                time.sleep(0.5)
+                ret, test_frame = cap.read()
+                if ret and is_solid_green_frame(test_frame):
+                    print(f"⚠️ Detectada tela verde no índice {current_index} (câmera virtual ou erro). Procurando alternativa...")
+                    cap.release()
+                    found_valid = False
+                    for idx in tried_indices:
+                        if idx != current_index:
+                            print(f"🔄 Testando índice alternativo {idx} contra tela verde...")
+                            test_cap = cv2.VideoCapture(idx)
+                            if test_cap.isOpened():
+                                test_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                                test_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                                time.sleep(0.5)
+                                ret_alt, frame_alt = test_cap.read()
+                                if ret_alt and not is_solid_green_frame(frame_alt):
+                                    cap = test_cap
+                                    current_index = idx
+                                    found_valid = True
+                                    print(f"✅ Câmera real sem tela verde encontrada no índice {current_index}!")
+                                    break
+                                else:
+                                    test_cap.release()
+                    
+                    if not found_valid:
+                        # Se nenhuma alternativa prestou, volta para a primeira por segurança
+                        print(f"⚠️ Nenhuma câmera alternativa sem tela verde encontrada. Mantendo índice {current_index} por fallback.")
+                        cap = cv2.VideoCapture(current_index)
+                        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         
         ret, frame = cap.read()
         if not ret:
-            print("⚠️ Falha ao capturar frame (câmera ocupada?)")
+            print(f"⚠️ Falha ao capturar frame da câmera no índice {current_index} (ocupada?)")
             time.sleep(1.0)
             continue
             
@@ -237,12 +351,13 @@ def video_loop():
             
         time.sleep(0.03) # Limita a ~30 fps para não usar muita CPU
 
+global_registered_boxes = []
 last_box_model = "NÃO IDENTIF."
 last_detected_weight = 0
 last_detected_weights = []
 
 def ocr_worker():
-    global last_box_model, last_detected_weight, last_detected_weights
+    global last_box_model, last_detected_weight, last_detected_weights, global_registered_boxes
     while True:
         frame_copy = None
         with lock:
@@ -251,8 +366,8 @@ def ocr_worker():
             
         if frame_copy is not None:
             try:
-                # OCR em background usa fallback vazio para caixas dinâmicas
-                model, weight, weights = analyze_box_ocr(frame_copy, None)
+                # OCR em background usa as caixas cadastradas recebidas do Electron
+                model, weight, weights = analyze_box_ocr(frame_copy, global_registered_boxes)
                 if model != "NÃO IDENTIF.":
                     with lock:
                         last_box_model = model
@@ -263,12 +378,31 @@ def ocr_worker():
         # Roda OCR a cada 1.2s em segundo plano para não pegar muita CPU
         time.sleep(1.2)
 
+@app.route('/set_camera', methods=['POST'])
+def set_camera():
+    global camera_change_requested, target_camera_index
+    data = request.get_json(silent=True) or {}
+    index = data.get("index")
+    if index is not None:
+        try:
+            target_camera_index = int(index)
+            camera_change_requested = True
+            print(f"🔄 Solicitada mudança manual de câmera para o índice: {target_camera_index}")
+            return jsonify({"ok": True, "message": f"Mudando para canal {target_camera_index}"})
+        except ValueError:
+            return jsonify({"ok": False, "message": "Índice de câmera inválido"}), 400
+    return jsonify({"ok": False, "message": "Parâmetro 'index' em falta"}), 400
+
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    global current_frame
+    global current_frame, global_registered_boxes
     data = request.get_json(silent=True) or {}
     fruit = str(data.get("fruit", "")).upper()
     registered_boxes = data.get("registered_boxes", [])
+
+    # Atualiza as caixas cadastradas na variável global para uso do background OCR worker
+    if registered_boxes:
+        global_registered_boxes = registered_boxes
 
     frame_copy = None
     with lock:
@@ -277,20 +411,21 @@ def analyze():
             
     if frame_copy is not None:
         try:
-            # Analisa o modelo e peso da caixa com base no cadastro do DB
-            box_model, detected_weight, detected_weights = analyze_box_ocr(frame_copy, registered_boxes)
-            # Conta as frutas e gera o frame anotado
+            # Conta as frutas e gera o frame anotado (MUITO RÁPIDO, ~20ms)
             count, annotated_frame = count_fruits(frame_copy, fruit)
             
-            # Atualiza o visor com o frame anotado (com os círculos e contornos pintados)
+            # Atualiza o visor com o frame anotado
             with lock:
                 current_frame = annotated_frame.copy()
         except Exception as e:
             print(f"⚠️ Falha durante a análise síncrona: {e}")
             count = 0
-            box_model = "NÃO IDENTIF."
-            detected_weight = 0
-            detected_weights = []
+            
+        # Usa os dados do OCR que foram lidos em background para responder instantaneamente
+        with lock:
+            box_model = last_box_model
+            detected_weight = last_detected_weight
+            detected_weights = list(last_detected_weights)
     else:
         # Fallback para o estado em cache
         with lock:
