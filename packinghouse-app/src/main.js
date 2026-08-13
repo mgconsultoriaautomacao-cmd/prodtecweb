@@ -280,11 +280,15 @@ app.whenReady().then(() => {
       
       // Busca em caminhos padrão de instalação do Python no Windows
       if (process.platform === 'win32') {
+        const sysRoot = process.env.SystemRoot || 'C:\\Windows';
         const winPyPaths = [
-          path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python312', 'python.exe'),
+          path.join(sysRoot, 'py.exe'),
+          path.join(sysRoot, 'System32', 'py.exe'),
           path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python311', 'python.exe'),
+          path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python312', 'python.exe'),
           path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python310', 'python.exe'),
           path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python39', 'python.exe'),
+          path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'WindowsApps', 'python.exe'),
           path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Python311', 'python.exe'),
           path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Python312', 'python.exe'),
           'C:\\Python311\\python.exe',
@@ -301,8 +305,9 @@ app.whenReady().then(() => {
 
     const pyExec = findPythonExecutable();
     const pyDir = path.dirname(pyPath);
+    const pyArgs = (pyExec.endsWith('py.exe') || pyExec === 'py') ? ['-3', '-u', pyPath] : ['-u', pyPath];
     
-    console.log('App: Starting CV Service using', pyExec, 'at', pyPath, 'with CWD:', pyDir);
+    console.log('App: Starting CV Service using', pyExec, 'with args:', pyArgs, 'at', pyPath, 'CWD:', pyDir);
     
     function triggerAutoSetupWin() {
       if (process.platform === 'win32') {
@@ -311,13 +316,13 @@ app.whenReady().then(() => {
           : path.join(__dirname, '..', 'setup_windows.bat');
         if (fs.existsSync(batPath)) {
           console.log('App: Automatically triggering setup_windows.bat due to Python/CV error...');
-          exec(`start "" "${batPath}"`);
+          exec(`cmd.exe /c start cmd.exe /k "${batPath}"`);
         }
       }
     }
 
     // Usamos '-u' para Python unbuffered stdout/stderr
-    const pyProcess = spawn(pyExec, ['-u', pyPath], { cwd: pyDir });
+    const pyProcess = spawn(pyExec, pyArgs, { cwd: pyDir });
 
     pyProcess.stdout.on('data', (data) => console.log(`CV: ${data}`));
     pyProcess.stderr.on('data', (data) => {
