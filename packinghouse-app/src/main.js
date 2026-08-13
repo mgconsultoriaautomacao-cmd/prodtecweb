@@ -177,13 +177,27 @@ function registerIpc() {
 }
 
 app.whenReady().then(() => {
-  db = initDb();
-  console.log('App: DB initialized.');
-  service = createAppService(db);
-  console.log('App: Service created.');
-  
-  registerIpc();
-  createWindow();
+  try {
+    db = initDb();
+    console.log('App: DB initialized.');
+    service = createAppService(db);
+    console.log('App: Service created.');
+  } catch (err) {
+    console.error('App: Error initializing local database:', err);
+    dialog.showErrorBox('Erro ao inicializar o banco de dados local', 'Ocorreu um erro ao carregar a base de dados: ' + err.message);
+  }
+
+  try {
+    registerIpc();
+  } catch (err) {
+    console.error('App: Error registering IPC handlers:', err);
+  }
+
+  try {
+    createWindow();
+  } catch (err) {
+    console.error('App: Error creating main window:', err);
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
