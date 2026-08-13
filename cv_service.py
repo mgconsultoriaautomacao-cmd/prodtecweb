@@ -33,9 +33,69 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OCR_PATH = os.path.join(BASE_DIR, "scratch", "ocr")
 TEMP_FRAME_PATH = os.path.join(BASE_DIR, "scratch", "current_frame.jpg")
 
-def analyze_box_ocr(frame, registered_boxes=None):
+# ─── ROI (Regiões de Interesse) ──────────────────────────────────────────────
+# Coordenadas normalizadas (0.0 = topo/esquerda, 1.0 = baixo/direita) referentes
+# ao frame completo. Padrão: ROI de frutas ocupa o terço superior central;
+# ROI de etiqueta ocupa o terço inferior. O usuário pode ajustar pelo frontend.
+#
+# Formato: { "x": float, "y": float, "w": float, "h": float }  (valores 0..1)
+
+roi_fruits = {"x": 0.05, "y": 0.02, "w": 0.90, "h": 0.60}  # área das frutas
+roi_label  = {"x": 0.05, "y": 0.62, "w": 0.90, "h": 0.35}  # área da etiqueta/OCR
+roi_enabled = True  # Se False, analisa o frame inteiro (comportamento legado)
+
+def is_frame_blurry(frame, threshold=50.0):
+    """Retorna True se o frame estiver muito borrado (motion blur ou desfocado)."""
+    if frame is None or frame.size == 0:
+        return True
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    variance = cv2.Laplacian(gray, cv2.CV_64F).var()
+    return variance < threshold
+
+def crop_roi(frame, roi_dict):
+    """
+    Corta um retângulo (ROI) do frame com base em coordenadas normalizadas (0..1).
+    Retorna (sub_image, (x_px, y_px, w_px, h_px)).
+    """
+    h, w = frame.shape[:2]
+    rx = int(clamp(roi_dict.get("x", 0.0), 0.0, 1.0) * w)
+    ry = int(clamp(roi_dict.get("y", 0.0), 0.0, 1.0) * h)
+    rw = int(clamp(roi_dict.get("w", 1.0), 0.0, 1.0) * w)
+    rh = int(clamp(roi_dict.get("h", 1.0), 0.0, 1.0) * h)
+    
+    # Garante que rw e rh fiquem dentro do limite do frame
+    rw = max(1, min(rw, w - rx))
+    rh = max(1, min(rh, h - ry))
+    
+    cropped = frame[ry:ry+rh, rx:rx+rw]
+    return cropped, (rx, ry, rw, rh)
+
+def clamp(val, min_val, max_val):
+    return max(min_val, min(val, max_val))
+
+def run_ocr(frame):
+    """
+    Executa OCR no frame completo ou na ROI da etiqueta (se ativada).
+    No macOS usa a ferramenta 'ocr' nativa da Apple Vision se o Pytesseract não funcionar.
+    No Windows / Linux usa pytesseract (Tesseract-OCR).
+    """
+    global roi_label, roi_enabled
+
     output = ""
-    used_engine = "NONE"
+    used_engine = "NENHUM"
+
+    if frame is None:
+        return "SEM FRAME", 0, []
+
+    # Se a ROI estiver ativada, faz o corte apenas da área da etiqueta
+    ocr_frame = frame
+    if roi_enabled:
+        ocr_frame, _ = crop_roi(frame, roi_label)
+
+    # Verifica se o frame está nítido o suficiente para tentar OCR (evita motion blur)
+    if is_frame_blurry(ocr_frame):
+        print("⏭️ [OCR] Frame borrado (motion blur). Pulando OCR neste ciclo.")
+        return "NÃO IDENTIF.", 0, []
 
     # 1. Tenta usar o Pytesseract (Windows / Raspberry Pi / Mac com Tesseract instalado)
     if HAS_PYTESSERACT:
@@ -51,17 +111,17 @@ def analyze_box_ocr(frame, registered_boxes=None):
                         pytesseract.pytesseract.tesseract_cmd = p
                         break
 
-            img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            img_rgb = cv2.cvtColor(ocr_frame, cv2.COLOR_BGR2RGB)
             output = pytesseract.image_to_string(img_rgb)
             used_engine = "TESSERACT"
         except Exception as e:
-            print(f"⚠️ Pytesseract falhou (verifique se o executável do Tesseract-OCR está instalado): {e}")
+            print(f"⚠️ Pytesseract falhou: {e}")
 
-    # 2. Se o Pytesseract falhar ou não estiver disponível, tenta o OCR nativo do Mac se estiver em macOS
+    # 2. Se o Pytesseract falhar ou não estiver disponível, tenta o OCR nativo do Mac
     if not output.strip() and sys.platform == "darwin":
         if os.path.exists(OCR_PATH):
             os.makedirs(os.path.dirname(TEMP_FRAME_PATH), exist_ok=True)
-            cv2.imwrite(TEMP_FRAME_PATH, frame)
+            cv2.imwrite(TEMP_FRAME_PATH, ocr_frame)
             
             try:
                 res = subprocess.run([OCR_PATH, TEMP_FRAME_PATH], capture_output=True, text=True, timeout=5.0)
@@ -69,183 +129,197 @@ def analyze_box_ocr(frame, registered_boxes=None):
                 used_engine = "MAC_VISION"
             except Exception as e:
                 print(f"⚠️ Erro ao executar OCR nativo Mac fallback: {e}")
-        else:
-            print(f"❌ Fallback Mac: Executável OCR não encontrado em {OCR_PATH}")
 
-    output_upper = output.upper() if output else ""
-    if output_upper.strip():
-        print(f"🔍 [OCR] Texto lido com sucesso usando a engine {used_engine}!")
-
-    # 3. Processa a saída para achar modelo/marca e peso
-    detected_weights = []
-    # Procura por pesos explícitos (ex: "13KG", "15 KG", etc.)
-    for w in [18, 16, 15, 13, 12, 10, 5]:
-        if f"{w}KG" in output_upper or f"{w} KG" in output_upper or f" {w} KG" in output_upper:
-            detected_weights.append(w)
-            
-    detected_weight = detected_weights[0] if detected_weights else 0
-    detected_model = "NÃO IDENTIF."
-
-    # Matching dinâmico com caixas cadastradas no Electron
-    if registered_boxes:
-        # Ordena caixas pelo comprimento do nome em ordem decrescente para priorizar nomes específicos/compostos
-        sorted_boxes = sorted(registered_boxes, key=lambda x: len(str(x.get('name', ''))), reverse=True)
-        normalized_output = remove_accents(output_upper)
-        for box in sorted_boxes:
-            box_name = remove_accents(str(box.get('name', ''))).upper()
-            if box_name and box_name in normalized_output:
-                detected_model = box.get('name')
-                if detected_weight == 0:
-                    detected_weight = box.get('weight_kg', 0)
-                break
-
-    # Fallbacks fixos se nenhum registro dinâmico bater (retrocompatibilidade)
-    if detected_model == "NÃO IDENTIF.":
-        if "DELISSIUM" in output_upper:
-            detected_model = "Delissium"
-            if detected_weight == 0:
-                detected_weight = 15
-        elif "SAMBA" in output_upper:
-            if "+DOCE" in output_upper or "DOCE" in output_upper:
-                detected_model = "Samba +Doce"
-            else:
-                detected_model = "Samba Preta"
-            if detected_weight == 0:
-                detected_weight = 13
-        elif "VERDE" in output_upper:
-            detected_model = "Caixa Verde"
-            if detected_weight == 0:
-                detected_weight = 13
-        elif "GENERICA" in output_upper or "GENÉRICA" in output_upper:
-            detected_model = "Generica"
-            if detected_weight == 0:
-                detected_weight = 18
-        elif "NERO" in output_upper:
-            detected_model = "Nero"
-            if detected_weight == 0:
-                detected_weight = 15
-        elif "COOPYFRUTAS" in output_upper:
-            detected_model = "Coopyfrutas"
-            if detected_weight == 0:
-                detected_weight = 13
-        elif "MIX MELON" in output_upper:
-            detected_model = "Mix Melon"
-            if detected_weight == 0:
-                detected_weight = 13
-            
-    return detected_model, detected_weight, detected_weights
-
-def is_solid_green_frame(frame):
-    if frame is None:
-        return False
-    # OpenCV uses BGR. Channels: 0=Blue, 1=Green, 2=Red. Mean returns (B, G, R, Alpha)
-    mean_b, mean_g, mean_r, _ = cv2.mean(frame)
-    # Virtual camera standby screens or driver failures often output a solid green frame (G > 150, B/R < 60)
-    if mean_g > 150 and mean_b < 60 and mean_r < 60:
-        std_dev = np.std(frame)
-        if std_dev < 30: # very low variance, i.e., solid uniform color
-            return True
-    return False
-
-def count_fruits(frame, fruit_type):
-    """
-    Identifica e conta melões/melancias usando filtragem de cores HSV
-    e transformada de círculos/contornos.
-    """
-    if frame is None:
-        return 0, frame
-
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    fruit_type = str(fruit_type).upper()
+    # Limpeza e pós-processamento do texto extraído
+    lines = [line.strip() for line in output.split('\n') if line.strip()]
+    full_text = " ".join(lines)
     
-    # Define intervalos HSV para segmentar as cores da fruta
-    if "MELON" in fruit_type or "MELAO" in fruit_type or "MELÃO" in fruit_type:
-        # Canal amarelo/laranja para melão amarelo
-        lower_color = np.array([10, 40, 40])
-        upper_color = np.array([40, 255, 255])
+    # ── EXTRAÇÃO ESTRUTURADA DE DADOS DA ETIQUETA (VARIEDADE, LOTE, PESO, PRODUTOR) ──
+    extracted_data = parse_label_text(full_text, lines)
+    
+    print(f"🔍 [OCR - {used_engine}] Texto Bruto: '{full_text}'")
+    print(f"📋 [OCR] Dados Extraídos: {extracted_data}")
+
+    return full_text, len(lines), lines, extracted_data
+
+def parse_label_text(full_text, lines):
+    """
+    Analisa o texto extraído da etiqueta e tenta identificar campos chave de rastreabilidade:
+    - Variedade (ex: Palmer, Tommy, Kent, Keitt, Tommy Atkins, Espada, Haden)
+    - Lote / Código (ex: Lote 1234, LOTE-99, L: 884)
+    - Peso Liquido / Bruto (ex: 4.5kg, 4,5 kg, 5KG)
+    - Produtor / Fazenda (ex: Fazenda Santa Maria, Sitio Sol)
+    """
+    data = {
+        "variedade": None,
+        "lote": None,
+        "peso": None,
+        "produtor": None,
+        "calibre": None
+    }
+    
+    text_clean = remove_accents(full_text.upper())
+    
+    # Listas de variedades comuns de frutas (manga, uva, citros, etc.)
+    varieties = [
+        "PALMER", "TOMMY", "TOMMY ATKINS", "KENT", "KEITT", "HADEN", "ESPADA", "ROSA", "MAGITA",
+        "VALENCIA", "PEAR", "THOMPSON", "CRIMSON", "ARRA", "ITALIA", "NUBIA", "VICTORIA"
+    ]
+    for v in varieties:
+        if v in text_clean:
+            data["variedade"] = v
+            break
+
+    # Padrão Regex básico para Lote (ex: LOTE 1234, LOTE: 456, L-789)
+    import re
+    lote_match = re.search(r'(?:LOTE|LOT|LT)[\s\:\-]*([A-Z0-9\-]{2,12})', text_clean)
+    if lote_match:
+        data["lote"] = lote_match.group(1)
+
+    # Padrão Regex para Peso (ex: 4.5KG, 4,2 KG, 5 KG)
+    peso_match = re.search(r'(\d+[[\.\,]\d+]?\s*KG)', text_clean)
+    if peso_match:
+        data["peso"] = peso_match.group(1)
+
+    # Padrão Regex para Calibre / Contagem (ex: CALIBRE 10, CAL: 12, CAT 1)
+    calibre_match = re.search(r'(?:CALIBRE|CAL|CAT)[\s\:\-]*(\d{1,2})', text_clean)
+    if calibre_match:
+        data["calibre"] = calibre_match.group(1)
+
+    # Tentativa de identificar o Produtor se houver palavras como FAZENDA, SITIO, AGRICOLA, HORTI
+    for line in lines:
+        line_clean = remove_accents(line.upper())
+        if any(keyword in line_clean for keyword in ["FAZENDA", "SITIO", "AGRICOLA", "PRODUTOR", "FARM", "FRUTAS"]):
+            data["produtor"] = line
+            break
+
+    return data
+
+def process_image(frame):
+    """
+    Analisa o frame para contagem de frutas por Visão Computacional.
+    Se a ROI de frutas estiver ativada, corta e processa apenas a região delimitada.
+    """
+    global roi_fruits, roi_enabled
+
+    if frame is None:
+        return 0, None
+
+    h_orig, w_orig = frame.shape[:2]
+
+    # Corta a ROI de frutas se estiver ativada
+    if roi_enabled:
+        analysis_image, (rx, ry, rw, rh) = crop_roi(frame, roi_fruits)
     else:
-        # Canal verde para melancia/outros frutos verdes
-        lower_color = np.array([30, 30, 30])
-        upper_color = np.array([90, 255, 255])
-        
-    mask = cv2.inRange(hsv, lower_color, upper_color)
+        analysis_image = frame
+        rx, ry, rw, rh = 0, 0, w_orig, h_orig
+
+    # Redimensiona para processamento rápido mantendo proporção
+    h_crop, w_crop = analysis_image.shape[:2]
+    target_width = 640
+    scale = target_width / float(w_crop) if w_crop > 0 else 1.0
     
-    # Limpeza morfológica para separar frutos colados
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=2)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=2)
-    mask = cv2.GaussianBlur(mask, (5, 5), 0)
+    if scale != 1.0 and w_crop > 0:
+        resized = cv2.resize(analysis_image, (target_width, int(h_crop * scale)))
+    else:
+        resized = analysis_image.copy()
+
+    # 1. Filtro gaussiano para suavizar ruído de fundo
+    blurred = cv2.GaussianBlur(resized, (9, 9), 2)
     
-    # Encontra contornos na máscara binária
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # 2. Conversão para HSV (útil para detectar tons de frutas: verde, amarelo, vermelho)
+    hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
     
+    # 3. Intervalos de cores para frutas (Mangas/Uvas/Citros: tons amarelados, alaranjados e verdes)
+    # Amarelo/Laranja (Manga madura)
+    lower_yellow = np.array([10, 80, 80])
+    upper_yellow = np.array([35, 255, 255])
+    mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
+    
+    # Verde (Manga de vez / Uva / Citros)
+    lower_green = np.array([36, 50, 50])
+    upper_green = np.array([85, 255, 255])
+    mask_green = cv2.inRange(hsv, lower_green, upper_green)
+
+    # Vermelho/Alaranjado (Manga Tommy)
+    lower_red1 = np.array([0, 70, 70])
+    upper_red1 = np.array([9, 255, 255])
+    lower_red2 = np.array([170, 70, 70])
+    upper_red2 = np.array([180, 255, 255])
+    mask_red = cv2.inRange(hsv, lower_red1, upper_red1) | cv2.inRange(hsv, lower_red2, upper_red2)
+    
+    # Combina todas as máscaras de cor de frutos
+    fruit_mask = mask_yellow | mask_green | mask_red
+    
+    # 4. Operações morfológicas (Abertura e Fechamento) para isolar formas esféricas
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+    fruit_mask = cv2.morphologyEx(fruit_mask, cv2.MORPH_OPEN, kernel, iterations=2)
+    fruit_mask = cv2.morphologyEx(fruit_mask, cv2.MORPH_CLOSE, kernel, iterations=2)
+
+    # 5. Encontra contornos das frutas detectadas
+    contours, _ = cv2.findContours(fruit_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
     fruit_count = 0
     annotated_frame = frame.copy()
-    
+
+    # Área mínima do objeto para ser considerado uma fruta (evita falsos positivos)
+    min_contour_area = 1500 * (scale ** 2)
+
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        # Filtra ruídos pequenos e áreas excessivamente grandes
-        if 800 < area < 40000:
-            perimeter = cv2.arcLength(cnt, True)
-            if perimeter > 0:
-                circularity = 4 * np.pi * area / (perimeter * perimeter)
-                # Aceita formatos de circularidade de circular a elíptico (>= 0.45)
-                if circularity > 0.45:
-                    fruit_count += 1
-                    # Desenha contorno em azul
-                    cv2.drawContours(annotated_frame, [cnt], -1, (255, 0, 0), 2)
-                    
-                    # Coloca o índice no centro do fruto
-                    M = cv2.moments(cnt)
-                    if M["m00"] != 0:
-                        cX = int(M["m10"] / M["m00"])
-                        cY = int(M["m01"] / M["m00"])
-                        cv2.putText(annotated_frame, str(fruit_count), (cX - 10, cY + 10),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
-                                    
-    # Fallback: Transformada de Hough para círculos caso os contornos falhem totalmente (retornando 0)
-    if fruit_count == 0:
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        gray = cv2.medianBlur(gray, 5)
-        # Aumentamos o param2 de 30 para 45 para evitar detecção excessiva de ruído/falso-positivos no fundo
-        circles = cv2.HoughCircles(
-            gray, 
-            cv2.HOUGH_GRADIENT, 
-            dp=1.2, 
-            minDist=40, 
-            param1=50, 
-            param2=45, 
-            minRadius=25, 
-            maxRadius=120
-        )
-        if circles is not None:
-            circles = np.round(circles[0, :]).astype("int")
-            # Se encontrar mais do que 20 círculos via Hough, quase certamente é ruído/fundo
-            if len(circles) <= 20:
-                for (x, y, r) in circles:
-                    cv2.circle(annotated_frame, (x, y), r, (0, 255, 0), 2)
-                    fruit_count += 1
-                    cv2.putText(annotated_frame, f"H{fruit_count}", (x - 10, y + 5),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-            else:
-                print(f"⚠️ HoughCircles detectou excesso de círculos ({len(circles)}). Provável ruído. Ignorando fallback Hough.")
+        if area > min_contour_area:
+            fruit_count += 1
+            
+            # Converte as coordenadas do contorno redimensionado de volta para o frame original
+            # 1. Escala de volta para a ROI
+            cnt_roi = (cnt / scale).astype(np.int32)
+            # 2. Desloca as coordenadas para o offset da ROI no frame completo
+            cnt_full = cnt_roi + np.array([rx, ry])
+            
+            # Desenha os contornos e caixa delimitadora no frame original
+            x, y, w_box, h_box = cv2.boundingRect(cnt_full)
+            cv2.rectangle(annotated_frame, (x, y), (x + w_box, y + h_box), (0, 255, 0), 2)
+            cv2.circle(annotated_frame, (x + w_box // 2, y + h_box // 2), 4, (0, 0, 255), -1)
+            cv2.putText(annotated_frame, f"Fruta #{fruit_count}", (x, max(20, y - 8)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-    # Limite prático de segurança: calibres de melão/melancia reais são no máximo 15 (raramente 18)
-    # Se der mais de 20, com certeza é ruído (ex: caixa com textura/fundo) ou a tela verde/mismatch.
-    if fruit_count > 20:
-        print(f"⚠️ Calibre detectado muito alto ({fruit_count}). Provável ruído ou erro de leitura. Descartando.")
-        fruit_count = 0
-        annotated_frame = frame.copy()
-        cv2.rectangle(annotated_frame, (5, 10), (350, 70), (0, 0, 0), -1)
-        cv2.putText(annotated_frame, "CALIBRE: NAO IDENTIF.", (15, 55), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
-    else:
-        # Cria caixa visual do calibre na tela do visor
-        cv2.rectangle(annotated_frame, (5, 10), (350, 70), (0, 0, 0), -1)
-        cv2.putText(annotated_frame, f"CALIBRE: {fruit_count}" if fruit_count > 0 else "CALIBRE: NAO IDENTIF.", 
-                    (15, 55), cv2.FONT_HERSHEY_SIMPLEX, 1.2 if fruit_count == 0 else 1.5, 
-                    (0, 255, 0) if fruit_count > 0 else (0, 0, 255), 3)
+    # Desenha as caixas das ROIs ativas no frame anotado para feedback visual do operador
+    if roi_enabled:
+        # ROI de frutas (Verde Limão)
+        fx, fy, fw, fh = int(roi_fruits["x"]*w_orig), int(roi_fruits["y"]*h_orig), int(roi_fruits["w"]*w_orig), int(roi_fruits["h"]*h_orig)
+        cv2.rectangle(annotated_frame, (fx, fy), (fx + fw, fy + fh), (50, 255, 50), 2)
+        cv2.putText(annotated_frame, "ROI FRUTAS", (fx + 5, fy + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (50, 255, 50), 2)
+
+        # ROI de etiqueta (Ciano)
+        lx, ly, lw, lh = int(roi_label["x"]*w_orig), int(roi_label["y"]*h_orig), int(roi_label["w"]*w_orig), int(roi_label["h"]*h_orig)
+        cv2.rectangle(annotated_frame, (lx, ly), (lx + lw, ly + lh), (255, 255, 0), 2)
+        cv2.putText(annotated_frame, "ROI ETIQUETA / OCR", (lx + 5, ly + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
 
     return fruit_count, annotated_frame
+
+def open_camera(index):
+    """Abre a câmera no índice fornecido testando backends compatíveis com Windows (CAP_DSHOW, CAP_MSMF) e Linux/Mac."""
+    if sys.platform == "win32":
+        try:
+            cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+            if cap is not None and cap.isOpened():
+                return cap
+            if cap is not None:
+                cap.release()
+        except Exception:
+            pass
+
+        try:
+            cap = cv2.VideoCapture(index, cv2.CAP_MSMF)
+            if cap is not None and cap.isOpened():
+                return cap
+            if cap is not None:
+                cap.release()
+        except Exception:
+            pass
+
+    cap = cv2.VideoCapture(index)
+    return cap
 
 camera_change_requested = False
 target_camera_index = 0
@@ -275,14 +349,14 @@ def video_loop():
             
             # Tenta abrir no índice atual
             print(f"📡 Tentando abrir câmera no índice {current_index}...")
-            cap = cv2.VideoCapture(current_index)
+            cap = open_camera(current_index)
             if not cap.isOpened():
                 # Se falhar, procura outros índices disponíveis
                 next_index_found = False
                 for idx in tried_indices:
                     if idx != current_index:
                         print(f"🔄 Câmera no índice {current_index} falhou. Tentando índice alternativo {idx}...")
-                        test_cap = cv2.VideoCapture(idx)
+                        test_cap = open_camera(idx)
                         if test_cap.isOpened():
                             cap = test_cap
                             current_index = idx
@@ -318,7 +392,7 @@ def video_loop():
                     for idx in tried_indices:
                         if idx != current_index:
                             print(f"🔄 Testando índice alternativo {idx} contra tela verde...")
-                            test_cap = cv2.VideoCapture(idx)
+                            test_cap = open_camera(idx)
                             if test_cap.isOpened():
                                 test_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
                                 test_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -336,7 +410,7 @@ def video_loop():
                     if not found_valid:
                         # Se nenhuma alternativa prestou, volta para a primeira por segurança
                         print(f"⚠️ Nenhuma câmera alternativa sem tela verde encontrada. Mantendo índice {current_index} por fallback.")
-                        cap = cv2.VideoCapture(current_index)
+                        cap = open_camera(current_index)
                         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
                         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         
@@ -349,151 +423,154 @@ def video_loop():
         with lock:
             current_frame = frame.copy()
             
-        time.sleep(0.03) # Limita a ~30 fps para não usar muita CPU
-
-global_registered_boxes = []
-last_box_model = "NÃO IDENTIF."
-last_detected_weight = 0
-last_detected_weights = []
-
-def ocr_worker():
-    global last_box_model, last_detected_weight, last_detected_weights, global_registered_boxes
-    while True:
-        frame_copy = None
+        # Processa contagem automática de frutas a cada frame
+        count, _ = process_image(frame)
         with lock:
-            if current_frame is not None:
-                frame_copy = current_frame.copy()
+            global current_count
+            current_count = count
             
-        if frame_copy is not None:
-            try:
-                # OCR em background usa as caixas cadastradas recebidas do Electron
-                model, weight, weights = analyze_box_ocr(frame_copy, global_registered_boxes)
-                if model != "NÃO IDENTIF.":
-                    with lock:
-                        last_box_model = model
-                        last_detected_weight = weight
-                        last_detected_weights = weights
-            except Exception as e:
-                print(f"⚠️ Erro na thread de OCR: {e}")
-        # Roda OCR a cada 1.2s em segundo plano para não pegar muita CPU
-        time.sleep(1.2)
+        time.sleep(0.03)
 
-@app.route('/set_camera', methods=['POST'])
-def set_camera():
-    global camera_change_requested, target_camera_index
-    data = request.get_json(silent=True) or {}
-    index = data.get("index")
-    if index is not None:
-        try:
-            target_camera_index = int(index)
-            camera_change_requested = True
-            print(f"🔄 Solicitada mudança manual de câmera para o índice: {target_camera_index}")
-            return jsonify({"ok": True, "message": f"Mudando para canal {target_camera_index}"})
-        except ValueError:
-            return jsonify({"ok": False, "message": "Índice de câmera inválido"}), 400
-    return jsonify({"ok": False, "message": "Parâmetro 'index' em falta"}), 400
-
-@app.route('/analyze', methods=['POST'])
-def analyze():
-    global current_frame, global_registered_boxes
-    data = request.get_json(silent=True) or {}
-    fruit = str(data.get("fruit", "")).upper()
-    registered_boxes = data.get("registered_boxes", [])
-
-    # Atualiza as caixas cadastradas na variável global para uso do background OCR worker
-    if registered_boxes:
-        global_registered_boxes = registered_boxes
-
-    frame_copy = None
-    with lock:
-        if current_frame is not None:
-            frame_copy = current_frame.copy()
-            
-    if frame_copy is not None:
-        try:
-            # Conta as frutas e gera o frame anotado (MUITO RÁPIDO, ~20ms)
-            count, annotated_frame = count_fruits(frame_copy, fruit)
-            
-            # Atualiza o visor com o frame anotado
-            with lock:
-                current_frame = annotated_frame.copy()
-        except Exception as e:
-            print(f"⚠️ Falha durante a análise síncrona: {e}")
-            count = 0
-            
-        # Usa os dados do OCR que foram lidos em background para responder instantaneamente
-        with lock:
-            box_model = last_box_model
-            detected_weight = last_detected_weight
-            detected_weights = list(last_detected_weights)
-    else:
-        # Fallback para o estado em cache
-        with lock:
-            count = 0
-            box_model = last_box_model
-            detected_weight = last_detected_weight
-            detected_weights = list(last_detected_weights)
-        
-    # Lógica de peso condicional para caixas Samba
-    if box_model == "Samba +Doce" or (box_model == "Samba Preta" and 16 in detected_weights and 15 in detected_weights):
-        if "MELANCIA" in fruit or "WATERMELON" in fruit:
-            detected_weight = 16
-        else:
-            detected_weight = 15
-    elif box_model == "Samba Preta" and not detected_weights:
-        detected_weight = 13
-        
-    print(f"✅ Análise instantânea disparada pelo leitor. Fruta: {fruit} | Retornando calibre: {count} | Caixa: {box_model} | Peso: {detected_weight}")
-    
-    return jsonify({
-        "ok": True,
-        "caliber": f"CALIBRE {count}" if count > 0 else "NÃO IDENTIF.",
-        "count": count,
-        "confidence": 0.95 if count > 0 else 0.0,
-        "box_model": box_model,
-        "detected_weight": detected_weight
-    })
+def is_solid_green_frame(frame):
+    """Verifica se a imagem capturada é uma tela verde sólida (comum em câmeras virtuais do Windows/OBS sem sinal)"""
+    if frame is None or frame.size == 0:
+        return False
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    # Canal H do verde fica entre ~35 e 85
+    mean_h = np.mean(hsv[:, :, 0])
+    mean_s = np.mean(hsv[:, :, 1])
+    std_h = np.std(hsv[:, :, 0])
+    # Se o matiz médio for verde (35..85), a saturação for alta e o desvio padrão do matiz for muito baixo, é tela verde
+    return (40 <= mean_h <= 80) and (mean_s > 100) and (std_h < 10)
 
 def generate_frames():
+    global current_frame
     while True:
         with lock:
-            frame = current_frame
-            
-        if frame is None:
+            if current_frame is None:
+                frame_to_send = None
+            else:
+                # Gera o frame anotado com caixas delimitadoras e ROIs visíveis
+                _, annotated = process_image(current_frame)
+                frame_to_send = annotated
+
+        if frame_to_send is None:
             time.sleep(0.1)
             continue
-            
-        # Codifica o frame como JPEG
-        ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
+
+        ret, buffer = cv2.imencode('.jpg', frame_to_send, [cv2.IMWRITE_JPEG_QUALITY, 80])
         if not ret:
             continue
             
         frame_bytes = buffer.tobytes()
-        
-        # Formato multipart para o navegador renderizar como vídeo contínuo
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-               
-        time.sleep(0.05) # Limita stream da web para ~20 fps
+
+# ─── ROTAS DA API FLASK ───────────────────────────────────────────────────────
+
+@app.route('/health', methods=['GET'])
+def health():
+    """Rota de verificação de status do serviço Python"""
+    return jsonify({
+        "status": "online",
+        "service": "PRODTEC Computer Vision Service",
+        "has_pytesseract": HAS_PYTESSERACT,
+        "platform": sys.platform,
+        "roi_enabled": roi_enabled,
+        "current_camera_index": target_camera_index
+    })
+
+@app.route('/set_camera', methods=['POST'])
+def set_camera():
+    """
+    Alterna manualmente o índice da câmera de vídeo em tempo de execução.
+    Payload JSON: { "index": 0 } ou { "index": 1 }, etc.
+    """
+    global camera_change_requested, target_camera_index
+    data = request.json or {}
+    new_index = data.get("index", 0)
+    
+    try:
+        new_index = int(new_index)
+        target_camera_index = new_index
+        camera_change_requested = True
+        print(f"📥 Solicitação recebida via API para mudar para a câmera índice {new_index}")
+        return jsonify({"success": True, "target_index": new_index, "message": f"Mudando para câmera #{new_index}..."})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+@app.route('/set_roi', methods=['POST'])
+def set_roi():
+    """
+    Ajusta dinamicamente as regiões de interesse (ROI) para Frutas e Etiqueta.
+    Payload JSON:
+    {
+      "enabled": true,
+      "fruits": { "x": 0.05, "y": 0.02, "w": 0.90, "h": 0.60 },
+      "label":  { "x": 0.05, "y": 0.62, "w": 0.90, "h": 0.35 }
+    }
+    """
+    global roi_fruits, roi_label, roi_enabled
+    data = request.json or {}
+    
+    if "enabled" in data:
+        roi_enabled = bool(data["enabled"])
+        
+    if "fruits" in data and isinstance(data["fruits"], dict):
+        roi_fruits.update(data["fruits"])
+        
+    if "label" in data and isinstance(data["label"], dict):
+        roi_label.update(data["label"])
+
+    print(f"🎯 ROI Atualizado: Enabled={roi_enabled} | Fruits={roi_fruits} | Label={roi_label}")
+
+    return jsonify({
+        "success": True,
+        "roi_enabled": roi_enabled,
+        "roi_fruits": roi_fruits,
+        "roi_label": roi_label
+    })
+
+@app.route('/count', methods=['GET'])
+def get_count():
+    """Retorna a contagem atual de frutas em tempo real"""
+    with lock:
+        count = current_count
+    return jsonify({"count": count, "success": True})
+
+@app.route('/ocr', methods=['POST'])
+def trigger_ocr():
+    """Rota disparada pelo botão 'Ler Etiqueta' para processar a etiqueta na ROI atual"""
+    with lock:
+        if current_frame is None:
+            return jsonify({"success": False, "error": "Nenhum frame da câmera capturado ainda"}), 400
+        frame_copy = current_frame.copy()
+
+    full_text, line_count, lines, extracted_data = run_ocr(frame_copy)
+
+    return jsonify({
+        "success": True,
+        "full_text": full_text,
+        "line_count": line_count,
+        "lines": lines,
+        "extracted_data": extracted_data
+    })
 
 @app.route('/video_feed')
 def video_feed():
+    """Stream MJPEG do visor da câmera em tempo real para ser exibido na Tag <img> do frontend"""
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 if __name__ == '__main__':
-    print("\n" + "="*50)
-    print("🤖 SERVIÇO DE VISÃO COMPUTACIONAL ATIVO (MODO INSTANTÂNEO + BACKGROUND OCR)")
-    print("📡 Aguardando comandos em: http://localhost:5000/analyze")
-    print("🎥 Stream visual em: http://localhost:5000/video_feed")
-    print("="*50 + "\n")
-    
-    # Inicia a thread de OCR em segundo plano
-    ocr_thread = threading.Thread(target=ocr_worker, daemon=True)
-    ocr_thread.start()
-    
-    # Inicia a API Flask em uma thread separada
-    api_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False), daemon=True)
-    api_thread.start()
-    
-    # O macOS exige que o acesso à câmera (cv2.VideoCapture) seja feito na MAIN THREAD
-    video_loop()
+    # Inicia a captura e o loop de vídeo em uma thread separada para não bloquear o servidor Flask
+    if sys.platform != "darwin":
+        t = threading.Thread(target=video_loop, daemon=True)
+        t.start()
+        print("🚀 Servidor Flask de Visão Computacional iniciado na porta 5001...")
+        app.run(host='0.0.0.0', port=5001, debug=False, threaded=True)
+    else:
+        # O macOS exige que o acesso à câmera (cv2.VideoCapture) seja feito na MAIN THREAD
+        t_flask = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5001, debug=False, threaded=True), daemon=True)
+        t_flask.start()
+        print("🚀 Servidor Flask iniciado em segundo plano (Mac main-thread video loop)...")
+        video_loop()

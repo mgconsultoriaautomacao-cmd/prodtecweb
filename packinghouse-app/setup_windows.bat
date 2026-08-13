@@ -3,7 +3,7 @@ title PRODTEC Packinghouse — Instalador de Visao Computacional (IA)
 
 echo.
 echo ======================================================================
-echo          PRODTEC Packinghouse — Instalador Visao Computacional v2.3
+echo          PRODTEC Packinghouse — Instalador Visao Computacional v2.4
 echo          MG Consultoria e Automacao
 echo ======================================================================
 echo.
@@ -96,12 +96,13 @@ exit /b 1
 echo [OK] Executavel do Python encontrado: %PYCMD%
 echo.
 
-:: 2. Atualizar PIP e instalar módulos de Visão Computacional
-echo [PASSO 2/4] Atualizando gerenciador de pacotes PIP...
+:: 2. Atualizar PIP e instalar módulos de Visão Computacional de forma limpa
+echo [PASSO 2/4] Garantindo pacotes de Visao Computacional sem conflito de DLL...
+%PYCMD% -m pip uninstall -y opencv-python opencv-contrib-python opencv-python-headless 2>nul
 %PYCMD% -m pip install --upgrade pip
 
 echo.
-echo [PASSO 3/4] Instalando pacotes de Visao Computacional (OpenCV, Flask, NumPy)...
+echo [PASSO 3/4] Instalando pacotes (OpenCV Headless, Flask, NumPy, PyTesseract)...
 echo.
 
 %PYCMD% -m pip install --user --prefer-binary opencv-python-headless numpy flask flask-cors pytesseract requests
