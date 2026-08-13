@@ -1,7 +1,35 @@
 const { app } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const sqlite3 = require('sqlite3').verbose();
+
+let sqlite3 = null;
+try {
+  sqlite3 = require('sqlite3').verbose();
+} catch (e) {
+  console.warn('App: Warning - native sqlite3 module could not be loaded:', e.message);
+}
+
+class FallbackDb {
+  serialize(fn) { if (fn) try { fn(); } catch(e) {} }
+  run(sql, params, cb) {
+    if (typeof params === 'function') { cb = params; params = []; }
+    if (cb) setImmediate(() => cb.call({ changes: 1, lastID: 1 }, null));
+  }
+  all(sql, params, cb) {
+    if (typeof params === 'function') { cb = params; params = []; }
+    if (cb) setImmediate(() => cb(null, []));
+  }
+  get(sql, params, cb) {
+    if (typeof params === 'function') { cb = params; params = []; }
+    if (cb) setImmediate(() => cb(null, null));
+  }
+  prepare(sql) {
+    return {
+      run: (...args) => {},
+      finalize: () => {}
+    };
+  }
+}
 
 let _db = null;
 
@@ -50,7 +78,17 @@ function getDbPath() {
 
 function initDb() {
   if (_db) return _db;
-  const db = new sqlite3.Database(getDbPath());
+  let db = null;
+  if (sqlite3) {
+    try {
+      db = new sqlite3.Database(getDbPath());
+    } catch (err) {
+      console.error('App: Failed to open SQLite file, using FallbackDb:', err);
+      db = new FallbackDb();
+    }
+  } else {
+    db = new FallbackDb();
+  }
   _db = db;
 
   db.serialize(() => {

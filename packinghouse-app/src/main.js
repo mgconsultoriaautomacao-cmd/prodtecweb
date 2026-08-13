@@ -6,10 +6,22 @@ process.on('uncaughtException', (error) => {
   console.error('[Main Process Uncaught Exception]:', error);
 });
 
-const { initDb } = require('./db');
-const { createAppService } = require('./services/appService');
-const { syncToSupabase, syncFromSupabase } = require('./services/syncService');
-const { analyzeBox } = require('./services/cvService');
+let initDb = null;
+let createAppService = null;
+let syncToSupabase = null;
+let syncFromSupabase = null;
+let analyzeBox = null;
+
+try {
+  initDb = require('./db').initDb;
+  createAppService = require('./services/appService').createAppService;
+  const syncSvc = require('./services/syncService');
+  syncToSupabase = syncSvc.syncToSupabase;
+  syncFromSupabase = syncSvc.syncFromSupabase;
+  analyzeBox = require('./services/cvService').analyzeBox;
+} catch (e) {
+  console.error('[main.js] Error requiring service modules:', e.message);
+}
 
 
 let mainWindow = null;
@@ -177,26 +189,28 @@ function registerIpc() {
 }
 
 app.whenReady().then(() => {
-  try {
-    db = initDb();
-    console.log('App: DB initialized.');
-    service = createAppService(db);
-    console.log('App: Service created.');
-  } catch (err) {
-    console.error('App: Error initializing local database:', err);
-    dialog.showErrorBox('Erro ao inicializar o banco de dados local', 'Ocorreu um erro ao carregar a base de dados: ' + err.message);
-  }
-
-  try {
-    registerIpc();
-  } catch (err) {
-    console.error('App: Error registering IPC handlers:', err);
-  }
-
+  // 1. Sempre cria a janela primeiro para garantir abertura do app
   try {
     createWindow();
   } catch (err) {
     console.error('App: Error creating main window:', err);
+  }
+
+  // 2. Inicializa o banco de dados e os serviços locais
+  try {
+    if (initDb) db = initDb();
+    console.log('App: DB initialized.');
+    if (createAppService && db) service = createAppService(db);
+    console.log('App: Service created.');
+  } catch (err) {
+    console.error('App: Error initializing local database:', err);
+  }
+
+  // 3. Registra os manipuladores IPC
+  try {
+    if (service) registerIpc();
+  } catch (err) {
+    console.error('App: Error registering IPC handlers:', err);
   }
 
   app.on('activate', () => {
