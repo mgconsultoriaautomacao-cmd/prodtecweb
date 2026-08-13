@@ -1,5 +1,10 @@
-const path = require('path');
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+
+// Tratamento global para evitar caixas de diálogo 'A JavaScript error occurred'
+process.on('uncaughtException', (error) => {
+  console.error('[Main Process Uncaught Exception]:', error);
+});
+
 const { initDb } = require('./db');
 const { createAppService } = require('./services/appService');
 const { syncToSupabase, syncFromSupabase } = require('./services/syncService');
@@ -230,7 +235,7 @@ app.whenReady().then(() => {
   }
 
   // Start CV Service (Python)
-  if (app.isPackaged || true) { // Run in both for now
+  try {
     const { spawn, exec } = require('child_process');
     const fs = require('fs');
     const pyPath = app.isPackaged 
@@ -303,9 +308,15 @@ app.whenReady().then(() => {
       return process.platform === 'win32' ? 'python' : 'python3';
     }
 
-    const pyExec = findPythonExecutable();
+    let pyExec = 'python';
+    try {
+      pyExec = findPythonExecutable() || (process.platform === 'win32' ? 'python' : 'python3');
+    } catch (e) {
+      console.error('App: Error finding Python executable:', e.message);
+    }
+
     const pyDir = path.dirname(pyPath);
-    const pyArgs = (pyExec.endsWith('py.exe') || pyExec === 'py') ? ['-3', '-u', pyPath] : ['-u', pyPath];
+    const pyArgs = (typeof pyExec === 'string' && (pyExec.endsWith('py.exe') || pyExec === 'py')) ? ['-3', '-u', pyPath] : ['-u', pyPath];
     
     console.log('App: Starting CV Service using', pyExec, 'with args:', pyArgs, 'at', pyPath, 'CWD:', pyDir);
     
@@ -351,8 +362,10 @@ app.whenReady().then(() => {
     
     app.on('will-quit', () => {
       console.log('App: Killing CV Service...');
-      pyProcess.kill();
+      try { pyProcess.kill(); } catch (e) {}
     });
+  } catch (err) {
+    console.error('App: Exception starting CV Service:', err);
   }
 });
 
