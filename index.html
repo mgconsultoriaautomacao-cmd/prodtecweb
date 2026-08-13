@@ -11595,6 +11595,13 @@ function deleteWebPlantioFromModal() {
 }
 
 async function loadCadernoCampo() {
+  // 0. Carregar Plantios Web
+  try {
+    await loadWebPlantios();
+  } catch(e) {
+    console.error('Erro ao carregar plantios em loadCadernoCampo:', e);
+  }
+
   // 1. Carregar MIP
   try {
     const { data: mipData, error: mipError } = await sb.from('caderno_campo_mip').select('*').eq('tenant_id', tenantId).order('data_vistoria', { ascending: false });
