@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const path = require('path');
 
 // Tratamento global para evitar caixas de diálogo 'A JavaScript error occurred'
 process.on('uncaughtException', (error) => {
