@@ -621,6 +621,34 @@ async function syncFromSupabase(db) {
       console.log(`Sync [down]: Parcels updated.`);
     }
 
+    // 5b. Sync Info Parcelas (Plantios do Caderno de Campo -> Parcelas Desktop)
+    const ipRes = await fetch(`${url}/rest/v1/info_parcelas?select=*${tenantFilter}&limit=5000`, {
+      headers: headers
+    });
+    if (ipRes.ok) {
+      const remIp = await ipRes.json();
+      console.log(`Sync [down]: Fetched ${remIp.length} info_parcelas (Cadastro de Plantio).`);
+      for (const ip of remIp) {
+        try {
+          const parcelCode = ip.parcela2 || `${ip.parcela || ''} ${ip.letra || ''}`.trim();
+          if (parcelCode) {
+            await dbRun(`
+              insert into parcels (code, active, remote_id, created_at, updated_at, synced)
+              values (?, ?, ?, ?, ?, 1)
+              on conflict(remote_id) do update set
+                code = excluded.code,
+                active = excluded.active,
+                updated_at = excluded.updated_at,
+                synced = 1
+            `, [parcelCode, ip.ativo !== false ? 1 : 0, ip.id, Date.now(), ip.updated_at ? new Date(ip.updated_at).getTime() : Date.now()]);
+          }
+        } catch (err) {
+          console.error(`Sync [down]: Error saving info_parcela ${ip.parcela2}:`, err.message);
+        }
+      }
+      console.log(`Sync [down]: Info Parcelas (Cadastro de Plantio) sincronizadas com sucesso.`);
+    }
+
     // 6. Sync Fruits
     const fRes = await fetch(`${url}/rest/v1/fruits?select=*${tenantFilter}&limit=5000`, {
       headers: headers

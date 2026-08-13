@@ -376,12 +376,21 @@
     async function refreshAdmin() {
       const { data: emps } = await supabaseClient.from('employees').select('*').order('name');
       const { data: ps } = await supabaseClient.from('parcels').select('*').order('code');
+      const { data: ips } = await supabaseClient.from('info_parcelas').select('*').order('created_at', { ascending: false });
       const { data: vs } = await supabaseClient.from('varieties').select('*').order('name');
       const { data: maps } = await supabaseClient.from('barcode_mappings').select('*, employees(name), box_weights(name)');
       const { data: weights } = await supabaseClient.from('box_weights').select('*');
 
+      const allParcels = [...(ps || [])];
+      (ips || []).forEach(ip => {
+        const code = ip.parcela2 || `${ip.parcela || ''} ${ip.letra || ''}`.trim();
+        if (code && !allParcels.some(p => p.code === code)) {
+          allParcels.push({ id: ip.id, code: code, isInfo: true });
+        }
+      });
+
       document.getElementById('empList').innerHTML = (emps || []).map(e => `<div class="card" style="margin-bottom:5px; padding:10px; display:flex; justify-content:space-between;"><span>${e.name} (${e.role})</span><button onclick="deleteObj('employees', '${e.id}', refreshAdmin)">X</button></div>`).join('');
-      document.getElementById('parcelList').innerHTML = (ps || []).map(x => `<div class="badge" style="background:rgba(255,255,255,0.1); display:flex; gap:5px;">${x.code}<span onclick="deleteObj('parcels', '${x.id}', refreshAdmin)" style="cursor:pointer">x</span></div>`).join('');
+      document.getElementById('parcelList').innerHTML = allParcels.map(x => `<div class="badge" style="background:rgba(255,255,255,0.1); display:flex; gap:5px;">${x.code}${x.isInfo ? '' : `<span onclick="deleteObj('parcels', '${x.id}', refreshAdmin)" style="cursor:pointer">x</span>`}</div>`).join('');
       document.getElementById('varList').innerHTML = (vs || []).map(x => `<div class="badge" style="background:rgba(255,255,255,0.1); display:flex; gap:5px;">${x.name}<span onclick="deleteObj('varieties', '${x.id}', refreshAdmin)" style="cursor:pointer">x</span></div>`).join('');
       
       document.getElementById('mapEmployee').innerHTML = emps.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
