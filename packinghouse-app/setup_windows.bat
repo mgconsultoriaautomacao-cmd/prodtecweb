@@ -3,7 +3,7 @@ title PRODTEC Packinghouse — Instalador de Visao Computacional (IA)
 
 echo.
 echo ======================================================================
-echo          PRODTEC Packinghouse — Instalador Visao Computacional v2.2
+echo          PRODTEC Packinghouse — Instalador Visao Computacional v2.3
 echo          MG Consultoria e Automacao
 echo ======================================================================
 echo.
@@ -62,7 +62,10 @@ echo.
 set "PYURL=https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe"
 set "PYINSTALLER=%TEMP%\python_setup.exe"
 
-powershell -Command "(New-Object Net.WebClient).DownloadFile('%PYURL%', '%PYINSTALLER%')"
+curl.exe -sSL -A "Mozilla/5.0" -o "%PYINSTALLER%" "%PYURL%" 2>nul
+if not exist "%PYINSTALLER%" (
+    powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $wc = New-Object Net.WebClient; $wc.Headers.Add('User-Agent', 'Mozilla/5.0'); $wc.DownloadFile('%PYURL%', '%PYINSTALLER%')"
+)
 
 if exist "%PYINSTALLER%" (
     echo Executando instalador silencioso do Python 3.11...
@@ -123,15 +126,29 @@ if exist "%LOCALAPPDATA%\Programs\Tesseract-OCR\tesseract.exe" set TESS_FOUND=1
 if %TESS_FOUND%==1 (
     echo [OK] Tesseract-OCR instalado e pronto!
 ) else (
-    echo [!] Tesseract-OCR nao encontrado. Baixando instalador...
-    set TESS_URL=https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.3.3.20231005.exe
-    set TESS_INSTALLER=%TEMP%\tesseract_setup.exe
-    powershell -Command "(New-Object Net.WebClient).DownloadFile('%TESS_URL%', '%TESS_INSTALLER%')"
+    echo [!] Tesseract-OCR nao encontrado. Baixando instalador 64-bit...
+    set "TESS_URL=https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.3.3.20231005.exe"
+    set "TESS_URL2=https://github.com/UB-Mannheim/tesseract/releases/download/v5.3.3.20231005/tesseract-ocr-w64-setup-5.3.3.20231005.exe"
+    set "TESS_INSTALLER=%TEMP%\tesseract_setup.exe"
+    
+    echo  [1/2] Baixando Tesseract via curl...
+    curl.exe -sSL -A "Mozilla/5.0" -o "%TESS_INSTALLER%" "%TESS_URL%" 2>nul
+    
+    if not exist "%TESS_INSTALLER%" (
+        echo  [2/2] Baixando Tesseract via PowerShell / GitHub Mirror...
+        powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $wc = New-Object Net.WebClient; $wc.Headers.Add('User-Agent', 'Mozilla/5.0'); try { $wc.DownloadFile('%TESS_URL2%', '%TESS_INSTALLER%') } catch { $wc.DownloadFile('%TESS_URL%', '%TESS_INSTALLER%') }"
+    )
+    
     if exist "%TESS_INSTALLER%" (
-        echo Instalando Tesseract-OCR...
+        echo Executando instalador silencioso do Tesseract-OCR...
         "%TESS_INSTALLER%" /S
         del /f /q "%TESS_INSTALLER%" 2>nul
-        echo [OK] Tesseract-OCR instalado!
+        echo [OK] Tesseract-OCR instalado com sucesso!
+    ) else (
+        echo.
+        echo [!] Nao foi possivel baixar o Tesseract-OCR automaticamente.
+        echo     Baixe e instale manualmente em:
+        echo     https://github.com/UB-Mannheim/tesseract/wiki
     )
 )
 
