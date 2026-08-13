@@ -2111,6 +2111,11 @@
       </div>
 
       <div id="importDefPreviewContainer" style="display:none; margin-bottom:16px">
+        <div style="background:var(--input-bg); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:12px">
+          <div style="font-size:12px; font-weight:800; color:var(--blue); text-transform:uppercase; margin-bottom:8px; display:flex; align-items:center; gap:6px"><i data-lucide="columns" style="width:14px;height:14px"></i> Mapeamento de Colunas (De-Para da Planilha)</div>
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:8px" id="importDefMappingGrid"></div>
+        </div>
+
         <div style="font-size:12px; font-weight:700; color:var(--green); margin-bottom:8px" id="importDefCountMsg"></div>
         <div style="max-height:220px; overflow-y:auto; border:1px solid var(--border); border-radius:8px">
           <table style="width:100%; border-collapse:collapse; font-size:11px">
@@ -11647,6 +11652,139 @@ async function loadCadernoCampo() {
   }
 }
 
+function printPastaCampoMip(itemStr) {
+  const item = typeof itemStr === 'string' ? JSON.parse(decodeURIComponent(itemStr)) : itemStr;
+  const formattedDate = item.data_vistoria ? item.data_vistoria.split('-').reverse().join('/') : '—';
+  
+  const pragaFriendly = (item.praga || '').replace(/_/g, ' ').toUpperCase();
+  const mediaVal = parseFloat(item.media) || 0;
+  
+  let limiar = 1.0;
+  if (pragaFriendly.includes('LAGARTA')) limiar = 0.2;
+  if (pragaFriendly.includes('OÍDIO') || pragaFriendly.includes('MÍLDIO')) limiar = 0.0;
+  
+  const acimaLimiar = mediaVal > limiar;
+  const statusText = acimaLimiar ? 'RECOMENDA-SE CONTROLE' : 'SOB CONTROLE';
+  
+  // Buscar informações da parcela
+  const ip = (_infoParcelas || []).find(x => x.parcela2 === item.parcela || x.parcela === item.parcela);
+  const culturaStr = ip ? (ip.cultura || 'MELÃO').toUpperCase() : 'MELÃO';
+  const areaStr = ip && ip.area ? `${ip.area} ha` : '—';
+  const dataPlantioStr = ip && ip.plantio ? ip.plantio.split('-').reverse().join('/') : '—';
+
+  const printWin = window.open('', '_blank', 'width=900,height=1200');
+  if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>MIP — Ficha de Amostragem Fitossanitária</title>
+    <style>
+      @page { size: A4 portrait; margin: 8mm 10mm; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 8pt; line-height: 1.3; }
+      .sheet { width: 100%; }
+      .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+      .hdr-table td { border: 1px solid #000; padding: 3px 5px; font-size: 7.5pt; vertical-align: middle; }
+      .hdr-left { width: 50%; font-weight: bold; }
+      .hdr-right { width: 50%; font-family: 'Times New Roman', serif; font-size: 7.5pt; }
+      .main-title { font-family: 'Arial', sans-serif; font-size: 12pt; font-weight: bold; text-align: center; padding: 6px 0; border: 2px solid #000; margin-bottom: 8px; background: #f3f4f6; text-transform: uppercase; }
+      .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+      .grid-table td, .grid-table th { border: 1px solid #000; padding: 5px 7px; vertical-align: middle; }
+      .grid-table th { background: #f9fafb; font-weight: bold; text-align: center; }
+      .section-title { font-size: 9pt; font-weight: bold; margin: 12px 0 4px 0; padding-bottom: 2px; border-bottom: 1px solid #000; text-transform: uppercase; }
+      .pts-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+      .pts-table th, .pts-table td { border: 1px solid #000; padding: 6px; text-align: center; font-size: 9pt; }
+      .pts-table th { background: #f3f4f6; font-weight: bold; }
+      .status-box { border: 2px solid #000; padding: 8px; text-align: center; font-size: 10pt; font-weight: bold; margin-bottom: 12px; background: ${acimaLimiar ? '#fef2f2' : '#f0fdf4'}; color: ${acimaLimiar ? '#991b1b' : '#166534'}; }
+      .signatures-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 25px; }
+      .sig-box { border: 1px solid #000; padding: 8px; font-size: 7.5pt; background: #fafafa; display: flex; flex-direction: column; justify-content: space-between; height: 90px; }
+      .sig-line { margin-top: 20px; border-top: 1px dashed #000; text-align: center; padding-top: 3px; font-size: 7pt; font-weight: bold; }
+    </style>
+  </head>
+  <body onload="window.print()">
+    <div class="sheet">
+      <table class="hdr-table">
+        <tr>
+          <td class="hdr-left">ELABORADO, EMITIDO E REVISADO POR: EMANUELA MOREIRA</td>
+          <td class="hdr-right">DEPARTAMENTO: CAMPO</td>
+        </tr>
+        <tr>
+          <td class="hdr-left">AVALIADO POR: ADGF</td>
+          <td class="hdr-right">DOC: FICHA DE MONITORAMENTO E AMOSTRAGEM MIP</td>
+        </tr>
+        <tr>
+          <td class="hdr-left">APROVADO POR: ADGF</td>
+          <td class="hdr-right">EMISSÃO: 15/06/2026 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; VERSÃO: 01 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; COD: PC08</td>
+        </tr>
+      </table>
+
+      <div class="main-title">MANEJO INTEGRADO DE PRAGAS — FICHA DE AMOSTRAGEM (MIP)</div>
+
+      <table class="grid-table">
+        <tr>
+          <td style="width:25%;"><strong>PARCELA:</strong><br/><span style="font-size:10pt; font-weight:bold">${item.parcela || '—'}</span></td>
+          <td style="width:25%;"><strong>CULTURA:</strong><br/><span style="font-size:10pt; font-weight:bold">${culturaStr}</span></td>
+          <td style="width:25%;"><strong>VARIEDADE:</strong><br/>${item.variedade || '—'}</td>
+          <td style="width:25%;"><strong>DATA VISTORIA:</strong><br/><span style="font-size:10pt; font-weight:bold">${formattedDate}</span></td>
+        </tr>
+        <tr>
+          <td><strong>ÁREA PARCELA:</strong><br/>${areaStr}</td>
+          <td><strong>DATA PLANTIO:</strong><br/>${dataPlantioStr}</td>
+          <td colspan="2"><strong>PRAGA / DOENÇA MONITORADA:</strong><br/><span style="font-size:10pt; font-weight:bold">${pragaFriendly}</span></td>
+        </tr>
+      </table>
+
+      <div class="section-title">RESULTADOS DOS 10 PONTOS DE AMOSTRAGEM NO CAMPO</div>
+      <table class="pts-table">
+        <tr>
+          <th>Ponto 1</th><th>Ponto 2</th><th>Ponto 3</th><th>Ponto 4</th><th>Ponto 5</th>
+          <th>Ponto 6</th><th>Ponto 7</th><th>Ponto 8</th><th>Ponto 9</th><th>Ponto 10</th>
+          <th style="background:#e5e7eb; font-weight:bold">MÉDIA</th>
+        </tr>
+        <tr>
+          <td>${item.ponto1 ?? 0}</td><td>${item.ponto2 ?? 0}</td><td>${item.ponto3 ?? 0}</td><td>${item.ponto4 ?? 0}</td><td>${item.ponto5 ?? 0}</td>
+          <td>${item.ponto6 ?? 0}</td><td>${item.ponto7 ?? 0}</td><td>${item.ponto8 ?? 0}</td><td>${item.ponto9 ?? 0}</td><td>${item.ponto10 ?? 0}</td>
+          <td style="background:#e5e7eb; font-size:11pt; font-weight:bold">${mediaVal.toFixed(2)}</td>
+        </tr>
+      </table>
+
+      <div class="status-box">
+        AVALIAÇÃO TÉCNICA: ${statusText} (Limiar de Dano: ${limiar.toFixed(1)})
+      </div>
+
+      <div style="border:1px solid #000; padding:8px; margin-bottom:12px">
+        <strong>OBSERVAÇÕES DO PRAGUEIRO / AUDITORIA:</strong><br/>
+        ${item.observacoes || 'Nenhuma observação registrada na amostragem.'}
+      </div>
+
+      <div class="signatures-grid">
+        <div class="sig-box">
+          <div>
+            <strong>Monitor de Pragas (Pragueiro)</strong><br/>
+            Responsável pela amostragem de campo
+          </div>
+          <div class="sig-line">Assinatura Monitor de Campo</div>
+        </div>
+        <div class="sig-box">
+          <div>
+            <strong>Engenheiro Agrônomo / Resp. Técnico</strong><br/>
+            Validação Técnica do Manejo Fitossanitário
+          </div>
+          <div class="sig-line">Assinatura Responsável Técnico</div>
+        </div>
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+  
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
 function renderCcMipTable(list) {
   const tbody = $('ccMipTableBody');
   if (!tbody) return;
@@ -11667,23 +11805,26 @@ function renderCcMipTable(list) {
     
     const formattedDate = item.data_vistoria ? item.data_vistoria.split('-').reverse().join('/') : '—';
     const pragaFriendly = item.praga.replace(/_/g, ' ');
+    const itemStr = encodeURIComponent(JSON.stringify(item));
     
     return `
       <tr style="border-bottom:1px solid var(--border); font-size:13px">
         <td style="padding:12px 10px">${formattedDate}</td>
         <td style="padding:12px 10px; font-weight:600">${item.parcela}</td>
-        <td style="padding:12px 10px">${item.variedade}</td>
+        <td style="padding:12px 10px">${item.variedade || '—'}</td>
         <td style="padding:12px 10px; font-weight:500">${pragaFriendly}</td>
         <td style="padding:12px 10px; text-align:center; font-weight:700">${mediaVal.toFixed(2)}</td>
         <td style="padding:12px 10px; text-align:center">
           <span class="badge" style="background:${statusColor}; font-size:11px">${statusText}</span>
         </td>
-        <td style="padding:12px 10px; text-align:center">
+        <td style="padding:12px 10px; text-align:center; white-space:nowrap">
+          <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoMip('${itemStr}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Relatório MIP</button>
           <button class="danger" style="padding:4px 8px; font-size:11px" onclick="deleteMipRecord('${item.id}')">Excluir</button>
         </td>
       </tr>
     `;
   }).join('');
+  if (window.lucide) lucide.createIcons();
 }
 
 function renderCcOpTable(list) {
@@ -12004,6 +12145,10 @@ function handleDefensivosFile(event) {
   reader.readAsText(file, 'UTF-8');
 }
 
+let _importCSVLines = [];
+let _importCSVSeparator = ',';
+let _importCSVHeaders = [];
+
 function parseDefensivosCSVText(text) {
   const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
   if (lines.length <= 1) {
@@ -12011,40 +12156,95 @@ function parseDefensivosCSVText(text) {
     return;
   }
 
-  const separator = lines[0].includes(';') ? ';' : ',';
-  const headers = lines[0].split(separator).map(h => h.trim().toUpperCase().replace(/["']/g, ''));
+  _importCSVLines = lines;
+  _importCSVSeparator = lines[0].includes(';') ? ';' : ',';
+  _importCSVHeaders = lines[0].split(_importCSVSeparator).map(h => h.trim().toUpperCase().replace(/["']/g, ''));
 
+  const headers = _importCSVHeaders;
   const getColIdx = (nameArr) => {
     return headers.findIndex(h => nameArr.some(n => h.includes(n)));
   };
 
-  const pIdx = getColIdx(['PRODUTO', 'NOME', 'COMERCIAL']);
-  const iIdx = getColIdx(['INGREDIENTE', 'PRINCIPIO', 'ATIVO']);
-  const mIdx = getColIdx(['MAPA', 'REGISTRO']);
-  const aIdx = getColIdx(['ALVO', 'PRAGA', 'DOENCA']);
-  const dIdx = getColIdx(['DOSE', 'DOSAGEM']);
-  const uIdx = getColIdx(['UNIDADE']);
-  const cIdx = getColIdx(['CARENCIA', 'DIAS']);
-  const intIdx = getColIdx(['INTERVALO', 'REENTRADA']);
-  const culIdx = getColIdx(['CULTURA']);
+  const initialMapping = {
+    produto: getColIdx(['PRODUTO', 'NOME', 'COMERCIAL']),
+    ingrediente: getColIdx(['INGREDIENTE', 'PRINCIPIO', 'ATIVO']),
+    mapa: getColIdx(['MAPA', 'REGISTRO']),
+    alvo: getColIdx(['ALVO', 'PRAGA', 'DOENCA']),
+    dose: getColIdx(['DOSE', 'DOSAGEM']),
+    unidade: getColIdx(['UNIDADE']),
+    carencia: getColIdx(['CARENCIA', 'DIAS']),
+    intervalo: getColIdx(['INTERVALO', 'REENTRADA']),
+    cultura: getColIdx(['CULTURA'])
+  };
+
+  // Render Mapping Select Grid
+  const mappingGrid = $('importDefMappingGrid');
+  if (mappingGrid) {
+    const fields = [
+      { key: 'produto', label: 'Produto *' },
+      { key: 'ingrediente', label: 'Ingr. Ativo *' },
+      { key: 'mapa', label: 'Reg. MAPA' },
+      { key: 'alvo', label: 'Alvo / Praga' },
+      { key: 'dose', label: 'Dose Recomendada' },
+      { key: 'unidade', label: 'Unidade Dose' },
+      { key: 'carencia', label: 'Carência (Dias)' },
+      { key: 'intervalo', label: 'Intervalo (Dias)' },
+      { key: 'cultura', label: 'Cultura' },
+    ];
+
+    mappingGrid.innerHTML = fields.map(f => {
+      const selectedIdx = initialMapping[f.key];
+      const opts = headers.map((h, idx) => `
+        <option value="${idx}" ${idx === selectedIdx ? 'selected' : ''}>${idx + 1}. ${h}</option>
+      `).join('');
+
+      return `
+        <div>
+          <label style="font-size:11px; font-weight:700; color:var(--muted); display:block; margin-bottom:2px">${f.label}</label>
+          <select id="mapCol_${f.key}" onchange="rebuildImportDefensivosPreview()" style="font-size:11px; padding:4px 6px; background:var(--card-bg); color:var(--text); border:1px solid var(--border); border-radius:6px; width:100%">
+            <option value="-1">— Ignorar —</option>
+            ${opts}
+          </select>
+        </div>
+      `;
+    }).join('');
+  }
+
+  rebuildImportDefensivosPreview();
+}
+
+function rebuildImportDefensivosPreview() {
+  if (!_importCSVLines || _importCSVLines.length <= 1) return;
+
+  const getSelIdx = (key) => parseInt($(`mapCol_${key}`)?.value ?? -1);
+
+  const pIdx = getSelIdx('produto');
+  const iIdx = getSelIdx('ingrediente');
+  const mIdx = getSelIdx('mapa');
+  const aIdx = getSelIdx('alvo');
+  const dIdx = getSelIdx('dose');
+  const uIdx = getSelIdx('unidade');
+  const cIdx = getSelIdx('carencia');
+  const intIdx = getSelIdx('intervalo');
+  const culIdx = getSelIdx('cultura');
 
   pendingImportDefensivos = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(separator).map(c => c.trim().replace(/["']/g, ''));
-    if (cols.length < 2) continue;
+  for (let i = 1; i < _importCSVLines.length; i++) {
+    const cols = _importCSVLines[i].split(_importCSVSeparator).map(c => c.trim().replace(/["']/g, ''));
+    if (cols.length < 1) continue;
 
-    const produto = (pIdx >= 0 ? cols[pIdx] : cols[0] || '').toUpperCase();
-    const ingrediente = (iIdx >= 0 ? cols[iIdx] : cols[1] || '').toUpperCase();
+    const produto = (pIdx >= 0 && cols[pIdx] ? cols[pIdx] : (cols[0] || '')).toUpperCase();
+    const ingrediente = (iIdx >= 0 && cols[iIdx] ? cols[iIdx] : (cols[1] || '')).toUpperCase();
     if (!produto || !ingrediente) continue;
 
     const mapa = mIdx >= 0 ? cols[mIdx] : (cols[2] || '');
     const alvo = (aIdx >= 0 ? cols[aIdx] : (cols[3] || '')).toUpperCase();
     const dose = parseFloat(dIdx >= 0 ? cols[dIdx] : cols[4]) || null;
-    const unidade = uIdx >= 0 ? cols[uIdx] : 'L/ha';
+    const unidade = uIdx >= 0 && cols[uIdx] ? cols[uIdx] : 'L/ha';
     const carencia = parseInt(cIdx >= 0 ? cols[cIdx] : cols[6]) || 0;
     const intervalo = parseInt(intIdx >= 0 ? cols[intIdx] : cols[7]) || 7;
-    const cultura = (culIdx >= 0 ? cols[culIdx] : (cols[8] || 'MELÃO')).toUpperCase();
+    const cultura = (culIdx >= 0 && cols[culIdx] ? cols[culIdx] : 'MELÃO').toUpperCase();
 
     pendingImportDefensivos.push({
       tenant_id: tenantId,
@@ -12060,36 +12260,34 @@ function parseDefensivosCSVText(text) {
     });
   }
 
-  if (pendingImportDefensivos.length === 0) {
-    alert('Nenhum defensivo válido foi encontrado na planilha. Verifique o cabeçalho.');
-    return;
-  }
-
-  // Render preview table
   const tbody = $('importDefPreviewTable');
   const msg = $('importDefCountMsg');
-  if (msg) msg.textContent = `✅ ${pendingImportDefensivos.length} defensivos identificados prontos para importar:`;
+  if (msg) msg.textContent = `${pendingImportDefensivos.length} defensivos válidos mapeados para importar:`;
 
   if (tbody) {
-    tbody.innerHTML = pendingImportDefensivos.map((item, idx) => `
-      <tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:5px; font-weight:700; color:var(--text)">${item.produto}</td>
-        <td style="padding:5px; color:var(--blue)">${item.ingrediente_ativo}</td>
-        <td style="padding:5px; text-align:center">${item.registro_mapa || '—'}</td>
-        <td style="padding:5px">${item.alvo || '—'}</td>
-        <td style="padding:5px; text-align:center">${item.dose ? item.dose + ' ' + item.unidade_dose : '—'}</td>
-        <td style="padding:5px; text-align:center; font-weight:700; color:var(--yellow)">${item.carencia_dias}d</td>
-        <td style="padding:5px; text-align:center">${item.intervalo_dias}d</td>
-        <td style="padding:5px; text-align:center">${item.cultura}</td>
-      </tr>
-    `).join('');
+    if (pendingImportDefensivos.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:15px; color:var(--red)">Nenhum registro reconhecido. Ajuste o mapeamento de colunas acima.</td></tr>`;
+    } else {
+      tbody.innerHTML = pendingImportDefensivos.slice(0, 50).map((item) => `
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:5px; font-weight:700; color:var(--text)">${item.produto}</td>
+          <td style="padding:5px; color:var(--blue)">${item.ingrediente_ativo}</td>
+          <td style="padding:5px; text-align:center">${item.registro_mapa || '—'}</td>
+          <td style="padding:5px">${item.alvo || '—'}</td>
+          <td style="padding:5px; text-align:center">${item.dose ? item.dose + ' ' + item.unidade_dose : '—'}</td>
+          <td style="padding:5px; text-align:center; font-weight:700; color:var(--yellow)">${item.carencia_dias}d</td>
+          <td style="padding:5px; text-align:center">${item.intervalo_dias}d</td>
+          <td style="padding:5px; text-align:center">${item.cultura}</td>
+        </tr>
+      `).join('');
+    }
   }
 
   $('importDefPreviewContainer').style.display = 'block';
   const btn = $('btnConfirmImportDef');
   if (btn) {
-    btn.disabled = false;
-    btn.style.opacity = '1';
+    btn.disabled = pendingImportDefensivos.length === 0;
+    btn.style.opacity = pendingImportDefensivos.length === 0 ? '0.5' : '1';
     btn.textContent = `Confirmar Importação (${pendingImportDefensivos.length} defensivos)`;
   }
 }
@@ -12260,25 +12458,74 @@ function addNewOpItem() {
   const dosagemLimite = parseFloat(def.dose || def.dosagem_recomendada) || dosagemReal;
   const dosagemCorrigida = dosagemReal > dosagemLimite ? dosagemLimite : dosagemReal;
   const inputAlvo = ($('newOpAlvo')?.value || def.alvo || '').trim().toUpperCase();
+  const opDateStr = $('newOpDate')?.value || today();
   
   const ip = _infoParcelas.find(x => x.id === pId);
-  
-  // Validação 1: Duplicados por Praga/Alvo
   const targetAlvo = inputAlvo || def.alvo || '';
   const cleanAlvo = targetAlvo.toUpperCase();
+  
+  // Validação 1: Duplicados por Praga/Alvo na mesma calda
   if (targetAlvo) {
     const alreadyHasAlvo = _newOpItems.some(item => item.alvo.trim().toUpperCase() === targetAlvo.trim().toUpperCase());
     if (alreadyHasAlvo) {
-      alert(`Você não pode aplicar dois defensivos para a mesma praga/alvo (${targetAlvo}) na mesma calda!`);
+      alert(`🚫 Trava de Auditoria: Você não pode aplicar dois defensivos para a mesma praga/alvo (${targetAlvo}) na mesma calda!`);
       return;
     }
   }
   
-  // Validação 2: Justificativa de MIP
+  // Validação 2: Checagem de Dosagem Excedente
+  if (dosagemReal > dosagemLimite) {
+    alert(`⚠️ Alerta de Auditoria: A dosagem informada (${dosagemReal} ${def.unidade_dose || 'L/ha'}) excede a dosagem máxima cadastrada (${dosagemLimite} ${def.unidade_dose || 'L/ha'}). A dosagem corrigida de auditoria será registrada como ${dosagemLimite}.`);
+  }
+
+  // Validação 3: Prazo de Carência vs Previsão de Colheita
+  if (ip && ip.previsao_colheita && def.carencia_dias > 0 && opDateStr) {
+    const appDt = new Date(opDateStr + 'T12:00:00');
+    appDt.setDate(appDt.getDate() + parseInt(def.carencia_dias));
+    const liberacaoIso = appDt.toISOString().split('T')[0];
+    
+    if (liberacaoIso > ip.previsao_colheita) {
+      const liberacaoBr = appDt.toLocaleDateString('pt-BR');
+      const prevColhBr = ip.previsao_colheita.split('-').reverse().join('/');
+      const proce = confirm(`⚠️ Trava de Auditoria (Carência): O defensivo ${def.produto} exige ${def.carencia_dias} dia(s) de carência.\n\nA colheita ficará liberada apenas em ${liberacaoBr}, enquanto a previsão de colheita é ${prevColhBr}.\n\nDeseja confirmar a inclusão mesmo assim?`);
+      if (!proce) return;
+    }
+  }
+
+  // Validação 4: Intervalo Mínimo de Reaplicação
+  if (opDateStr && window._opList && window._opList.length > 0) {
+    const parcelCode = ip ? (ip.parcela2 || ip.parcela) : '';
+    const minIntervalDays = parseInt(def.intervalo_dias) || 7;
+    const currentAppDt = new Date(opDateStr + 'T12:00:00');
+    
+    const pastApp = window._opList.find(op => {
+      if (op.parcela !== parcelCode) return false;
+      const opDt = new Date(op.data_aplicacao + 'T12:00:00');
+      const diffDays = Math.round((currentAppDt - opDt) / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays < minIntervalDays) {
+        const items = op.caderno_campo_op_itens || [];
+        return items.some(i => (i.produto_nome || '').toUpperCase() === def.produto.toUpperCase() || (def.ingrediente_ativo && (i.ingrediente_ativo || '').toUpperCase() === def.ingrediente_ativo.toUpperCase()));
+      }
+      return false;
+    });
+
+    if (pastApp) {
+      const pastDtBr = pastApp.data_aplicacao ? pastApp.data_aplicacao.split('-').reverse().join('/') : 'recensemente';
+      const cont = confirm(`⚠️ Alerta de Auditoria (Reaplicação): O defensivo ${def.produto} foi aplicado nesta parcela em ${pastDtBr}. O intervalo de reaplicação recomendado é de ${minIntervalDays} dias.\n\nDeseja continuar?`);
+      if (!cont) return;
+    }
+  }
+
+  // Validação 5: Alvo / Praga Compatível
+  if (def.alvo && cleanAlvo && !def.alvo.toUpperCase().includes(cleanAlvo) && !cleanAlvo.includes(def.alvo.toUpperCase())) {
+    toast(`Aviso de Auditoria: Produto ${def.produto} cadastrado para [${def.alvo}], alvo informado [${targetAlvo}]`, 'warning');
+  }
+  
+  // Validação 6: Justificativa de MIP
   const isFertilizer = !targetAlvo || cleanAlvo.includes('ADUBO') || cleanAlvo.includes('FOLIARE') || cleanAlvo.includes('NUTRIENTE') || cleanAlvo.includes('FISIOLOGICO') || cleanAlvo === 'N/A';
   if (!isFertilizer) {
     const parcelName = ip ? (ip.parcela2 || ip.parcela) : '';
-    const relevantMips = _mipRecords.filter(m => {
+    const relevantMips = (_mipRecords || []).filter(m => {
       const matchesParcel = m.parcela === parcelName;
       const matchesPraga = isMatchingPraga(m.praga, targetAlvo);
       return matchesParcel && matchesPraga;
@@ -12288,8 +12535,8 @@ function addNewOpItem() {
     const latestMip = relevantMips[0];
     
     if (!latestMip || parseFloat(latestMip.media) <= 0) {
-      alert(`Você não pode aplicar o defensivo ${def.produto} para a praga "${targetAlvo}" na parcela ${parcelName} porque ela não foi identificada no MIP (Manejo Integrado de Pragas) recente desta parcela.`);
-      return;
+      const resp = confirm(`⚠️ Alerta de Auditoria (MIP): O defensivo ${def.produto} para a praga "${targetAlvo}" não foi recomendado no MIP recente da parcela ${parcelName}.\n\nDeseja continuar e incluir este produto?`);
+      if (!resp) return;
     }
   }
   

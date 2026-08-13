@@ -1559,6 +1559,17 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
     </div>
 
     <button class="btn btn-primary btn-full" id="btnSaveMip" onclick="saveMipRecord()" style="display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="check" style="width:18px;height:18px"></i> Salvar Ficha MIP</button>
+
+    <!-- Histórico de Vistorias MIP com Botão de Impressão -->
+    <div class="card" style="margin-top:20px; padding:16px">
+      <div style="font-weight:800; font-size:14px; color:var(--text); margin-bottom:10px; display:flex; align-items:center; justify-content:space-between">
+        <span>Vistorias MIP Recentes</span>
+        <span style="font-size:11px; color:var(--muted)" id="mipHistoryCount">0 registros</span>
+      </div>
+      <div id="mipHistoryContainer" style="display:flex; flex-direction:column; gap:8px; max-height:280px; overflow-y:auto">
+        <div style="font-size:12px; color:var(--muted); font-style:italic; text-align:center; padding:10px">Nenhum registro MIP encontrado.</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -3847,6 +3858,183 @@ let varieties = [];
       console.warn('Erro ao carregar caderno_campo_mip:', e);
       mipRecordsData = JSON.parse(localStorage.getItem('prodtech_mip_records') || '[]');
     }
+    renderMipHistory();
+  }
+
+  function renderMipHistory() {
+    const container = document.getElementById('mipHistoryContainer');
+    const countEl = document.getElementById('mipHistoryCount');
+    if (!container) return;
+    const list = mipRecordsData || [];
+    if (countEl) countEl.textContent = `${list.length} registro(s)`;
+    if (list.length === 0) {
+      container.innerHTML = '<div style="font-size:12px; color:var(--muted); font-style:italic; text-align:center; padding:10px">Nenhum registro MIP encontrado.</div>';
+      return;
+    }
+    container.innerHTML = list.map(item => {
+      let limiar = 1.0;
+      const pragaUpper = (item.praga || '').toUpperCase();
+      if (pragaUpper.includes('LAGARTA')) limiar = 0.2;
+      if (pragaUpper.includes('OÍDIO') || pragaUpper.includes('MÍLDIO')) limiar = 0.0;
+      
+      const mediaVal = parseFloat(item.media) || 0;
+      const acimaLimiar = mediaVal > limiar;
+      
+      const statusText = acimaLimiar ? 'Recomenda-se Controle' : 'Sob Controle';
+      const statusBg = acimaLimiar ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)';
+      const statusColor = acimaLimiar ? 'var(--red)' : 'var(--green)';
+      
+      const formattedDate = item.data_vistoria ? item.data_vistoria.split('-').reverse().join('/') : '—';
+      const pragaFriendly = item.praga.replace(/_/g, ' ');
+      const itemStr = encodeURIComponent(JSON.stringify(item));
+      
+      return `
+        <div style="background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:10px; display:flex; align-items:center; justify-content:space-between; gap:8px">
+          <div>
+            <div style="font-size:13px; font-weight:800; color:var(--text)">${item.parcela} <span style="font-weight:400; font-size:11px; color:var(--muted)">(${formattedDate})</span></div>
+            <div style="font-size:12px; color:var(--blue); font-weight:600; margin-top:2px">${pragaFriendly}</div>
+            <div style="font-size:11px; color:var(--muted); margin-top:2px">Média: <strong>${mediaVal.toFixed(2)}</strong> | Limiar: ${limiar.toFixed(1)}</div>
+          </div>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px">
+            <span style="font-size:10px; font-weight:700; background:${statusBg}; color:${statusColor}; padding:2px 6px; border-radius:4px">${statusText}</span>
+            <button class="btn btn-sec" style="font-size:11px; padding:3px 8px; display:inline-flex; align-items:center; gap:3px" onclick="printPastaCampoMip('${itemStr}')"><i data-lucide="printer" style="width:12px;height:12px"></i> Imprimir</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function printPastaCampoMip(itemStr) {
+    const item = typeof itemStr === 'string' ? JSON.parse(decodeURIComponent(itemStr)) : itemStr;
+    const formattedDate = item.data_vistoria ? item.data_vistoria.split('-').reverse().join('/') : '—';
+    
+    const pragaFriendly = (item.praga || '').replace(/_/g, ' ').toUpperCase();
+    const mediaVal = parseFloat(item.media) || 0;
+    
+    let limiar = 1.0;
+    if (pragaFriendly.includes('LAGARTA')) limiar = 0.2;
+    if (pragaFriendly.includes('OÍDIO') || pragaFriendly.includes('MÍLDIO')) limiar = 0.0;
+    
+    const acimaLimiar = mediaVal > limiar;
+    const statusText = acimaLimiar ? 'RECOMENDA-SE CONTROLE' : 'SOB CONTROLE';
+    
+    const ip = (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(x => x.parcela2 === item.parcela || x.parcela === item.parcela);
+    const culturaStr = ip ? (ip.cultura || 'MELÃO').toUpperCase() : 'MELÃO';
+    const areaStr = ip && ip.area ? `${ip.area} ha` : '—';
+    const dataPlantioStr = ip && ip.plantio ? ip.plantio.split('-').reverse().join('/') : '—';
+
+    const printWin = window.open('', '_blank', 'width=900,height=1200');
+    if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
+
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8"/>
+      <title>MIP — Ficha de Amostragem Fitossanitária</title>
+      <style>
+        @page { size: A4 portrait; margin: 8mm 10mm; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 8pt; line-height: 1.3; }
+        .sheet { width: 100%; }
+        .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        .hdr-table td { border: 1px solid #000; padding: 3px 5px; font-size: 7.5pt; vertical-align: middle; }
+        .hdr-left { width: 50%; font-weight: bold; }
+        .hdr-right { width: 50%; font-family: 'Times New Roman', serif; font-size: 7.5pt; }
+        .main-title { font-family: 'Arial', sans-serif; font-size: 12pt; font-weight: bold; text-align: center; padding: 6px 0; border: 2px solid #000; margin-bottom: 8px; background: #f3f4f6; text-transform: uppercase; }
+        .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        .grid-table td, .grid-table th { border: 1px solid #000; padding: 5px 7px; vertical-align: middle; }
+        .grid-table th { background: #f9fafb; font-weight: bold; text-align: center; }
+        .section-title { font-size: 9pt; font-weight: bold; margin: 12px 0 4px 0; padding-bottom: 2px; border-bottom: 1px solid #000; text-transform: uppercase; }
+        .pts-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+        .pts-table th, .pts-table td { border: 1px solid #000; padding: 6px; text-align: center; font-size: 9pt; }
+        .pts-table th { background: #f3f4f6; font-weight: bold; }
+        .status-box { border: 2px solid #000; padding: 8px; text-align: center; font-size: 10pt; font-weight: bold; margin-bottom: 12px; background: ${acimaLimiar ? '#fef2f2' : '#f0fdf4'}; color: ${acimaLimiar ? '#991b1b' : '#166534'}; }
+        .signatures-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 25px; }
+        .sig-box { border: 1px solid #000; padding: 8px; font-size: 7.5pt; background: #fafafa; display: flex; flex-direction: column; justify-content: space-between; height: 90px; }
+        .sig-line { margin-top: 20px; border-top: 1px dashed #000; text-align: center; padding-top: 3px; font-size: 7pt; font-weight: bold; }
+      </style>
+    </head>
+    <body onload="window.print()">
+      <div class="sheet">
+        <table class="hdr-table">
+          <tr>
+            <td class="hdr-left">ELABORADO, EMITIDO E REVISADO POR: EMANUELA MOREIRA</td>
+            <td class="hdr-right">DEPARTAMENTO: CAMPO</td>
+          </tr>
+          <tr>
+            <td class="hdr-left">AVALIADO POR: ADGF</td>
+            <td class="hdr-right">DOC: FICHA DE MONITORAMENTO E AMOSTRAGEM MIP</td>
+          </tr>
+          <tr>
+            <td class="hdr-left">APROVADO POR: ADGF</td>
+            <td class="hdr-right">EMISSÃO: 15/06/2026 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; VERSÃO: 01 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; COD: PC08</td>
+          </tr>
+        </table>
+
+        <div class="main-title">MANEJO INTEGRADO DE PRAGAS — FICHA DE AMOSTRAGEM (MIP)</div>
+
+        <table class="grid-table">
+          <tr>
+            <td style="width:25%;"><strong>PARCELA:</strong><br/><span style="font-size:10pt; font-weight:bold">${item.parcela || '—'}</span></td>
+            <td style="width:25%;"><strong>CULTURA:</strong><br/><span style="font-size:10pt; font-weight:bold">${culturaStr}</span></td>
+            <td style="width:25%;"><strong>VARIEDADE:</strong><br/>${item.variedade || '—'}</td>
+            <td style="width:25%;"><strong>DATA VISTORIA:</strong><br/><span style="font-size:10pt; font-weight:bold">${formattedDate}</span></td>
+          </tr>
+          <tr>
+            <td><strong>ÁREA PARCELA:</strong><br/>${areaStr}</td>
+            <td><strong>DATA PLANTIO:</strong><br/>${dataPlantioStr}</td>
+            <td colspan="2"><strong>PRAGA / DOENÇA MONITORADA:</strong><br/><span style="font-size:10pt; font-weight:bold">${pragaFriendly}</span></td>
+          </tr>
+        </table>
+
+        <div class="section-title">RESULTADOS DOS 10 PONTOS DE AMOSTRAGEM NO CAMPO</div>
+        <table class="pts-table">
+          <tr>
+            <th>Ponto 1</th><th>Ponto 2</th><th>Ponto 3</th><th>Ponto 4</th><th>Ponto 5</th>
+            <th>Ponto 6</th><th>Ponto 7</th><th>Ponto 8</th><th>Ponto 9</th><th>Ponto 10</th>
+            <th style="background:#e5e7eb; font-weight:bold">MÉDIA</th>
+          </tr>
+          <tr>
+            <td>${item.ponto1 ?? 0}</td><td>${item.ponto2 ?? 0}</td><td>${item.ponto3 ?? 0}</td><td>${item.ponto4 ?? 0}</td><td>${item.ponto5 ?? 0}</td>
+            <td>${item.ponto6 ?? 0}</td><td>${item.ponto7 ?? 0}</td><td>${item.ponto8 ?? 0}</td><td>${item.ponto9 ?? 0}</td><td>${item.ponto10 ?? 0}</td>
+            <td style="background:#e5e7eb; font-size:11pt; font-weight:bold">${mediaVal.toFixed(2)}</td>
+          </tr>
+        </table>
+
+        <div class="status-box">
+          AVALIAÇÃO TÉCNICA: ${statusText} (Limiar de Dano: ${limiar.toFixed(1)})
+        </div>
+
+        <div style="border:1px solid #000; padding:8px; margin-bottom:12px">
+          <strong>OBSERVAÇÕES DO PRAGUEIRO / AUDITORIA:</strong><br/>
+          ${item.observacoes || 'Nenhuma observação registrada na amostragem.'}
+        </div>
+
+        <div class="signatures-grid">
+          <div class="sig-box">
+            <div>
+              <strong>Monitor de Pragas (Pragueiro)</strong><br/>
+              Responsável pela amostragem de campo
+            </div>
+            <div class="sig-line">Assinatura Monitor de Campo</div>
+          </div>
+          <div class="sig-box">
+            <div>
+              <strong>Engenheiro Agrônomo / Resp. Técnico</strong><br/>
+              Validação Técnica do Manejo Fitossanitário
+            </div>
+            <div class="sig-line">Assinatura Responsável Técnico</div>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+    
+    printWin.document.write(html);
+    printWin.document.close();
   }
 
   async function loadOpRecords() {
@@ -4128,6 +4316,7 @@ let varieties = [];
       
       mipRecordsData.unshift(record);
       localStorage.setItem('prodtech_mip_records', JSON.stringify(mipRecordsData || []));
+      renderMipHistory();
       
       showScreen('home');
       mipValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -4138,6 +4327,7 @@ let varieties = [];
       
       mipRecordsData.unshift(record);
       localStorage.setItem('prodtech_mip_records', JSON.stringify(mipRecordsData || []));
+      renderMipHistory();
       
       toast('✓ Amostragem MIP salva offline!', 'ok');
       showScreen('home');
