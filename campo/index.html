@@ -2622,26 +2622,6 @@ async function loadEmployees() {
   employees = data || [];
 }
 
-async function loadParcelas() {
-  const { data } = await sb.from('parcels')
-    .select('id, code')
-    .eq('tenant_id', tenantId)
-    .eq('active', true)
-    .order('code');
-  parcelas = data || [];
-  const sel = $('cParcela');
-  if(sel) {
-    sel.innerHTML = '<option value="">— Parcela —</option>';
-    parcelas.forEach(p => sel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`));
-    sel.onchange = updateVarietyFilter;
-  }
-  const bSel = $('bulkParcela');
-  if(bSel) {
-    bSel.innerHTML = '<option value="">— Nenhuma Parcela —</option>';
-    parcelas.forEach(p => bSel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`));
-  }
-}
-
 let parcelLinks = [];
 async function loadParcelLinks() {
   const { data } = await sb.from('parcel_links')
