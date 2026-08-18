@@ -5593,7 +5593,15 @@ function showOrdemColheita(list) {
 
 
 async function pushCarrao({ session, workers, carriageIds = [] }) {
-  // Busca o último seq para este tenant (independente da data, para ser sequencial global)
+  // Gera UUID v4 no cliente para evitar conflitos de chave
+  function clientUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  }
+
+  // Busca o último seq para este tenant
   let nextSeq = 1;
   try {
     const { data: seqData } = await sb.from('field_carrao_sessions')
@@ -5607,15 +5615,15 @@ async function pushCarrao({ session, workers, carriageIds = [] }) {
       nextSeq = parseInt(seqData[0].carrao_seq) + 1;
     }
   } catch(e) {
-    console.warn('Erro ao buscar carrao_seq (provavelmente coluna faltante):', e);
+    console.warn('Erro ao buscar carrao_seq:', e);
   }
-
 
   const qty = session.qty_carrocoes;
   const sessionsToInsert = [];
   
   for (let i = 0; i < qty; i++) {
     const sObj = {
+      id: clientUUID(),
       ...session,
       qty_carrocoes: 1, 
       total_value: session.price_per_carrao, 
@@ -5624,12 +5632,53 @@ async function pushCarrao({ session, workers, carriageIds = [] }) {
       carriage_id: carriageIds[i] || session.carriage_id || null
     };
     sessionsToInsert.push(sObj);
-
   }
 
-  const { data: sessList, error: e1 } = await sb.from('field_carrao_sessions').insert(sessionsToInsert).select('*');
-  if (e1) throw e1;
+  // Tenta inserção normal primeiro; se der 409 (Conflict), tenta upsert
+  let sessList = null;
+  const { data: d1, error: e1 } = await sb.from('field_carrao_sessions')
+    .insert(sessionsToInsert)
+    .select('*');
 
+  if (e1) {
+    console.warn('Insert falhou, tentando upsert:', e1.message, e1.code);
+    // Fallback: upsert ignorando duplicados
+    const { data: d2, error: e2 } = await sb.from('field_carrao_sessions')
+      .upsert(sessionsToInsert, { onConflict: 'id', ignoreDuplicates: true })
+      .select('*');
+    
+    if (e2) {
+      console.error('Upsert também falhou:', e2.message);
+      // Último recurso: inserir um a um, ignorando os que derem erro
+      sessList = [];
+      for (const s of sessionsToInsert) {
+        const { data: d3, error: e3 } = await sb.from('field_carrao_sessions')
+          .upsert([s], { onConflict: 'id', ignoreDuplicates: true })
+          .select('*');
+        if (d3 && d3.length > 0) sessList.push(d3[0]);
+        else if (e3) console.warn('Falha em registro individual:', e3.message);
+      }
+      if (sessList.length === 0) throw new Error('Nenhum carroção pôde ser salvo: ' + (e2.message || 'erro desconhecido'));
+    } else {
+      sessList = d2 || [];
+      // Se upsert com ignoreDuplicates retorna vazio, buscar os registros pelos IDs
+      if (sessList.length === 0) {
+        const ids = sessionsToInsert.map(s => s.id);
+        const { data: existing } = await sb.from('field_carrao_sessions')
+          .select('*')
+          .in('id', ids);
+        sessList = existing || [];
+      }
+    }
+  } else {
+    sessList = d1 || [];
+  }
+
+  if (!sessList || sessList.length === 0) {
+    throw new Error('Nenhum carroção retornado pelo servidor.');
+  }
+
+  // Inserir os funcionários vinculados
   const empRows = [];
   for (const sess of sessList) {
     workers.forEach(w => {
@@ -5641,8 +5690,11 @@ async function pushCarrao({ session, workers, carriageIds = [] }) {
     });
   }
 
-  const { error: e2 } = await sb.from('field_carrao_employees').insert(empRows);
-  if (e2) throw e2;
+  if (empRows.length > 0) {
+    const { error: empErr } = await sb.from('field_carrao_employees')
+      .upsert(empRows, { onConflict: 'session_id,employee_id', ignoreDuplicates: true });
+    if (empErr) console.warn('Aviso ao inserir funcionários:', empErr.message);
+  }
   
   return sessList.map(sess => ({ session: sess, workers: empRows.filter(r => r.session_id === sess.id) }));
 }
