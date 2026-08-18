@@ -631,6 +631,8 @@ async function syncFromSupabase(db) {
       for (const ip of remIp) {
         try {
           const parcelCode = ip.parcela2 || `${ip.parcela || ''} ${ip.letra || ''}`.trim();
+          const vars = [ip.variedade, ip.variedade2, ip.variedade3, ip.variedade4, ip.variedade5].filter(Boolean).join(' / ');
+          const fullCode = vars ? `${parcelCode} — ${vars}` : parcelCode;
           if (parcelCode) {
             await dbRun(`
               insert into parcels (code, active, remote_id, created_at, updated_at, synced)
@@ -640,7 +642,7 @@ async function syncFromSupabase(db) {
                 active = excluded.active,
                 updated_at = excluded.updated_at,
                 synced = 1
-            `, [parcelCode, ip.ativo !== false ? 1 : 0, ip.id, Date.now(), ip.updated_at ? new Date(ip.updated_at).getTime() : Date.now()]);
+            `, [fullCode, ip.ativo !== false ? 1 : 0, ip.id, Date.now(), ip.updated_at ? new Date(ip.updated_at).getTime() : Date.now()]);
           }
         } catch (err) {
           console.error(`Sync [down]: Error saving info_parcela ${ip.parcela2}:`, err.message);

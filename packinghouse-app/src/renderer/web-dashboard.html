@@ -384,8 +384,10 @@
       const allParcels = [...(ps || [])];
       (ips || []).forEach(ip => {
         const code = ip.parcela2 || `${ip.parcela || ''} ${ip.letra || ''}`.trim();
-        if (code && !allParcels.some(p => p.code === code)) {
-          allParcels.push({ id: ip.id, code: code, isInfo: true });
+        const vars = [ip.variedade, ip.variedade2, ip.variedade3, ip.variedade4, ip.variedade5].filter(Boolean).join(' / ');
+        const fullLabel = vars ? `${code} — ${vars}` : code;
+        if (code && !allParcels.some(p => p.code === fullLabel)) {
+          allParcels.push({ id: ip.id, code: fullLabel, isInfo: true });
         }
       });
 

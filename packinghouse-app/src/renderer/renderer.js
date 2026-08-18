@@ -1253,7 +1253,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const empId = dashEmployee ? dashEmployee.value : '';
 
       const [logs, stats, dsStats, cfg] = await Promise.all([
-        window.api.logsList({ stationId, startMs: todaySMs, endMs: todayEMs, limit: 50 }),
+        window.api.logsList({ stationId, startMs: todaySMs, endMs: todayEMs, limit: 10000 }),
         window.api.totalsNow({ stationId, role: roleSelect.value }),
         window.api.dashboardsGetStats({ stationId, startMs: sMs, endMs: eMs, employeeId: empId || null }),
         window.api.contextGet({ stationId, role: roleSelect.value }),
@@ -1699,7 +1699,7 @@ window.addEventListener('DOMContentLoaded', () => {
     logLoad.onclick = async () => {
       const sMs = startOfDayMs(logStart.value);
       const eMs = endOfDayMs(logEnd.value);
-      const entries = await window.api.logsList({ stationId, startMs: sMs, endMs: eMs, limit: 200 });
+      const entries = await window.api.logsList({ stationId, startMs: sMs, endMs: eMs, limit: 5000 });
       logOut.innerHTML = entries.map(l => `
         <div style="display:flex; gap:15px; padding:8px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:12px;">
           <span class="muted" style="width:70px">${new Date(l.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>

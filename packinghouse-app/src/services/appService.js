@@ -573,7 +573,7 @@ function createAppService(db) {
 
     if (!raw) return { ok: false, error: 'EMPTY_BARCODE' };
 
-    // 0. Anti-duplicate Check (2 seconds)
+    // 0. Anti-duplicate Check (1 second)
     const lastScan = await get(`
       select ts, raw_barcode
       from scan_events
@@ -582,7 +582,7 @@ function createAppService(db) {
       limit 1
     `, [st, sc]);
 
-    if (lastScan && lastScan.raw_barcode === raw && (ts - lastScan.ts) < 2000) {
+    if (lastScan && lastScan.raw_barcode === raw && (ts - lastScan.ts) < 1000) {
       return { ok: true, ignored: true, reason: 'DUPLICATE_SCAN' };
     }
 
@@ -1160,7 +1160,7 @@ function createAppService(db) {
       left join varieties v on v.id = se.variety_id
       where ${where.join(' and ')}
       order by se.ts desc
-      limit ${Math.min(1000, Math.max(50, Number(limit || 500)))}
+      limit ${Math.min(50000, Math.max(1, Number(limit || 5000)))}
     `, args);
   }
 

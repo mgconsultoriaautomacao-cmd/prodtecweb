@@ -10,14 +10,113 @@ on:
   workflow_dispatch:
 
 jobs:
-  release:
-    name: Create GitHub Release
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+  # ─────────────────────────────────────────────────────────────────────
+  # Windows Build → gera .exe (NSIS installer)
+  # ─────────────────────────────────────────────────────────────────────
+  build-windows:
+    name: Build Windows (.exe)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: packinghouse-app
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild native modules for Windows x64
+        run: npx @electron/rebuild -f -w sqlite3 -a x64
+
+      - name: Build Windows NSIS installer
+        run: npx electron-builder --win --x64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: packinghouse-app/dist-win/*.exe
+          retention-days: 30
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Linux ARM64 Build → gera .deb para Raspberry Pi 4/5
+  # ─────────────────────────────────────────────────────────────────────
+  build-linux-arm64:
+    name: Build Linux ARM64 (.deb para Raspberry Pi)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packinghouse-app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            dpkg fakeroot \
+            gcc-aarch64-linux-gnu \
+            g++-aarch64-linux-gnu \
+            libxtst-dev libpng++-dev
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Rebuild sqlite3 for Linux ARM64
+        run: npx @electron/rebuild -f -w sqlite3 -a arm64
+        env:
+          npm_config_arch: arm64
+          npm_config_target_arch: arm64
+
+      - name: Build Linux ARM64 .deb
+        run: npx electron-builder --linux deb --arm64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Linux ARM64 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64-deb
+          path: packinghouse-app/dist-win/*.deb
+          retention-days: 30
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Release — cria GitHub Release quando há uma tag v*
+  # ─────────────────────────────────────────────────────────────────────
+  release:
+    name: Create GitHub Release
+    needs: [build-windows, build-linux-arm64]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: dist/windows
+
+      - name: Download Linux ARM64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-arm64-deb
+          path: dist/linux-arm64
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -26,12 +125,25 @@ jobs:
           body: |
             ## PRODTEC Packinghouse ${{ github.ref_name }}
 
-            ### Downloads
-            - **Windows**: Instale o arquivo `PRODTEC-Packinghouse-Setup-1.0.1.exe` (Instalador automático NSIS)
+            ### 📥 Downloads
 
-            > ⚠️ No Windows, se aparecer alerta de segurança, clique em "Mais informações → Executar assim mesmo".
+            | Plataforma | Arquivo | Instruções |
+            |---|---|---|
+            | **Windows 10/11** | `.exe` | Execute o instalador. Se aparecer alerta do Windows Defender, clique em "Mais informações → Executar assim mesmo" |
+            | **Raspberry Pi 4/5** | `.deb` | `sudo dpkg -i prodtec-packinghouse_*.deb` |
+
+            > ⚠️ O app requer Python 3 instalado para o serviço de visão computacional (OCR de caixas).
+
+            ### Novidades v1.0.6
+            - Correção do erro 409 (Conflict) no lançamento de carroções
+            - Filtro de variedades por parcela no módulo de campo
+            - Operadores de máquina alimentados pelo cadastro de funcionários
+            - Preenchimento automático do responsável com o usuário logado
+            - Redução do intervalo anti-duplicidade de leitura de 2-3s para 1s
+            - Remoção do limite de 50 leituras por colaborador
           files: |
-            PRODTEC-Packinghouse-Setup-1.0.1.exe
+            dist/windows/*.exe
+            dist/linux-arm64/*.deb
           draft: false
           prerelease: false
         env:

@@ -1740,8 +1740,9 @@
     
     <!-- SUB-TABS DO CADERNO DE CAMPO -->
     <div style="display:flex; gap:10px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:10px; flex-wrap:wrap">
-      <button class="btn on" id="ccTabPlantiosBtn" onclick="showCcTab('plantios')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="sprout" style="width:14px;height:14px"></i> Cadastro de Plantios</button>
-      <button class="btn sec" id="ccTabMipBtn" onclick="showCcTab('mip')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="bug" style="width:14px;height:14px"></i> Amostragem MIP</button>
+      <button class="btn on" id="ccTabPlantiosBtn" onclick="showCcTab('plantios')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="sprout" style="width:14px;height:14px"></i> Plantios & Parcelas</button>
+      <button class="btn sec" id="ccTabColheitasBtn" onclick="showCcTab('colheitas')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="shopping-bag" style="width:14px;height:14px"></i> Colheitas por Parcela</button>
+      <button class="btn sec" id="ccTabMipBtn" onclick="showCcTab('mip')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="bug" style="width:14px;height:14px"></i> Monitoramento MIP</button>
       <button class="btn sec" id="ccTabOpBtn" onclick="showCcTab('op')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="file-text" style="width:14px;height:14px"></i> Aplicação O.P</button>
       <button class="btn sec" id="ccTabDefregBtn" onclick="showCcTab('defreg')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="shield" style="width:14px;height:14px"></i> Defensivos/Estoque</button>
       <button class="btn sec" id="ccTabCalagemBtn" onclick="showCcTab('calagem')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="layers" style="width:14px;height:14px"></i> Ordem de Calagem</button>
@@ -1754,9 +1755,10 @@
     <!-- ABA 0: CADASTRO & HISTÓRICO DE PLANTIOS -->
     <div id="ccTabPlantios" class="tab-pane-cc">
       <div class="card" style="margin-bottom:24px">
-        <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
-          <div style="display:flex; align-items:center; gap:8px"><i data-lucide="sprout" class="btn-i" style="color:var(--green)"></i> Plantios e Cadastro Geral de Parcelas</div>
-          <button onclick="openWebPlantioModal()" class="green" style="font-size:13px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px; background:var(--green)"><i data-lucide="plus-circle" style="width:16px; height:16px"></i> + Novo Plantio</button>
+          <div style="display:flex; gap:8px; align-items:center">
+            <button onclick="printSelectedPlantioCapas()" class="btn on" style="font-size:13px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px"><i data-lucide="printer" style="width:16px; height:16px"></i> 🖨️ Imprimir Ordens / Capas em Lote</button>
+            <button onclick="openWebPlantioModal()" class="green" style="font-size:13px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px; background:var(--green)"><i data-lucide="plus-circle" style="width:16px; height:16px"></i> + Novo Plantio</button>
+          </div>
         </div>
         <p style="color:var(--muted); font-size:12px; margin-bottom:20px">Gerencie a estrutura completa de parcelas, variedades plantadas, datas de transplante e previsão de colheita.</p>
         
@@ -1786,6 +1788,7 @@
           <table style="width:100%; border-collapse:collapse">
             <thead>
               <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:center; padding:12px; width:40px"><input type="checkbox" onclick="toggleSelectAllPlantioCapas(this)" title="Selecionar Todos" style="width:16px; height:16px; cursor:pointer"/></th>
                 <th style="text-align:left; padding:12px">Parcela</th>
                 <th style="text-align:left; padding:12px">Cultura</th>
                 <th style="text-align:left; padding:12px">Variedades</th>
@@ -1798,7 +1801,69 @@
               </tr>
             </thead>
             <tbody id="webPlantiosTableBody">
-              <tr><td colspan="9" style="text-align:center; padding:20px; color:var(--muted)">Carregando plantios...</td></tr>
+              <tr><td colspan="10" style="text-align:center; padding:20px; color:var(--muted)">Carregando plantios...</td></tr>
+            </tbody>
+          </table>
+        </div>
+    <!-- ABA: COLHEITAS POR PARCELA -->
+    <div id="ccTabColheitas" class="tab-pane-cc" style="display:none">
+      <div class="card" style="margin-bottom:24px">
+        <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+          <div style="display:flex; align-items:center; gap:8px"><i data-lucide="shopping-bag" class="btn-i" style="color:var(--green)"></i> Colheitas por Parcela & Emissão de Ordens de Colheita</div>
+          <div style="display:flex; gap:8px; align-items:center">
+            <button onclick="printSelectedColheitaOrders()" class="btn on" style="font-size:13px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px"><i data-lucide="printer" style="width:16px; height:16px"></i> 🖨️ Imprimir Ordens Selecionadas</button>
+            <button onclick="openNewColheitaModal()" class="green" style="font-size:13px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px; background:var(--green)"><i data-lucide="plus-circle" style="width:16px; height:16px"></i> + Nova Colheita</button>
+          </div>
+        </div>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:20px">Histórico completo de colheitas registradas por parcela, volume recolhido (carroções/caixas), equipes de pinceladores e geração de Ordens de Colheita.</p>
+        
+        <div style="overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:center; padding:12px; width:40px"><input type="checkbox" onclick="toggleSelectAllColheitas(this)" title="Selecionar Todos" style="width:16px; height:16px; cursor:pointer"/></th>
+                <th style="text-align:left; padding:12px">Data Colheita</th>
+                <th style="text-align:left; padding:12px">Parcela</th>
+                <th style="text-align:left; padding:12px">Variedade</th>
+                <th style="text-align:center; padding:12px">Carroções</th>
+                <th style="text-align:center; padding:12px">Caixas</th>
+                <th style="text-align:left; padding:12px">Pincelador 1 / Equipe</th>
+                <th style="text-align:center; padding:12px">Rastreabilidade / Lote</th>
+                <th style="text-align:center; padding:12px">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="ccColheitasTableBody">
+              <tr><td colspan="9" style="text-align:center; padding:20px; color:var(--muted)">Nenhuma colheita registrada.</td></tr>
+            </tbody>
+          </table>
+        </div>
+    <!-- ABA: PÓS-COLHEITA - TRATAMENTO DE TALO DO MELÃO -->
+    <div id="ccTabPos" class="tab-pane-cc" style="display:none">
+      <div class="card" style="margin-bottom:24px">
+        <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+          <div style="display:flex; align-items:center; gap:8px"><i data-lucide="sparkles" class="btn-i" style="color:var(--yellow)"></i> Pós-Colheita — Tratamento de Talo do Melão</div>
+          <button onclick="openNewPosModal()" class="green" style="font-size:13px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px; background:var(--green)"><i data-lucide="plus-circle" style="width:16px; height:16px"></i> + Novo Tratamento de Talo</button>
+        </div>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:20px">Registro oficial de sanidade e aplicação de defensivos fúngicos no pedúnculo/talo do melão pós-colheita (Prevenção de podridões em trânsito/exportação).</p>
+        
+        <div style="overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:left; padding:12px">Data Aplicação</th>
+                <th style="text-align:left; padding:12px">Parcela Origem</th>
+                <th style="text-align:left; padding:12px">Produto / Fungicida</th>
+                <th style="text-align:left; padding:12px">Ingrediente Ativo</th>
+                <th style="text-align:center; padding:12px">Dosagem (mL/L)</th>
+                <th style="text-align:center; padding:12px">Vol. Água (L)</th>
+                <th style="text-align:center; padding:12px">Carroções</th>
+                <th style="text-align:center; padding:12px">Carência</th>
+                <th style="text-align:left; padding:12px">Operador / Pincelador</th>
+                <th style="text-align:center; padding:12px">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="ccPosTableBody">
+              <tr><td colspan="10" style="text-align:center; padding:20px; color:var(--muted)">Nenhum tratamento de talo pós-colheita registrado.</td></tr>
             </tbody>
           </table>
         </div>
@@ -1940,14 +2005,18 @@
       
       <!-- Seção 2: Operacional & Clima -->
       <div style="font-weight:700; color:#fff; margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px; margin-top:16px">2. Operacional & Clima</div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
         <div>
           <label class="flabel">Tratorista</label>
-          <input id="newOpTratorista" type="text" value="Robson Rafael de Medeiros" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+          <select id="newOpTratorista" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px"></select>
         </div>
         <div>
           <label class="flabel">Barrista</label>
-          <input id="newOpBarrista" type="text" placeholder="Nome do barrista" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+          <select id="newOpBarrista" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px"></select>
+        </div>
+        <div>
+          <label class="flabel">Manipulador</label>
+          <select id="newOpManipulador" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px"></select>
         </div>
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
@@ -2093,6 +2162,139 @@
     </div>
   </div>
 
+  <!-- MODAL: NOVA COLHEITA POR PARCELA -->
+  <div id="newColheitaModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:28px; border-radius:18px; width:720px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5)">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px">
+        <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px"><i data-lucide="shopping-bag" style="width:22px; height:22px; color:var(--green)"></i> Registrar Nova Colheita de Parcela</h3>
+        <button onclick="closeNewColheitaModal()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); border-radius:50%; width:32px; height:32px; cursor:pointer">✕</button>
+      </div>
+      
+      <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Parcela Colhida *</label>
+          <select id="colheitaParcelaSelect" onchange="onColheitaParcelaChange()" style="width:100%"></select>
+          <input type="text" id="colheitaParcelaCustom" placeholder="Ou digite o nome/número da parcela..." style="text-transform:uppercase; width:100%; margin-top:4px; display:none"/>
+        </div>
+        <div>
+          <label class="flabel">Data da Colheita *</label>
+          <input type="date" id="colheitaData" required style="width:100%"/>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Variedade *</label>
+          <input type="text" id="colheitaVariedade" placeholder="Ex: GOLDMINE" style="text-transform:uppercase; width:100%" required/>
+        </div>
+        <div>
+          <label class="flabel">Qtde Carroções *</label>
+          <input type="number" id="colheitaCarrocoes" placeholder="Ex: 3" style="width:100%" required min="1"/>
+        </div>
+        <div>
+          <label class="flabel">Qtde Caixas / Frutos</label>
+          <input type="number" id="colheitaCaixas" placeholder="Ex: 120" style="width:100%"/>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Pincelador 1 / Líder de Equipe</label>
+          <select id="colheitaPincelador1" onchange="onColheitaPinceladorChange(1)" style="width:100%"></select>
+          <input type="text" id="colheitaPincelador1Custom" placeholder="Ou digite o nome do pincelador 1..." style="width:100%; margin-top:4px; display:none"/>
+        </div>
+        <div>
+          <label class="flabel">Pincelador 2 / Auxiliar</label>
+          <select id="colheitaPincelador2" onchange="onColheitaPinceladorChange(2)" style="width:100%"></select>
+          <input type="text" id="colheitaPincelador2Custom" placeholder="Ou digite o nome do pincelador 2..." style="width:100%; margin-top:4px; display:none"/>
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <label class="flabel">Código de Rastreabilidade / Lote</label>
+        <input type="text" id="colheitaRastreabilidade" placeholder="Ex: LOTE-P33G-2026-001" style="text-transform:uppercase; width:100%"/>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <label class="flabel">Observações da Colheita</label>
+        <textarea id="colheitaObs" rows="2" placeholder="Qualidade do fruto no campo, ponto de colheita..." style="width:100%; font-family:inherit"></textarea>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px">
+        <button class="sec" onclick="closeNewColheitaModal()">Cancelar</button>
+        <button onclick="saveNewColheitaRecord()" style="background:var(--green); color:#fff; border:none; padding:8px 18px; border-radius:8px; font-weight:700; cursor:pointer">Salvar Colheita</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: NOVO TRATAMENTO DE TALO PÓS-COLHEITA -->
+  <div id="newPosModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:28px; border-radius:18px; width:720px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5)">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px">
+        <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px"><i data-lucide="sparkles" style="width:22px; height:22px; color:var(--yellow)"></i> Novo Tratamento de Talo (Pós-Colheita)</h3>
+        <button onclick="closeNewPosModal()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); border-radius:50%; width:32px; height:32px; cursor:pointer">✕</button>
+      </div>
+      
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Parcela Origem *</label>
+          <select id="posParcela" style="width:100%"></select>
+        </div>
+        <div>
+          <label class="flabel">Data de Aplicação *</label>
+          <input type="date" id="posDataAplicacao" required style="width:100%"/>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Produto Comercial (Fungicida Talo) *</label>
+          <select id="posProdutoSelect" onchange="onPosDefensivoChange()" style="width:100%"></select>
+          <input type="text" id="posProdutoNomeCustom" placeholder="Ou digite o nome do produto comercial..." style="text-transform:uppercase; width:100%; margin-top:4px; display:none"/>
+        </div>
+        <div>
+          <label class="flabel">Ingrediente Ativo</label>
+          <input type="text" id="posIngredienteAtivo" placeholder="Ex: AZOXISTROBINA + DIFENOCONAZOL" style="text-transform:uppercase; width:100%"/>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Dosagem (mL ou g)</label>
+          <input type="number" step="0.1" id="posDosagem" placeholder="Ex: 150" style="width:100%"/>
+        </div>
+        <div>
+          <label class="flabel">Volume Água (L)</label>
+          <input type="number" step="0.1" id="posVolumeAgua" placeholder="Ex: 100" style="width:100%"/>
+        </div>
+        <div>
+          <label class="flabel">Nº Carroções / Lote</label>
+          <input type="number" id="posCarrocoes" placeholder="Ex: 3" style="width:100%"/>
+        </div>
+        <div>
+          <label class="flabel" style="color:var(--yellow); font-weight:700">Carência (Dias)</label>
+          <input type="number" id="posCarencia" placeholder="Ex: 3" value="0" style="font-weight:700; width:100%"/>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Operador / Pincelador Responsável *</label>
+          <select id="posOperador" style="width:100%"></select>
+        </div>
+        <div>
+          <label class="flabel">Justificativa / Alvo</label>
+          <input type="text" id="posJustificativa" value="TRATAMENTO DE TALO DO MELÃO (PREVENÇÃO DE PODRIDÃO DE PEDÚNCULO)" style="text-transform:uppercase; width:100%"/>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px">
+        <button class="sec" onclick="closeNewPosModal()">Cancelar</button>
+        <button onclick="saveNewPosRecord()" style="background:var(--green); color:#fff; border:none; padding:8px 18px; border-radius:8px; font-weight:700; cursor:pointer">Salvar Tratamento de Talo</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: IMPORTAR PLANILHA DE DEFENSIVOS (CSV / EXCEL) -->
   <div id="importDefensivosModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center;">
     <div style="background:var(--modal-bg); color:var(--modal-text); padding:28px; border-radius:18px; width:750px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5)">
@@ -2100,13 +2302,13 @@
         <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px"><i data-lucide="upload" style="width:22px; height:22px; color:var(--blue)"></i> Importar Planilha de Defensivos & Carência</h3>
         <button onclick="closeImportDefensivosModal()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); border-radius:50%; width:32px; height:32px; cursor:pointer">✕</button>
       </div>
-      <p style="font-size:12px; color:var(--muted); margin-bottom:16px">Selecione ou arraste um arquivo de planilha (formato <strong>.CSV</strong>) contendo a lista de produtos fitossanitários com suas respectivas carências em dias, intervalos e dosagens.</p>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:16px">Selecione ou arraste um arquivo de planilha (formato <strong>.XLSX, .XLSM ou .CSV</strong>) contendo a lista de defensivos (Melão, Melancia) com dosagens, carências e ingredientes ativos.</p>
 
       <div style="border:2px dashed var(--border); border-radius:14px; padding:30px 20px; text-align:center; background:rgba(255,255,255,0.02); margin-bottom:16px" id="dropAreaDefensivos">
         <i data-lucide="file-spreadsheet" style="width:40px; height:40px; color:var(--blue); margin-bottom:8px"></i>
-        <div style="font-weight:700; font-size:14px; margin-bottom:4px">Arraste seu arquivo CSV aqui ou clique para selecionar</div>
-        <div style="font-size:11px; color:var(--muted); margin-bottom:14px">Formato suportado: .CSV (separado por vírgula ou ponto-e-vírgula)</div>
-        <input type="file" id="fileInputDefensivos" accept=".csv, .txt" style="display:none" onchange="handleDefensivosFile(event)"/>
+        <div style="font-weight:700; font-size:14px; margin-bottom:4px">Arraste sua planilha Excel ou CSV aqui ou clique para selecionar</div>
+        <div style="font-size:11px; color:var(--muted); margin-bottom:14px">Formatos suportados: .XLSX, .XLSM (Planilha Modelo), .CSV</div>
+        <input type="file" id="fileInputDefensivos" accept=".csv, .txt, .xlsx, .xlsm, .xls" style="display:none" onchange="handleDefensivosFile(event)"/>
         <button onclick="$('fileInputDefensivos').click()" class="btn sec" style="font-size:12px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px"><i data-lucide="folder-open" style="width:14px;height:14px"></i> Escolher Arquivo</button>
       </div>
 
@@ -8893,6 +9095,144 @@ function printCertificacaoPackSheet() {
   printWin.document.close();
 }
 
+function toggleSelectAllPlantioCapas(master) {
+  document.querySelectorAll('.chkPlantioCapa').forEach(c => c.checked = master.checked);
+}
+
+function printSelectedPlantioCapas() {
+  const selectedCheckboxes = document.querySelectorAll('.chkPlantioCapa:checked');
+  let idsToPrint = Array.from(selectedCheckboxes).map(c => c.value);
+  
+  if (idsToPrint.length === 0) {
+    const confirmAll = confirm('Nenhuma parcela foi selecionada via caixa de seleção na tabela.\n\nDeseja imprimir as Capas / Ordens de Colheita de TODAS as parcelas ativas de uma só vez?');
+    if (!confirmAll) return;
+    idsToPrint = (_infoParcelas || []).filter(p => p.ativo !== false).map(p => p.id);
+  }
+
+  if (idsToPrint.length === 0) {
+    alert('Nenhuma parcela encontrada para impressão.');
+    return;
+  }
+
+  const printWin = window.open('', '_blank', 'width=900,height=1200');
+  if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
+
+  let pages = [];
+  idsToPrint.forEach(id => {
+    const item = _infoParcelas.find(x => x.id === id);
+    if (!item) return;
+    pages.push(generateSingleCapaHtml(item));
+  });
+
+  const fullDoc = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Ordens de Colheita / Capas de Campo em Lote</title>
+    <style>
+      @page { size: A4 portrait; margin: 8mm 10mm; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 8pt; line-height: 1.3; }
+      .sheet { width: 100%; page-break-after: always; break-after: page; }
+      .sheet:last-child { page-break-after: auto; break-after: auto; }
+      .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+      .hdr-table td { border: 1px solid #000; padding: 3px 5px; font-size: 7.5pt; vertical-align: middle; }
+      .hdr-left { width: 50%; font-weight: bold; }
+      .hdr-right { width: 50%; font-family: 'Times New Roman', serif; font-size: 7.5pt; }
+      .main-title { font-family: 'Comic Sans MS', 'Arial', sans-serif; font-size: 13pt; font-weight: bold; text-align: center; padding: 5px 0; border: 2px solid #000; margin-bottom: 8px; background: #f3f4f6; }
+      .section-title { font-size: 9pt; font-weight: bold; margin: 10px 0 3px 0; padding-bottom: 1px; border-bottom: 1px solid #000; text-transform: uppercase; }
+      table.data-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+      table.data-table td, table.data-table th { border: 1px solid #000; padding: 3px 5px; font-size: 8pt; vertical-align: middle; }
+      table.data-table th { background: #e5e7eb; font-weight: bold; text-align: center; }
+      .lbl { font-weight: bold; }
+    </style>
+  </head>
+  <body>
+    ${pages.join('')}
+  </body>
+  </html>
+  `;
+
+  printWin.document.write(fullDoc);
+  printWin.document.close();
+}
+
+function generateSingleCapaHtml(item) {
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa';
+  const variedadesList = item.variedade ? item.variedade.split(',').map(v => v.trim()).filter(v => v) : [];
+  let variedadesHtml = variedadesList.map(v => `<div>${v.toUpperCase()}</div>`).join('');
+  if (!variedadesHtml) variedadesHtml = '—';
+  
+  const dtPlantio = item.plantio ? new Date(item.plantio + 'T12:00:00') : null;
+  const anoStr = dtPlantio ? `${dtPlantio.getFullYear()}/${dtPlantio.getFullYear() + 1}` : new Date().getFullYear();
+
+  const fmtD = d => d ? d.split('-').reverse().join('/') : '____/____/________';
+
+  return `
+    <div class="sheet">
+      <table class="hdr-table">
+        <tr>
+          <td class="hdr-left">${tenantName.toUpperCase()}</td>
+          <td class="hdr-right">AGR-PC-01-R00 / REGISTRO DA CULTURA - ANEXO I</td>
+        </tr>
+      </table>
+
+      <div class="main-title">CAMPO DA PARCELA Nº ${item.parcela2 || item.parcela || '____'}</div>
+
+      <div class="section-title">1. IDENTIFICAÇÃO DA ÁREA DE CULTIVO</div>
+      <table class="data-table">
+        <tr>
+          <td width="50%"><span class="lbl">SAFRA (ANO):</span> ${anoStr}</td>
+          <td width="50%"><span class="lbl">CULTURA:</span> ${item.cultura || 'MELÃO'}</td>
+        </tr>
+        <tr>
+          <td><span class="lbl">Nº DA PARCELA:</span> ${item.parcela2 || item.parcela || '—'}</td>
+          <td><span class="lbl">ÁREA DA PARCELA:</span> ${item.area ? item.area + ' ha' : '—'}</td>
+        </tr>
+        <tr>
+          <td colspan="2"><span class="lbl">VARIEDADE(S):</span> ${variedadesHtml}</td>
+        </tr>
+        <tr>
+          <td><span class="lbl">TOTAL DE FILEIRAS/LINHAS:</span> ${item.linhas || '—'}</td>
+          <td><span class="lbl">ESPAÇAMENTO:</span> ${item.espacamento ? item.espacamento + ' m' : '—'}</td>
+        </tr>
+      </table>
+
+      <div class="section-title">2. DADOS DE SEMEADURA E TRANSPLANTE</div>
+      <table class="data-table">
+        <tr>
+          <td width="50%"><span class="lbl">DATA DA SEMEADURA:</span> ${fmtD(item.semeadura)}</td>
+          <td width="50%"><span class="lbl">DATA DO TRANSPLANTE:</span> ${fmtD(item.transplante || item.plantio)}</td>
+        </tr>
+        <tr>
+          <td><span class="lbl">QUANTIDADE DE MUDAS/SEMENTES:</span> ${item.quantidade ? item.quantidade.toLocaleString('pt-BR') : '—'}</td>
+          <td><span class="lbl">PREVISÃO DE INÍCIO DA COLHEITA:</span> ${fmtD(item.previsao_colheita)}</td>
+        </tr>
+      </table>
+
+      <div class="section-title">3. RASTREABILIDADE DAS SEMENTES E REGISTROS IDIARN</div>
+      <table class="data-table">
+        <tr>
+          <td width="50%"><span class="lbl">Nº NOTA FISCAL SEMENTE:</span> ${item.nf || '—'}</td>
+          <td width="50%"><span class="lbl">FORNECEDOR SEMENTE:</span> ${item.fornecedor || '—'}</td>
+        </tr>
+        <tr>
+          <td><span class="lbl">TERMO DE CONFORMIDADE:</span> ${item.termo || '—'}</td>
+          <td><span class="lbl">VIVEIRO / PRODUTOR MUDA:</span> ${item.fornecedor2 || '—'}</td>
+        </tr>
+        <tr>
+          <td colspan="2"><span class="lbl">REGISTRO DE PLANTIO IDIARN:</span> ${item.idiarn || 'CONFORME LEGISLAÇÃO VIGENTE'}</td>
+        </tr>
+      </table>
+
+      <div style="margin-top:20px; font-size:7.5pt; color:#4b5563; text-align:center;">
+        Documento Oficial de Rastreabilidade Agrícola • ProdTec Gestão Integrada
+      </div>
+    </div>
+  `;
+}
+
 function printPastaCampoCapa(id) {
   const item = _infoParcelas.find(x => x.id === id);
   if (!item) { alert('Ciclo de parcela não encontrado.'); return; }
@@ -11084,7 +11424,7 @@ let webInfoParcelasData = [];
 let webVariedadeRowCount = 0;
 
 function showCcTab(tab) {
-  ['plantios','mip','op','defreg','calagem','fert','tratos','mudas','pos'].forEach(t => {
+  ['plantios','colheitas','mip','op','defreg','calagem','fert','tratos','mudas','pos'].forEach(t => {
     const pane = $(`ccTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
     const btn = $(`ccTab${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
     if (pane) pane.style.display = (tab === t) ? 'block' : 'none';
@@ -11093,6 +11433,10 @@ function showCcTab(tab) {
 
   if (tab === 'plantios') {
     loadWebPlantios();
+  } else if (tab === 'colheitas') {
+    loadColheitasTable();
+  } else if (tab === 'pos') {
+    loadPosColheitaTable();
   } else if (tab === 'defreg') {
     loadDefensivosTable();
   }
@@ -11182,6 +11526,7 @@ function renderWebPlantiosTable(data) {
 
     return `
       <tr style="border-bottom:1px solid var(--border); opacity:${isAtivo ? 1 : 0.6}">
+        <td style="padding:12px; text-align:center"><input type="checkbox" class="chkPlantioCapa" value="${p.id}" style="width:16px; height:16px; cursor:pointer"/></td>
         <td style="padding:12px; font-weight:800; color:var(--text)">${p.parcela2 || p.parcela || '—'}</td>
         <td style="padding:12px">${cultBadge(p.cultura)}</td>
         <td style="padding:12px">
@@ -11375,7 +11720,7 @@ function calcWebPrevisaoColheita() {
   if (hint) hint.textContent = `✅ Calculado automaticamente: transplante + ${dias} dias`;
 }
 
-function addWebVariedadeRow(nomeVal = '', loteVal = '', qtdVal = '', linhasVal = '', dataVal = '', areaVal = '') {
+function addWebVariedadeRow(nomeVal = '', loteVal = '', qtdVal = '', linhasVal = '', dataVal = '', areaVal = '', semeaduraVal = '', nfVal = '', termoVal = '') {
   if (webVariedadeRowCount >= 10) { alert('Máximo de 10 variedades por plantio'); return; }
   webVariedadeRowCount++;
   const idx = webVariedadeRowCount;
@@ -11395,20 +11740,32 @@ function addWebVariedadeRow(nomeVal = '', loteVal = '', qtdVal = '', linhasVal =
         <input id="webPlVar${idx}" type="text" placeholder="Ex: GOLDMINE" value="${nomeVal || ''}" style="text-transform:uppercase; font-weight:700; font-size:13px" oninput="calcWebAreaHectares()"/>
       </div>
       <div>
+        <label class="flabel">Semeadura</label>
+        <input id="webPlSemeaduraVar${idx}" type="date" value="${semeaduraVal && semeaduraVal !== 'null' ? semeaduraVal : ''}"/>
+      </div>
+      <div>
+        <label class="flabel">Transplante / Plantio</label>
+        <input id="webPlDataPlantio${idx}" type="date" value="${dataVal && dataVal !== 'null' ? dataVal : ''}"/>
+      </div>
+      <div>
+        <label class="flabel">Qtd. Mudas/Sementes</label>
+        <input id="webPlQtd${idx}" type="number" placeholder="15000" value="${qtdVal || ''}"/>
+      </div>
+      <div>
+        <label class="flabel">NF Semente / Muda</label>
+        <input id="webPlNfVar${idx}" type="text" placeholder="Ex: 14738" value="${nfVal || ''}"/>
+      </div>
+      <div>
+        <label class="flabel">Termo / Certificado</label>
+        <input id="webPlTermoVar${idx}" type="text" placeholder="Ex: 51374" value="${termoVal || ''}"/>
+      </div>
+      <div>
         <label class="flabel">Lote Semente</label>
         <input id="webPlLote${idx}" type="text" placeholder="Ex: 150339" value="${loteVal || ''}"/>
       </div>
       <div>
-        <label class="flabel">Qtd. Sementes</label>
-        <input id="webPlQtd${idx}" type="number" placeholder="15000" value="${qtdVal || ''}"/>
-      </div>
-      <div>
         <label class="flabel">Linhas *</label>
         <input id="webPlLinhas${idx}" type="number" placeholder="24" value="${linhasVal || ''}" oninput="calcWebAreaHectares()"/>
-      </div>
-      <div>
-        <label class="flabel">Data Plantio</label>
-        <input id="webPlDataPlantio${idx}" type="date" value="${dataVal && dataVal !== 'null' ? dataVal : ''}"/>
       </div>
       <div>
         <label class="flabel" style="color:#3b82f6; font-weight:800">Área (ha)</label>
@@ -11454,13 +11811,16 @@ async function saveWebPlantio() {
   const parcela2 = `${parcela} ${letra}`;
   const tamanhoL = parseFloat($('webPlTamanhoLinha').value) || 0;
 
-  // Collect ate 10 variedades com linhas, data de plantio e área
+  // Collect até 10 variedades com semeadura, transplante, nf, termo, quantidade e área conjugadas
   const varsData = [];
   for (let i = 1; i <= 10; i++) {
     const nome = $(`webPlVar${i}`)?.value?.trim().toUpperCase();
     if (nome) {
       const linhasV = parseInt($(`webPlLinhas${i}`)?.value) || null;
       const dataV = $(`webPlDataPlantio${i}`)?.value || null;
+      const semeaduraV = $(`webPlSemeaduraVar${i}`)?.value || null;
+      const nfV = $(`webPlNfVar${i}`)?.value?.trim() || null;
+      const termoV = $(`webPlTermoVar${i}`)?.value?.trim() || null;
       const areaVInput = parseFloat($(`webPlAreaVar${i}`)?.value);
       const areaV = !isNaN(areaVInput) ? areaVInput : ((linhasV && tamanhoL > 0) ? parseFloat(((linhasV * tamanhoL) / 5000).toFixed(2)) : null);
 
@@ -11470,6 +11830,9 @@ async function saveWebPlantio() {
         qtd: parseInt($(`webPlQtd${i}`)?.value) || null,
         linhas: linhasV,
         data_plantio: dataV,
+        semeadura: semeaduraV,
+        nf: nfV,
+        termo: termoV,
         area: areaV
       });
     }
@@ -11480,59 +11843,60 @@ async function saveWebPlantio() {
   btn.textContent = 'Salvando...';
 
   const areaVal = parseFloat($('webPlArea').value) || null;
-
-  const payload = {
-    tenant_id: tenantId,
-    parcela,
-    letra,
-    parcela2,
-    cultura,
-    variedade: varsData[0]?.nome || null, lote: varsData[0]?.lote || null, quantidade: varsData[0]?.qtd || null, linhas1: varsData[0]?.linhas || null, data_plantio1: varsData[0]?.data_plantio || null, area1: varsData[0]?.area || null,
-    variedade2: varsData[1]?.nome || null, lote2: varsData[1]?.lote || null, quantidade2: varsData[1]?.qtd || null, linhas2: varsData[1]?.linhas || null, data_plantio2: varsData[1]?.data_plantio || null, area2: varsData[1]?.area || null,
-    variedade3: varsData[2]?.nome || null, lote3: varsData[2]?.lote || null, quantidade3: varsData[2]?.qtd || null, linhas3: varsData[2]?.linhas || null, data_plantio3: varsData[2]?.data_plantio || null, area3: varsData[2]?.area || null,
-    variedade4: varsData[3]?.nome || null, lote4: varsData[3]?.lote || null, quantidade4: varsData[3]?.qtd || null, linhas4: varsData[3]?.linhas || null, data_plantio4: varsData[3]?.data_plantio || null, area4: varsData[3]?.area || null,
-    variedade5: varsData[4]?.nome || null, lote5: varsData[4]?.lote || null, quantidade5: varsData[4]?.qtd || null, linhas5: varsData[4]?.linhas || null, data_plantio5: varsData[4]?.data_plantio || null, area5: varsData[4]?.area || null,
-    variedade6: varsData[5]?.nome || null, lote6: varsData[5]?.lote || null, quantidade6: varsData[5]?.qtd || null, linhas6: varsData[5]?.linhas || null, data_plantio6: varsData[5]?.data_plantio || null, area6: varsData[5]?.area || null,
-    variedade7: varsData[6]?.nome || null, lote7: varsData[6]?.lote || null, quantidade7: varsData[6]?.qtd || null, linhas7: varsData[6]?.linhas || null, data_plantio7: varsData[6]?.data_plantio || null, area7: varsData[6]?.area || null,
-    variedade8: varsData[7]?.nome || null, lote8: varsData[7]?.lote || null, quantidade8: varsData[7]?.qtd || null, linhas8: varsData[7]?.linhas || null, data_plantio8: varsData[7]?.data_plantio || null, area8: varsData[7]?.area || null,
-    variedade9: varsData[8]?.nome || null, lote9: varsData[8]?.lote || null, quantidade9: varsData[8]?.qtd || null, linhas9: varsData[8]?.linhas || null, data_plantio9: varsData[8]?.data_plantio || null, area9: varsData[8]?.area || null,
-    variedade10: varsData[9]?.nome || null, lote10: varsData[9]?.lote || null, quantidade10: varsData[9]?.qtd || null, linhas10: varsData[9]?.linhas || null, data_plantio10: varsData[9]?.data_plantio || null, area10: varsData[9]?.area || null,
-    linhas: parseInt($('webPlFileiras').value) || null,
-    tamanho_linha: tamanhoL || null,
-    espacamento: parseFloat($('webPlEspacamento').value) || null,
-    area: areaVal,
-    area_ha: areaVal,
-    semeadura: $('webPlSemeadura').value || null,
-    transplante: $('webPlTransplante').value || null,
-    plantio: $('webPlPlantio').value || $('webPlTransplante').value || null,
-    previsao_colheita: $('webPlPrevisao').value || null,
-    idiarn: $('webPlIdiarn').value.trim() || null,
-    termo: $('webPlTermo').value.trim() || null,
-    nf: $('webPlNf').value.trim() || null,
-    fornecedor: $('webPlFornecedor').value.trim() || null,
-    fornecedor2: $('webPlFornecedor2').value.trim() || null,
-    obs: $('webPlObs').value.trim() || null,
-    ativo: true,
-  };
+  const globalSemeadura = $('webPlSemeadura').value || null;
+  const globalTransplante = $('webPlTransplante').value || null;
+  const globalNf = $('webPlNf').value.trim() || null;
+  const globalTermo = $('webPlTermo').value.trim() || null;
 
   try {
-    let res;
-    if (editId) {
-      res = await sb.from('info_parcelas').update(payload).eq('id', editId).eq('tenant_id', tenantId);
-    } else {
-      res = await sb.from('info_parcelas').insert(payload);
-    }
+    // Para cada variedade conjugada, insere/atualiza um registro individual com a parcela física compartilhada
+    for (let idx = 0; idx < varsData.length; idx++) {
+      const v = varsData[idx];
+      const payload = {
+        tenant_id: tenantId,
+        parcela,
+        letra,
+        parcela2,
+        cultura,
+        variedade: v.nome,
+        lote: v.lote || null,
+        quantidade: v.qtd || null,
+        linhas: v.linhas || (parseInt($('webPlFileiras').value) || null),
+        tamanho_linha: tamanhoL || null,
+        espacamento: parseFloat($('webPlEspacamento').value) || null,
+        area: v.area || areaVal,
+        area_ha: v.area || areaVal,
+        semeadura: v.semeadura || globalSemeadura,
+        transplante: v.data_plantio || globalTransplante,
+        plantio: v.data_plantio || globalTransplante || globalSemeadura,
+        previsao_colheita: $('webPlPrevisao').value || null,
+        idiarn: $('webPlIdiarn').value.trim() || null,
+        termo: v.termo || globalTermo,
+        nf: v.nf || globalNf,
+        fornecedor: $('webPlFornecedor').value.trim() || null,
+        fornecedor2: $('webPlFornecedor2').value.trim() || null,
+        obs: $('webPlObs').value.trim() || null,
+        ativo: true,
+      };
 
-    if (res.error) {
-      if (res.error.message && (res.error.message.includes("'area'") || res.error.message.includes('area'))) {
-        delete payload.area;
-        if (editId) {
-          res = await sb.from('info_parcelas').update(payload).eq('id', editId).eq('tenant_id', tenantId);
-        } else {
-          res = await sb.from('info_parcelas').insert(payload);
-        }
+      let res;
+      if (editId && idx === 0) {
+        res = await sb.from('info_parcelas').update(payload).eq('id', editId).eq('tenant_id', tenantId);
+      } else {
+        res = await sb.from('info_parcelas').insert(payload);
       }
-      if (res.error) throw res.error;
+
+      if (res.error) {
+        if (res.error.message && (res.error.message.includes("'area'") || res.error.message.includes('area'))) {
+          delete payload.area;
+          if (editId && idx === 0) {
+            res = await sb.from('info_parcelas').update(payload).eq('id', editId).eq('tenant_id', tenantId);
+          } else {
+            res = await sb.from('info_parcelas').insert(payload);
+          }
+        }
+        if (res.error) throw res.error;
+      }
     }
 
     toast(editId ? 'Plantio atualizado com sucesso! ✅' : 'Plantio cadastrado com sucesso! ✅', 'ok');
@@ -11648,6 +12012,12 @@ async function loadCadernoCampo() {
     if (!defError && defData) {
       _defensivos = defData;
     }
+  } catch(e) {}
+
+  // 5. Carregar Colheitas por Parcela & Pós-Colheita
+  try {
+    await loadColheitasTable();
+    await loadPosColheitaTable();
   } catch(e) {}
   
   const opSel = $('newOpParcelSelect');
@@ -11801,8 +12171,9 @@ function renderCcMipTable(list) {
   }
   tbody.innerHTML = list.map(item => {
     let limiar = 1.0;
-    if (item.praga.includes('LAGARTA')) limiar = 0.2;
-    if (item.praga.includes('OÍDIO') || item.praga.includes('MÍLDIO')) limiar = 0.0;
+    const pragaRaw = (item.praga || '').toUpperCase();
+    if (pragaRaw.includes('LAGARTA')) limiar = 0.2;
+    if (pragaRaw.includes('OÍDIO') || pragaRaw.includes('MÍLDIO')) limiar = 0.0;
     
     const mediaVal = parseFloat(item.media) || 0;
     const acimaLimiar = mediaVal > limiar;
@@ -11811,13 +12182,13 @@ function renderCcMipTable(list) {
     const statusColor = acimaLimiar ? 'rgba(239, 68, 68, 0.1); color: var(--red)' : 'rgba(16, 185, 129, 0.1); color: var(--green)';
     
     const formattedDate = item.data_vistoria ? item.data_vistoria.split('-').reverse().join('/') : '—';
-    const pragaFriendly = item.praga.replace(/_/g, ' ');
+    const pragaFriendly = (item.praga || 'Geral').replace(/_/g, ' ');
     const itemStr = encodeURIComponent(JSON.stringify(item));
     
     return `
       <tr style="border-bottom:1px solid var(--border); font-size:13px">
         <td style="padding:12px 10px">${formattedDate}</td>
-        <td style="padding:12px 10px; font-weight:600">${item.parcela}</td>
+        <td style="padding:12px 10px; font-weight:600">${item.parcela || '—'}</td>
         <td style="padding:12px 10px">${item.variedade || '—'}</td>
         <td style="padding:12px 10px; font-weight:500">${pragaFriendly}</td>
         <td style="padding:12px 10px; text-align:center; font-weight:700">${mediaVal.toFixed(2)}</td>
@@ -12144,12 +12515,88 @@ function handleDefensivosFile(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const text = e.target.result;
-    parseDefensivosCSVText(text);
-  };
-  reader.readAsText(file, 'UTF-8');
+  const fileName = file.name.toLowerCase();
+  if (fileName.endsWith('.xlsx') || fileName.endsWith('.xlsm') || fileName.endsWith('.xls')) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        parseDefensivosWorkbook(workbook);
+      } catch(err) {
+        console.error("Erro lendo arquivo Excel:", err);
+        alert("Erro ao ler arquivo Excel: " + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const text = e.target.result;
+      parseDefensivosCSVText(text);
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+}
+
+function parseDefensivosWorkbook(workbook) {
+  let combinedLines = [];
+  const targetSheetNames = ['MELÃO', 'MELAO', 'MELANCIA', 'DEFENSIVOS'];
+  
+  let sheetsToProcess = workbook.SheetNames.filter(s => targetSheetNames.includes(s.toUpperCase()));
+  if (sheetsToProcess.length === 0) {
+    sheetsToProcess = [workbook.SheetNames[0]];
+  }
+
+  sheetsToProcess.forEach(sheetName => {
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) return;
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    if (!rows || rows.length === 0) return;
+
+    let headerIdx = -1;
+    for (let r = 0; r < Math.min(15, rows.length); r++) {
+      const rowStr = (rows[r] || []).join(' ').toUpperCase();
+      if (rowStr.includes('NOME COMERCIAL') || rowStr.includes('INGREDIENTE ATIVO') || rowStr.includes('PRODUTO')) {
+        headerIdx = r;
+        break;
+      }
+    }
+
+    if (headerIdx === -1) headerIdx = 0;
+
+    let defaultCultura = 'TODAS';
+    if (sheetName.toUpperCase().includes('MELANCIA')) defaultCultura = 'MELANCIA';
+    else if (sheetName.toUpperCase().includes('MELÃO') || sheetName.toUpperCase().includes('MELAO')) defaultCultura = 'MELÃO';
+
+    const headerRow = rows[headerIdx].map(c => String(c !== undefined && c !== null ? c : '').trim());
+    if (!headerRow.some(h => h.toUpperCase().includes('CULTURA'))) {
+      headerRow.push('CULTURA');
+    }
+
+    if (combinedLines.length === 0) {
+      combinedLines.push(headerRow.join(';'));
+    }
+
+    for (let r = headerIdx + 1; r < rows.length; r++) {
+      const row = rows[r];
+      if (!row || row.length === 0) continue;
+      const rowVals = row.map(c => String(c !== undefined && c !== null ? c : '').trim());
+      if (!rowVals[0] && !rowVals[1]) continue;
+
+      if (rowVals.length < headerRow.length) {
+        rowVals.push(defaultCultura);
+      }
+      combinedLines.push(rowVals.join(';'));
+    }
+  });
+
+  if (combinedLines.length <= 1) {
+    alert('Nenhum defensivo válido encontrado na planilha.');
+    return;
+  }
+
+  parseDefensivosCSVText(combinedLines.join('\n'));
 }
 
 let _importCSVLines = [];
@@ -12340,6 +12787,660 @@ async function deleteMipRecord(id) {
   }
 }
 
+// ── COLHEITAS POR PARCELA & ORDENS DE COLHEITA ─────────────────────
+let _colheitasList = [];
+let _posColheitaList = [];
+
+async function loadColheitasTable() {
+  try {
+    const { data, error } = await sb.from('caderno_campo_colheita')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('data_colheita', { ascending: false });
+
+    if (!error && data) {
+      _colheitasList = data;
+      renderCcColheitasTable(data);
+    } else {
+      _colheitasList = [];
+      renderCcColheitasTable([]);
+    }
+  } catch (e) {
+    console.error('Erro ao carregar colheitas:', e);
+    _colheitasList = [];
+    renderCcColheitasTable([]);
+  }
+}
+
+function renderCcColheitasTable(list) {
+  const tbody = $('ccColheitasTableBody');
+  if (!tbody) return;
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px; color:var(--muted)">Nenhuma colheita registrada nesta safra.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(item => {
+    const fmtDate = item.data_colheita ? item.data_colheita.split('-').reverse().join('/') : '—';
+    const itemStr = encodeURIComponent(JSON.stringify(item));
+    return `
+      <tr style="border-bottom:1px solid var(--border); font-size:13px">
+        <td style="padding:12px 10px; text-align:center"><input type="checkbox" class="chkColheitaOrder" value="${item.id}" style="width:16px; height:16px; cursor:pointer"/></td>
+        <td style="padding:12px 10px; font-weight:700">${fmtDate}</td>
+        <td style="padding:12px 10px; font-weight:800; color:var(--green)">${item.parcela || '—'}</td>
+        <td style="padding:12px 10px; font-weight:600">${item.variedade || '—'}</td>
+        <td style="padding:12px 10px; text-align:center; font-weight:700">${item.quantidade_carrocoes || 0}</td>
+        <td style="padding:12px 10px; text-align:center">${item.quantidade_caixas || '—'}</td>
+        <td style="padding:12px 10px">${item.pincelador1 || item.equipe_colheita || '—'}</td>
+        <td style="padding:12px 10px; text-align:center; font-size:11px; color:var(--muted)">${item.rastreabilidade_codigo || '—'}</td>
+        <td style="padding:12px 10px; text-align:center; white-space:nowrap">
+          <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printOrdemColheitaReport('${itemStr}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Ordem Colheita</button>
+          <button class="danger" style="padding:4px 8px; font-size:11px" onclick="deleteColheitaRecord('${item.id}')">Excluir</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  if (window.lucide) lucide.createIcons();
+}
+
+function toggleSelectAllColheitas(master) {
+  document.querySelectorAll('.chkColheitaOrder').forEach(c => c.checked = master.checked);
+}
+
+async function openNewColheitaModal() {
+  const modal = $('newColheitaModal');
+  if (!modal) return;
+
+  // 1. Carregar parcelas
+  const parcelSelect = $('colheitaParcelaSelect');
+  if (parcelSelect) {
+    try {
+      const { data } = await sb.from('info_parcelas').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
+      _infoParcelas = data || [];
+    } catch(e) {}
+
+    parcelSelect.innerHTML = '<option value="">-- Selecione a Parcela --</option>' + 
+      (_infoParcelas || []).map(p => `<option value="${p.parcela2 || p.parcela}" data-vars="${p.variedade || ''}">${p.parcela2 || p.parcela} — ${p.variedade || 'Sem variedade'} (${p.cultura || 'MELÃO'})</option>`).join('') +
+      '<option value="OUTRO">+ Outra Parcela Não Cadastrada...</option>';
+  }
+
+  // 2. Carregar funcionários (pinceladores / equipe)
+  try {
+    const { data: empData } = await sb.from('employees').select('*').eq('tenant_id', tenantId).order('name', { ascending: true });
+    if (empData) window._employeesList = empData;
+  } catch(e) {}
+
+  const p1 = $('colheitaPincelador1');
+  const p2 = $('colheitaPincelador2');
+  if (p1 && p2) {
+    let empOptions = '<option value="">-- Selecione o Pincelador / Líder --</option>';
+    if (window._employeesList && window._employeesList.length > 0) {
+      empOptions += window._employeesList.map(e => `<option value="${e.name}">${e.name} (${e.role || 'Operador'})</option>`).join('');
+    }
+    empOptions += '<option value="OUTRO">+ Digitar Nome Manualmente...</option>';
+    p1.innerHTML = empOptions;
+    p2.innerHTML = empOptions;
+  }
+
+  $('colheitaData').value = new Date().toISOString().split('T')[0];
+  if ($('colheitaParcelaCustom')) {
+    $('colheitaParcelaCustom').value = '';
+    $('colheitaParcelaCustom').style.display = 'none';
+  }
+  if ($('colheitaPincelador1Custom')) {
+    $('colheitaPincelador1Custom').value = '';
+    $('colheitaPincelador1Custom').style.display = 'none';
+  }
+  if ($('colheitaPincelador2Custom')) {
+    $('colheitaPincelador2Custom').value = '';
+    $('colheitaPincelador2Custom').style.display = 'none';
+  }
+  $('colheitaVariedade').value = '';
+  $('colheitaCarrocoes').value = '';
+  $('colheitaCaixas').value = '';
+  $('colheitaRastreabilidade').value = '';
+  $('colheitaObs').value = '';
+
+  modal.style.display = 'flex';
+}
+
+function onColheitaParcelaChange() {
+  const sel = $('colheitaParcelaSelect');
+  if (!sel) return;
+  const customInput = $('colheitaParcelaCustom');
+  if (sel.value === 'OUTRO') {
+    if (customInput) {
+      customInput.style.display = 'block';
+      customInput.focus();
+    }
+    $('colheitaVariedade').value = '';
+    return;
+  }
+  if (customInput) customInput.style.display = 'none';
+  const opt = sel.options[sel.selectedIndex];
+  if (opt && opt.dataset.vars) {
+    $('colheitaVariedade').value = opt.dataset.vars.split(',')[0].trim();
+  }
+}
+
+function onColheitaPinceladorChange(num) {
+  const sel = $(`colheitaPincelador${num}`);
+  const customInput = $(`colheitaPincelador${num}Custom`);
+  if (!sel || !customInput) return;
+  if (sel.value === 'OUTRO') {
+    customInput.style.display = 'block';
+    customInput.focus();
+  } else {
+    customInput.style.display = 'none';
+  }
+}
+
+function closeNewColheitaModal() {
+  const modal = $('newColheitaModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function saveNewColheitaRecord() {
+  const pSel = $('colheitaParcelaSelect').value;
+  let parcela = '';
+  if (pSel === 'OUTRO') {
+    parcela = ($('colheitaParcelaCustom')?.value || '').toUpperCase().trim();
+  } else {
+    parcela = pSel;
+  }
+
+  const data_colheita = $('colheitaData').value;
+  const variedade = $('colheitaVariedade').value.toUpperCase().trim();
+  const quantidade_carrocoes = parseInt($('colheitaCarrocoes').value) || 0;
+  const quantidade_caixas = parseInt($('colheitaCaixas').value) || 0;
+
+  const p1Sel = $('colheitaPincelador1').value;
+  let pincelador1 = p1Sel === 'OUTRO' ? ($('colheitaPincelador1Custom')?.value || '').trim() : p1Sel;
+
+  const p2Sel = $('colheitaPincelador2').value;
+  let pincelador2 = p2Sel === 'OUTRO' ? ($('colheitaPincelador2Custom')?.value || '').trim() : p2Sel;
+
+  const rastreabilidade_codigo = $('colheitaRastreabilidade').value.toUpperCase().trim();
+  const observacoes = $('colheitaObs').value;
+
+  if (!parcela) {
+    alert('Por favor, informe ou selecione a Parcela Colhida.');
+    return;
+  }
+  if (!data_colheita) {
+    alert('Por favor, informe a Data da Colheita.');
+    return;
+  }
+  if (quantidade_carrocoes <= 0) {
+    alert('Por favor, informe a Quantidade de Carroções (deve ser um número maior que zero).');
+    return;
+  }
+
+  try {
+    const payload = {
+      tenant_id: tenantId,
+      parcela,
+      data_colheita,
+      variedade: variedade || 'MELÃO',
+      quantidade_carrocoes,
+      quantidade_caixas,
+      pincelador1: pincelador1 || 'Equipe de Campo',
+      pincelador2,
+      equipe_colheita: [pincelador1, pincelador2].filter(Boolean).join(' / ') || 'Equipe de Campo',
+      rastreabilidade_codigo: rastreabilidade_codigo || `LOT-${parcela}-${data_colheita.replace(/-/g, '')}`,
+      observacoes
+    };
+
+    const { error } = await sb.from('caderno_campo_colheita').insert(payload);
+    if (error) throw error;
+
+    toast('✓ Colheita de parcela salva com sucesso! 🌾', 'ok');
+    closeNewColheitaModal();
+    await loadColheitasTable();
+  } catch (e) {
+    alert('Erro ao salvar colheita: ' + (e.message || 'Verifique a conexão.'));
+  }
+}
+
+async function deleteColheitaRecord(id) {
+  if (!confirm('Deseja excluir este registro de colheita?')) return;
+  try {
+    const { error } = await sb.from('caderno_campo_colheita').delete().eq('id', id).eq('tenant_id', tenantId);
+    if (error) throw error;
+    toast('✓ Colheita excluída!', 'ok');
+    await loadColheitasTable();
+  } catch(e) {
+    alert('Erro ao excluir: ' + e.message);
+  }
+}
+
+function printOrdemColheitaReport(itemStr) {
+  const item = JSON.parse(decodeURIComponent(itemStr));
+  const printWin = window.open('', '_blank', 'width=900,height=1200');
+  if (!printWin) { alert('Permita popups para imprimir.'); return; }
+
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa Agrícola';
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Ordem de Colheita — Parcela ${item.parcela}</title>
+    <style>
+      @page { size: A4 portrait; margin: 10mm; }
+      body { font-family: 'Arial', sans-serif; color: #000; font-size: 9pt; line-height: 1.4; padding: 10px; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+      td, th { border: 1px solid #000; padding: 5px 8px; font-size: 9pt; vertical-align: middle; }
+      th { background: #f3f4f6; font-weight: bold; text-align: left; }
+      .header-title { font-size: 14pt; font-weight: bold; text-align: center; border: 2px solid #000; padding: 8px; background: #e5e7eb; margin-bottom: 12px; }
+    </style>
+  </head>
+  <body>
+    <table>
+      <tr>
+        <td style="font-weight:bold; font-size:11pt; width:60%">${tenantName.toUpperCase()}</td>
+        <td style="text-align:right; font-size:8.5pt">ORDEM DE COLHEITA AGRÍCOLA #COL-${item.id ? item.id.substring(0,8) : '001'}</td>
+      </tr>
+    </table>
+
+    <div class="header-title">ORDEM DE COLHEITA DE CAMPO — PARCELA Nº ${item.parcela}</div>
+
+    <table>
+      <tr>
+        <th width="30%">DATA DA COLHEITA:</th>
+        <td width="70%"><strong>${item.data_colheita ? item.data_colheita.split('-').reverse().join('/') : '—'}</strong></td>
+      </tr>
+      <tr>
+        <th>Nº DA PARCELA:</th>
+        <td><strong>${item.parcela}</strong></td>
+      </tr>
+      <tr>
+        <th>VARIEDADE:</th>
+        <td><strong>${item.variedade || '—'}</strong></td>
+      </tr>
+      <tr>
+        <th>QUANTIDADE DE CARROÇÕES:</th>
+        <td><strong>${item.quantidade_carrocoes || 0} Carroções</strong></td>
+      </tr>
+      <tr>
+        <th>QUANTIDADE ESTIMADA DE CAIXAS:</th>
+        <td>${item.quantidade_caixas ? item.quantidade_caixas + ' caixas' : '—'}</td>
+      </tr>
+      <tr>
+        <th>PINCELADOR 1 / RESPONSÁVEL:</th>
+        <td><strong>${item.pincelador1 || '—'}</strong></td>
+      </tr>
+      <tr>
+        <th>PINCELADOR 2 / AUXILIAR:</th>
+        <td>${item.pincelador2 || '—'}</td>
+      </tr>
+      <tr>
+        <th>CÓDIGO DE RASTREABILIDADE:</th>
+        <td><strong>${item.rastreabilidade_codigo || '—'}</strong></td>
+      </tr>
+      <tr>
+        <th>OBSERVAÇÕES DO CAMPO:</th>
+        <td>${item.observacoes || 'Nenhuma observação informada.'}</td>
+      </tr>
+    </table>
+
+    <div style="margin-top:40px; display:flex; justify-content:space-between; text-align:center">
+      <div style="width:45%; border-top:1px solid #000; padding-top:4px">
+        <strong>${item.pincelador1 || 'Pincelador / Responsável'}</strong><br/>Equipe de Colheita
+      </div>
+      <div style="width:45%; border-top:1px solid #000; padding-top:4px">
+        <strong>Supervisão de Campo / Packing</strong><br/>Recebimento de Frutos
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
+function printSelectedColheitaOrders() {
+  const chks = document.querySelectorAll('.chkColheitaOrder:checked');
+  const selectedIds = Array.from(chks).map(c => c.value);
+
+  let itemsToPrint = [];
+  if (selectedIds.length > 0) {
+    itemsToPrint = _colheitasList.filter(c => selectedIds.includes(c.id));
+  } else {
+    const confirmAll = confirm('Nenhuma colheita foi marcada na tabela.\n\nDeseja imprimir as Ordens de Colheita de TODAS as colheitas registradas?');
+    if (!confirmAll) return;
+    itemsToPrint = _colheitasList;
+  }
+
+  if (itemsToPrint.length === 0) {
+    alert('Nenhuma colheita encontrada para impressão.');
+    return;
+  }
+
+  const printWin = window.open('', '_blank', 'width=900,height=1200');
+  if (!printWin) { alert('Permita popups para imprimir.'); return; }
+
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa Agrícola';
+
+  const pages = itemsToPrint.map(item => `
+    <div style="page-break-after: always; break-after: page;">
+      <table style="width:100%; border-collapse:collapse; margin-bottom:12px; border:1px solid #000">
+        <tr>
+          <td style="font-weight:bold; font-size:11pt; padding:6px; width:60%">${tenantName.toUpperCase()}</td>
+          <td style="text-align:right; font-size:8.5pt; padding:6px">ORDEM DE COLHEITA AGRÍCOLA</td>
+        </tr>
+      </table>
+
+      <div style="font-size:14pt; font-weight:bold; text-align:center; border:2px solid #000; padding:8px; background:#e5e7eb; margin-bottom:12px;">ORDEM DE COLHEITA DE CAMPO — PARCELA Nº ${item.parcela}</div>
+
+      <table style="width:100%; border-collapse:collapse; margin-bottom:12px">
+        <tr style="border:1px solid #000"><th style="padding:6px; border:1px solid #000; background:#f3f4f6; width:30%; text-align:left">DATA DA COLHEITA:</th><td style="padding:6px; border:1px solid #000"><strong>${item.data_colheita ? item.data_colheita.split('-').reverse().join('/') : '—'}</strong></td></tr>
+        <tr style="border:1px solid #000"><th style="padding:6px; border:1px solid #000; background:#f3f4f6; text-align:left">Nº DA PARCELA:</th><td style="padding:6px; border:1px solid #000"><strong>${item.parcela}</strong></td></tr>
+        <tr style="border:1px solid #000"><th style="padding:6px; border:1px solid #000; background:#f3f4f6; text-align:left">VARIEDADE:</th><td style="padding:6px; border:1px solid #000"><strong>${item.variedade || '—'}</strong></td></tr>
+        <tr style="border:1px solid #000"><th style="padding:6px; border:1px solid #000; background:#f3f4f6; text-align:left">QUANTIDADE DE CARROÇÕES:</th><td style="padding:6px; border:1px solid #000"><strong>${item.quantidade_carrocoes || 0} Carroções</strong></td></tr>
+        <tr style="border:1px solid #000"><th style="padding:6px; border:1px solid #000; background:#f3f4f6; text-align:left">QUANTIDADE ESTIMADA DE CAIXAS:</th><td style="padding:6px; border:1px solid #000">${item.quantidade_caixas ? item.quantidade_caixas + ' caixas' : '—'}</td></tr>
+        <tr style="border:1px solid #000"><th style="padding:6px; border:1px solid #000; background:#f3f4f6; text-align:left">PINCELADOR 1 / RESPONSÁVEL:</th><td style="padding:6px; border:1px solid #000"><strong>${item.pincelador1 || '—'}</strong></td></tr>
+        <tr style="border:1px solid #000"><th style="padding:6px; border:1px solid #000; background:#f3f4f6; text-align:left">PINCELADOR 2 / AUXILIAR:</th><td style="padding:6px; border:1px solid #000">${item.pincelador2 || '—'}</td></tr>
+        <tr style="border:1px solid #000"><th style="padding:6px; border:1px solid #000; background:#f3f4f6; text-align:left">CÓDIGO DE RASTREABILIDADE:</th><td style="padding:6px; border:1px solid #000"><strong>${item.rastreabilidade_codigo || '—'}</strong></td></tr>
+        <tr style="border:1px solid #000"><th style="padding:6px; border:1px solid #000; background:#f3f4f6; text-align:left">OBSERVAÇÕES:</th><td style="padding:6px; border:1px solid #000">${item.observacoes || 'Nenhuma.'}</td></tr>
+      </table>
+
+      <div style="margin-top:40px; display:flex; justify-content:space-between; text-align:center">
+        <div style="width:45%; border-top:1px solid #000; padding-top:4px">
+          <strong>${item.pincelador1 || 'Pincelador / Responsável'}</strong><br/>Equipe de Colheita
+        </div>
+        <div style="width:45%; border-top:1px solid #000; padding-top:4px">
+          <strong>Supervisão de Campo / Packing</strong><br/>Recebimento de Frutos
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  printWin.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8"/>
+      <title>Ordens de Colheita de Campo em Lote</title>
+      <style>
+        @page { size: A4 portrait; margin: 10mm; }
+        body { font-family: 'Arial', sans-serif; color: #000; font-size: 9pt; line-height: 1.4; }
+      </style>
+    </head>
+    <body>
+      ${pages}
+    </body>
+    </html>
+  `);
+  printWin.document.close();
+}
+
+// ── PÓS-COLHEITA / TRATAMENTO DE TALO DO MELÃO ─────────────────────
+async function loadPosColheitaTable() {
+  try {
+    const { data, error } = await sb.from('caderno_campo_pos_colheita')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('data_aplicacao', { ascending: false });
+
+    if (!error && data) {
+      _posColheitaList = data;
+      renderCcPosTable(data);
+    } else {
+      _posColheitaList = [];
+      renderCcPosTable([]);
+    }
+  } catch (e) {
+    console.error('Erro ao carregar pós-colheita:', e);
+    _posColheitaList = [];
+    renderCcPosTable([]);
+  }
+}
+
+function renderCcPosTable(list) {
+  const tbody = $('ccPosTableBody');
+  if (!tbody) return;
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:20px; color:var(--muted)">Nenhum tratamento de talo pós-colheita registrado.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(item => {
+    const fmtDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—';
+    const itemStr = encodeURIComponent(JSON.stringify(item));
+    return `
+      <tr style="border-bottom:1px solid var(--border); font-size:13px">
+        <td style="padding:12px 10px; font-weight:700">${fmtDate}</td>
+        <td style="padding:12px 10px; font-weight:800; color:var(--green)">${item.parcela || '—'}</td>
+        <td style="padding:12px 10px; font-weight:700; color:var(--text)">${item.produto_nome || '—'}</td>
+        <td style="padding:12px 10px; color:var(--blue)">${item.ingrediente_ativo || '—'}</td>
+        <td style="padding:12px 10px; text-align:center; font-weight:700">${item.dosagem_produto || 0} mL/L</td>
+        <td style="padding:12px 10px; text-align:center">${item.volume_agua || 0} L</td>
+        <td style="padding:12px 10px; text-align:center">${item.quantidade_carrocoes || 0}</td>
+        <td style="padding:12px 10px; text-align:center; font-weight:700; color:var(--yellow)">${item.carencia_dias || 0}d</td>
+        <td style="padding:12px 10px">${item.operador || '—'}</td>
+        <td style="padding:12px 10px; text-align:center; white-space:nowrap">
+          <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printPosColheitaReport('${itemStr}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Relatório Talo</button>
+          <button class="danger" style="padding:4px 8px; font-size:11px" onclick="deletePosRecord('${item.id}')">Excluir</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  if (window.lucide) lucide.createIcons();
+}
+
+async function openNewPosModal() {
+  const modal = $('newPosModal');
+  if (!modal) return;
+
+  // 1. Carregar combo de parcelas
+  const parcelSelect = $('posParcela');
+  if (parcelSelect) {
+    if (!_infoParcelas || _infoParcelas.length === 0) {
+      const { data } = await sb.from('info_parcelas').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
+      _infoParcelas = data || [];
+    }
+    parcelSelect.innerHTML = '<option value="">-- Selecione a Parcela --</option>' + 
+      _infoParcelas.map(p => `<option value="${p.parcela2 || p.parcela}">${p.parcela2 || p.parcela} — ${p.variedade || 'Sem variedade'} (${p.cultura || 'MELÃO'})</option>`).join('');
+  }
+
+  // 2. Carregar combo de defensivos do cadastro
+  const defSelect = $('posProdutoSelect');
+  if (defSelect) {
+    if (!_defensivos || _defensivos.length === 0) {
+      const { data: defData } = await sb.from('caderno_campo_defensivos_cadastro').select('*').eq('tenant_id', tenantId).order('produto', { ascending: true });
+      _defensivos = defData || [];
+    }
+    defSelect.innerHTML = '<option value="">-- Selecione o Defensivo do Cadastro --</option>' + 
+      (_defensivos || []).map(d => `<option value="${d.id}" data-prod="${d.produto}" data-ing="${d.ingrediente_ativo || ''}" data-car="${d.carencia_dias || 0}" data-dose="${d.dose || 0}">${d.produto} (${d.ingrediente_ativo || 'S/ Princípio'}) - Carência: ${d.carencia_dias || 0}d</option>`).join('') + 
+      '<option value="OUTRO">+ Outro Produto Não Cadastrado...</option>';
+  }
+
+  // 3. Carregar combo de operadores/pinceladores
+  const opSelect = $('posOperador');
+  if (opSelect) {
+    let empOptions = '<option value="">-- Selecione o Operador / Pincelador --</option>';
+    if (window._employeesList && window._employeesList.length > 0) {
+      empOptions += window._employeesList.map(e => `<option value="${e.name}">${e.name} (${e.role || 'Operador'})</option>`).join('');
+    }
+    opSelect.innerHTML = empOptions;
+  }
+
+  $('posDataAplicacao').value = new Date().toISOString().split('T')[0];
+  const customInput = $('posProdutoNomeCustom');
+  if (customInput) {
+    customInput.value = '';
+    customInput.style.display = 'none';
+  }
+  $('posIngredienteAtivo').value = '';
+  $('posDosagem').value = '';
+  $('posVolumeAgua').value = '';
+  $('posCarrocoes').value = '';
+  $('posCarencia').value = '0';
+  $('posJustificativa').value = 'TRATAMENTO DE TALO DO MELÃO (PREVENÇÃO DE PODRIDÃO DE PEDÚNCULO)';
+
+  modal.style.display = 'flex';
+}
+
+function onPosDefensivoChange() {
+  const sel = $('posProdutoSelect');
+  if (!sel) return;
+  const customInput = $('posProdutoNomeCustom');
+  const val = sel.value;
+
+  if (val === 'OUTRO') {
+    if (customInput) {
+      customInput.style.display = 'block';
+      customInput.focus();
+    }
+    $('posIngredienteAtivo').value = '';
+    $('posCarencia').value = '0';
+    $('posDosagem').value = '';
+    return;
+  }
+
+  if (customInput) customInput.style.display = 'none';
+  const opt = sel.options[sel.selectedIndex];
+  if (opt && opt.dataset) {
+    $('posIngredienteAtivo').value = opt.dataset.ing || '';
+    $('posCarencia').value = opt.dataset.car || '0';
+    $('posDosagem').value = opt.dataset.dose || '';
+  }
+}
+
+function closeNewPosModal() {
+  const modal = $('newPosModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function saveNewPosRecord() {
+  const parcela = $('posParcela').value;
+  const data_aplicacao = $('posDataAplicacao').value;
+
+  const defSelVal = $('posProdutoSelect').value;
+  let produto_nome = '';
+  if (defSelVal === 'OUTRO') {
+    produto_nome = ($('posProdutoNomeCustom')?.value || '').toUpperCase().trim();
+  } else {
+    const sel = $('posProdutoSelect');
+    const opt = sel.options[sel.selectedIndex];
+    produto_nome = opt ? (opt.dataset.prod || opt.text.split('(')[0].trim()).toUpperCase() : '';
+  }
+
+  const ingrediente_ativo = $('posIngredienteAtivo').value.toUpperCase().trim();
+  const dosagem_produto = parseFloat($('posDosagem').value) || 0;
+  const volume_agua = parseFloat($('posVolumeAgua').value) || 0;
+  const quantidade_carrocoes = parseInt($('posCarrocoes').value) || 0;
+  const carencia_dias = parseInt($('posCarencia').value) || 0;
+  const operador = $('posOperador').value;
+  const justificativa = $('posJustificativa').value.toUpperCase().trim();
+
+  if (!parcela || !data_aplicacao || !produto_nome) {
+    alert('Preencha os campos obrigatórios: Parcela, Data e Produto Fungicida.');
+    return;
+  }
+
+  try {
+    const payload = {
+      tenant_id: tenantId,
+      parcela,
+      data_aplicacao,
+      produto_nome,
+      ingrediente_ativo,
+      dosagem_produto,
+      volume_agua,
+      quantidade_carrocoes,
+      carencia_dias,
+      operador,
+      justificativa
+    };
+
+    const { error } = await sb.from('caderno_campo_pos_colheita').insert(payload);
+    if (error) throw error;
+
+    toast('✓ Tratamento de Talo pós-colheita salvo com sucesso! 🛡️', 'ok');
+    closeNewPosModal();
+    await loadPosColheitaTable();
+  } catch (e) {
+    alert('Erro ao salvar tratamento pós-colheita: ' + (e.message || 'Verifique a conexão.'));
+  }
+}
+
+async function deletePosRecord(id) {
+  if (!confirm('Deseja excluir este tratamento de talo pós-colheita?')) return;
+  try {
+    const { error } = await sb.from('caderno_campo_pos_colheita').delete().eq('id', id).eq('tenant_id', tenantId);
+    if (error) throw error;
+    toast('✓ Registro excluído!', 'ok');
+    await loadPosColheitaTable();
+  } catch(e) {
+    alert('Erro ao excluir: ' + e.message);
+  }
+}
+
+function printPosColheitaReport(itemStr) {
+  const item = JSON.parse(decodeURIComponent(itemStr));
+  const printWin = window.open('', '_blank', 'width=900,height=1200');
+  if (!printWin) { alert('Permita popups para imprimir.'); return; }
+
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa Agrícola';
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Relatório de Tratamento Pós-Colheita (Talo) — Parcela ${item.parcela}</title>
+    <style>
+      @page { size: A4 portrait; margin: 10mm; }
+      body { font-family: 'Arial', sans-serif; color: #000; font-size: 9pt; line-height: 1.4; padding: 10px; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+      td, th { border: 1px solid #000; padding: 6px 8px; font-size: 9pt; vertical-align: middle; }
+      th { background: #f3f4f6; font-weight: bold; text-align: left; }
+      .header-title { font-size: 13pt; font-weight: bold; text-align: center; border: 2px solid #000; padding: 8px; background: #e5e7eb; margin-bottom: 12px; }
+    </style>
+  </head>
+  <body>
+    <table>
+      <tr>
+        <td style="font-weight:bold; font-size:11pt; width:60%">${tenantName.toUpperCase()}</td>
+        <td style="text-align:right; font-size:8.5pt">REGISTRO DE PÓS-COLHEITA / TRATAMENTO DE TALO</td>
+      </tr>
+    </table>
+
+    <div class="header-title">FICHA DE APLICAÇÃO DE PÓS-COLHEITA — TRATAMENTO DO TALO DO MELÃO</div>
+
+    <table>
+      <tr><th width="35%">DATA DE APLICAÇÃO:</th><td width="65%"><strong>${item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—'}</strong></td></tr>
+      <tr><th>PARCELA DE ORIGEM:</th><td><strong>${item.parcela}</strong></td></tr>
+      <tr><th>PRODUTO FUNGICIDA (NOME COMERCIAL):</th><td><strong>${item.produto_nome || '—'}</strong></td></tr>
+      <tr><th>INGREDIENTE ATIVO:</th><td>${item.ingrediente_ativo || '—'}</td></tr>
+      <tr><th>DOSAGEM DO PRODUTO:</th><td><strong>${item.dosagem_produto || 0} mL/L</strong></td></tr>
+      <tr><th>VOLUME DE ÁGUA DILUÍDO:</th><td>${item.volume_agua || 0} Litros</td></tr>
+      <tr><th>Nº DE CARROÇÕES / LOTE:</th><td>${item.quantidade_carrocoes || 0} Carroções</td></tr>
+      <tr><th>PERÍODO DE CARENCIA:</th><td>${item.carencia_dias || 0} Dias</td></tr>
+      <tr><th>OPERADOR / PINCELADOR:</th><td><strong>${item.operador || '—'}</strong></td></tr>
+      <tr><th>JUSTIFICATIVA TÉCNICA:</th><td>${item.justificativa || 'Tratamento de talo do melão contra podridão de pedúnculo'}</td></tr>
+    </table>
+
+    <div style="margin-top:50px; display:flex; justify-content:space-between; text-align:center">
+      <div style="width:45%; border-top:1px solid #000; padding-top:4px">
+        <strong>${item.operador || 'Operador Responsável'}</strong><br/>Aplicação no Packing House
+      </div>
+      <div style="width:45%; border-top:1px solid #000; padding-top:4px">
+        <strong>Responsável Técnico / Qualidade</strong><br/>Visto e Liberação
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
 async function deleteOpRecord(id) {
   if (!confirm('Deseja realmente excluir esta Ordem de Pulverização?')) return;
   try {
@@ -12358,8 +13459,14 @@ function openNewOpModal() {
   renderNewOpItems();
   
   $('newOpDate').value = today();
-  $('newOpTratorista').value = "Robson Rafael de Medeiros";
-  $('newOpBarrista').value = "";
+  
+  const emps = window._employees || [];
+  const empOpts = '<option value="">— Selecionar —</option>' + emps.map(e => `<option value="${e.name}">${e.name}${e.role ? ' (' + e.role + ')' : ''}</option>`).join('');
+  
+  if ($('newOpTratorista')) $('newOpTratorista').innerHTML = empOpts;
+  if ($('newOpBarrista')) $('newOpBarrista').innerHTML = empOpts;
+  if ($('newOpManipulador')) $('newOpManipulador').innerHTML = empOpts;
+
   $('newOpTrator').value = "Trator 2";
   $('newOpEquipamento').value = "Pulverizador Turbo";
   $('newOpPressao').value = "Pressão: 70 PSI / Rotação 1900";
@@ -12451,6 +13558,39 @@ function onNewOpDefensivoChange() {
   }
 }
 
+function validateMipForOpDashboard(parcelId, parcelCode, alvo, opDate) {
+  const cleanAlvo = (alvo || '').toUpperCase();
+  
+  const isFertilizer = !alvo
+    || cleanAlvo.includes('ADUBO')
+    || cleanAlvo.includes('FOLIAR')
+    || cleanAlvo.includes('NUTRIENTE')
+    || cleanAlvo.includes('FISIOLOGICO')
+    || cleanAlvo === 'N/A'
+    || cleanAlvo === '';
+  
+  if (isFertilizer) {
+    return { ok: true, blocked: false, message: 'Fertilizante/adubo — isento de justificativa MIP' };
+  }
+  
+  const mips = window._mipRecords || [];
+  const relevantMips = mips.filter(m => {
+    const matchesParcel = m.parcel_id == parcelId || m.parcela === parcelCode;
+    const pragaClean = (m.praga || '').toUpperCase();
+    return matchesParcel && (pragaClean.includes(cleanAlvo) || cleanAlvo.includes(pragaClean));
+  });
+  
+  if (relevantMips.length === 0) {
+    return {
+      ok: false,
+      blocked: true,
+      message: `🚫 NÃO CONFORMIDADE: A praga "${alvo}" NÃO foi identificada no monitoramento MIP desta parcela. Defensivos químicos só podem ser aplicados mediante justificativa de praga no MIP. (Fertilizantes e Adubos Foliares são isentos).`
+    };
+  }
+  
+  return { ok: true, blocked: false, message: 'Conforme MIP' };
+}
+
 function addNewOpItem() {
   const pId = $('newOpParcelSelect').value;
   if (!pId) { alert('Selecione o ciclo de parcela primeiro!'); return; }
@@ -12471,7 +13611,15 @@ function addNewOpItem() {
   const targetAlvo = inputAlvo || def.alvo || '';
   const cleanAlvo = targetAlvo.toUpperCase();
   
-  // Validação 1: Duplicados por Praga/Alvo na mesma calda
+  // Validação 1: Justificativa de MIP para Defensivos Químicos vs Isenção para Foliares
+  const parcelCode = ip ? (ip.parcela2 || ip.parcela) : '';
+  const mipValidation = validateMipForOpDashboard(pId, parcelCode, targetAlvo, opDateStr);
+  if (mipValidation.blocked) {
+    alert(mipValidation.message);
+    return;
+  }
+
+  // Validação 1b: Duplicados por Praga/Alvo na mesma calda
   if (targetAlvo) {
     const alreadyHasAlvo = _newOpItems.some(item => item.alvo.trim().toUpperCase() === targetAlvo.trim().toUpperCase());
     if (alreadyHasAlvo) {
@@ -12671,6 +13819,7 @@ async function saveNewOpDashboard() {
     trator: tratorVal,
     tratorista: tratoristaVal,
     barrista: barristaVal,
+    manipulador: ($('newOpManipulador')?.value || '').trim() || null,
     equipamento: $('newOpEquipamento').value,
     pressao: $('newOpPressao').value,
     bicos: $('newOpBicos').value,
@@ -12871,9 +14020,9 @@ function printOpReport(itemStr) {
   doc.text(String(item.tratorista || '—'), 48, y + 6);
   
   doc.setFont("helvetica", "bold");
-  doc.text("Barrista (Calda):", 102, y + 6);
+  doc.text("Barrista / Manipulador:", 102, y + 6);
   doc.setFont("helvetica", "normal");
-  doc.text(String(item.barrista || '—'), 135, y + 6);
+  doc.text(`${item.barrista || '—'}${item.manipulador ? ' / ' + item.manipulador : ''}`, 145, y + 6);
   
   // Linha 2
   doc.setFont("helvetica", "bold");
