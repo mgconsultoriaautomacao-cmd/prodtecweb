@@ -1750,6 +1750,7 @@
       <button class="btn sec" id="ccTabTratosBtn" onclick="showCcTab('tratos')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="clipboard-list" style="width:14px;height:14px"></i> Tratos Culturais</button>
       <button class="btn sec" id="ccTabMudasBtn" onclick="showCcTab('mudas')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="tree-pine" style="width:14px;height:14px"></i> Mudas & Sementes</button>
       <button class="btn sec" id="ccTabPosBtn" onclick="showCcTab('pos')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="sparkles" style="width:14px;height:14px"></i> Pós-Colheita</button>
+      <button class="btn sec" id="ccTabIdiarnBtn" onclick="showCcTab('idiarn')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="file-check" style="width:14px;height:14px"></i> Visitas IDIARN</button>
     </div>
 
     <!-- ABA 0: CADASTRO & HISTÓRICO DE PLANTIOS -->
@@ -1805,6 +1806,7 @@
             </tbody>
           </table>
         </div>
+      </div>
     <!-- ABA: COLHEITAS POR PARCELA -->
     <div id="ccTabColheitas" class="tab-pane-cc" style="display:none">
       <div class="card" style="margin-bottom:24px">
@@ -1837,6 +1839,8 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
     <!-- ABA: PÓS-COLHEITA - TRATAMENTO DE TALO DO MELÃO -->
     <div id="ccTabPos" class="tab-pane-cc" style="display:none">
       <div class="card" style="margin-bottom:24px">
@@ -1871,7 +1875,7 @@
     </div>
 
     <!-- ABA 1: AMOSTRAGEM MIP -->
-    <div id="ccTabMip" class="tab-pane-cc">
+    <div id="ccTabMip" class="tab-pane-cc" style="display:none">
       <div class="card" style="margin-bottom:24px">
         <div class="title"><i data-lucide="bug" class="btn-i"></i> Vistorias Realizadas no Campo (MIP)</div>
         <p style="color:var(--muted); font-size:12px; margin-bottom:15px">Consulte as médias de infestações coletadas. Alvos com infestação acima de 1.00 ou com presença de doenças exigirão atenção.</p>
@@ -1925,6 +1929,34 @@
       </div>
     </div>
 
+    <!-- ABA IDIARN: VISITAS E FISCALIZAÇÕES IDIARN -->
+    <div id="ccTabIdiarn" class="tab-pane-cc" style="display:none">
+      <div class="card" style="margin-bottom:24px">
+        <div class="title" style="display:flex; justify-content:space-between; align-items:center"><div style="display:flex; align-items:center; gap:6px"><i data-lucide="file-check" class="btn-i"></i> Visitas IDIARN / Laudos</div>
+          <button onclick="openNewIdiarnModal()" class="green" style="font-size:11px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; background:var(--green)"><i data-lucide="plus-circle" style="width:14px; height:14px"></i> Nova Visita IDIARN</button>
+        </div>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:15px">Histórico de visitas, fiscalizações do IDIARN e laudos fitossanitários cadastrados.</p>
+        <div style="overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:left; padding:10px">Data</th>
+                <th style="text-align:left; padding:10px">Documento / Laudo</th>
+                <th style="text-align:left; padding:10px">Parcela</th>
+                <th style="text-align:left; padding:10px">Safra / Ciclo</th>
+                <th style="text-align:left; padding:10px">Produtos Fitossanitários</th>
+                <th style="text-align:center; padding:10px">Área (Hectares)</th>
+                <th style="text-align:center; padding:10px">Laudo PDF</th>
+              </tr>
+            </thead>
+            <tbody id="ccIdiarnTableBody">
+              <tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Carregando Visitas IDIARN...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ABA 3: CADASTRO DE DEFENSIVOS E CONTROLE DE ESTOQUE -->
     <div id="ccTabDefreg" class="tab-pane-cc" style="display:none">
       <div class="card" style="margin-bottom:24px">
@@ -1968,6 +2000,126 @@
             </thead>
             <tbody id="ccDefensivosTableBody">
               <tr><td colspan="9" style="text-align:center; padding:20px; color:var(--muted)">Carregando cadastro de defensivos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA: ORDEM DE CALAGEM -->
+    <div id="ccTabCalagem" class="tab-pane-cc" style="display:none">
+      <div class="card" style="margin-bottom:24px">
+        <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+          <div style="display:flex; align-items:center; gap:8px"><i data-lucide="layers" class="btn-i" style="color:var(--yellow)"></i> Registro de Calagem e Solo</div>
+          <button onclick="openNewCalagemModal()" class="green" style="font-size:13px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px; background:var(--green)"><i data-lucide="plus-circle" style="width:16px; height:16px"></i> + Nova Calagem</button>
+        </div>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:20px">Histórico de calagem e correção de solo por parcela.</p>
+        
+        <div style="overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:left; padding:12px">Data Aplicação</th>
+                <th style="text-align:left; padding:12px">Parcela</th>
+                <th style="text-align:center; padding:12px">Qtde Calcário (T)</th>
+                <th style="text-align:center; padding:12px">PRNT (%)</th>
+                <th style="text-align:left; padding:12px">Operador</th>
+                <th style="text-align:left; padding:12px">Equipamento</th>
+                <th style="text-align:center; padding:12px">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="ccCalagemTableBody">
+              <tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Nenhum registro de calagem encontrado.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA: FERTIRRIGAÇÃO -->
+    <div id="ccTabFert" class="tab-pane-cc" style="display:none">
+      <div class="card" style="margin-bottom:24px">
+        <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+          <div style="display:flex; align-items:center; gap:8px"><i data-lucide="droplet" class="btn-i" style="color:var(--blue)"></i> Registros de Fertirrigação</div>
+          <button onclick="openNewFertModal()" class="green" style="font-size:13px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px; background:var(--green)"><i data-lucide="plus-circle" style="width:16px; height:16px"></i> + Nova Fertirrigação</button>
+        </div>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:20px">Histórico de receitas aplicadas e consumo de fertilizantes por parcela.</p>
+        
+        <div style="overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:left; padding:12px">Data Início</th>
+                <th style="text-align:left; padding:12px">Data Fim</th>
+                <th style="text-align:left; padding:12px">Parcela</th>
+                <th style="text-align:left; padding:12px">Receita</th>
+                <th style="text-align:left; padding:12px">Operador</th>
+                <th style="text-align:left; padding:12px">Fertilizantes</th>
+                <th style="text-align:center; padding:12px">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="ccFertTableBody">
+              <tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Nenhum registro de fertirrigação encontrado.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA: TRATOS CULTURAIS -->
+    <div id="ccTabTratos" class="tab-pane-cc" style="display:none">
+      <div class="card" style="margin-bottom:24px">
+        <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+          <div style="display:flex; align-items:center; gap:8px"><i data-lucide="clipboard-list" class="btn-i" style="color:var(--green)"></i> Tratos Culturais e Preparo de Solo</div>
+          <button onclick="openNewTratoModal()" class="green" style="font-size:13px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px; background:var(--green)"><i data-lucide="plus-circle" style="width:16px; height:16px"></i> + Novo Trato Cultural</button>
+        </div>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:20px">Histórico de gradagem, plantio, capina e preparo de solo.</p>
+        
+        <div style="overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:left; padding:12px">Data</th>
+                <th style="text-align:left; padding:12px">Parcela</th>
+                <th style="text-align:left; padding:12px">Atividade</th>
+                <th style="text-align:left; padding:12px">Implemento</th>
+                <th style="text-align:left; padding:12px">Operador</th>
+                <th style="text-align:center; padding:12px">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="ccTratosTableBody">
+              <tr><td colspan="6" style="text-align:center; padding:20px; color:var(--muted)">Nenhum trato cultural registrado.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA: MUDAS & SEMENTES -->
+    <div id="ccTabMudas" class="tab-pane-cc" style="display:none">
+      <div class="card" style="margin-bottom:24px">
+        <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+          <div style="display:flex; align-items:center; gap:8px"><i data-lucide="tree-pine" class="btn-i" style="color:var(--green)"></i> Rastreabilidade de Mudas & Sementes</div>
+          <small style="color:var(--muted)">💡 Cadastro e edições são feitos através da aba 'Plantios & Parcelas'</small>
+        </div>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:20px">Histórico e rastreabilidade de fornecedores, viveiros, notas fiscais e lotes de mudas/sementes por plantio.</p>
+        
+        <div style="overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:left; padding:12px">Parcela</th>
+                <th style="text-align:left; padding:12px">Cultura</th>
+                <th style="text-align:left; padding:12px">Variedade principal</th>
+                <th style="text-align:center; padding:12px">Qtd. Mudas/Sementes</th>
+                <th style="text-align:left; padding:12px">Fornecedor</th>
+                <th style="text-align:left; padding:12px">Viveiro</th>
+                <th style="text-align:left; padding:12px">NF Semente/Mudas</th>
+                <th style="text-align:left; padding:12px">Lote Semente</th>
+              </tr>
+            </thead>
+            <tbody id="ccMudasTableBody">
+              <tr><td colspan="8" style="text-align:center; padding:20px; color:var(--muted)">Nenhum plantio ou lote de semente cadastrado.</td></tr>
             </tbody>
           </table>
         </div>
@@ -2095,6 +2247,32 @@
           <button onclick="addNewOpItem()" style="background:var(--green); color:#fff; border:none; padding:7px 12px; border-radius:6px; width:100%; font-weight:700; cursor:pointer">+ Adicionar</button>
         </div>
       </div>
+
+      <!-- Custom write-in for Foliar / Fertilizantes -->
+      <div id="newOpDefensivoCustomContainer" style="display:none; grid-template-columns: 2fr 1.5fr 1fr 1fr; gap:10px; margin-bottom:12px; margin-top:8px">
+        <div>
+          <label class="flabel">Nome Customizado (Foliar / Outro)</label>
+          <input id="newOpDefensivoCustom" type="text" placeholder="Ex: NUTRIFOLIAR POTASSIO" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px; text-transform:uppercase">
+        </div>
+        <div>
+          <label class="flabel">Princípio Ativo</label>
+          <input id="newOpIngredienteCustom" type="text" placeholder="Ex: POTASSIO 30%" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px; text-transform:uppercase">
+        </div>
+        <div>
+          <label class="flabel">Carência (Dias)</label>
+          <input id="newOpCarenciaCustom" type="number" value="0" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Unidade Dose</label>
+          <select id="newOpUnidadeCustom" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+            <option value="L/ha">L/ha</option>
+            <option value="kg/ha">kg/ha</option>
+            <option value="mL/100L">mL/100L</option>
+            <option value="g/100L">g/100L</option>
+          </select>
+        </div>
+      </div>
+
       <div id="newOpItemsContainer" style="margin-bottom:16px; max-height:150px; overflow-y:auto; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid var(--border)">
         <!-- List of added items -->
       </div>
@@ -2111,33 +2289,184 @@
     </div>
   </div>
 
+  <!-- MODAL: NOVA VISITA IDIARN -->
+  <div id="newIdiarnModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px; width:90%; max-width:850px; max-height:90vh; overflow-y:auto; position:relative">
+      <div style="font-size:18px; font-weight:bold; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:8px">
+        <div style="display:flex; align-items:center; gap:6px; color:#fff"><i data-lucide="file-check"></i> Registrar Visita IDIARN</div>
+        <button onclick="closeNewIdiarnModal()" style="background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer">×</button>
+      </div>
+      
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Ciclo de Parcela</label>
+          <select id="newIdiarnParcelSelect" onchange="onNewIdiarnParcelChange()" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px"></select>
+        </div>
+        <div>
+          <label class="flabel">Safra / Ciclo</label>
+          <input id="newIdiarnCiclo" type="text" placeholder="Ex: 2024/2025" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">N° IDIARN (auto)</label>
+          <div style="display:flex; gap:6px">
+            <input id="newIdiarnNumero" type="number" placeholder="—" style="padding:6px; background:var(--input-bg); color:var(--orange); font-weight:800; border:1px solid var(--border); width:100%; border-radius:6px" readonly>
+            <button onclick="reloadNewIdiarnNumber()" style="background:var(--card2); border:1px solid var(--border); border-radius:6px; padding:6px; cursor:pointer; color:var(--muted)"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i></button>
+          </div>
+        </div>
+        <div>
+          <label class="flabel">Data Aplicação</label>
+          <input id="newIdiarnDate" type="date" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Área (Hectares)</label>
+          <input id="newIdiarnArea" type="number" step="0.01" placeholder="Ex: 2.24" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Variedade</label>
+          <input id="newIdiarnVariedade" type="text" placeholder="Ex: Goldex" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Fazenda</label>
+          <input id="newIdiarnFazenda" type="text" value="SANTA HELENA" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Documento / Laudo</label>
+          <input id="newIdiarnDocumento" type="text" placeholder="Ex: IDIARN 97 - 30 F - VISITA 1" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+      </div>
+
+      <!-- Seção: Produtos Fitossanitários -->
+      <div style="font-weight:700; color:#fff; margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px; margin-top:16px">Produtos Fitossanitários</div>
+      
+      <!-- Chips dos defensivos aplicados nos últimos 7 dias -->
+      <div id="newIdiarnMipSection" style="margin-bottom:12px">
+        <label class="flabel" id="newIdiarnOpsStatus">Selecione os produtos aplicados:</label>
+        <div id="newIdiarnOpChips" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; margin-bottom:12px"></div>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-bottom:12px; align-items:end">
+        <div style="flex:1">
+          <label class="flabel">Adicionar Outro Produto Manualmente</label>
+          <input id="newIdiarnProdutoManual" type="text" placeholder="Ex: Collis 500 SC, Privilege..." style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <button onclick="addNewIdiarnManualProduct()" style="background:var(--green); color:#fff; border:none; padding:7px 16px; border-radius:6px; font-weight:700; cursor:pointer">+ Add</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <label class="flabel">URL do PDF / Laudo Digitalizado</label>
+        <input id="newIdiarnPdfUrl" type="url" placeholder="https://..." style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px">
+        <button class="sec" onclick="closeNewIdiarnModal()">Cancelar</button>
+        <button onclick="saveNewIdiarnDashboard()" style="background:var(--blue); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:700; cursor:pointer">Salvar e Registrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: CADASTRO / EDIÇÃO DE DEFENSIVO INDIVIDUAL -->
   <div id="defensivoModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center;">
-    <div style="background:var(--modal-bg); color:var(--modal-text); padding:28px; border-radius:18px; width:680px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5)">
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:28px; border-radius:18px; width:900px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5)">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px">
         <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px" id="defensivoModalTitle"><i data-lucide="shield" style="width:22px; height:22px; color:var(--yellow)"></i> Novo Defensivo</h3>
         <button onclick="closeDefensivoModal()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); border-radius:50%; width:32px; height:32px; cursor:pointer">✕</button>
       </div>
       <input type="hidden" id="defEditId"/>
-      <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:12px; margin-bottom:12px">
+
+      <!-- SEÇÃO 1: Identificação -->
+      <div style="font-size:11px; font-weight:800; color:var(--blue); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid var(--border)">1. Identificação do Produto</div>
+      <div style="display:grid; grid-template-columns:1.5fr 1fr 1fr; gap:12px; margin-bottom:12px">
         <div><label class="flabel">Produto (Nome Comercial) *</label><input type="text" id="defProduto" placeholder="Ex: ORTUS 50 SC" required style="text-transform:uppercase"/></div>
-        <div><label class="flabel">Ingrediente Ativo / Princípio *</label><input type="text" id="defIngredienteAtivo" placeholder="Ex: FENPIROXIMATO" required style="text-transform:uppercase"/></div>
+        <div><label class="flabel">Ingrediente Ativo *</label><input type="text" id="defIngredienteAtivo" placeholder="Ex: FENPIROXIMATO" required style="text-transform:uppercase"/></div>
+        <div><label class="flabel">Concentração IA</label><input type="text" id="defConcentracaoIA" placeholder="Ex: 250 g/L"/></div>
       </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
-        <div><label class="flabel">Nº Registro MAPA</label><input type="text" id="defRegistroMapa" placeholder="Ex: 03893"/></div>
-        <div><label class="flabel">Dose Recomendada</label><input type="number" step="0.01" id="defDose" placeholder="Ex: 1.00"/></div>
-        <div><label class="flabel">Unidade Dose</label>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:12px">
+        <div><label class="flabel">Tipo</label>
+          <select id="defTipo">
+            <option value="">— Selecionar —</option>
+            <option value="FUNGICIDA">Fungicida</option>
+            <option value="INSETICIDA">Inseticida</option>
+            <option value="ACARICIDA">Acaricida</option>
+            <option value="HERBICIDA">Herbicida</option>
+            <option value="BACTERICIDA">Bactericida</option>
+            <option value="INSETIC / ACARIC">Inseticida/Acaricida</option>
+            <option value="FUNGICIDA/BACTERICIDA">Fungicida/Bactericida</option>
+            <option value="INSETICIDA BIOLOGICO">Inseticida Biológico</option>
+            <option value="OUTRO">Outro</option>
+          </select>
+        </div>
+        <div><label class="flabel">Classe Toxicológica</label>
+          <select id="defClasseToxicologica">
+            <option value="">— Sel. —</option>
+            <option value="I">I - Extremamente Tóxico</option>
+            <option value="II">II - Altamente Tóxico</option>
+            <option value="III">III - Medianamente Tóxico</option>
+            <option value="IV">IV - Pouco Tóxico</option>
+            <option value="V">V - Improvável Causar Dano</option>
+          </select>
+        </div>
+        <div><label class="flabel">Tarja</label>
+          <select id="defTarja">
+            <option value="">— Sel. —</option>
+            <option value="VERMELHA">🔴 Vermelha</option>
+            <option value="AMARELA">🟡 Amarela</option>
+            <option value="AZUL">🔵 Azul</option>
+            <option value="VERDE">🟢 Verde</option>
+          </select>
+        </div>
+        <div><label class="flabel">Classe Ambiental</label>
+          <select id="defClasseAmbiental">
+            <option value="">— Sel. —</option>
+            <option value="I">I - Altamente Perigoso</option>
+            <option value="II">II - Muito Perigoso</option>
+            <option value="III">III - Perigoso</option>
+            <option value="IV">IV - Pouco Perigoso</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- SEÇÃO 2: Dosagem e Aplicação -->
+      <div style="font-size:11px; font-weight:800; color:var(--blue); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; margin-top:8px; padding-bottom:4px; border-bottom:1px solid var(--border)">2. Dosagem e Aplicação</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:12px">
+        <div><label class="flabel">Dose (Texto)</label><input type="text" id="defDoseTexto" placeholder="Ex: 60 - 100 ml/ha"/></div>
+        <div><label class="flabel">Unidade Medida</label>
           <select id="defUnidadeDose">
+            <option value="LT">LT</option>
+            <option value="KG">KG</option>
             <option value="L/ha">L/ha</option>
             <option value="kg/ha">kg/ha</option>
             <option value="mL/100L">mL/100L</option>
             <option value="g/100L">g/100L</option>
           </select>
         </div>
+        <div><label class="flabel">Critério (H/L)</label>
+          <select id="defCriterioDosagem">
+            <option value="H">H (por hectare)</option>
+            <option value="L">L (por 100L água)</option>
+          </select>
+        </div>
+        <div><label class="flabel">Vol. Máx. Calda (L/ha)</label><input type="text" id="defVolumeMaxCalda" placeholder="Ex: 300 - 600 L"/></div>
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
+        <div><label class="flabel">Dose Numérica</label><input type="number" step="0.01" id="defDose" placeholder="Ex: 1.00"/></div>
+        <div><label class="flabel">Nº Registro MAPA</label><input type="text" id="defRegistroMapa" placeholder="Ex: 03893"/></div>
+        <div><label class="flabel">Nº Aplicações no Ciclo</label><input type="number" id="defNumAplicacoes" placeholder="Ex: 4"/></div>
+      </div>
+
+      <!-- SEÇÃO 3: Carência e Reentrada -->
+      <div style="font-size:11px; font-weight:800; color:var(--yellow); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; margin-top:8px; padding-bottom:4px; border-bottom:1px solid var(--border)">3. Carência, Reentrada e Cultura</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:12px">
         <div><label class="flabel" style="color:var(--yellow); font-weight:700">Carência (Dias) *</label><input type="number" id="defCarencia" placeholder="Ex: 7" required style="font-weight:700"/></div>
-        <div><label class="flabel">Intervalo Aplicação (Dias)</label><input type="number" id="defIntervalo" placeholder="Ex: 7" value="7"/></div>
+        <div><label class="flabel">Intervalo entre Aplicações (Dias)</label><input type="number" id="defIntervalo" placeholder="Ex: 7" value="7"/></div>
+        <div><label class="flabel">Reentrada na Área (Dias)</label><input type="number" id="defReentrada" placeholder="Ex: 1"/></div>
         <div><label class="flabel">Cultura Alvo</label>
           <select id="defCultura">
             <option value="MELÃO">MELÃO</option>
@@ -2151,6 +2480,26 @@
         <label class="flabel">Alvo / Praga / Doença</label>
         <input type="text" id="defAlvo" placeholder="Ex: Ácaro rajado, Mosca branca, Oídio..." style="text-transform:uppercase"/>
       </div>
+
+      <!-- SEÇÃO 4: TESCO e MRL -->
+      <div style="font-size:11px; font-weight:800; color:var(--accent, #06b6d4); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; margin-top:8px; padding-bottom:4px; border-bottom:1px solid var(--border)">4. TESCO / MRL (Limites Máximos de Resíduos)</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr; gap:12px; margin-bottom:12px">
+        <div><label class="flabel">Condição TESCO</label>
+          <select id="defCondicaoTesco">
+            <option value="">— Sel. —</option>
+            <option value="NA">NA (Não Aplicável)</option>
+            <option value="Restrito">Restrito</option>
+            <option value="Monitorado">Monitorado</option>
+            <option value="Proibido">Proibido</option>
+          </select>
+        </div>
+        <div><label class="flabel">Medida TESCO</label><input type="text" id="defMedidaTesco" placeholder="Ex: Med-05"/></div>
+        <div><label class="flabel">MRL EU/CODEX (mg/Kg)</label><input type="text" id="defMrlEu" placeholder="Ex: 0.06"/></div>
+        <div><label class="flabel">MRL GB (mg/Kg)</label><input type="text" id="defMrlGb" placeholder="Ex: 0.06"/></div>
+        <div><label class="flabel">MRL Brasil (mg/Kg)</label><input type="text" id="defMrlBrasil" placeholder="Ex: 0.05"/></div>
+      </div>
+
+      <!-- SEÇÃO 5: Observações -->
       <div style="margin-bottom:20px">
         <label class="flabel">Observações / Recomendações</label>
         <textarea id="defObs" rows="2" placeholder="Instruções de diluição, reentrada ou restrição de mistura..." style="width:100%; font-family:inherit"></textarea>
@@ -2348,6 +2697,136 @@
     </div>
   </div>
 
+  <!-- MODAL: NOVA CALAGEM -->
+  <div id="newCalagemModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:28px; border-radius:18px; width:550px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5)">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px">
+        <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px"><i data-lucide="layers" style="width:22px; height:22px; color:var(--yellow)"></i> Registrar Nova Calagem</h3>
+        <button onclick="closeNewCalagemModal()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); border-radius:50%; width:32px; height:32px; cursor:pointer">✕</button>
+      </div>
+      
+      <div style="margin-bottom:12px">
+        <label class="flabel">Parcela Colhida / Área *</label>
+        <select id="calagemParcelaSelect" style="width:100%"></select>
+      </div>
+      <div style="margin-bottom:12px">
+        <label class="flabel">Data Aplicação *</label>
+        <input type="date" id="calagemData" required style="width:100%"/>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Qtde Calcário (T) *</label>
+          <input type="number" step="0.01" id="calagemQtd" placeholder="Ex: 2.5" style="width:100%" required/>
+        </div>
+        <div>
+          <label class="flabel">PRNT (%)</label>
+          <input type="number" step="0.01" id="calagemPrnt" placeholder="Ex: 80" style="width:100%"/>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px">
+        <div>
+          <label class="flabel">Operador</label>
+          <input type="text" id="calagemOperador" placeholder="Nome do operador" style="width:100%"/>
+        </div>
+        <div>
+          <label class="flabel">Equipamento</label>
+          <input type="text" id="calagemEquipamento" placeholder="Ex: Distribuidor" style="width:100%"/>
+        </div>
+      </div>
+      
+      <div style="display:flex; justify-content:flex-end; gap:10px">
+        <button class="btn" onclick="closeNewCalagemModal()">Cancelar</button>
+        <button class="btn btn-green" onclick="saveCalagem()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: NOVO TRATO CULTURAL -->
+  <div id="newTratoModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:28px; border-radius:18px; width:550px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5)">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px">
+        <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px"><i data-lucide="clipboard-list" style="width:22px; height:22px; color:var(--green)"></i> Registrar Novo Trato Cultural</h3>
+        <button onclick="closeNewTratoModal()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); border-radius:50%; width:32px; height:32px; cursor:pointer">✕</button>
+      </div>
+      
+      <div style="margin-bottom:12px">
+        <label class="flabel">Parcela *</label>
+        <select id="tratoParcelaSelect" style="width:100%"></select>
+      </div>
+      <div style="margin-bottom:12px">
+        <label class="flabel">Atividade / Trato *</label>
+        <input type="text" id="tratoAtividade" placeholder="Ex: GRADAGEM, COROAMENTO..." style="text-transform:uppercase; width:100%" required/>
+      </div>
+      <div style="margin-bottom:12px">
+        <label class="flabel">Data *</label>
+        <input type="date" id="tratoData" required style="width:100%"/>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px">
+        <div>
+          <label class="flabel">Implemento</label>
+          <input type="text" id="tratoImplemento" placeholder="Ex: Grade aradora" style="width:100%"/>
+        </div>
+        <div>
+          <label class="flabel">Operador</label>
+          <input type="text" id="tratoOperador" placeholder="Nome do operador" style="width:100%"/>
+        </div>
+      </div>
+      
+      <div style="display:flex; justify-content:flex-end; gap:10px">
+        <button class="btn" onclick="closeNewTratoModal()">Cancelar</button>
+        <button class="btn btn-green" onclick="saveTrato()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: NOVA FERTIRRIGAÇÃO -->
+  <div id="newFertModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:28px; border-radius:18px; width:700px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5)">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px">
+        <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px"><i data-lucide="droplet" style="width:22px; height:22px; color:var(--blue)"></i> Registrar Nova Fertirrigação</h3>
+        <button onclick="closeNewFertModal()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); border-radius:50%; width:32px; height:32px; cursor:pointer">✕</button>
+      </div>
+      
+      <div style="margin-bottom:12px">
+        <label class="flabel">Parcela *</label>
+        <select id="fertParcelaSelect" style="width:100%"></select>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Data Início *</label>
+          <input type="date" id="fertDataInicio" required style="width:100%"/>
+        </div>
+        <div>
+          <label class="flabel">Data Fim *</label>
+          <input type="date" id="fertDataFim" required style="width:100%"/>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:12px; margin-bottom:16px">
+        <div>
+          <label class="flabel">Receita (ex: Fase 1)</label>
+          <input type="text" id="fertReceita" placeholder="Ex: Receita Melão Amarelo" style="width:100%"/>
+        </div>
+        <div>
+          <label class="flabel">Operador</label>
+          <input type="text" id="fertOperador" placeholder="Nome do operador" style="width:100%"/>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--border); padding-top:12px; margin-bottom:16px">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+          <strong style="color:#fff; font-size:14px">Nutrientes / Adubos Utilizados</strong>
+          <button onclick="addFertProdRow()" class="btn btn-blue" style="font-size:11px; padding:4px 8px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="plus-circle" style="width:12px; height:12px"></i> + Insumo</button>
+        </div>
+        <div id="fertProdsContainer" style="display:flex; flex-direction:column; gap:8px"></div>
+      </div>
+      
+      <div style="display:flex; justify-content:flex-end; gap:10px">
+        <button class="btn" onclick="closeNewFertModal()">Cancelar</button>
+        <button class="btn btn-green" onclick="saveFert()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
   <div id="tab-trace" class="tab">
     <h1 class="ptitle"><i data-lucide="leaf"></i> Rastreabilidade</h1>
     <div class="grid3">
@@ -2519,11 +2998,41 @@
   <div id="tab-settings" class="tab">
     <h1 class="ptitle"><i data-lucide="sliders"></i> Configurações do Tenant</h1>
     <div class="grid2">
-      <div class="card">
-        <div class="title"><i data-lucide="building" class="btn-i"></i> Dados da Empresa</div>
-        <div style="margin-bottom:12px"><label class="flabel">Nome da Empresa</label><input id="cfgName" placeholder="Ex: Fazenda Santa Maria"/></div>
-        <div style="margin-bottom:12px"><label class="flabel">Tipo de Cultura</label>
-          <select id="cfgCulture"><option value="MAMAO">Mamão</option><option value="MELAO">Melão/Melancia (com rastreabilidade)</option><option value="OUTRO">Outro</option></select>
+      <div class="card" style="grid-column: span 2">
+        <div class="title"><i data-lucide="building" class="btn-i"></i> Cadastro da Empresa & Certificações do Caderno de Campo</div>
+        <div style="display:grid; grid-template-columns:1.5fr 1fr 1.2fr; gap:12px; margin-bottom:12px">
+          <div><label class="flabel">Nome da Empresa / Fazenda</label><input id="cfgName" placeholder="Ex: Bom Jesus LTDA"/></div>
+          <div><label class="flabel">Tipo de Cultura</label>
+            <select id="cfgCulture"><option value="MAMAO">Mamão</option><option value="MELAO">Melão/Melancia (com rastreabilidade)</option><option value="OUTRO">Outro</option></select>
+          </div>
+          <div>
+            <label class="flabel">Logo da Fazenda (Imagens PNG/JPG)</label>
+            <div style="display:flex; gap:10px; align-items:center">
+              <input type="file" id="cfgLogoFile" accept="image/*" onchange="uploadTenantLogo(event)" style="display:none"/>
+              <button class="sec" onclick="$('cfgLogoFile').click()" style="padding:6px 12px; font-size:12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="upload" style="width:14px;height:14px"></i> Enviar Logo</button>
+              <div id="cfgLogoPreviewContainer" style="width:40px; height:40px; border-radius:8px; border:1px solid var(--border); overflow:hidden; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05)">
+                <img id="cfgLogoPreview" src="" style="max-width:100%; max-height:100%; object-fit:contain; display:none"/>
+                <span id="cfgLogoPlaceholder" style="font-size:10px; color:var(--muted)">Logo</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:12px; margin-bottom:12px">
+          <div><label class="flabel">Endereço (Fazenda/Galpão)</label><input id="cfgEndereco" placeholder="Ex: BR 304, Km 12 - Zona Rural"/></div>
+          <div><label class="flabel">Município</label><input id="cfgMunicipio" placeholder="Ex: Mossoró"/></div>
+          <div><label class="flabel">UF</label><input id="cfgUf" placeholder="Ex: RN" maxlength="2"/></div>
+          <div><label class="flabel">CEP</label><input id="cfgCep" placeholder="Ex: 59600-000"/></div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1.5fr 1fr 1fr; gap:12px; margin-bottom:12px">
+          <div><label class="flabel">Caixa Postal</label><input id="cfgCaixaPostal" placeholder="Ex: CP 143"/></div>
+          <div><label class="flabel">E-mail de Contato</label><input id="cfgEmail" type="email" placeholder="Ex: contato@fazenda.com.br"/></div>
+          <div><label class="flabel">Telefone</label><input id="cfgTelefone" placeholder="Ex: (84) 99999-9999"/></div>
+          <div><label class="flabel">Registro Certificação</label><input id="cfgRegistroGlobalgap" placeholder="Ex: TESCO / SEDEX"/></div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 2fr 1.5fr; gap:12px; margin-top:16px; padding-top:12px; border-top:1px solid var(--border)">
+          <div><label class="flabel">GGN (GlobalGAP Number)</label><input id="cfgGgnGeral" placeholder="Ex: 4056186000000"/></div>
+          <div><label class="flabel">Responsável Técnico (RT)</label><input id="cfgRtNome" placeholder="Ex: Maria de Souza"/></div>
+          <div><label class="flabel">Registro RT (CREA/UF)</label><input id="cfgRtCrea" placeholder="Ex: 21085-D/RN"/></div>
         </div>
       </div>
       <div class="card">
@@ -3438,6 +3947,7 @@ async function afterLogin(user){
   tenantId = tu.tenant_id;
   tenantName = tenant?.name || 'Empresa';
   tenantConfig = tenant || {};
+  window.tenantConfig = tenantConfig;
   $('tenantBadge').textContent = tenantName;
 
   const isGlobalAdmin = ['mgconsultoriaautomacao@gmail.com', 'admin@prodtech.com'].includes(user.email);
@@ -3488,6 +3998,7 @@ async function switchTenant(id) {
   tenantId = t.id;
   tenantName = t.name;
   tenantConfig = t;
+  window.tenantConfig = tenantConfig;
   $('tenantBadge').textContent = tenantName;
   showTab('dash', document.querySelector('.nav'));
   await Promise.all([loadEmpSelectAll(), loadWeightSelectAll()]);
@@ -4395,7 +4906,7 @@ function buildDashCharts(scans, packerScans, s, e, prevScans, harvest){
     packerScans.forEach(x => { 
       let name = x.employee_name;
       if(!name || name.includes('-')) {
-         const emp = window._employees ? window._employees.find(e => e.barcode === x.employee_barcode) : null;
+         const emp = _employees ? _employees.find(e => e.barcode === x.employee_barcode) : null;
          if(emp) name = emp.name;
       }
       if(!name) name = x.employee_barcode || 'Desconhecido';
@@ -6416,6 +6927,7 @@ async function loadSettings(){
   const {data}=await sb.from('tenants').select('*').eq('id',tenantId).single();
   if(!data)return;
   tenantConfig=data;
+  window.tenantConfig=data;
   $('cfgName').value=data.name||'';
   $('cfgCulture').value=data.culture_type||'MAMAO';
   $('cfgMetaPacker').value=data.target_per_hour_packer||'';
@@ -6432,6 +6944,37 @@ async function loadSettings(){
   $('cfgProdPenaltyPercent').value=data.prod_penalty_percent||'0';
   $('cfgWaTemplateEmp').value=data.wa_template_employee||'📦 *Produção do dia — {nome}*\n📅 {data} | *Empresa*\n\n✅ Caixas produzidas: *{caixas} cx*\n⚖️ Total pesado: *{peso} kg*\n🏆 Posição no ranking: *{ranking}*\n\n_Sistema Prodtech — Obrigado pelo trabalho de hoje!_ 🌟';
   $('cfgWaTemplateMgr').value=data.wa_template_manager||'📊 *Relatório Diário de Produção*\n📅 {data}\n\n{detalhes}\n\n🚀 *Total Geral: {total_caixas} cx | {total_peso} kg*';
+  
+  // New company and RT fields load
+  if ($('cfgEndereco')) $('cfgEndereco').value = data.endereco || '';
+  if ($('cfgMunicipio')) $('cfgMunicipio').value = data.municipio || '';
+  if ($('cfgUf')) $('cfgUf').value = data.uf || '';
+  if ($('cfgCep')) $('cfgCep').value = data.cep || '';
+  if ($('cfgCaixaPostal')) $('cfgCaixaPostal').value = data.caixa_postal || '';
+  if ($('cfgEmail')) $('cfgEmail').value = data.email || '';
+  if ($('cfgTelefone')) $('cfgTelefone').value = data.telefone || '';
+  if ($('cfgRegistroGlobalgap')) $('cfgRegistroGlobalgap').value = data.registro_globalgap || '';
+  if ($('cfgGgnGeral')) $('cfgGgnGeral').value = data.ggn_geral || '';
+  if ($('cfgRtNome')) $('cfgRtNome').value = data.responsavel_tecnico_nome || '';
+  if ($('cfgRtCrea')) $('cfgRtCrea').value = data.responsavel_tecnico_crea || '';
+
+  // Logo Preview load
+  if (data.logo_url) {
+    if ($('cfgLogoPreview')) {
+      $('cfgLogoPreview').src = data.logo_url;
+      $('cfgLogoPreview').style.display = 'block';
+    }
+    if ($('cfgLogoPlaceholder')) $('cfgLogoPlaceholder').style.display = 'none';
+    window._tenantLogoBase64 = data.logo_url;
+  } else {
+    if ($('cfgLogoPreview')) {
+      $('cfgLogoPreview').src = '';
+      $('cfgLogoPreview').style.display = 'none';
+    }
+    if ($('cfgLogoPlaceholder')) $('cfgLogoPlaceholder').style.display = 'block';
+    window._tenantLogoBase64 = null;
+  }
+
   // Work Hours
   if($('cfgWorkStart')) $('cfgWorkStart').value=data.work_start_time||'07:00';
   if($('cfgWorkEnd')) $('cfgWorkEnd').value=data.work_end_time||'17:00';
@@ -6453,6 +6996,26 @@ async function loadSettings(){
 
   window._tenantUsers = users || [];
   renderUsersTable(window._tenantUsers);
+}
+
+function uploadTenantLogo(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  if (file.size > 800 * 1024) {
+    alert("A logo deve ter no máximo 800 KB para salvamento direto.");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64 = e.target.result;
+    if ($('cfgLogoPreview')) {
+      $('cfgLogoPreview').src = base64;
+      $('cfgLogoPreview').style.display = 'block';
+    }
+    if ($('cfgLogoPlaceholder')) $('cfgLogoPlaceholder').style.display = 'none';
+    window._tenantLogoBase64 = base64;
+  };
+  reader.readAsDataURL(file);
 }
 
 function renderUsersTable(users) {
@@ -6501,7 +7064,20 @@ async function saveSettings(){
     work_start_time:$('cfgWorkStart')?.value||'07:00',
     work_end_time:$('cfgWorkEnd')?.value||'17:00',
     lunch_start_time:$('cfgLunchStart')?.value||'11:30',
-    lunch_end_time:$('cfgLunchEnd')?.value||'13:00'
+    lunch_end_time:$('cfgLunchEnd')?.value||'13:00',
+    // New fields
+    logo_url: window._tenantLogoBase64 || null,
+    endereco: $('cfgEndereco')?.value?.trim() || null,
+    municipio: $('cfgMunicipio')?.value?.trim() || null,
+    uf: $('cfgUf')?.value?.trim() || null,
+    cep: $('cfgCep')?.value?.trim() || null,
+    caixa_postal: $('cfgCaixaPostal')?.value?.trim() || null,
+    email: $('cfgEmail')?.value?.trim() || null,
+    telefone: $('cfgTelefone')?.value?.trim() || null,
+    registro_globalgap: $('cfgRegistroGlobalgap')?.value?.trim() || null,
+    ggn_geral: $('cfgGgnGeral')?.value?.trim() || null,
+    responsavel_tecnico_nome: $('cfgRtNome')?.value?.trim() || null,
+    responsavel_tecnico_crea: $('cfgRtCrea')?.value?.trim() || null,
   };
 
   try {
@@ -6653,6 +7229,20 @@ function pdfHeader(doc,title,sub){
   doc.text('PRODTECH — '+title,14,13);
   doc.setFontSize(9);doc.setFont('helvetica','normal');
   doc.text(`${tenantName} | ${sub} | ${new Date().toLocaleString('pt-BR')}`,14,22);
+  
+  // Add logo to PDF header if configured
+  const logo = (window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64;
+  if (logo && logo.startsWith('data:image')) {
+    try {
+      const format = logo.includes('image/png') ? 'PNG' : 'JPEG';
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(174, 3, 26, 26, 2, 2, 'F');
+      doc.addImage(logo, format, 175, 4, 24, 24);
+    } catch(e) {
+      console.warn('Erro ao desenhar logo no PDF:', e);
+    }
+  }
+  
   doc.setTextColor(15,23,42);
 }
 
@@ -6811,186 +7401,291 @@ function exportFinPDF(){
   doc.save(`prodtech-payroll-${s}-${e}.pdf`);
 }
 
-function exportHarvestOrderPDF(sid) {
-  const { jsPDF } = window.jspdf;
-  const s = _massSessions.find(x => x.id === sid);
-  if (!s) { alert('Sessão não encontrada.'); return; }
-  const emps = _massEmployees.filter(e => e.session_id === sid);
+function loadImg(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = (e) => reject(e);
+    img.src = url;
+  });
+}
 
+async function exportHarvestOrderPDF(sidOrIds) {
+  const ids = Array.isArray(sidOrIds) ? sidOrIds : [sidOrIds];
+  if (ids.length === 0) return;
+
+  const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const mg = 10;
   
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.3);
-
-  let y = 10;
-  const h1 = 20;
-
-  // ── CABEÇALHO SUPERIOR ──────────────────────────────────────────────────
-  doc.rect(mg, y, 190, h1);
-  doc.line(mg + 55, y, mg + 55, y + h1);
-  doc.line(mg + 125, y, mg + 125, y + h1);
-
-  // Box 1: Elaborado / Avaliado
-  doc.setFontSize(6); doc.setFont('helvetica', 'bold');
-  doc.text('ELABORADO E EMITIDO POR: RC', mg + 2, y + 4);
-  doc.text('AVALIADO POR: JMLL', mg + 2, y + 8);
-  doc.text('APROVADO POR: JMLL', mg + 2, y + 12);
-  doc.text('FREQUÊNCIA: POR CARROÇÃO COLHIDO', mg + 2, y + 16);
-  doc.text('INDIVIDUAL', mg + 14, y + 19);
-
-  // Box 2: Logo / Tenant Header
-  doc.setFontSize(14); doc.setFont('helvetica', 'bold');
-  doc.text(tenantName.toUpperCase(), mg + 90, y + 11, { align: 'center' });
-  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
-  doc.text('CONTROLE DE PRODUÇÃO AGRÍCOLA', mg + 90, y + 16, { align: 'center' });
-
-  // Box 3: Info Documento
-  doc.setFontSize(5); doc.setFont('helvetica', 'normal');
-  doc.text('DEPARTAMENTO: CAMPO', mg + 127, y + 4);
-  doc.text('NOME DO DOC: CONTROLE DE CARROÇÃO - PACKING HOUSE', mg + 127, y + 8);
-  doc.text('EMISSÃO: 01/06/2012 - U. REVISÃO: 05-05-2025 - MOD. E APROVAÇÃO: 02/05/2019', mg + 127, y + 12);
-  doc.text('PAG: 01 DE 01     COD: OC05     REVISÃO: ANUAL     VERSÃO: 12', mg + 127, y + 16);
-
-  y += h1;
-
-  // ── TÍTULO CENTRAL ──────────────────────────────────────────────────────
-  const h2 = 12;
-  doc.rect(mg, y, 190, h2);
-  doc.setFontSize(10); doc.setFont('helvetica', 'bold');
-  doc.text(`ORDEM DE COLHEITA Nº ${s.carrao_seq || '—'}`, 105, y + 5, { align: 'center' });
-  doc.setFontSize(9);
-  doc.text('CONTROLE DE CARROÇÃO / PACKING HOUSE', 105, y + 10, { align: 'center' });
-  y += h2;
-
-  // ── LINHA: EMPRESA E CONTROLE DE PRODUÇÃO ───────────────────────────────
-  const h3 = 14;
-  doc.rect(mg, y, 190, h3);
-  doc.line(mg + 130, y, mg + 130, y + h3);
-  
-  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
-  doc.text('EMPRESA:', mg + 2, y + 10);
-  doc.setFontSize(11); doc.setFont('helvetica', 'normal');
-  doc.text(tenantName.toUpperCase(), mg + 20, y + 9);
-  doc.line(mg + 18, y + 10, mg + 120, y + 10); // Linha sublinhada
-
-  doc.setFontSize(7); doc.setFont('helvetica', 'bold');
-  doc.text('LOTE / RASTREABILIDADE', 165, y + 5, { align: 'center' });
-  doc.setFontSize(14);
-  doc.text(String(s.julian_lot || s.carrao_seq || '—'), 165, y + 11, { align: 'center' });
-  y += h3;
-
-
-  // ── LINHA: DATA E Nº DO CARROÇÃO ────────────────────────────────────────
-  const h4 = 14;
-  doc.rect(mg, y, 190, h4);
-  doc.line(mg + 130, y, mg + 130, y + h4);
-  
-  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
-  doc.text('DATA DA COLHEITA\nREALIZADA:', mg + 2, y + 5);
-  doc.setFontSize(12);
-  
-  // Tratar a data para o formato escrito no traço
-  const dObj = new Date(s.date + 'T12:00:00');
-  const dia = ('0' + dObj.getDate()).slice(-2);
-  const mes = ('0' + (dObj.getMonth() + 1)).slice(-2);
-  const ano = dObj.getFullYear();
-  doc.text(`${dia}    /   ${mes}    /  ${ano}`, mg + 45, y + 10);
-  doc.line(mg + 35, y + 11, mg + 120, y + 11);
-
-  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
-  doc.text('Nº DO CARROÇÃO', mg + 132, y + 4);
-  doc.setFontSize(14);
-  const carriageObj = window._carriages ? window._carriages.find(c => c.id == s.carriage_id) : null;
-  const carriageName = carriageObj ? carriageObj.code : (s.carrao_seq || s.qty_carrocoes || '—');
-  doc.text(String(carriageName), 165, y + 11, { align: 'center' });
-  doc.line(mg + 132, y + 12, mg + 188, y + 12);
-  y += h4;
-
-  // ── LINHA: PARCELA E Nº DA UP ───────────────────────────────────────────
-  const h5 = 14;
-  doc.rect(mg, y, 190, h5);
-  doc.line(mg + 130, y, mg + 130, y + h5);
-  
-  doc.setFontSize(7); doc.setFont('helvetica', 'bold');
-  doc.text('PARCELA:', mg + 2, y + 4);
-  doc.setFontSize(14); doc.setFont('helvetica', 'normal');
-  doc.text(s.parcels?.code || '—', mg + 10, y + 11);
-  
-  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
-  doc.text('Nº da UP:', mg + 132, y + 4);
-  doc.setFontSize(12);
-  doc.text(s.parcels?.p_code || '—', 165, y + 11, { align: 'center' });
-  doc.line(mg + 132, y + 12, mg + 188, y + 12);
-  y += h5;
-
-  // ── LINHA: VARIEDADE, CORTE E TRATORISTA ────────────────────────────────
-  const h6 = 14;
-  doc.rect(mg, y, 190, h6);
-  doc.line(mg + 65, y, mg + 65, y + h6);
-  doc.line(mg + 130, y, mg + 130, y + h6);
-  
-  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
-  doc.text('VARIEDADE:', mg + 2, y + 4);
-  doc.setFontSize(12);
-  doc.text(s.variety_name || '—', mg + 5, y + 11);
-
-  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
-  doc.text('CORTE:', mg + 67, y + 4);
-  doc.setFontSize(12);
-  doc.text(String(s.corte || (s.shift === 'MANHA' ? '1' : '2')) + 'º', mg + 85, y + 11);
-
-  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
-  doc.text('TRATORISTA:', mg + 132, y + 4);
-  doc.setFontSize(12);
-  doc.text(s.tractor_driver || '—', mg + 135, y + 11);
-  y += h6;
-
-  // ── LINHA: MÁQUINA E OPERADOR DA MÁQUINA ─────────────────────────────────
-  const hMachine = 14;
-  doc.rect(mg, y, 190, hMachine);
-  doc.line(mg + 95, y, mg + 95, y + hMachine);
-  
-  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
-  doc.text('CÓD. MÁQUINA:', mg + 2, y + 4);
-  doc.setFontSize(12);
-  doc.text(s.machine_code || '—', mg + 5, y + 11);
-
-  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
-  doc.text('OPERADOR DA MÁQUINA:', mg + 97, y + 4);
-  doc.setFontSize(12);
-  doc.text(s.machine_operator || '—', mg + 100, y + 11);
-  y += hMachine;
-
-  // ── LINHA: RESPONSÁVEL COLHEITA E RESPONSÁVEL EMBALAGEM ─────────────────
-  const h7 = 16;
-  doc.rect(mg, y, 190, h7);
-  doc.line(mg + 130, y, mg + 130, y + h7);
-
-  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
-  doc.text('RESPONSÁVEL PELA COLHEITA', mg + 2, y + 4);
-  const supervisor = s.registered_by || '—';
-  doc.setFontSize(12);
-  doc.text(supervisor, mg + 30, y + 13);
-
-
-  doc.setFontSize(7); doc.setFont('helvetica', 'normal');
-  doc.text('RESPONSÁVEL PELA EMBALAGEM', mg + 132, y + 4);
-  if (s.ph_inspector_name) {
-    doc.setFontSize(10);
-    doc.text(s.ph_inspector_name, mg + 135, y + 14);
-  }
-  if (s.ph_signature_base64) {
-    try {
-      const sig = s.ph_signature_base64.replace(/^data:image\/\w+;base64,/, '');
-      doc.addImage(sig, 'PNG', mg + 140, y + 5, 40, 10);
-    } catch(e) {}
+  // Carregar imagem da logo
+  let logoImg = null;
+  try {
+    if (window.tenantConfig && window.tenantConfig.logo_url) {
+      logoImg = await loadImg(window.tenantConfig.logo_url);
+    } else {
+      logoImg = await loadImg('/logo.png');
+    }
+  } catch(e) {
+    console.warn('Erro ao carregar logo para o PDF:', e);
   }
 
-  // Se o documento precisar de múltiplas ordens na mesma página, y seria atualizado aqui
-  // y += h7 + 10;
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'AGRICOLA BOM JESUS';
 
-  doc.save(`ordem-colheita-${s.date}-${s.parcels?.code || 'P'}.pdf`);
+  for (let idx = 0; idx < ids.length; idx++) {
+    const sid = ids[idx];
+    if (idx > 0) {
+      doc.addPage();
+    }
+
+    let s = (_massSessions || []).find(x => x.id === sid);
+    let emps = (_massEmployees || []).filter(e => e.session_id === sid);
+
+    if (!s) {
+      try {
+        const { data: sessData } = await sb.from('field_carrao_sessions')
+          .select('*, parcels(code, p_code), varieties(name)')
+          .eq('id', sid)
+          .single();
+        if (sessData) {
+          s = {
+            ...sessData,
+            variety_name: sessData.varieties?.name || '—'
+          };
+          const { data: empsData } = await sb.from('field_carrao_employees')
+            .select('*')
+            .eq('session_id', sid);
+          emps = empsData || [];
+        } else {
+          const { data: ccData } = await sb.from('caderno_campo_colheita')
+            .select('*')
+            .eq('id', sid)
+            .single();
+          if (ccData) {
+            s = {
+              id: ccData.id,
+              date: ccData.data_colheita,
+              parcels: { code: ccData.parcela, p_code: '—' },
+              variety_name: ccData.variedade || '—',
+              qty_carrocoes: 1,
+              julian_lot: ccData.rastreabilidade_codigo,
+              carrao_seq: ccData.id.substring(0, 8),
+              shift: 'MANHA',
+              corte: 1,
+              tractor_driver: '—',
+              machine_code: '—',
+              machine_operator: '—',
+              registered_by: ccData.pincelador1 || 'Equipe',
+              ph_signature_base64: 'manual_dummy'
+            };
+            emps = [
+              { employee_name: ccData.pincelador1 },
+              { employee_name: ccData.pincelador2 }
+            ].filter(e => e.employee_name);
+          }
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar dados da colheita:', err);
+      }
+    }
+
+    if (!s) {
+      doc.setFontSize(12);
+      doc.text(`Ordem de colheita id ${sid} não encontrada no banco.`, 20, 20);
+      continue;
+    }
+
+    // DRAW THE ENTIRE PDF PAGE FOR `s` AND `emps`
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.3);
+
+    let y = 10;
+    const h1 = 20;
+
+    // ── CABEÇALHO SUPERIOR ──────────────────────────────────────────────────
+    doc.rect(mg, y, 190, h1);
+    doc.line(mg + 55, y, mg + 55, y + h1);
+    doc.line(mg + 125, y, mg + 125, y + h1);
+
+    // Box 1: Elaborado / Avaliado
+    doc.setFontSize(6); doc.setFont('helvetica', 'bold');
+    doc.text('ELABORADO E EMITIDO POR: RC', mg + 2, y + 4);
+    doc.text('AVALIADO POR: JMLL', mg + 2, y + 8);
+    doc.text('APROVADO POR: JMLL', mg + 2, y + 12);
+    doc.text('FREQUÊNCIA: POR CARROÇÃO COLHIDO', mg + 2, y + 16);
+    doc.text('INDIVIDUAL', mg + 14, y + 19);
+
+    // Box 2: Logo / Tenant Header
+    if (logoImg) {
+      doc.addImage(logoImg, 'PNG', mg + 57, y + 2, 16, 16);
+    }
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+    doc.text(tenantName.toUpperCase(), mg + 98, y + 9, { align: 'center' });
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+    doc.text('CONTROLE DE PRODUÇÃO AGRÍCOLA', mg + 98, y + 14, { align: 'center' });
+
+    // Box 3: Info Documento
+    doc.setFontSize(5); doc.setFont('helvetica', 'normal');
+    doc.text('DEPARTAMENTO: CAMPO', mg + 127, y + 4);
+    doc.text('NOME DO DOC: CONTROLE DE CARROÇÃO - PACKING HOUSE', mg + 127, y + 8);
+    doc.text('EMISSÃO: 01/06/2012 - U. REVISÃO: 05-05-2025 - MOD. E APROVAÇÃO: 02/05/2019', mg + 127, y + 12);
+    doc.text('PAG: 01 DE 01     COD: OC05     REVISÃO: ANUAL     VERSÃO: 12', mg + 127, y + 16);
+
+    y += h1;
+
+    // ── TÍTULO CENTRAL ──────────────────────────────────────────────────────
+    const h2 = 12;
+    doc.rect(mg, y, 190, h2);
+    doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+    doc.text(`ORDEM DE COLHEITA Nº ${s.carrao_seq || '—'}`, 105, y + 5, { align: 'center' });
+    doc.setFontSize(9);
+    doc.text('CONTROLE DE CARROÇÃO / PACKING HOUSE', 105, y + 10, { align: 'center' });
+    y += h2;
+
+    // ── LINHA: EMPRESA E CONTROLE DE PRODUÇÃO ───────────────────────────────
+    const h3 = 14;
+    doc.rect(mg, y, 190, h3);
+    doc.line(mg + 130, y, mg + 130, y + h3);
+    
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+    doc.text('EMPRESA:', mg + 2, y + 10);
+    doc.setFontSize(11); doc.setFont('helvetica', 'normal');
+    doc.text(tenantName.toUpperCase(), mg + 20, y + 9);
+    doc.line(mg + 18, y + 10, mg + 120, y + 10);
+
+    doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+    doc.text('LOTE / RASTREABILIDADE', 165, y + 5, { align: 'center' });
+    doc.setFontSize(14);
+    doc.text(String(s.julian_lot || s.carrao_seq || '—'), 165, y + 11, { align: 'center' });
+    y += h3;
+
+    // ── LINHA: DATA E Nº DO CARROÇÃO ────────────────────────────────────────
+    const h4 = 14;
+    doc.rect(mg, y, 190, h4);
+    doc.line(mg + 130, y, mg + 130, y + h4);
+    
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+    doc.text('DATA DA COLHEITA\nREALIZADA:', mg + 2, y + 5);
+    doc.setFontSize(12);
+    
+    const dObj = new Date(s.date + 'T12:00:00');
+    const dia = ('0' + dObj.getDate()).slice(-2);
+    const mes = ('0' + (dObj.getMonth() + 1)).slice(-2);
+    const ano = dObj.getFullYear();
+    doc.text(`${dia}    /   ${mes}    /  ${ano}`, mg + 45, y + 10);
+    doc.line(mg + 35, y + 11, mg + 120, y + 11);
+
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+    doc.text('Nº DO CARROÇÃO', mg + 132, y + 4);
+    doc.setFontSize(14);
+    const carriageObj = window._carriages ? window._carriages.find(c => c.id == s.carriage_id) : null;
+    const carriageName = carriageObj ? carriageObj.code : (s.carrao_seq || s.qty_carrocoes || '—');
+    doc.text(String(carriageName), 165, y + 11, { align: 'center' });
+    doc.line(mg + 132, y + 12, mg + 188, y + 12);
+    y += h4;
+
+    // ── LINHA: PARCELA E Nº DA UP ───────────────────────────────────────────
+    const h5 = 14;
+    doc.rect(mg, y, 190, h5);
+    doc.line(mg + 130, y, mg + 130, y + h5);
+    
+    doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+    doc.text('PARCELA:', mg + 2, y + 4);
+    doc.setFontSize(14); doc.setFont('helvetica', 'normal');
+    doc.text(s.parcels?.code || '—', mg + 10, y + 11);
+    
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+    doc.text('Nº da UP:', mg + 132, y + 4);
+    doc.setFontSize(12);
+    doc.text(s.parcels?.p_code || '—', 165, y + 11, { align: 'center' });
+    doc.line(mg + 132, y + 12, mg + 188, y + 12);
+    y += h5;
+
+    // ── LINHA: VARIEDADE, CORTE E TRATORISTA ────────────────────────────────
+    const h6 = 14;
+    doc.rect(mg, y, 190, h6);
+    doc.line(mg + 65, y, mg + 65, y + h6);
+    doc.line(mg + 130, y, mg + 130, y + h6);
+    
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+    doc.text('VARIEDADE:', mg + 2, y + 4);
+    doc.setFontSize(12);
+    doc.text(s.variety_name || '—', mg + 5, y + 11);
+
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+    doc.text('CORTE:', mg + 67, y + 4);
+    doc.setFontSize(12);
+    doc.text(String(s.corte || (s.shift === 'MANHA' ? '1' : '2')) + 'º', mg + 85, y + 11);
+
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+    doc.text('TRATORISTA:', mg + 132, y + 4);
+    doc.setFontSize(12);
+    doc.text(s.tractor_driver || '—', mg + 135, y + 11);
+    y += h6;
+
+    // ── LINHA: MÁQUINA E OPERADOR DA MÁQUINA ─────────────────────────────────
+    const hMachine = 14;
+    doc.rect(mg, y, 190, hMachine);
+    doc.line(mg + 95, y, mg + 95, y + hMachine);
+    
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+    doc.text('CÓD. MÁQUINA:', mg + 2, y + 4);
+    doc.setFontSize(12);
+    doc.text(s.machine_code || '—', mg + 5, y + 11);
+
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+    doc.text('OPERADOR DA MÁQUINA:', mg + 97, y + 4);
+    doc.setFontSize(12);
+    doc.text(s.machine_operator || '—', mg + 100, y + 11);
+    y += hMachine;
+
+    // ── LINHA: RESPONSÁVEL COLHEITA E RESPONSÁVEL EMBALAGEM ─────────────────
+    const h7 = 16;
+    doc.rect(mg, y, 190, h7);
+    doc.line(mg + 130, y, mg + 130, y + h7);
+
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+    doc.text('RESPONSÁVEL PELA COLHEITA', mg + 2, y + 4);
+    const supervisor = s.registered_by || '—';
+    doc.setFontSize(12);
+    doc.text(supervisor, mg + 30, y + 13);
+
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+    doc.text('RESPONSÁVEL PELA EMBALAGEM', mg + 132, y + 4);
+    if (s.ph_inspector_name) {
+      doc.setFontSize(10);
+      doc.text(s.ph_inspector_name, mg + 135, y + 14);
+    }
+    if (s.ph_signature_base64 && s.ph_signature_base64 !== 'manual_dummy') {
+      try {
+        const sig = s.ph_signature_base64.replace(/^data:image\/\w+;base64,/, '');
+        doc.addImage(sig, 'PNG', mg + 140, y + 5, 40, 10);
+      } catch(e) {}
+    }
+    y += h7;
+
+    // ── MESA / COLABORADORES ───────────────────────────────────────────────
+    y += 10;
+    doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+    doc.text('EQUIPE DE TRABALHADORES (COLHEITA / PINCELADORES):', mg, y);
+    y += 4;
+    
+    doc.setFont('helvetica', 'normal');
+    let col = 0;
+    let rowY = y;
+    (emps || []).forEach((e, i) => {
+      const colX = mg + (col * 60);
+      doc.text(`• ${e.employee_name || e.employee_id || '—'}`, colX, rowY);
+      col++;
+      if (col > 2) {
+        col = 0;
+        rowY += 5;
+      }
+    });
+  }
+
+  const filename = ids.length === 1 ? `ordem-colheita-${ids[0]}.pdf` : `lote-ordens-colheita.pdf`;
+  doc.save(filename);
 }
 
 function exportAuditPDF(){
@@ -7066,6 +7761,18 @@ async function exportProducaoPDF(dateParam){
   if(!data?.length) { alert('Nenhum dado de produção para esta data.'); return; }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
+  
+  // Add logo if exists
+  const logo = (window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64;
+  if (logo && logo.startsWith('data:image')) {
+    try {
+      const format = logo.includes('image/png') ? 'PNG' : 'JPEG';
+      doc.addImage(logo, format, 175, 10, 20, 20);
+    } catch(e) {
+      console.warn('Erro ao desenhar logo no PDF:', e);
+    }
+  }
+
   doc.setFontSize(16); doc.setTextColor(15,23,42);
   doc.text(`Relatório de Produção — ${date}`, 14, 20);
   doc.setFontSize(10); doc.setTextColor(100,116,139);
@@ -8110,6 +8817,19 @@ async function exportEmpDossierPDF() {
     doc.text("DOSSIÊ DE PRODUÇÃO E PAGAMENTO", 105, 18, { align: 'center' });
     doc.setFontSize(10); doc.setFont("helvetica", "normal");
     doc.text(`Empresa: ${tenantName} | Emissão: ${new Date().toLocaleDateString('pt-BR')}`, 105, 28, { align: 'center' });
+    
+    // Add logo to dossier header if configured
+    const logo = (window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64;
+    if (logo && logo.startsWith('data:image')) {
+      try {
+        const format = logo.includes('image/png') ? 'PNG' : 'JPEG';
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(174, 7, 26, 26, 2, 2, 'F');
+        doc.addImage(logo, format, 175, 8, 24, 24);
+      } catch(e) {
+        console.warn('Erro ao desenhar logo no PDF:', e);
+      }
+    }
     
     // Employee & Filter Info
     doc.setTextColor(0,0,0);
@@ -9324,25 +10044,38 @@ function printPastaCampoCapa(id) {
   </head>
   <body onload="window.print()">
     <div class="sheet">
-      <!-- CABEÇALHO OFICIAL (4 LINHAS) -->
-      <table class="hdr-table">
-        <tr>
-          <td class="hdr-left">ELABORADO, EMITIDO e REVISADO POR: EMANUELA MOREIRA</td>
-          <td class="hdr-right">DEPARTAMENTO: CAMPO</td>
-        </tr>
-        <tr>
-          <td class="hdr-left">Avaliado por: ADGF</td>
-          <td class="hdr-right">NOME DO DOC: REGISTRO DA CULTURA</td>
-        </tr>
-        <tr>
-          <td class="hdr-left">Aprovado Por: ADGF</td>
-          <td class="hdr-right">EMISSÃO: 15/06/2026 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; MOD. E APROVAÇÃO: 01/07/2026</td>
-        </tr>
-        <tr>
-          <td class="hdr-left">Frequência: Por parcela de campo.</td>
-          <td class="hdr-right">U. REVISÃO: 01/07/2026 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; VERSÃO: 01 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; COD: PC01 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; REVISÃO: ANUAL &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; PAG: 01 DE 01</td>
-        </tr>
-      </table>
+      <!-- CABEÇALHO OFICIAL COM LOGO DO TENANT -->
+      <div style="display:flex; justify-content:space-between; align-items:stretch; margin-bottom:12px; border:1px solid #000;">
+        <div style="width:45%; padding:6px; display:flex; align-items:center; gap:12px; border-right:1px solid #000;">
+          ${window.tenantConfig && window.tenantConfig.logo_url ? `<img src="${window.tenantConfig.logo_url}" style="max-height:48px; max-width:140px; object-fit:contain;"/>` : `<div style="width:40px; height:40px; background:#ddd; display:flex; align-items:center; justify-content:center; border-radius:4px; font-weight:bold; font-size:18px; color:#555;">🌱</div>`}
+          <div>
+            <div style="font-size:10pt; font-weight:bold; color:#1b4332; text-transform:uppercase;">${(window.tenantConfig && window.tenantConfig.name || 'BOM JESUS AGRÍCOLA').toUpperCase()}</div>
+            <div style="font-size:6.5pt; color:#444; line-height:1.2;">
+              ${window.tenantConfig && window.tenantConfig.endereco ? `${window.tenantConfig.endereco}<br/>` : ''}
+              ${window.tenantConfig && window.tenantConfig.municipio ? `${window.tenantConfig.municipio}/${window.tenantConfig.uf || 'RN'}` : ''}
+              ${window.tenantConfig && window.tenantConfig.ggn_geral ? ` | GGN: ${window.tenantConfig.ggn_geral}` : ''}
+            </div>
+          </div>
+        </div>
+        <table class="hdr-table" style="width:55%; margin-bottom:0; border:none; table-layout:fixed;">
+          <tr>
+            <td class="hdr-left" style="border-top:none; border-left:none;">ELABORADO, EMITIDO e REVISADO: EMANUELA MOREIRA</td>
+            <td class="hdr-right" style="border-top:none; border-right:none;">DEPARTAMENTO: CAMPO</td>
+          </tr>
+          <tr>
+            <td class="hdr-left" style="border-left:none;">Avaliado por: ADGF</td>
+            <td class="hdr-right" style="border-right:none;">NOME DO DOC: REGISTRO DA CULTURA</td>
+          </tr>
+          <tr>
+            <td class="hdr-left" style="border-left:none;">Aprovado Por: ADGF</td>
+            <td class="hdr-right" style="border-right:none; font-size:6.5pt;">EMISSÃO: 15/06/2026 &nbsp;&nbsp;&nbsp; MOD. E APROVAÇÃO: 01/07/2026</td>
+          </tr>
+          <tr>
+            <td class="hdr-left" style="border-left:none; border-bottom:none;">Frequência: Por parcela de campo.</td>
+            <td class="hdr-right" style="border-right:none; border-bottom:none; font-size:6.5pt;">COD: PC01 &nbsp;&nbsp;&nbsp; VERSÃO: 01 &nbsp;&nbsp;&nbsp; PAG: 01 DE 01</td>
+          </tr>
+        </table>
+      </div>
       
       <div class="main-title">REGISTROS DA CULTURA</div>
       
@@ -9363,19 +10096,19 @@ function printPastaCampoCapa(id) {
       <table class="grid-table">
         <tr>
           <td colspan="2"><strong>EMPRESA:</strong><br/><span style="font-weight: bold;">${tenantName.toUpperCase()}</span></td>
-          <td style="width: 15%;"><strong>UF:</strong><br/>RN</td>
+          <td style="width: 15%;"><strong>UF:</strong><br/>${window.tenantConfig && window.tenantConfig.uf || 'RN'}</td>
         </tr>
         <tr>
-          <td colspan="2"><strong>ENDEREÇO:</strong><br/>Sítio Pau Branco, S/N - Zona Rural</td>
-          <td><strong>MUNICÍPIO:</strong><br/>Mossoró</td>
+          <td colspan="2"><strong>ENDEREÇO:</strong><br/>${window.tenantConfig && window.tenantConfig.endereco || 'Sítio Pau Branco, S/N - Zona Rural'}</td>
+          <td><strong>MUNICÍPIO:</strong><br/>${window.tenantConfig && window.tenantConfig.municipio || 'Mossoró'}</td>
         </tr>
         <tr>
-          <td><strong>CEP:</strong><br/>59.600-970</td>
-          <td><strong>CAIXA POSTAL:</strong><br/>111</td>
-          <td><strong>TELEFONE:</strong><br/>(84) 9424 0050</td>
+          <td><strong>CEP:</strong><br/>${window.tenantConfig && window.tenantConfig.cep || '59.600-970'}</td>
+          <td><strong>CAIXA POSTAL:</strong><br/>${window.tenantConfig && window.tenantConfig.caixa_postal || '111'}</td>
+          <td><strong>TELEFONE:</strong><br/>${window.tenantConfig && window.tenantConfig.telefone || '(84) 9424 0050'}</td>
         </tr>
         <tr>
-          <td colspan="3"><strong>E-MAIL:</strong><br/>ajaxdgfilho@uol.com.br / neto@coopyfrutas.com</td>
+          <td colspan="3"><strong>E-MAIL:</strong><br/>${window.tenantConfig && window.tenantConfig.email || 'ajaxdgfilho@uol.com.br / neto@coopyfrutas.com'}</td>
         </tr>
       </table>
       
@@ -9383,23 +10116,23 @@ function printPastaCampoCapa(id) {
       <table class="grid-table" style="font-size: 7.5pt;">
         <tr>
           <td style="width: 30%;"><strong>REGISTRO NO GLOBALGAP:</strong></td>
-          <td>SATIVA EURO 18GP</td>
+          <td>${window.tenantConfig && window.tenantConfig.registro_globalgap || 'SATIVA EURO 18GP'}</td>
         </tr>
         <tr>
           <td><strong>REGISTRO GGN GERAL NO GLOBALGAP:</strong></td>
-          <td>4049928377654</td>
+          <td>${window.tenantConfig && window.tenantConfig.ggn_geral || '4049928377654'}</td>
         </tr>
         <tr>
           <td><strong>REGISTRO GGN INDIVIDUAL DAS FAZENDAS:</strong></td>
-          <td>NOR-4049928594464 / DINA-4049929454279 / FV-4050373290191 / JM-4049929684294 / ABJ-4049929454262</td>
+          <td>${window.tenantConfig && window.tenantConfig.ggn_geral ? window.tenantConfig.ggn_geral : 'NOR-4049928594464 / DINA-4049929454279 / FV-4050373290191 / JM-4049929684294 / ABJ-4049929454262'}</td>
         </tr>
         <tr>
           <td><strong>REGISTRO TN - TESCO NATURE'S:</strong></td>
-          <td>NOR-55/NC10/35365/08, DINA-55/NC10/35363/08, FV-55/NC10/50717/09, JM-55/NC10/35364/08, ABJ-55/NC10/35366/08.</td>
+          <td>${window.tenantConfig && window.tenantConfig.registro_globalgap ? window.tenantConfig.registro_globalgap : 'NOR-55/NC10/35365/08, DINA-55/NC10/35363/08, FV-55/NC10/50717/09, JM-55/NC10/35364/08, ABJ-55/NC10/35366/08.'}</td>
         </tr>
         <tr>
           <td><strong>REGISTRO NO SEDEX:</strong></td>
-          <td>NOR-PS974429034707, DINA-P000000040784, FV-P000000040785, JM-P000000040787, ABJ-P000000040789.</td>
+          <td>${window.tenantConfig && window.tenantConfig.registro_globalgap ? window.tenantConfig.registro_globalgap : 'NOR-PS974429034707, DINA-P000000040784, FV-P000000040785, JM-P000000040787, ABJ-P000000040789.'}</td>
         </tr>
         <tr>
           <td colspan="2" style="text-align: center; font-weight: bold; background: #f9fafb; font-size: 8pt; padding: 6px;">CERTIFICADOS ENCONTRAM-SE NA PASTA 13</td>
@@ -9408,6 +10141,17 @@ function printPastaCampoCapa(id) {
       
       <div class="section-title">2. RESPONSÁVEIS TÉCNICOS</div>
       <div class="signatures-grid">
+        ${window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome ? `
+        <div class="sig-box">
+          <div>
+            <strong>${window.tenantConfig.responsavel_tecnico_nome}</strong><br/>
+            Engenheiro Agrônomo | CREA: ${window.tenantConfig.responsavel_tecnico_crea || '—'}<br/>
+            ${window.tenantConfig.endereco || ''}<br/>
+            ${window.tenantConfig.telefone ? 'Tel: ' + window.tenantConfig.telefone : ''} ${window.tenantConfig.email ? ' | Email: ' + window.tenantConfig.email : ''}
+          </div>
+          <div class="sig-line">Assinatura</div>
+        </div>
+        ` : `
         <div class="sig-box">
           <div>
             <strong>Ajax Dantas de Gois Filho</strong><br/>
@@ -9444,6 +10188,7 @@ function printPastaCampoCapa(id) {
           </div>
           <div class="sig-line">Assinatura</div>
         </div>
+        `}
       </div>
       
       <div class="obs-box">
@@ -9476,11 +10221,20 @@ function printPastaCampoOrdemPulv(itemStr) {
     idadeDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + ' dias';
   }
   
-  // Processar itens da calda
-  const itemsCalda = item.caderno_campo_op_itens || [];
-  
-  // Preencher até 3 linhas de produtos para manter estrutura limpa
-  const filledProducts = [...itemsCalda];
+  // Separation between Defensivos e Adubos Foliares
+  const defsOnly = itemsCalda.filter(i => {
+    const t = (i.tipo_produto || '').toUpperCase();
+    const a = (i.alvo || '').toUpperCase();
+    return t === 'DEFENSIVO' || (!t.includes('FOLIAR') && !a.includes('FOLIAR'));
+  });
+  const foliaresOnly = itemsCalda.filter(i => {
+    const t = (i.tipo_produto || '').toUpperCase();
+    const a = (i.alvo || '').toUpperCase();
+    return t === 'FOLIAR' || t.includes('FOLIAR') || a.includes('FOLIAR');
+  });
+
+  // Preencher até 3 linhas de defensivos para manter estrutura limpa
+  const filledProducts = [...defsOnly];
   while (filledProducts.length < 3) {
     filledProducts.push({
       produto_nome: '', alvo: '', dosagem_real: '', dosagem_corrigida: '', unidade: '', carencia_dias: ''
@@ -9500,6 +10254,7 @@ function printPastaCampoOrdemPulv(itemStr) {
         activeIng = match.ingrediente_ativo || '—';
         toxicClass = match.classe_toxicologica || '—';
         regMapa = match.registro_mapa || '—';
+        concentration = match.concentracao_ia || '—';
       }
     }
     
@@ -9541,6 +10296,25 @@ function printPastaCampoOrdemPulv(itemStr) {
       </tr>
     `;
   }).join('');
+
+  // Formatar HTML de Adubos Foliares
+  let foliaresRowsHtml = '';
+  if (foliaresOnly.length > 0) {
+    foliaresRowsHtml = foliaresOnly.map(f => `
+      <tr>
+        <td style="font-size: 7.5pt; font-weight: bold; color: #166534;">${f.produto_nome}</td>
+        <td style="font-size: 7.5pt;" colspan="2">Adubo Foliar / Nutrição</td>
+        <td class="cell-center" style="font-size: 7.5pt; font-weight: bold;">${f.dosagem_real} ${f.unidade}</td>
+        <td style="font-size: 7.5pt;" colspan="2">Aplicação via calda de pulverização (Isento de MIP)</td>
+      </tr>
+    `).join('');
+  } else {
+    foliaresRowsHtml = `
+      <tr>
+        <td style="font-size: 7.5pt; color: #666;" colspan="6">Nenhum adubo foliar adicionado a esta calda.</td>
+      </tr>
+    `;
+  }
 
   // Clima
   const isEnsolarado = (parseFloat(item.temperatura_c) > 22 && !(item.observacoes || '').toUpperCase().includes('CHUVA')) ? 'x' : '';
@@ -9600,25 +10374,38 @@ function printPastaCampoOrdemPulv(itemStr) {
   </head>
   <body onload="window.print()">
     <div class="sheet">
-      <!-- CABEÇALHO OFICIAL (4 LINHAS) -->
-      <table class="hdr-table">
-        <tr>
-          <td class="hdr-left">ELABORADO, EMITIDO E REVISADO POR: EMANUELA MOREIRA</td>
-          <td class="hdr-right">DEPARTAMENTO: CAMPO</td>
-        </tr>
-        <tr>
-          <td class="hdr-left">AVALIADO POR: ADGF</td>
-          <td class="hdr-right">NOME DO DOC: ORDEM DE AUTORIZAÇÃO DE APLICAÇÃO DE PRODUTOS FITOSSANITÁRIOS - CAMPO</td>
-        </tr>
-        <tr>
-          <td class="hdr-left">APROVADO POR: ADGF</td>
-          <td class="hdr-right">DATA EMISSÃO: 15/06/2026 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; MOD. E APROVAÇÃO: 01/07/2026 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; U. REVISÃO: 01/07/2026</td>
-        </tr>
-        <tr>
-          <td class="hdr-left">FREQUENCIA: POR APLICAÇÃO EM CAMPO</td>
-          <td class="hdr-right">PAG: 01 DE 01 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; COD: OC02 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; REVISÃO: ANUAL &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; VERSÃO: 01</td>
-        </tr>
-      </table>
+      <!-- CABEÇALHO OFICIAL COM LOGO DO TENANT -->
+      <div style="display:flex; justify-content:space-between; align-items:stretch; margin-bottom:6px; border:1px solid #000;">
+        <div style="width:45%; padding:6px; display:flex; align-items:center; gap:12px; border-right:1px solid #000;">
+          ${window.tenantConfig && window.tenantConfig.logo_url ? `<img src="${window.tenantConfig.logo_url}" style="max-height:48px; max-width:140px; object-fit:contain;"/>` : `<div style="width:40px; height:40px; background:#ddd; display:flex; align-items:center; justify-content:center; border-radius:4px; font-weight:bold; font-size:18px; color:#555;">🌱</div>`}
+          <div>
+            <div style="font-size:10pt; font-weight:bold; color:#1b4332; text-transform:uppercase;">${(window.tenantConfig && window.tenantConfig.name || 'BOM JESUS AGRÍCOLA').toUpperCase()}</div>
+            <div style="font-size:6.5pt; color:#444; line-height:1.2;">
+              ${window.tenantConfig && window.tenantConfig.endereco ? `${window.tenantConfig.endereco}<br/>` : ''}
+              ${window.tenantConfig && window.tenantConfig.municipio ? `${window.tenantConfig.municipio}/${window.tenantConfig.uf || 'RN'}` : ''} 
+              ${window.tenantConfig && window.tenantConfig.ggn_geral ? ` | GGN: ${window.tenantConfig.ggn_geral}` : ''}
+            </div>
+          </div>
+        </div>
+        <table class="hdr-table" style="width:55%; margin-bottom:0; border:none; table-layout:fixed;">
+          <tr>
+            <td class="hdr-left" style="border-top:none; border-left:none;">ELABORADO, EMITIDO E REVISADO: EMANUELA MOREIRA</td>
+            <td class="hdr-right" style="border-top:none; border-right:none;">DEPARTAMENTO: CAMPO</td>
+          </tr>
+          <tr>
+            <td class="hdr-left" style="border-left:none;">AVALIADO POR: ADGF</td>
+            <td class="hdr-right" style="border-right:none;">NOME DO DOC: AUTORIZAÇÃO DE PULVERIZAÇÃO</td>
+          </tr>
+          <tr>
+            <td class="hdr-left" style="border-left:none;">APROVADO POR: ADGF</td>
+            <td class="hdr-right" style="border-right:none; font-size:6pt;">DATA EMISSÃO: 15/06/2026 &nbsp;&nbsp; MOD/APROV: 01/07/2026</td>
+          </tr>
+          <tr>
+            <td class="hdr-left" style="border-left:none; border-bottom:none;">FREQUENCIA: POR APLICAÇÃO</td>
+            <td class="hdr-right" style="border-right:none; border-bottom:none; font-size:6pt;">PAG: 01/01 &nbsp;&nbsp; COD: OC02 &nbsp;&nbsp; REV: ANUAL &nbsp;&nbsp; VERSÃO: 01</td>
+          </tr>
+        </table>
+      </div>
       
       <div class="main-title">ORDEM DE AUTORIZAÇÃO DE APLICAÇÃO DE PRODUTOS FITOSSANITÁRIOS - CAMPO</div>
       
@@ -9681,14 +10468,21 @@ function printPastaCampoOrdemPulv(itemStr) {
       </table>
       
       <!-- ADUBOS FOLIARES -->
-      <table class="info-grid" style="margin-top: 4px;">
-        <tr>
-          <td style="font-weight: bold; background: #eef2f7; text-align: center; width: 20%;">ADUBOS FOLIARES INSERIDOS</td>
-          <td style="width: 25%;"><strong>Nome Comercial:</strong> ${item.defensivo1 || '—'}</td>
-          <td style="width: 15%;"><strong>Unidade:</strong> LT / KG</td>
-          <td style="width: 15%;"><strong>Quantidade:</strong> 5.00</td>
-          <td style="width: 25%;"><strong>Observações:</strong> Diluição em tanque principal</td>
-        </tr>
+      <table class="doc-table" style="margin-top: 4px;">
+        <thead>
+          <tr>
+            <th colspan="6" style="background: #f0fdf4; color: #166534; text-align: left; font-size: 8pt; padding: 4px 6px;">🍃 ADUBAÇÃO FOLIAR E NUTRIENTES INSERIDOS NA CALDA</th>
+          </tr>
+          <tr>
+            <th style="width: 25%;">Nome Comercial</th>
+            <th style="width: 20%;" colspan="2">Categoria</th>
+            <th style="width: 15%;">Dosagem / ha</th>
+            <th style="width: 40%;" colspan="2">Instruções de Mistura / Observações</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${foliaresRowsHtml}
+        </tbody>
       </table>
       
       <!-- DETALHES DE OPERAÇÃO E CONDIÇÕES CLIMÁTICAS -->
@@ -9762,6 +10556,10 @@ function printPastaCampoAutColheita(itemStr) {
   const item = JSON.parse(decodeURIComponent(itemStr));
   const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'DINA DINAMARCA INDUSTRIAL AGRÍCOLA LTDA';
   
+  // Dynamic RT Name and CREA
+  const rtNome = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'Ajax Dantas de Gois Filho';
+  const rtCrea = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_crea) || '2100995243';
+
   // Buscar ciclo correspondente em _infoParcelas para preencher dados extras
   const ip = _infoParcelas.find(x => x.parcela2 === item.parcela || x.parcela === item.parcela);
   const variedadesStr = ip && ip.variedade ? ip.variedade : item.variedade || 'JADIAL, GOLDEX, GRAND PRIX, ASTURIA, GOLDMINE';
@@ -9846,25 +10644,38 @@ function printPastaCampoAutColheita(itemStr) {
   </head>
   <body onload="window.print()">
     <div class="sheet">
-      <!-- CABEÇALHO OFICIAL (4 LINHAS) -->
-      <table class="hdr-table">
-        <tr>
-          <td class="hdr-left">ELABORADO, EMITIDO e REVISADO POR:<br/>EMANUELA MOREIRA</td>
-          <td class="hdr-right">DEPARTAMENTO: CAMPO</td>
-        </tr>
-        <tr>
-          <td class="hdr-left">Avaliado por: ADGF</td>
-          <td class="hdr-right">NOME DO DOC: AUTORIZAÇÃO PARA COLHEITA DE FRUTOS</td>
-        </tr>
-        <tr>
-          <td class="hdr-left">Aprovado Por: ADGF</td>
-          <td class="hdr-right">EMISSÃO: 15/06/2026 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; MOD. E APROVAÇÃO: 01/07/2026</td>
-        </tr>
-        <tr>
-          <td class="hdr-left">Frequência: Por parcela de campo.</td>
-          <td class="hdr-right">U. REVISÃO: 01/07/2026 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; VERSÃO: 01 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; REVISÃO: ANUAL &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; CODIGO: PC 11 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; PAG: 01 DE 01</td>
-        </tr>
-      </table>
+      <!-- CABEÇALHO OFICIAL COM LOGO DO TENANT -->
+      <div style="display:flex; justify-content:space-between; align-items:stretch; margin-bottom:12px; border:1px solid #000;">
+        <div style="width:45%; padding:6px; display:flex; align-items:center; gap:12px; border-right:1px solid #000;">
+          ${window.tenantConfig && window.tenantConfig.logo_url ? `<img src="${window.tenantConfig.logo_url}" style="max-height:48px; max-width:140px; object-fit:contain;"/>` : `<div style="width:40px; height:40px; background:#ddd; display:flex; align-items:center; justify-content:center; border-radius:4px; font-weight:bold; font-size:18px; color:#555;">🌱</div>`}
+          <div>
+            <div style="font-size:10pt; font-weight:bold; color:#1b4332; text-transform:uppercase;">${(window.tenantConfig && window.tenantConfig.name || 'BOM JESUS AGRÍCOLA').toUpperCase()}</div>
+            <div style="font-size:6.5pt; color:#444; line-height:1.2;">
+              ${window.tenantConfig && window.tenantConfig.endereco ? `${window.tenantConfig.endereco}<br/>` : ''}
+              ${window.tenantConfig && window.tenantConfig.municipio ? `${window.tenantConfig.municipio}/${window.tenantConfig.uf || 'RN'}` : ''}
+              ${window.tenantConfig && window.tenantConfig.ggn_geral ? ` | GGN: ${window.tenantConfig.ggn_geral}` : ''}
+            </div>
+          </div>
+        </div>
+        <table class="hdr-table" style="width:55%; margin-bottom:0; border:none; table-layout:fixed;">
+          <tr>
+            <td class="hdr-left" style="border-top:none; border-left:none;">ELABORADO, EMITIDO e REVISADO: EMANUELA MOREIRA</td>
+            <td class="hdr-right" style="border-top:none; border-right:none;">DEPARTAMENTO: CAMPO</td>
+          </tr>
+          <tr>
+            <td class="hdr-left" style="border-left:none;">Avaliado por: ADGF</td>
+            <td class="hdr-right" style="border-right:none;">NOME DO DOC: AUTORIZAÇÃO PARA COLHEITA DE FRUTOS</td>
+          </tr>
+          <tr>
+            <td class="hdr-left" style="border-left:none;">Aprovado Por: ADGF</td>
+            <td class="hdr-right" style="border-right:none; font-size:6.5pt;">EMISSÃO: 15/06/2026 &nbsp;&nbsp;&nbsp; MOD. E APROVAÇÃO: 01/07/2026</td>
+          </tr>
+          <tr>
+            <td class="hdr-left" style="border-left:none; border-bottom:none;">Frequência: Por parcela de campo.</td>
+            <td class="hdr-right" style="border-right:none; border-bottom:none; font-size:6.5pt;">COD: PC 11 &nbsp;&nbsp;&nbsp; VERSÃO: 01 &nbsp;&nbsp;&nbsp; PAG: 01 DE 01</td>
+          </tr>
+        </table>
+      </div>
       
       <div class="main-title">
         AUTORIZAÇÃO PARA COLHEITA DE FRUTOS LIVRE DE EXCEDENTE DE<br/>RESÍDUOS QUÍMICOS
@@ -9872,7 +10683,7 @@ function printPastaCampoAutColheita(itemStr) {
       
       <!-- TEXTO DA DECLARAÇÃO -->
       <div class="declaration-text">
-        Ajax Dantas de Gois Filho, Engenheiro Agrônomo, CREA sob o nº 2100995243 e/ou Valeriano Dantas de Gois, Engenheiro Agrônomo, CREA sob o nº 2106090242 e/ou Francisco Canindé dos Santos Neto, Engenheiro Agrônomo, CREA sob o nº 2112017578, Técnicos Responsáveis pela produção da empresa <strong>${tenantName.toUpperCase()}</strong>, autorizo(amos) a colheita da parcela nº <strong>${item.parcela}</strong> com as variedades <strong>${variedadesStr.toUpperCase()}</strong>.
+        <strong>${rtNome}</strong>, Engenheiro Agrônomo, CREA sob o nº <strong>${rtCrea}</strong>, Técnico Responsável pela produção da empresa <strong>${tenantName.toUpperCase()}</strong>, autorizo(amos) a colheita da parcela nº <strong>${item.parcela}</strong> com as variedades <strong>${variedadesStr.toUpperCase()}</strong>.
       </div>
       
       <div style="font-weight: bold; font-size: 10pt; margin-bottom: 8px;">NÚMERO DO CORTE / DATA:</div>
@@ -11424,21 +12235,79 @@ let webInfoParcelasData = [];
 let webVariedadeRowCount = 0;
 
 function showCcTab(tab) {
-  ['plantios','colheitas','mip','op','defreg','calagem','fert','tratos','mudas','pos'].forEach(t => {
+  ['plantios','colheitas','mip','op','defreg','calagem','fert','tratos','mudas','pos','idiarn'].forEach(t => {
     const pane = $(`ccTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
     const btn = $(`ccTab${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
     if (pane) pane.style.display = (tab === t) ? 'block' : 'none';
     if (btn) btn.className = (tab === t) ? 'btn on' : 'btn sec';
   });
 
-  if (tab === 'plantios') {
-    loadWebPlantios();
-  } else if (tab === 'colheitas') {
-    loadColheitasTable();
-  } else if (tab === 'pos') {
-    loadPosColheitaTable();
-  } else if (tab === 'defreg') {
-    loadDefensivosTable();
+  try {
+    if (tab === 'plantios') {
+      loadWebPlantios();
+    } else if (tab === 'colheitas') {
+      loadColheitasTable();
+    } else if (tab === 'mip') {
+      loadMipTable();
+    } else if (tab === 'op') {
+      loadOpTable();
+    } else if (tab === 'pos') {
+      loadPosColheitaTable();
+    } else if (tab === 'defreg') {
+      loadDefensivosTable();
+    } else if (tab === 'calagem') {
+      loadCalagemTable();
+    } else if (tab === 'fert') {
+      loadFertTable();
+    } else if (tab === 'tratos') {
+      loadTratosTable();
+    } else if (tab === 'mudas') {
+      loadMudasTable();
+    } else if (tab === 'idiarn') {
+      loadIdiarnTable();
+    }
+  } catch (err) {
+    console.error('Erro ao alternar aba do Caderno de Campo:', err);
+  }
+}
+
+async function loadMipTable() {
+  try {
+    const { data: mipData, error: mipError } = await sb.from('caderno_campo_mip')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('data_vistoria', { ascending: false });
+    if (!mipError && mipData) {
+      renderCcMipTable(mipData);
+      _mipRecords = mipData;
+    } else {
+      renderCcMipTable([]);
+      _mipRecords = [];
+    }
+  } catch(e) {
+    console.error('Erro ao carregar MIP:', e);
+    renderCcMipTable([]);
+    _mipRecords = [];
+  }
+}
+
+async function loadOpTable() {
+  try {
+    const { data: opData, error: opError } = await sb.from('caderno_campo_op')
+      .select('*, caderno_campo_op_itens(*)')
+      .eq('tenant_id', tenantId)
+      .order('data_aplicacao', { ascending: false });
+    if (!opError && opData) {
+      renderCcOpTable(opData);
+      window._opList = opData;
+    } else {
+      renderCcOpTable([]);
+      window._opList = [];
+    }
+  } catch(e) {
+    console.error('Erro ao carregar OP:', e);
+    renderCcOpTable([]);
+    window._opList = [];
   }
 }
 
@@ -11792,6 +12661,77 @@ function isSunday(dateStr) {
   return d.getDay() === 0;
 }
 
+function getEasterHolidayDates(year) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const L = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * L) / 451);
+  const month = Math.floor((h + L - 7 * m + 114) / 31);
+  const day = ((h + L - 7 * m + 114) % 31) + 1;
+  
+  const easter = new Date(year, month - 1, day);
+  
+  const sextaSanta = new Date(easter);
+  sextaSanta.setDate(easter.getDate() - 2);
+  
+  const carnaval = new Date(easter);
+  carnaval.setDate(easter.getDate() - 47);
+  
+  const corpusChristi = new Date(easter);
+  corpusChristi.setDate(easter.getDate() + 60);
+  
+  const toDateStr = d => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dayStr}`;
+  };
+  
+  return {
+    carnaval: toDateStr(carnaval),
+    sextaSanta: toDateStr(sextaSanta),
+    corpusChristi: toDateStr(corpusChristi)
+  };
+}
+
+function getHolidayName(dateStr) {
+  if (!dateStr) return null;
+  const s = String(dateStr).split('T')[0];
+  const parts = s.split('-');
+  if (parts.length !== 3) return null;
+  const year = parseInt(parts[0], 10);
+  const monthDay = `${parts[1]}-${parts[2]}`;
+  
+  const fixed = {
+    '01-01': 'Confraternização Universal',
+    '04-21': 'Tiradentes',
+    '05-01': 'Dia do Trabalho',
+    '09-07': 'Independência do Brasil',
+    '10-12': 'Nossa Senhora Aparecida',
+    '11-02': 'Finados',
+    '11-15': 'Proclamação da República',
+    '11-20': 'Dia da Consciência Negra',
+    '12-25': 'Natal'
+  };
+  
+  if (fixed[monthDay]) return fixed[monthDay];
+  
+  const mobile = getEasterHolidayDates(year);
+  if (s === mobile.carnaval) return 'Carnaval';
+  if (s === mobile.sextaSanta) return 'Sexta-feira Santa';
+  if (s === mobile.corpusChristi) return 'Corpus Christi';
+  
+  return null;
+}
+
 async function saveWebPlantio() {
   const btn = $('webBtnSavePlantio');
   const editId = $('webPlEditId').value;
@@ -11967,34 +12907,10 @@ async function loadCadernoCampo() {
   }
 
   // 1. Carregar MIP
-  try {
-    const { data: mipData, error: mipError } = await sb.from('caderno_campo_mip').select('*').eq('tenant_id', tenantId).order('data_vistoria', { ascending: false });
-    if (!mipError && mipData) {
-      renderCcMipTable(mipData);
-      _mipRecords = mipData;
-    } else {
-      renderCcMipTable([]);
-      _mipRecords = [];
-    }
-  } catch(e) {
-    renderCcMipTable([]);
-    _mipRecords = [];
-  }
+  await loadMipTable();
 
   // 2. Carregar O.P
-  try {
-    const { data: opData, error: opError } = await sb.from('caderno_campo_op').select('*, caderno_campo_op_itens(*)').eq('tenant_id', tenantId).order('data_aplicacao', { ascending: false });
-    if (!opError && opData) {
-      renderCcOpTable(opData);
-      window._opList = opData;
-    } else {
-      renderCcOpTable([]);
-      window._opList = [];
-    }
-  } catch(e) {
-    renderCcOpTable([]);
-    window._opList = [];
-  }
+  await loadOpTable();
   
   // 3. Carregar parcelas para popular o select de Nova O.P
   try {
@@ -12018,6 +12934,10 @@ async function loadCadernoCampo() {
   try {
     await loadColheitasTable();
     await loadPosColheitaTable();
+    await loadCalagemTable();
+    await loadFertTable();
+    await loadTratosTable();
+    loadMudasTable();
   } catch(e) {}
   
   const opSel = $('newOpParcelSelect');
@@ -12027,6 +12947,7 @@ async function loadCadernoCampo() {
       opSel.insertAdjacentHTML('beforeend', `<option value="${ip.id}">${ip.parcela2 || ip.parcela} (${ip.variedade || ''})</option>`);
     });
   }
+  showCcTab('plantios');
 }
 
 function printPastaCampoMip(itemStr) {
@@ -12338,18 +13259,23 @@ function renderDefensivosTable(data) {
       ? `<span style="font-size:11px; background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:6px; font-weight:700">Isento (0d)</span>`
       : `<span style="font-size:11px; background:rgba(245,158,11,0.15); color:var(--yellow); border:1px solid rgba(245,158,11,0.3); padding:3px 8px; border-radius:6px; font-weight:700">${carenciaVal} dias</span>`;
 
-    const doseStr = d.dose ? `${d.dose} ${d.unidade_dose || 'L/ha'}` : '—';
+    const doseStr = d.dose_texto || (d.dose ? `${d.dose} ${d.unidade_dose || 'L/ha'}` : '—');
+    
+    const tarjaColors = { VERMELHA: '#ef4444', AMARELA: '#f59e0b', AZUL: '#3b82f6', VERDE: '#22c55e' };
+    const tarjaDot = d.tarja ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${tarjaColors[d.tarja]||'#64748b'};margin-right:3px"></span>` : '';
+    const tipoStr = d.tipo ? `<span style="font-size:10px; background:rgba(59,130,246,0.1); color:var(--blue); padding:2px 6px; border-radius:4px; font-weight:700">${d.tipo}</span>` : '';
+    const tescoStr = d.condicao_tesco && d.condicao_tesco !== 'NA' ? `<span style="font-size:9px; background:rgba(239,68,68,0.1); color:var(--red); padding:2px 5px; border-radius:4px; font-weight:700">${d.condicao_tesco}</span>` : '';
 
     return `
       <tr style="border-bottom:1px solid var(--border); font-size:13px">
-        <td style="padding:12px; font-weight:800; color:var(--text)">${d.produto || '—'}</td>
-        <td style="padding:12px; color:var(--blue); font-weight:600">${d.ingrediente_ativo || '—'}</td>
+        <td style="padding:12px; font-weight:800; color:var(--text)">${tarjaDot}${d.produto || '—'}</td>
+        <td style="padding:12px; color:var(--blue); font-weight:600">${d.ingrediente_ativo || '—'}<br>${tipoStr}</td>
         <td style="padding:12px; text-align:center; font-size:11px">${d.registro_mapa || '—'}</td>
         <td style="padding:12px; font-size:12px">${d.alvo || '—'}</td>
-        <td style="padding:12px; text-align:center; font-weight:700">${doseStr}</td>
+        <td style="padding:12px; text-align:center; font-weight:700; font-size:11px">${doseStr}</td>
         <td style="padding:12px; text-align:center">${carenciaBadge}</td>
-        <td style="padding:12px; text-align:center; font-weight:600">${d.intervalo_dias ? d.intervalo_dias + ' dias' : '7 dias'}</td>
-        <td style="padding:12px; text-align:center; font-size:11px; color:var(--muted)">${d.cultura || 'TODAS'}</td>
+        <td style="padding:12px; text-align:center; font-weight:600">${d.intervalo_dias ? d.intervalo_dias + 'd' : '7d'}</td>
+        <td style="padding:12px; text-align:center; font-size:11px; color:var(--muted)">${d.cultura || 'TODAS'}<br>${tescoStr}</td>
         <td style="padding:12px; text-align:center; white-space:nowrap">
           <button onclick="openDefensivoModal('${d.id}')" class="sec" style="padding:4px 8px; font-size:11px; display:inline-flex; align-items:center; gap:3px" title="Editar"><i data-lucide="edit-3" style="width:12px;height:12px"></i> Editar</button>
           <button onclick="deleteDefensivo('${d.id}')" class="danger" style="padding:4px 8px; font-size:11px; margin-left:4px" title="Excluir">✕</button>
@@ -12366,14 +13292,22 @@ function openDefensivoModal(editId) {
   const title = $('defensivoModalTitle');
   const editIdInput = $('defEditId');
 
-  // Reset form
-  ['defProduto','defIngredienteAtivo','defRegistroMapa','defDose','defCarencia','defIntervalo','defAlvo','defObs'].forEach(id => {
+  // Reset ALL form fields
+  ['defProduto','defIngredienteAtivo','defRegistroMapa','defDose','defCarencia','defIntervalo','defAlvo','defObs',
+   'defConcentracaoIA','defDoseTexto','defVolumeMaxCalda','defNumAplicacoes','defReentrada',
+   'defMedidaTesco','defMrlEu','defMrlGb','defMrlBrasil'].forEach(id => {
     const el = $(id);
     if (el) el.value = '';
   });
-  $('defUnidadeDose').value = 'L/ha';
-  $('defCultura').value = 'MELÃO';
-  $('defIntervalo').value = '7';
+  if ($('defUnidadeDose')) $('defUnidadeDose').value = 'LT';
+  if ($('defCultura')) $('defCultura').value = 'MELÃO';
+  if ($('defIntervalo')) $('defIntervalo').value = '7';
+  if ($('defTipo')) $('defTipo').value = '';
+  if ($('defClasseToxicologica')) $('defClasseToxicologica').value = '';
+  if ($('defTarja')) $('defTarja').value = '';
+  if ($('defClasseAmbiental')) $('defClasseAmbiental').value = '';
+  if ($('defCondicaoTesco')) $('defCondicaoTesco').value = '';
+  if ($('defCriterioDosagem')) $('defCriterioDosagem').value = 'H';
 
   if (editId) {
     const item = webDefensivosData.find(x => x.id === editId);
@@ -12386,12 +13320,28 @@ function openDefensivoModal(editId) {
     $('defIngredienteAtivo').value = item.ingrediente_ativo || '';
     $('defRegistroMapa').value = item.registro_mapa || '';
     $('defDose').value = item.dose || '';
-    $('defUnidadeDose').value = item.unidade_dose || 'L/ha';
+    $('defUnidadeDose').value = item.unidade_dose || 'LT';
     $('defCarencia').value = item.carencia_dias ?? '';
     $('defIntervalo').value = item.intervalo_dias || 7;
     $('defCultura').value = item.cultura || 'MELÃO';
     $('defAlvo').value = item.alvo || '';
     $('defObs').value = item.obs || '';
+    // New fields
+    if ($('defTipo')) $('defTipo').value = item.tipo || '';
+    if ($('defClasseToxicologica')) $('defClasseToxicologica').value = item.classe_toxicologica || '';
+    if ($('defTarja')) $('defTarja').value = item.tarja || '';
+    if ($('defClasseAmbiental')) $('defClasseAmbiental').value = item.classe_ambiental || '';
+    if ($('defConcentracaoIA')) $('defConcentracaoIA').value = item.concentracao_ia || '';
+    if ($('defDoseTexto')) $('defDoseTexto').value = item.dose_texto || '';
+    if ($('defVolumeMaxCalda')) $('defVolumeMaxCalda').value = item.volume_maximo_calda || '';
+    if ($('defNumAplicacoes')) $('defNumAplicacoes').value = item.num_aplicacoes_ciclo || '';
+    if ($('defReentrada')) $('defReentrada').value = item.reentrada_dias || '';
+    if ($('defCondicaoTesco')) $('defCondicaoTesco').value = item.condicao_tesco || '';
+    if ($('defMedidaTesco')) $('defMedidaTesco').value = item.medida_tesco || '';
+    if ($('defMrlEu')) $('defMrlEu').value = item.mrl_eu || '';
+    if ($('defMrlGb')) $('defMrlGb').value = item.mrl_gb || '';
+    if ($('defMrlBrasil')) $('defMrlBrasil').value = item.mrl_brasil || '';
+    if ($('defCriterioDosagem')) $('defCriterioDosagem').value = item.criterio_dosagem || 'H';
   } else {
     if (title) title.innerHTML = `<i data-lucide="shield" style="color:var(--yellow); width:22px; height:22px;"></i> Novo Defensivo`;
     editIdInput.value = '';
@@ -12421,12 +13371,28 @@ async function saveDefensivo() {
     ingrediente_ativo,
     registro_mapa: $('defRegistroMapa').value.trim() || null,
     dose: parseFloat($('defDose').value) || null,
-    unidade_dose: $('defUnidadeDose').value || 'L/ha',
+    unidade_dose: $('defUnidadeDose').value || 'LT',
     carencia_dias: carencia_dias,
     intervalo_dias: parseInt($('defIntervalo').value) || 7,
     cultura: $('defCultura').value || 'MELÃO',
     alvo: $('defAlvo').value.trim().toUpperCase() || null,
     obs: $('defObs').value.trim() || null,
+    // Novos campos expandidos
+    tipo: $('defTipo')?.value || null,
+    classe_toxicologica: $('defClasseToxicologica')?.value || null,
+    tarja: $('defTarja')?.value || null,
+    classe_ambiental: $('defClasseAmbiental')?.value || null,
+    concentracao_ia: $('defConcentracaoIA')?.value?.trim() || null,
+    dose_texto: $('defDoseTexto')?.value?.trim() || null,
+    volume_maximo_calda: $('defVolumeMaxCalda')?.value?.trim() || null,
+    num_aplicacoes_ciclo: parseInt($('defNumAplicacoes')?.value) || null,
+    reentrada_dias: parseInt($('defReentrada')?.value) || null,
+    condicao_tesco: $('defCondicaoTesco')?.value || null,
+    medida_tesco: $('defMedidaTesco')?.value?.trim() || null,
+    mrl_eu: $('defMrlEu')?.value?.trim() || null,
+    mrl_gb: $('defMrlGb')?.value?.trim() || null,
+    mrl_brasil: $('defMrlBrasil')?.value?.trim() || null,
+    criterio_dosagem: $('defCriterioDosagem')?.value || null,
   };
 
   try {
@@ -12488,16 +13454,12 @@ function closeImportDefensivosModal() {
 }
 
 function downloadDefensivosTemplateCSV() {
-  const csvHeaders = 'PRODUTO,INGREDIENTE_ATIVO,REGISTRO_MAPA,ALVO,DOSE,UNIDADE_DOSE,CARENCIA_DIAS,INTERVALO_DIAS,CULTURA\n';
+  const csvHeaders = 'PRODUTO,INGREDIENTE_ATIVO,TIPO,CLASSE_TOXICOLOGICA,TARJA,CLASSE_AMBIENTAL,CONCENTRACAO_IA,ALVO,DOSE_TEXTO,UNIDADE_MEDIDA,CRITERIO_DOSAGEM,VOLUME_MAX_CALDA,NUM_APLICACOES,INTERVALO_DIAS,CARENCIA_DIAS,REENTRADA_DIAS,MRL_EU,MRL_GB,MRL_BRASIL,CONDICAO_TESCO,MEDIDA_TESCO,CULTURA\n';
   const csvRows = [
-    'ORTUS 50 SC,FENPIROXIMATO,03893,ÁCARO RAJADO,1.0,L/ha,7,7,MELÃO',
-    'RANMAN,CIAZOFAMIDA,008104,MÍLDIO,0.5,L/ha,3,7,MELÃO',
-    'CERCONIL WP,TIOFANATO METÍLICO,04889,OÍDIO,1.5,kg/ha,7,7,MELÃO',
-    'AMPLIGO,CHLORANTRANILIPROLE,05110,LAGARTA,0.2,L/ha,1,5,MELANCIA',
-    'KARATE ZEON 50 CS,LAMBDA CIALOTRINA,02908,VAQUINHA,0.15,L/ha,3,7,MELÃO',
-    'AMISTAR TOP,AZOXISTROBINA + DIFEOCONAZOL,05709,OÍDIO E CRESPAMENTO,0.5,L/ha,7,7,MELÃO',
-    'NATIVO,TEBUCONAZOL + TRIFLOXISTROBINA,08807,MÍLDIO,0.6,L/ha,7,7,MELÃO',
-    'VERTIMEC 18 EC,ABAMECTINA,009096,MOSCA MINADORA,1.0,L/ha,3,7,MELÃO',
+    'ORTUS 50 SC,FENPIROXIMATO,ACARICIDA,IV,AZUL,II,50 g/L,ÁCARO RAJADO,400-600 ml/ha,LT,H,300-600 L,4,7,7,1,0.3,0.3,0.5,Restrito,Med-01,MELÃO',
+    'KARATE ZEON 250 CS,LAMBDA-CIALOTRINA,INSETICIDA,V,AZUL,I,250 g/L,BROCA DOS FRUTOS,60-100 ml/ha,LT,H,300-600 L,4,7,7,1,0.06,0.06,0.05,Restrito,Med-05,MELÃO',
+    'AMISTAR TOP,AZOXISTROBINA+DIFENOCONAZOL,FUNGICIDA,II,AMARELA,II,200+125 g/L,OÍDIO E MÍLDIO,0.4-0.5 L/ha,LT,H,300-600 L,4,7,10,1,0.5,0.5,1,NA,,MELÃO',
+    'MANZATE WG,MANCOZEBE,FUNGICIDA,V,AZUL,II,750 g/kg,ANTRACNOSE E MÍLDIO,210 g/100L,KG,L,300-600 L,4,7,14,1,1.5,1.5,1,Restrito,Med-10,MELÃO',
   ].join('\n');
 
   const blob = new Blob([csvHeaders + csvRows], { type: 'text/csv;charset=utf-8;' });
@@ -12620,14 +13582,28 @@ function parseDefensivosCSVText(text) {
   };
 
   const initialMapping = {
-    produto: getColIdx(['PRODUTO', 'NOME', 'COMERCIAL']),
+    produto: getColIdx(['PRODUTO', 'NOME COMERCIAL', 'COMERCIAL']),
     ingrediente: getColIdx(['INGREDIENTE', 'PRINCIPIO', 'ATIVO']),
+    tipo: getColIdx(['TIPO']),
+    classe_tox: getColIdx(['TOXICOLOG', 'CLASSE TOXICOL']),
+    tarja: getColIdx(['TARJA']),
+    classe_amb: getColIdx(['AMBIENTAL', 'CLASSE AMBIENTAL']),
+    concentracao: getColIdx(['CONCENTRA']),
+    alvo: getColIdx(['ALVO', 'PRAGA', 'DOENCA', 'CONTROLE']),
+    dose_texto: getColIdx(['DOSE DO', 'DOSE']),
+    unidade: getColIdx(['UNIDADE DE MEDIDA', 'UNIDADE']),
+    criterio: getColIdx(['CRITÉRIO', 'CRITERIO', 'H/L']),
+    vol_calda: getColIdx(['VOLUME', 'CALDA']),
+    num_aplic: getColIdx(['APLICAÇÕES', 'APLICACOES']),
+    intervalo: getColIdx(['INTERVALO']),
+    carencia: getColIdx(['CARÊNCIA', 'CARENCIA']),
+    reentrada: getColIdx(['REENTRADA']),
+    mrl_eu: getColIdx(['MRL  (EU', 'MRL EU', 'CODEX']),
+    mrl_gb: getColIdx(['MRL  (GB', 'MRL GB']),
+    mrl_brasil: getColIdx(['MRL  (BRASIL', 'MRL BRASIL', 'MRL  (Brasil']),
+    condicao_tesco: getColIdx(['TESCO', 'CONDIÇÃO']),
+    medida_tesco: getColIdx(['CONDIÇÃO DE', 'USO TESCO']),
     mapa: getColIdx(['MAPA', 'REGISTRO']),
-    alvo: getColIdx(['ALVO', 'PRAGA', 'DOENCA']),
-    dose: getColIdx(['DOSE', 'DOSAGEM']),
-    unidade: getColIdx(['UNIDADE']),
-    carencia: getColIdx(['CARENCIA', 'DIAS']),
-    intervalo: getColIdx(['INTERVALO', 'REENTRADA']),
     cultura: getColIdx(['CULTURA'])
   };
 
@@ -12637,12 +13613,26 @@ function parseDefensivosCSVText(text) {
     const fields = [
       { key: 'produto', label: 'Produto *' },
       { key: 'ingrediente', label: 'Ingr. Ativo *' },
-      { key: 'mapa', label: 'Reg. MAPA' },
+      { key: 'tipo', label: 'Tipo' },
+      { key: 'classe_tox', label: 'Classe Toxicológica' },
+      { key: 'tarja', label: 'Tarja' },
+      { key: 'classe_amb', label: 'Classe Ambiental' },
+      { key: 'concentracao', label: 'Concentração IA' },
       { key: 'alvo', label: 'Alvo / Praga' },
-      { key: 'dose', label: 'Dose Recomendada' },
-      { key: 'unidade', label: 'Unidade Dose' },
-      { key: 'carencia', label: 'Carência (Dias)' },
+      { key: 'dose_texto', label: 'Dose (Texto)' },
+      { key: 'unidade', label: 'Unidade Medida' },
+      { key: 'criterio', label: 'Critério (H/L)' },
+      { key: 'vol_calda', label: 'Vol. Calda' },
+      { key: 'num_aplic', label: 'Nº Aplicações' },
       { key: 'intervalo', label: 'Intervalo (Dias)' },
+      { key: 'carencia', label: 'Carência (Dias)' },
+      { key: 'reentrada', label: 'Reentrada (Dias)' },
+      { key: 'mrl_eu', label: 'MRL EU/CODEX' },
+      { key: 'mrl_gb', label: 'MRL GB' },
+      { key: 'mrl_brasil', label: 'MRL Brasil' },
+      { key: 'condicao_tesco', label: 'Condição TESCO' },
+      { key: 'medida_tesco', label: 'Medida TESCO' },
+      { key: 'mapa', label: 'Reg. MAPA' },
       { key: 'cultura', label: 'Cultura' },
     ];
 
@@ -12671,16 +13661,10 @@ function rebuildImportDefensivosPreview() {
   if (!_importCSVLines || _importCSVLines.length <= 1) return;
 
   const getSelIdx = (key) => parseInt($(`mapCol_${key}`)?.value ?? -1);
-
-  const pIdx = getSelIdx('produto');
-  const iIdx = getSelIdx('ingrediente');
-  const mIdx = getSelIdx('mapa');
-  const aIdx = getSelIdx('alvo');
-  const dIdx = getSelIdx('dose');
-  const uIdx = getSelIdx('unidade');
-  const cIdx = getSelIdx('carencia');
-  const intIdx = getSelIdx('intervalo');
-  const culIdx = getSelIdx('cultura');
+  const getVal = (cols, key, fallbackIdx) => {
+    const idx = getSelIdx(key);
+    return idx >= 0 && cols[idx] ? cols[idx].trim() : (fallbackIdx >= 0 && cols[fallbackIdx] ? cols[fallbackIdx].trim() : '');
+  };
 
   pendingImportDefensivos = [];
 
@@ -12688,28 +13672,44 @@ function rebuildImportDefensivosPreview() {
     const cols = _importCSVLines[i].split(_importCSVSeparator).map(c => c.trim().replace(/["']/g, ''));
     if (cols.length < 1) continue;
 
-    const produto = (pIdx >= 0 && cols[pIdx] ? cols[pIdx] : (cols[0] || '')).toUpperCase();
-    const ingrediente = (iIdx >= 0 && cols[iIdx] ? cols[iIdx] : (cols[1] || '')).toUpperCase();
+    const produto = getVal(cols, 'produto', 0).toUpperCase();
+    const ingrediente = getVal(cols, 'ingrediente', 1).toUpperCase();
     if (!produto || !ingrediente) continue;
 
-    const mapa = mIdx >= 0 ? cols[mIdx] : (cols[2] || '');
-    const alvo = (aIdx >= 0 ? cols[aIdx] : (cols[3] || '')).toUpperCase();
-    const dose = parseFloat(dIdx >= 0 ? cols[dIdx] : cols[4]) || null;
-    const unidade = uIdx >= 0 && cols[uIdx] ? cols[uIdx] : 'L/ha';
-    const carencia = parseInt(cIdx >= 0 ? cols[cIdx] : cols[6]) || 0;
-    const intervalo = parseInt(intIdx >= 0 ? cols[intIdx] : cols[7]) || 7;
-    const cultura = (culIdx >= 0 && cols[culIdx] ? cols[culIdx] : 'MELÃO').toUpperCase();
+    const carenciaRaw = getVal(cols, 'carencia', -1);
+    const carencia = carenciaRaw === 'ND' ? 0 : (parseInt(carenciaRaw) || 0);
+    const intervaloRaw = getVal(cols, 'intervalo', -1);
+    const intervalo = parseInt(intervaloRaw.replace(/[^0-9]/g, '')) || 7;
+    const reentradaRaw = getVal(cols, 'reentrada', -1);
+    const reentrada = reentradaRaw ? (parseInt(reentradaRaw.replace(/[^0-9]/g, '')) || null) : null;
+    const numAplicRaw = getVal(cols, 'num_aplic', -1);
+    const numAplic = numAplicRaw ? (parseInt(numAplicRaw.replace(/[^0-9]/g, '')) || null) : null;
+    const cultura = getVal(cols, 'cultura', -1).toUpperCase() || 'MELÃO';
 
     pendingImportDefensivos.push({
       tenant_id: tenantId,
       produto,
       ingrediente_ativo: ingrediente,
-      registro_mapa: mapa || null,
-      alvo: alvo || null,
-      dose,
-      unidade_dose: unidade || 'L/ha',
-      carencia_dias: carencia,
+      tipo: getVal(cols, 'tipo', -1).toUpperCase() || null,
+      classe_toxicologica: getVal(cols, 'classe_tox', -1) || null,
+      tarja: getVal(cols, 'tarja', -1).toUpperCase() || null,
+      classe_ambiental: getVal(cols, 'classe_amb', -1) || null,
+      concentracao_ia: getVal(cols, 'concentracao', -1) || null,
+      alvo: getVal(cols, 'alvo', -1).toUpperCase() || null,
+      dose_texto: getVal(cols, 'dose_texto', -1) || null,
+      unidade_dose: getVal(cols, 'unidade', -1) || 'LT',
+      criterio_dosagem: getVal(cols, 'criterio', -1) || null,
+      volume_maximo_calda: getVal(cols, 'vol_calda', -1) || null,
+      num_aplicacoes_ciclo: numAplic,
       intervalo_dias: intervalo,
+      carencia_dias: carencia,
+      reentrada_dias: reentrada,
+      mrl_eu: getVal(cols, 'mrl_eu', -1) || null,
+      mrl_gb: getVal(cols, 'mrl_gb', -1) || null,
+      mrl_brasil: getVal(cols, 'mrl_brasil', -1) || null,
+      condicao_tesco: getVal(cols, 'condicao_tesco', -1) || null,
+      medida_tesco: getVal(cols, 'medida_tesco', -1) || null,
+      registro_mapa: getVal(cols, 'mapa', -1) || null,
       cultura: cultura || 'MELÃO'
     });
   }
@@ -12728,7 +13728,7 @@ function rebuildImportDefensivosPreview() {
           <td style="padding:5px; color:var(--blue)">${item.ingrediente_ativo}</td>
           <td style="padding:5px; text-align:center">${item.registro_mapa || '—'}</td>
           <td style="padding:5px">${item.alvo || '—'}</td>
-          <td style="padding:5px; text-align:center">${item.dose ? item.dose + ' ' + item.unidade_dose : '—'}</td>
+          <td style="padding:5px; text-align:center">${item.dose_texto || (item.dose ? item.dose + ' ' + item.unidade_dose : '—')}</td>
           <td style="padding:5px; text-align:center; font-weight:700; color:var(--yellow)">${item.carencia_dias}d</td>
           <td style="padding:5px; text-align:center">${item.intervalo_dias}d</td>
           <td style="padding:5px; text-align:center">${item.cultura}</td>
@@ -12793,18 +13793,51 @@ let _posColheitaList = [];
 
 async function loadColheitasTable() {
   try {
-    const { data, error } = await sb.from('caderno_campo_colheita')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .order('data_colheita', { ascending: false });
+    const [ccRes, fcRes] = await Promise.all([
+      sb.from('caderno_campo_colheita')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('data_colheita', { ascending: false }),
+      sb.from('field_carrao_sessions')
+        .select('*, parcels(code), varieties(name), field_carrao_employees(*)')
+        .eq('tenant_id', tenantId)
+        .order('date', { ascending: false })
+    ]);
 
-    if (!error && data) {
-      _colheitasList = data;
-      renderCcColheitasTable(data);
-    } else {
-      _colheitasList = [];
-      renderCcColheitasTable([]);
+    let list = [];
+    if (ccRes.data) {
+      list = list.concat(ccRes.data.map(item => ({
+        id: item.id,
+        data_colheita: item.data_colheita,
+        parcela: item.parcela,
+        variedade: item.variedade,
+        quantidade_carrocoes: item.quantidade_carrocoes || 0,
+        quantidade_caixas: item.quantidade_caixas || 0,
+        pincelador1: item.pincelador1 || item.equipe_colheita || '—',
+        rastreabilidade_codigo: item.rastreabilidade_codigo || '—',
+        source: 'manual',
+        raw: item
+      })));
     }
+    if (fcRes.data) {
+      list = list.concat(fcRes.data.map(item => ({
+        id: item.id,
+        data_colheita: item.date,
+        parcela: item.parcels?.code || '—',
+        variedade: item.varieties?.name || '—',
+        quantidade_carrocoes: item.qty_carrocoes || 1,
+        quantidade_caixas: item.qty_caixas || 0,
+        pincelador1: item.field_carrao_employees?.map(e => e.employee_name).join(' / ') || 'Equipe de Campo',
+        rastreabilidade_codigo: item.julian_lot || '—',
+        source: 'PWA (Carroção)',
+        raw: item
+      })));
+    }
+
+    list.sort((a, b) => new Date(b.data_colheita) - new Date(a.data_colheita));
+
+    _colheitasList = list;
+    renderCcColheitasTable(list);
   } catch (e) {
     console.error('Erro ao carregar colheitas:', e);
     _colheitasList = [];
@@ -12834,7 +13867,7 @@ function renderCcColheitasTable(list) {
         <td style="padding:12px 10px">${item.pincelador1 || item.equipe_colheita || '—'}</td>
         <td style="padding:12px 10px; text-align:center; font-size:11px; color:var(--muted)">${item.rastreabilidade_codigo || '—'}</td>
         <td style="padding:12px 10px; text-align:center; white-space:nowrap">
-          <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printOrdemColheitaReport('${itemStr}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Ordem Colheita</button>
+          <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="exportHarvestOrderPDF('${item.id}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Ordem Colheita</button>
           <button class="danger" style="padding:4px 8px; font-size:11px" onclick="deleteColheitaRecord('${item.id}')">Excluir</button>
         </td>
       </tr>
@@ -12977,24 +14010,32 @@ async function saveNewColheitaRecord() {
   }
 
   try {
-    const payload = {
+    const basePayload = {
       tenant_id: tenantId,
       parcela,
       data_colheita,
       variedade: variedade || 'MELÃO',
-      quantidade_carrocoes,
-      quantidade_caixas,
+      quantidade_carrocoes: 1, // split into 1 cart per row
+      quantidade_caixas: Math.round(quantidade_caixas / quantidade_carrocoes) || 0,
       pincelador1: pincelador1 || 'Equipe de Campo',
       pincelador2,
       equipe_colheita: [pincelador1, pincelador2].filter(Boolean).join(' / ') || 'Equipe de Campo',
-      rastreabilidade_codigo: rastreabilidade_codigo || `LOT-${parcela}-${data_colheita.replace(/-/g, '')}`,
       observacoes
     };
 
-    const { error } = await sb.from('caderno_campo_colheita').insert(payload);
+    const inserts = [];
+    for (let i = 0; i < quantidade_carrocoes; i++) {
+      const lotSuffix = quantidade_carrocoes > 1 ? `-${i + 1}` : '';
+      inserts.push({
+        ...basePayload,
+        rastreabilidade_codigo: (rastreabilidade_codigo || `LOT-${parcela}-${data_colheita.replace(/-/g, '')}`) + lotSuffix
+      });
+    }
+
+    const { error } = await sb.from('caderno_campo_colheita').insert(inserts);
     if (error) throw error;
 
-    toast('✓ Colheita de parcela salva com sucesso! 🌾', 'ok');
+    toast('✓ Colheitas salvas com sucesso! 🌾', 'ok');
     closeNewColheitaModal();
     await loadColheitasTable();
   } catch (e) {
@@ -13005,8 +14046,14 @@ async function saveNewColheitaRecord() {
 async function deleteColheitaRecord(id) {
   if (!confirm('Deseja excluir este registro de colheita?')) return;
   try {
-    const { error } = await sb.from('caderno_campo_colheita').delete().eq('id', id).eq('tenant_id', tenantId);
-    if (error) throw error;
+    const item = _colheitasList.find(x => x.id === id);
+    if (item && item.source === 'PWA (Carroção)') {
+      const { error } = await sb.from('field_carrao_sessions').delete().eq('id', id).eq('tenant_id', tenantId);
+      if (error) throw error;
+    } else {
+      const { error } = await sb.from('caderno_campo_colheita').delete().eq('id', id).eq('tenant_id', tenantId);
+      if (error) throw error;
+    }
     toast('✓ Colheita excluída!', 'ok');
     await loadColheitasTable();
   } catch(e) {
@@ -13101,80 +14148,540 @@ function printOrdemColheitaReport(itemStr) {
   printWin.document.close();
 }
 
-function printSelectedColheitaOrders() {
+async function printSelectedColheitaOrders() {
   const chks = document.querySelectorAll('.chkColheitaOrder:checked');
   const selectedIds = Array.from(chks).map(c => c.value);
 
-  let itemsToPrint = [];
+  let idsToPrint = [];
   if (selectedIds.length > 0) {
-    itemsToPrint = _colheitasList.filter(c => selectedIds.includes(c.id));
+    idsToPrint = selectedIds;
   } else {
-    const confirmAll = confirm('Nenhuma colheita foi marcada na tabela.\n\nDeseja imprimir as Ordens de Colheita de TODAS as colheitas registradas?');
+    const confirmAll = confirm('Nenhuma colheita foi marcada na tabela.\n\nDeseja imprimir as Ordens de Colheita de TODAS as colheitas exibidas?');
     if (!confirmAll) return;
-    itemsToPrint = _colheitasList;
+    idsToPrint = _colheitasList.map(c => c.id);
   }
 
-  if (itemsToPrint.length === 0) {
+  if (idsToPrint.length === 0) {
     alert('Nenhuma colheita encontrada para impressão.');
     return;
   }
 
-  const printWin = window.open('', '_blank', 'width=900,height=1200');
-  if (!printWin) { alert('Permita popups para imprimir.'); return; }
+  runWithTractorLoader('Gerando PDFs...', 'Preparando as Ordens de Colheita selecionadas...', async () => {
+    await exportHarvestOrderPDF(idsToPrint);
+  });
+}
 
-  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa Agrícola';
+// ── CALAGEM E SOLO ──────────────────────────────────────────
+let _calagemList = [];
+async function loadCalagemTable() {
+  try {
+    const { data, error } = await sb.from('caderno_campo_calagem')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('data_aplicacao', { ascending: false });
 
-  const pages = itemsToPrint.map(item => `
-    <div style="page-break-after: always; break-after: page;">
-      <table style="width:100%; border-collapse:collapse; margin-bottom:12px; border:1px solid #000">
-        <tr>
-          <td style="font-weight:bold; font-size:11pt; padding:6px; width:60%">${tenantName.toUpperCase()}</td>
-          <td style="text-align:right; font-size:8.5pt; padding:6px">ORDEM DE COLHEITA AGRÍCOLA</td>
-        </tr>
-      </table>
+    if (!error && data) {
+      _calagemList = data;
+      renderCcCalagemTable(data);
+    } else {
+      _calagemList = [];
+      renderCcCalagemTable([]);
+    }
+  } catch (e) {
+    console.error('Erro ao carregar calagem:', e);
+    _calagemList = [];
+    renderCcCalagemTable([]);
+  }
+}
 
-      <div style="font-size:14pt; font-weight:bold; text-align:center; border:2px solid #000; padding:8px; background:#e5e7eb; margin-bottom:12px;">ORDEM DE COLHEITA DE CAMPO — PARCELA Nº ${item.parcela}</div>
+function renderCcCalagemTable(list) {
+  const tbody = $('ccCalagemTableBody');
+  if (!tbody) return;
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Nenhum registro de calagem encontrado.</td></tr>`;
+    return;
+  }
 
-      <table style="width:100%; border-collapse:collapse; margin-bottom:12px">
-        <tr style="border:1px solid #000"><th style="padding:6px; border:1px solid #000; background:#f3f4f6; width:30%; text-align:left">DATA DA COLHEITA:</th><td style="padding:6px; border:1px solid #000"><strong>${item.data_colheita ? item.data_colheita.split('-').reverse().join('/') : '—'}</strong></td></tr>
-        <tr style="border:1px solid #000"><th style="padding:6px; border:1px solid #000; background:#f3f4f6; text-align:left">Nº DA PARCELA:</th><td style="padding:6px; border:1px solid #000"><strong>${item.parcela}</strong></td></tr>
-        <tr style="border:1px solid #000"><th style="padding:6px; border:1px solid #000; background:#f3f4f6; text-align:left">VARIEDADE:</th><td style="padding:6px; border:1px solid #000"><strong>${item.variedade || '—'}</strong></td></tr>
-        <tr style="border:1px solid #000"><th style="padding:6px; border:1px solid #000; background:#f3f4f6; text-align:left">QUANTIDADE DE CARROÇÕES:</th><td style="padding:6px; border:1px solid #000"><strong>${item.quantidade_carrocoes || 0} Carroções</strong></td></tr>
-        <tr style="border:1px solid #000"><th style="padding:6px; border:1px solid #000; background:#f3f4f6; text-align:left">QUANTIDADE ESTIMADA DE CAIXAS:</th><td style="padding:6px; border:1px solid #000">${item.quantidade_caixas ? item.quantidade_caixas + ' caixas' : '—'}</td></tr>
-        <tr style="border:1px solid #000"><th style="padding:6px; border:1px solid #000; background:#f3f4f6; text-align:left">PINCELADOR 1 / RESPONSÁVEL:</th><td style="padding:6px; border:1px solid #000"><strong>${item.pincelador1 || '—'}</strong></td></tr>
-        <tr style="border:1px solid #000"><th style="padding:6px; border:1px solid #000; background:#f3f4f6; text-align:left">PINCELADOR 2 / AUXILIAR:</th><td style="padding:6px; border:1px solid #000">${item.pincelador2 || '—'}</td></tr>
-        <tr style="border:1px solid #000"><th style="padding:6px; border:1px solid #000; background:#f3f4f6; text-align:left">CÓDIGO DE RASTREABILIDADE:</th><td style="padding:6px; border:1px solid #000"><strong>${item.rastreabilidade_codigo || '—'}</strong></td></tr>
-        <tr style="border:1px solid #000"><th style="padding:6px; border:1px solid #000; background:#f3f4f6; text-align:left">OBSERVAÇÕES:</th><td style="padding:6px; border:1px solid #000">${item.observacoes || 'Nenhuma.'}</td></tr>
-      </table>
+  tbody.innerHTML = list.map(item => {
+    const fmtDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—';
+    return `
+      <tr style="border-bottom:1px solid var(--border); font-size:13px">
+        <td style="padding:12px 10px; font-weight:700">${fmtDate}</td>
+        <td style="padding:12px 10px; font-weight:800; color:var(--green)">${item.parcela || '—'}</td>
+        <td style="padding:12px 10px; text-align:center; font-weight:700">${item.quantidade_calcario || 0} T</td>
+        <td style="padding:12px 10px; text-align:center">${item.prnt || '—'} %</td>
+        <td style="padding:12px 10px">${item.operador || '—'}</td>
+        <td style="padding:12px 10px">${item.equipamento || '—'}</td>
+        <td style="padding:12px 10px; text-align:center">
+          <button class="danger" style="padding:4px 8px; font-size:11px" onclick="deleteCalagemRecord('${item.id}')">Excluir</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
 
-      <div style="margin-top:40px; display:flex; justify-content:space-between; text-align:center">
-        <div style="width:45%; border-top:1px solid #000; padding-top:4px">
-          <strong>${item.pincelador1 || 'Pincelador / Responsável'}</strong><br/>Equipe de Colheita
-        </div>
-        <div style="width:45%; border-top:1px solid #000; padding-top:4px">
-          <strong>Supervisão de Campo / Packing</strong><br/>Recebimento de Frutos
-        </div>
-      </div>
+async function openNewCalagemModal() {
+  const modal = $('newCalagemModal');
+  if (!modal) return;
+
+  // Carregar parcelas
+  const parcelSelect = $('calagemParcelaSelect');
+  if (parcelSelect) {
+    if (!_infoParcelas || _infoParcelas.length === 0) {
+      const { data } = await sb.from('info_parcelas').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
+      _infoParcelas = data || [];
+    }
+    parcelSelect.innerHTML = '<option value="">-- Selecione a Parcela --</option>' + 
+      _infoParcelas.map(p => `<option value="${p.parcela2 || p.parcela}">${p.parcela2 || p.parcela} — ${p.variedade || 'Sem variedade'} (${p.cultura || 'MELÃO'})</option>`).join('');
+  }
+
+  $('calagemData').value = new Date().toISOString().split('T')[0];
+  $('calagemQtd').value = '';
+  $('calagemPrnt').value = '';
+  $('calagemOperador').value = '';
+  $('calagemEquipamento').value = '';
+
+  modal.style.display = 'flex';
+}
+
+function closeNewCalagemModal() {
+  const modal = $('newCalagemModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function saveCalagem() {
+  const parcela = $('calagemParcelaSelect').value;
+  const data_aplicacao = $('calagemData').value;
+  const quantidade_calcario = parseFloat($('calagemQtd').value) || 0;
+  const prnt = parseFloat($('calagemPrnt').value) || null;
+  const operador = $('calagemOperador').value.trim() || null;
+  const equipamento = $('calagemEquipamento').value.trim() || null;
+
+  if (!parcela) { alert('Selecione a parcela.'); return; }
+  if (!data_aplicacao) { alert('Selecione a data.'); return; }
+  if (quantidade_calcario <= 0) { alert('Informe a quantidade de calcário maior que zero.'); return; }
+
+  // Buscar parcel do select correspondente para obter o UUID
+  const selectedP = _infoParcelas.find(p => (p.parcela2 || p.parcela) === parcela);
+
+  const payload = {
+    tenant_id,
+    parcel_id: selectedP ? selectedP.id : null,
+    parcela,
+    data_aplicacao,
+    quantidade_calcario,
+    prnt,
+    operador,
+    equipamento
+  };
+
+  try {
+    const { error } = await sb.from('caderno_campo_calagem').insert([payload]);
+    if (error) throw error;
+    alert('✓ Registro de calagem salvo com sucesso!');
+    closeNewCalagemModal();
+    loadCalagemTable();
+  } catch (e) {
+    console.error('Erro ao salvar calagem:', e);
+    alert('Erro ao salvar: ' + (e.message || 'Verifique sua conexão.'));
+  }
+}
+
+async function deleteCalagemRecord(id) {
+  if (!confirm('Deseja realmente excluir este registro de calagem?')) return;
+  try {
+    const { error } = await sb.from('caderno_campo_calagem').delete().eq('id', id).eq('tenant_id', tenantId);
+    if (error) throw error;
+    loadCalagemTable();
+  } catch (e) {
+    console.error('Erro ao excluir calagem:', e);
+    alert('Erro ao excluir: ' + (e.message || 'Verifique sua conexão.'));
+  }
+}
+
+// ── TRATOS CULTURAIS ────────────────────────────────────────
+let _tratosList = [];
+async function loadTratosTable() {
+  try {
+    const { data, error } = await sb.from('caderno_campo_tratos')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('data_trato', { ascending: false });
+
+    if (!error && data) {
+      _tratosList = data;
+      renderCcTratosTable(data);
+    } else {
+      _tratosList = [];
+      renderCcTratosTable([]);
+    }
+  } catch (e) {
+    console.error('Erro ao carregar tratos culturais:', e);
+    _tratosList = [];
+    renderCcTratosTable([]);
+  }
+}
+
+function renderCcTratosTable(list) {
+  const tbody = $('ccTratosTableBody');
+  if (!tbody) return;
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--muted)">Nenhum trato cultural registrado.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(item => {
+    const fmtDate = item.data_trato ? item.data_trato.split('-').reverse().join('/') : '—';
+    return `
+      <tr style="border-bottom:1px solid var(--border); font-size:13px">
+        <td style="padding:12px 10px; font-weight:700">${fmtDate}</td>
+        <td style="padding:12px 10px; font-weight:800; color:var(--green)">${item.parcela || '—'}</td>
+        <td style="padding:12px 10px; font-weight:700; color:var(--text)">${item.atividade || '—'}</td>
+        <td style="padding:12px 10px">${item.implemento || '—'}</td>
+        <td style="padding:12px 10px">${item.operador || '—'}</td>
+        <td style="padding:12px 10px; text-align:center">
+          <button class="danger" style="padding:4px 8px; font-size:11px" onclick="deleteTratoRecord('${item.id}')">Excluir</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function openNewTratoModal() {
+  const modal = $('newTratoModal');
+  if (!modal) return;
+
+  // Carregar parcelas
+  const parcelSelect = $('tratoParcelaSelect');
+  if (parcelSelect) {
+    if (!_infoParcelas || _infoParcelas.length === 0) {
+      const { data } = await sb.from('info_parcelas').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
+      _infoParcelas = data || [];
+    }
+    parcelSelect.innerHTML = '<option value="">-- Selecione a Parcela --</option>' + 
+      _infoParcelas.map(p => `<option value="${p.parcela2 || p.parcela}">${p.parcela2 || p.parcela} — ${p.variedade || 'Sem variedade'} (${p.cultura || 'MELÃO'})</option>`).join('');
+  }
+
+  $('tratoData').value = new Date().toISOString().split('T')[0];
+  $('tratoAtividade').value = '';
+  $('tratoImplemento').value = '';
+  $('tratoOperador').value = '';
+
+  modal.style.display = 'flex';
+}
+
+function closeNewTratoModal() {
+  const modal = $('newTratoModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function saveTrato() {
+  const parcela = $('tratoParcelaSelect').value;
+  const data_trato = $('tratoData').value;
+  const atividade = $('tratoAtividade').value.trim().toUpperCase();
+  const implemento = $('tratoImplemento').value.trim() || null;
+  const operador = $('tratoOperador').value.trim() || null;
+
+  if (!parcela) { alert('Selecione a parcela.'); return; }
+  if (!data_trato) { alert('Selecione a data.'); return; }
+  if (!atividade) { alert('Informe a atividade/trato.'); return; }
+
+  const selectedP = _infoParcelas.find(p => (p.parcela2 || p.parcela) === parcela);
+
+  const payload = {
+    tenant_id,
+    parcel_id: selectedP ? selectedP.id : null,
+    parcela,
+    data_trato,
+    atividade,
+    implemento,
+    operador
+  };
+
+  try {
+    const { error } = await sb.from('caderno_campo_tratos').insert([payload]);
+    if (error) throw error;
+    alert('✓ Registro de trato cultural salvo com sucesso!');
+    closeNewTratoModal();
+    loadTratosTable();
+  } catch (e) {
+    console.error('Erro ao salvar trato cultural:', e);
+    alert('Erro ao salvar: ' + (e.message || 'Verifique sua conexão.'));
+  }
+}
+
+async function deleteTratoRecord(id) {
+  if (!confirm('Deseja realmente excluir este trato cultural?')) return;
+  try {
+    const { error } = await sb.from('caderno_campo_tratos').delete().eq('id', id).eq('tenant_id', tenantId);
+    if (error) throw error;
+    loadTratosTable();
+  } catch (e) {
+    console.error('Erro ao excluir trato cultural:', e);
+    alert('Erro ao excluir: ' + (e.message || 'Verifique sua conexão.'));
+  }
+}
+
+// ── FERTIRRIGAÇÃO ──────────────────────────────────────────
+let _fertList = [];
+async function loadFertTable() {
+  try {
+    const { data: fertData, error: fertErr } = await sb.from('caderno_campo_fertirrigacao')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('data_inicio', { ascending: false });
+
+    const { data: itensData, error: itensErr } = await sb.from('caderno_campo_fertirrigacao_itens')
+      .select('*')
+      .eq('tenant_id', tenantId);
+
+    if (!fertErr && fertData) {
+      const itemsMap = {};
+      (itensData || []).forEach(it => {
+        if (!itemsMap[it.fert_id]) itemsMap[it.fert_id] = [];
+        itemsMap[it.fert_id].push(`${it.produto_nome} (${it.quantidade}${it.unidade || 'kg'})`);
+      });
+
+      _fertList = fertData.map(f => ({
+        ...f,
+        fertilizantes: (itemsMap[f.id] || []).join(', ') || '—'
+      }));
+
+      renderCcFertTable(_fertList);
+    } else {
+      _fertList = [];
+      renderCcFertTable([]);
+    }
+  } catch (e) {
+    console.error('Erro ao carregar fertirrigação:', e);
+    _fertList = [];
+    renderCcFertTable([]);
+  }
+}
+
+function renderCcFertTable(list) {
+  const tbody = $('ccFertTableBody');
+  if (!tbody) return;
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Nenhum registro de fertirrigação encontrado.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(item => {
+    const fmtStart = item.data_inicio ? item.data_inicio.split('-').reverse().join('/') : '—';
+    const fmtEnd = item.data_fim ? item.data_fim.split('-').reverse().join('/') : '—';
+    return `
+      <tr style="border-bottom:1px solid var(--border); font-size:13px">
+        <td style="padding:12px 10px">${fmtStart}</td>
+        <td style="padding:12px 10px">${fmtEnd}</td>
+        <td style="padding:12px 10px; font-weight:800; color:var(--green)">${item.parcela || '—'}</td>
+        <td style="padding:12px 10px; font-weight:700; color:var(--text)">${item.receita || '—'}</td>
+        <td style="padding:12px 10px">${item.operador || '—'}</td>
+        <td style="padding:12px 10px; color:var(--blue); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap" title="${item.fertilizantes}">${item.fertilizantes}</td>
+        <td style="padding:12px 10px; text-align:center">
+          <button class="danger" style="padding:4px 8px; font-size:11px" onclick="deleteFertRecord('${item.id}')">Excluir</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function openNewFertModal() {
+  const modal = $('newFertModal');
+  if (!modal) return;
+
+  const parcelSelect = $('fertParcelaSelect');
+  if (parcelSelect) {
+    if (!_infoParcelas || _infoParcelas.length === 0) {
+      const { data } = await sb.from('info_parcelas').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
+      _infoParcelas = data || [];
+    }
+    parcelSelect.innerHTML = '<option value="">-- Selecione a Parcela --</option>' + 
+      _infoParcelas.map(p => `<option value="${p.parcela2 || p.parcela}">${p.parcela2 || p.parcela} — ${p.variedade || 'Sem variedade'} (${p.cultura || 'MELÃO'})</option>`).join('');
+  }
+
+  $('fertDataInicio').value = new Date().toISOString().split('T')[0];
+  $('fertDataFim').value = new Date().toISOString().split('T')[0];
+  $('fertReceita').value = '';
+  $('fertOperador').value = '';
+  
+  const container = $('fertProdsContainer');
+  if (container) {
+    container.innerHTML = '';
+    if (!_defensivos || _defensivos.length === 0) {
+      try {
+        const { data } = await sb.from('caderno_campo_defensivos_cadastro').select('*').eq('tenant_id', tenantId).order('produto', { ascending: true });
+        _defensivos = data || [];
+      } catch(e) {}
+    }
+    addFertProdRow();
+  }
+
+  modal.style.display = 'flex';
+}
+
+function closeNewFertModal() {
+  const modal = $('newFertModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function addFertProdRow() {
+  const container = $('fertProdsContainer');
+  if (!container) return;
+
+  const optionsHtml = (_defensivos || []).map(d => `<option value="${d.id}" data-nome="${d.produto}">${d.produto} (${d.ingrediente_ativo || 'Adubo/Fol.'})</option>`).join('');
+
+  const rowHtml = `
+    <div class="fert-prod-row" style="display:grid; grid-template-columns:2.5fr 1fr 1fr auto; gap:8px; align-items:center; margin-bottom:8px">
+      <select class="fert-row-prod" style="width:100%; font-size:12px; padding:6px" required>
+        <option value="">-- Selecionar Adubo/Nutriente --</option>
+        ${optionsHtml}
+        <option value="OUTRO">+ Outro Produto Manual...</option>
+      </select>
+      <input type="text" class="fert-row-prod-custom" placeholder="Nome do adubo" style="width:100%; font-size:12px; padding:6px; display:none" />
+      <input type="number" step="0.01" class="fert-row-qty" placeholder="Qtd" style="width:100%; font-size:12px; padding:6px" required min="0.01" />
+      <select class="fert-row-unit" style="width:100%; font-size:12px; padding:6px">
+        <option value="kg">kg</option>
+        <option value="L">L</option>
+      </select>
+      <button type="button" class="danger" onclick="removeFertProdRow(this)" style="padding:6px 10px; font-size:12px">✕</button>
     </div>
-  `).join('');
+  `;
+  container.insertAdjacentHTML('beforeend', rowHtml);
 
-  printWin.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8"/>
-      <title>Ordens de Colheita de Campo em Lote</title>
-      <style>
-        @page { size: A4 portrait; margin: 10mm; }
-        body { font-family: 'Arial', sans-serif; color: #000; font-size: 9pt; line-height: 1.4; }
-      </style>
-    </head>
-    <body>
-      ${pages}
-    </body>
-    </html>
-  `);
-  printWin.document.close();
+  const rows = container.querySelectorAll('.fert-prod-row');
+  const lastRow = rows[rows.length - 1];
+  const sel = lastRow.querySelector('.fert-row-prod');
+  const custom = lastRow.querySelector('.fert-row-prod-custom');
+  if (sel && custom) {
+    sel.addEventListener('change', () => {
+      custom.style.display = (sel.value === 'OUTRO') ? 'block' : 'none';
+    });
+  }
+}
+
+function removeFertProdRow(btn) {
+  const row = btn.closest('.fert-prod-row');
+  if (row) row.remove();
+}
+
+async function saveFert() {
+  const parcela = $('fertParcelaSelect').value;
+  const data_inicio = $('fertDataInicio').value;
+  const data_fim = $('fertDataFim').value;
+  const receita = $('fertReceita').value.trim() || null;
+  const operador = $('fertOperador').value.trim() || null;
+
+  if (!parcela) { alert('Selecione a parcela.'); return; }
+  if (!data_inicio || !data_fim) { alert('Informe o período (Início e Fim).'); return; }
+
+  const rows = document.querySelectorAll('.fert-prod-row');
+  if (rows.length === 0) { alert('Adicione pelo menos um insumo/adubo.'); return; }
+
+  const itemsToInsert = [];
+  for (const row of rows) {
+    const sel = row.querySelector('.fert-row-prod');
+    const custom = row.querySelector('.fert-row-prod-custom');
+    const qtyInput = row.querySelector('.fert-row-qty');
+    const unitSel = row.querySelector('.fert-row-unit');
+
+    const qty = parseFloat(qtyInput.value) || 0;
+    if (qty <= 0) { alert('Informe a quantidade de todos os fertilizantes.'); return; }
+
+    let prodId = null;
+    let prodNome = '';
+
+    if (sel.value === 'OUTRO') {
+      prodNome = custom.value.trim();
+      if (!prodNome) { alert('Informe o nome do adubo digitado manualmente.'); return; }
+    } else {
+      prodId = sel.value;
+      if (!prodId) { alert('Selecione o adubo ou digite um manualmente.'); return; }
+      const opt = sel.options[sel.selectedIndex];
+      prodNome = opt.dataset.nome || opt.text;
+    }
+
+    itemsToInsert.push({
+      tenant_id,
+      produto_id: prodId,
+      produto_nome: prodNome,
+      quantidade: qty,
+      unidade: unitSel.value
+    });
+  }
+
+  const selectedP = _infoParcelas.find(p => (p.parcela2 || p.parcela) === parcela);
+
+  const headerPayload = {
+    tenant_id,
+    parcel_id: selectedP ? selectedP.id : null,
+    parcela,
+    data_inicio,
+    data_fim,
+    receita,
+    operador
+  };
+
+  try {
+    const { data: headData, error: headErr } = await sb.from('caderno_campo_fertirrigacao')
+      .insert([headerPayload])
+      .select('id')
+      .single();
+
+    if (headErr) throw headErr;
+    if (!headData) throw new Error('Não foi possível gerar ID da fertirrigação.');
+
+    const fert_id = headData.id;
+    const finalItems = itemsToInsert.map(it => ({ ...it, fert_id }));
+
+    const { error: itemsErr } = await sb.from('caderno_campo_fertirrigacao_itens').insert(finalItems);
+    if (itemsErr) throw itemsErr;
+
+    alert('✓ Registro de fertirrigação salvo com sucesso!');
+    closeNewFertModal();
+    loadFertTable();
+  } catch (e) {
+    console.error('Erro ao salvar fertirrigação:', e);
+    alert('Erro ao salvar: ' + (e.message || 'Verifique sua conexão.'));
+  }
+}
+
+async function deleteFertRecord(id) {
+  if (!confirm('Deseja realmente excluir este registro de fertirrigação? Isso excluirá os produtos vinculados.')) return;
+  try {
+    const { error } = await sb.from('caderno_campo_fertirrigacao').delete().eq('id', id).eq('tenant_id', tenantId);
+    if (error) throw error;
+    loadFertTable();
+  } catch (e) {
+    console.error('Erro ao excluir fertirrigação:', e);
+    alert('Erro ao excluir: ' + (e.message || 'Verifique sua conexão.'));
+  }
+}
+
+// ── MUDAS E SEMENTES ────────────────────────────────────────
+function loadMudasTable() {
+  const tbody = $('ccMudasTableBody');
+  if (!tbody) return;
+  const list = webInfoParcelasData;
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--muted)">Nenhum plantio ou lote de semente cadastrado.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(item => {
+    return `
+      <tr style="border-bottom:1px solid var(--border); font-size:13px">
+        <td style="padding:12px 10px; font-weight:800; color:var(--green)">${item.parcela2 || item.parcela || '—'}</td>
+        <td style="padding:12px 10px; font-weight:600">${item.cultura || '—'}</td>
+        <td style="padding:12px 10px; font-weight:700; color:var(--text)">${item.variedade || '—'}</td>
+        <td style="padding:12px 10px; text-align:center; font-weight:700">${item.quantidade ? item.quantidade.toLocaleString('pt-BR') : '—'}</td>
+        <td style="padding:12px 10px">${item.fornecedor || '—'}</td>
+        <td style="padding:12px 10px">${item.viveiro || '—'}</td>
+        <td style="padding:12px 10px; font-weight:500; color:var(--blue)">${item.nf2 || item.nf || '—'}</td>
+        <td style="padding:12px 10px; font-weight:600; color:var(--yellow)">${item.lote_semente || item.lote || '—'}</td>
+      </tr>
+    `;
+  }).join('');
 }
 
 // ── PÓS-COLHEITA / TRATAMENTO DE TALO DO MELÃO ─────────────────────
@@ -13460,7 +14967,7 @@ function openNewOpModal() {
   
   $('newOpDate').value = today();
   
-  const emps = window._employees || [];
+  const emps = (_employees || []).filter(e => e.active !== false);
   const empOpts = '<option value="">— Selecionar —</option>' + emps.map(e => `<option value="${e.name}">${e.name}${e.role ? ' (' + e.role + ')' : ''}</option>`).join('');
   
   if ($('newOpTratorista')) $('newOpTratorista').innerHTML = empOpts;
@@ -13510,8 +15017,8 @@ function populateNewOpDefensivesSelect() {
   const select = $('newOpDefensivoSelect');
   if (!select) return;
 
-  if ((!_defensivos || _defensivos.length === 0) && window.webDefensivosData && window.webDefensivosData.length > 0) {
-    _defensivos = window.webDefensivosData;
+  if ((!_defensivos || _defensivos.length === 0) && webDefensivosData && webDefensivosData.length > 0) {
+    _defensivos = webDefensivosData;
   }
 
   select.innerHTML = '<option value="">Selecione um defensivo</option>';
@@ -13527,7 +15034,9 @@ function populateNewOpDefensivesSelect() {
     const normCult = norm(cultura);
     const filtered = listToUse.filter(d => {
       if (!d.cultura || d.cultura === 'TODAS' || d.cultura === 'TODOS') return true;
-      return norm(d.cultura) === normCult;
+      // Tratar múltiplos cultivos separados por vírgula no cadastro
+      const normalizedCultures = norm(d.cultura).split(',').map(s => s.trim());
+      return normalizedCultures.includes(normCult);
     });
     if (filtered.length > 0) listToUse = filtered;
   }
@@ -13537,8 +15046,11 @@ function populateNewOpDefensivesSelect() {
     const doseStr = doseVal ? ` | Dose: ${doseVal} ${d.unidade_dose || 'L/ha'}` : '';
     const alvoStr = d.alvo ? ` | Alvo: ${d.alvo}` : '';
     const ingStr = d.ingrediente_ativo ? ` (${d.ingrediente_ativo})` : '';
-    select.insertAdjacentHTML('beforeend', `<option value="${d.id}">${d.produto}${ingStr}${doseStr}${alvoStr}</option>`);
+    const carStr = d.carencia_dias !== undefined && d.carencia_dias !== null ? ` | Carência: ${d.carencia_dias}d` : '';
+    select.insertAdjacentHTML('beforeend', `<option value="${d.id}">${d.produto}${ingStr}${doseStr}${alvoStr}${carStr}</option>`);
   });
+  
+  select.insertAdjacentHTML('beforeend', '<option value="OUTRO">+ Digitar Outro (Foliar / Fertilizante / Defensivo)...</option>');
   
   onNewOpDefensivoChange();
 }
@@ -13546,15 +15058,24 @@ function populateNewOpDefensivesSelect() {
 function onNewOpDefensivoChange() {
   const select = $('newOpDefensivoSelect');
   if (!select) return;
-  const id = select.value;
-  const def = (_defensivos || []).find(d => d.id === id);
-  if (def) {
-    const doseVal = def.dose || def.dosagem_recomendada || 1.00;
-    if ($('newOpDosagemReal')) $('newOpDosagemReal').value = doseVal;
-    if ($('newOpAlvo')) $('newOpAlvo').value = def.alvo || '';
+  const customContainer = $('newOpDefensivoCustomContainer');
+  
+  if (select.value === 'OUTRO') {
+    if (customContainer) customContainer.style.display = 'grid';
+    $('newOpDefensivoCustom').focus();
+    $('newOpDosagemReal').value = '1.00';
+    $('newOpAlvo').value = 'ADUBAÇÃO FOLIAR';
   } else {
-    if ($('newOpDosagemReal')) $('newOpDosagemReal').value = '1.00';
-    if ($('newOpAlvo')) $('newOpAlvo').value = '';
+    if (customContainer) customContainer.style.display = 'none';
+    const id = select.value;
+    const def = (_defensivos || []).find(d => d.id === id);
+    if (def) {
+      $('newOpDosagemReal').value = def.dose || def.dosagem_recomendada || '1.00';
+      $('newOpAlvo').value = def.alvo || '';
+    } else {
+      $('newOpDosagemReal').value = '1.00';
+      $('newOpAlvo').value = '';
+    }
   }
 }
 
@@ -13573,7 +15094,7 @@ function validateMipForOpDashboard(parcelId, parcelCode, alvo, opDate) {
     return { ok: true, blocked: false, message: 'Fertilizante/adubo — isento de justificativa MIP' };
   }
   
-  const mips = window._mipRecords || [];
+  const mips = _mipRecords || [];
   const relevantMips = mips.filter(m => {
     const matchesParcel = m.parcel_id == parcelId || m.parcela === parcelCode;
     const pragaClean = (m.praga || '').toUpperCase();
@@ -13598,25 +15119,60 @@ function addNewOpItem() {
   const id = $('newOpDefensivoSelect').value;
   if (!id) { alert('Selecione o defensivo'); return; }
   
-  const def = _defensivos.find(d => d.id === id);
-  if (!def) return;
+  let def = null;
+  let dosagemReal = parseFloat($('newOpDosagemReal').value) || 0;
+  let dosagemLimite = dosagemReal;
+  let dosagemCorrigida = dosagemReal;
+  let inputAlvo = '';
+  let opDateStr = $('newOpDate')?.value || today();
+  let ip = _infoParcelas.find(x => x.id === pId);
+  let targetAlvo = '';
+  let cleanAlvo = '';
+  let isCustom = false;
 
-  const dosagemReal = parseFloat($('newOpDosagemReal').value) || 0;
-  const dosagemLimite = parseFloat(def.dose || def.dosagem_recomendada) || dosagemReal;
-  const dosagemCorrigida = dosagemReal > dosagemLimite ? dosagemLimite : dosagemReal;
-  const inputAlvo = ($('newOpAlvo')?.value || def.alvo || '').trim().toUpperCase();
-  const opDateStr = $('newOpDate')?.value || today();
-  
-  const ip = _infoParcelas.find(x => x.id === pId);
-  const targetAlvo = inputAlvo || def.alvo || '';
-  const cleanAlvo = targetAlvo.toUpperCase();
+  if (id === 'OUTRO') {
+    isCustom = true;
+    const customName = ($('newOpDefensivoCustom')?.value || '').trim().toUpperCase();
+    const customIng = ($('newOpIngredienteCustom')?.value || '').trim().toUpperCase();
+    const customCarencia = parseInt($('newOpCarenciaCustom')?.value) || 0;
+    const customUnidade = $('newOpUnidadeCustom')?.value || 'L/ha';
+    
+    if (!customName) { alert('Por favor, informe o nome do produto customizado.'); return; }
+    
+    inputAlvo = ($('newOpAlvo')?.value || 'ADUBAÇÃO FOLIAR').trim().toUpperCase();
+    targetAlvo = inputAlvo;
+    cleanAlvo = targetAlvo.toUpperCase();
+
+    def = {
+      id: null,
+      produto: customName,
+      ingrediente_ativo: customIng,
+      carencia_dias: customCarencia,
+      unidade_dose: customUnidade,
+      dose: dosagemReal,
+      alvo: targetAlvo,
+      intervalo_dias: 0
+    };
+  } else {
+    def = _defensivos.find(d => d.id === id);
+    if (!def) return;
+    dosagemReal = parseFloat($('newOpDosagemReal').value) || 0;
+    dosagemLimite = parseFloat(def.dose || def.dosagem_recomendada) || dosagemReal;
+    dosagemCorrigida = dosagemReal > dosagemLimite ? dosagemLimite : dosagemReal;
+    inputAlvo = ($('newOpAlvo')?.value || def.alvo || '').trim().toUpperCase();
+    targetAlvo = inputAlvo || def.alvo || '';
+    cleanAlvo = targetAlvo.toUpperCase();
+  }
+
   
   // Validação 1: Justificativa de MIP para Defensivos Químicos vs Isenção para Foliares
-  const parcelCode = ip ? (ip.parcela2 || ip.parcela) : '';
-  const mipValidation = validateMipForOpDashboard(pId, parcelCode, targetAlvo, opDateStr);
-  if (mipValidation.blocked) {
-    alert(mipValidation.message);
-    return;
+  if (!isCustom) {
+    const parcelCode = ip ? (ip.parcela2 || ip.parcela) : '';
+    const mipValidation = validateMipForOpDashboard(pId, parcelCode, targetAlvo, opDateStr);
+    if (mipValidation.blocked) {
+      alert(mipValidation.message);
+      return;
+    }
   }
 
   // Validação 1b: Duplicados por Praga/Alvo na mesma calda
@@ -13628,13 +15184,14 @@ function addNewOpItem() {
     }
   }
   
-  // Validação 2: Checagem de Dosagem Excedente
-  if (dosagemReal > dosagemLimite) {
-    alert(`⚠️ Alerta de Auditoria: A dosagem informada (${dosagemReal} ${def.unidade_dose || 'L/ha'}) excede a dosagem máxima cadastrada (${dosagemLimite} ${def.unidade_dose || 'L/ha'}). A dosagem corrigida de auditoria será registrada como ${dosagemLimite}.`);
+  // Validação 2: Checagem de Dosagem Excedente (Bloqueio estrito)
+  if (!isCustom && dosagemReal > dosagemLimite) {
+    alert(`🚫 DOSAGEM NÃO PERMITIDA — A dosagem real (${dosagemReal} ${def.unidade_dose || 'L/ha'}) excede o limite máximo permitido (${dosagemLimite} ${def.unidade_dose || 'L/ha'}). Reduza a dosagem para prosseguir!`);
+    return;
   }
 
   // Validação 3: Prazo de Carência vs Previsão de Colheita
-  if (ip && ip.previsao_colheita && def.carencia_dias > 0 && opDateStr) {
+  if (!isCustom && ip && ip.previsao_colheita && def.carencia_dias > 0 && opDateStr) {
     const appDt = new Date(opDateStr + 'T12:00:00');
     appDt.setDate(appDt.getDate() + parseInt(def.carencia_dias));
     const liberacaoIso = appDt.toISOString().split('T')[0];
@@ -13642,18 +15199,18 @@ function addNewOpItem() {
     if (liberacaoIso > ip.previsao_colheita) {
       const liberacaoBr = appDt.toLocaleDateString('pt-BR');
       const prevColhBr = ip.previsao_colheita.split('-').reverse().join('/');
-      const proce = confirm(`⚠️ Trava de Auditoria (Carência): O defensivo ${def.produto} exige ${def.carencia_dias} dia(s) de carência.\n\nA colheita ficará liberada apenas em ${liberacaoBr}, enquanto a previsão de colheita é ${prevColhBr}.\n\nDeseja confirmar a inclusão mesmo assim?`);
-      if (!proce) return;
+      alert(`🚫 CARÊNCIA INVÁLIDA — A carência para ${def.produto} é de ${def.carencia_dias} dias, mas a colheita está prevista para ${prevColhBr}. A colheita ficaria bloqueada até ${liberacaoBr}, gerando inconformidade de auditoria!`);
+      return;
     }
   }
 
   // Validação 4: Intervalo Mínimo de Reaplicação
-  if (opDateStr && window._opList && window._opList.length > 0) {
+  if (!isCustom && opDateStr && _opList && _opList.length > 0) {
     const parcelCode = ip ? (ip.parcela2 || ip.parcela) : '';
     const minIntervalDays = parseInt(def.intervalo_dias) || 7;
     const currentAppDt = new Date(opDateStr + 'T12:00:00');
     
-    const pastApp = window._opList.find(op => {
+    const pastApp = _opList.find(op => {
       if (op.parcela !== parcelCode) return false;
       const opDt = new Date(op.data_aplicacao + 'T12:00:00');
       const diffDays = Math.round((currentAppDt - opDt) / (1000 * 60 * 60 * 24));
@@ -13665,33 +15222,35 @@ function addNewOpItem() {
     });
 
     if (pastApp) {
-      const pastDtBr = pastApp.data_aplicacao ? pastApp.data_aplicacao.split('-').reverse().join('/') : 'recensemente';
-      const cont = confirm(`⚠️ Alerta de Auditoria (Reaplicação): O defensivo ${def.produto} foi aplicado nesta parcela em ${pastDtBr}. O intervalo de reaplicação recomendado é de ${minIntervalDays} dias.\n\nDeseja continuar?`);
-      if (!cont) return;
+      const pastDtBr = pastApp.data_aplicacao ? pastApp.data_aplicacao.split('-').reverse().join('/') : 'recentemente';
+      alert(`🚫 INTERVALO MÍNIMO NÃO RESPEITADO — O defensivo ${def.produto} já foi aplicado nesta parcela em ${pastDtBr}. O intervalo recomendado entre aplicações é de ${minIntervalDays} dias.`);
+      return;
     }
   }
 
   // Validação 5: Alvo / Praga Compatível
-  if (def.alvo && cleanAlvo && !def.alvo.toUpperCase().includes(cleanAlvo) && !cleanAlvo.includes(def.alvo.toUpperCase())) {
+  if (!isCustom && def.alvo && cleanAlvo && !def.alvo.toUpperCase().includes(cleanAlvo) && !cleanAlvo.includes(def.alvo.toUpperCase())) {
     toast(`Aviso de Auditoria: Produto ${def.produto} cadastrado para [${def.alvo}], alvo informado [${targetAlvo}]`, 'warning');
   }
   
   // Validação 6: Justificativa de MIP
-  const isFertilizer = !targetAlvo || cleanAlvo.includes('ADUBO') || cleanAlvo.includes('FOLIARE') || cleanAlvo.includes('NUTRIENTE') || cleanAlvo.includes('FISIOLOGICO') || cleanAlvo === 'N/A';
-  if (!isFertilizer) {
-    const parcelName = ip ? (ip.parcela2 || ip.parcela) : '';
-    const relevantMips = (_mipRecords || []).filter(m => {
-      const matchesParcel = m.parcela === parcelName;
-      const matchesPraga = isMatchingPraga(m.praga, targetAlvo);
-      return matchesParcel && matchesPraga;
-    });
-    
-    relevantMips.sort((a, b) => new Date(b.data_vistoria) - new Date(a.data_vistoria));
-    const latestMip = relevantMips[0];
-    
-    if (!latestMip || parseFloat(latestMip.media) <= 0) {
-      const resp = confirm(`⚠️ Alerta de Auditoria (MIP): O defensivo ${def.produto} para a praga "${targetAlvo}" não foi recomendado no MIP recente da parcela ${parcelName}.\n\nDeseja continuar e incluir este produto?`);
-      if (!resp) return;
+  if (!isCustom) {
+    const isFertilizer = !targetAlvo || cleanAlvo.includes('ADUBO') || cleanAlvo.includes('FOLIARE') || cleanAlvo.includes('NUTRIENTE') || cleanAlvo.includes('FISIOLOGICO') || cleanAlvo === 'N/A';
+    if (!isFertilizer) {
+      const parcelName = ip ? (ip.parcela2 || ip.parcela) : '';
+      const relevantMips = (_mipRecords || []).filter(m => {
+        const matchesParcel = m.parcela === parcelName;
+        const matchesPraga = isMatchingPraga(m.praga, targetAlvo);
+        return matchesParcel && matchesPraga;
+      });
+      
+      relevantMips.sort((a, b) => new Date(b.data_vistoria) - new Date(a.data_vistoria));
+      const latestMip = relevantMips[0];
+      
+      if (!latestMip || parseFloat(latestMip.media) <= 0) {
+        const resp = confirm(`⚠️ Alerta de Auditoria (MIP): O defensivo ${def.produto} para a praga "${targetAlvo}" não foi recomendado no MIP recente da parcela ${parcelName}.\n\nDeseja continuar e incluir este produto?`);
+        if (!resp) return;
+      }
     }
   }
   
@@ -13764,13 +15323,21 @@ async function saveNewOpDashboard() {
   const chosenDate = $('newOpDate').value || today();
 
   if (isSunday(chosenDate)) {
-    return alert('🚫 Trava de Auditoria: Não é permitido registrar Ordem de Pulverização (O.P) em domingos!');
+    alert('🚫 Trava de Auditoria: Não é permitido registrar Ordem de Pulverização (O.P) em domingos!');
+    return;
+  }
+
+  const holidayName = getHolidayName(chosenDate);
+  if (holidayName) {
+    alert(`🚫 Trava de Auditoria: Não é permitido registrar Ordem de Pulverização (O.P) em feriados (${holidayName})!`);
+    return;
   }
 
   const startVal = $('newOpHoraInicio').value;
   const endVal = $('newOpHoraFim').value;
   const tratoristaVal = $('newOpTratorista').value.trim();
   const barristaVal = $('newOpBarrista').value.trim();
+  const manipuladorVal = ($('newOpManipulador')?.value || '').trim();
   const tratorVal = $('newOpTrator').value.trim();
   
   // Validação 1: Tratorista e Barrista
@@ -13786,23 +15353,29 @@ async function saveNewOpDashboard() {
       return;
     }
     
-    const conflicts = (window._opList || []).filter(op => {
+    const conflicts = (_opList || []).filter(op => {
       const isSameDay = op.data_aplicacao === chosenDate;
       const hasOverlap = overlaps(startVal, endVal, op.horario_inicio, op.horario_fim);
       return isSameDay && hasOverlap;
     });
     
     for (const op of conflicts) {
-      if (tratoristaVal && op.tratorista && op.tratorista.trim().toLowerCase() === tratoristaVal.toLowerCase()) {
-        alert(`Conflito de Horário! O tratorista ${tratoristaVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
+      const opEmps = [op.tratorista, op.barrista, op.manipulador].filter(Boolean).map(e => e.trim().toLowerCase());
+      
+      if (tratoristaVal && opEmps.includes(tratoristaVal.toLowerCase())) {
+        alert(`🚫 CONFLITO DE HORÁRIO — O colaborador ${tratoristaVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
         return;
       }
-      if (barristaVal && op.barrista && op.barrista.trim().toLowerCase() === barristaVal.toLowerCase()) {
-        alert(`Conflito de Horário! O barrista ${barristaVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
+      if (barristaVal && opEmps.includes(barristaVal.toLowerCase())) {
+        alert(`🚫 CONFLITO DE HORÁRIO — O colaborador ${barristaVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
+        return;
+      }
+      if (manipuladorVal && opEmps.includes(manipuladorVal.toLowerCase())) {
+        alert(`🚫 CONFLITO DE HORÁRIO — O colaborador ${manipuladorVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
         return;
       }
       if (tratorVal && op.trator && op.trator.trim().toLowerCase() === tratorVal.toLowerCase()) {
-        alert(`Conflito de Horário! O trator ${tratorVal} já está sendo utilizado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
+        alert(`🚫 CONFLITO DE HORÁRIO — O trator ${tratorVal} já está sendo utilizado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
         return;
       }
     }
@@ -13862,11 +15435,21 @@ async function saveNewOpDashboard() {
   }
 }
 
-function printOpReport(itemStr) {
+async function printOpReport(itemStr) {
   const item = JSON.parse(decodeURIComponent(itemStr));
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   
+  // Load logo dynamically
+  let logoImg = null;
+  if (window.tenantConfig && window.tenantConfig.logo_url) {
+    try {
+      logoImg = await loadImg(window.tenantConfig.logo_url);
+    } catch(e) {
+      console.warn('Erro ao carregar logo para o PDF da OP:', e);
+    }
+  }
+
   // Cores
   const primaryColor = [27, 67, 50]; // Verde escuro agro
   const secondaryColor = [82, 183, 136]; // Verde claro
@@ -13882,14 +15465,23 @@ function printOpReport(itemStr) {
   doc.setFillColor(27, 67, 50);
   doc.rect(6, 6, 198, 25, 'F');
   
+  let textStartX = 12;
+  if (logoImg) {
+    // Add white background circle or rect for logo
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(10, 8, 21, 21, 2, 2, 'F');
+    doc.addImage(logoImg, 'PNG', 11, 9, 19, 19);
+    textStartX = 34;
+  }
+
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.text("PRODTEC - GESTÃO AGRÍCOLA", 12, 16);
+  doc.setFontSize(14);
+  doc.text((window.tenantConfig && window.tenantConfig.name || "PRODTEC - GESTÃO AGRÍCOLA").toUpperCase(), textStartX, 16);
   
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text("Caderno de Campo Digital - Rastreabilidade e Aplicações", 12, 22);
+  doc.setFontSize(9);
+  doc.text("Caderno de Campo Digital - Rastreabilidade e Aplicações", textStartX, 22);
   
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
@@ -14082,9 +15674,11 @@ function printOpReport(itemStr) {
   
   doc.setFontSize(9);
   doc.setTextColor(33, 37, 41);
-  doc.text(String(item.eng_agronomo || 'Reinaldo Chotten'), 52, y + 4, { align: "center" });
+  const rtNome = window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome || 'Reinaldo Chotten';
+  const rtCrea = window.tenantConfig && window.tenantConfig.responsavel_tecnico_crea || 'CREA';
+  doc.text(String(item.eng_agronomo || rtNome), 52, y + 4, { align: "center" });
   doc.setFont("helvetica", "bold");
-  doc.text("Responsável Técnico (Agrônomo / CREA)", 52, y + 8, { align: "center" });
+  doc.text(`Responsável Técnico (Agrônomo / ${rtCrea})`, 52, y + 8, { align: "center" });
   
   doc.setFont("helvetica", "normal");
   doc.text(String(item.tratorista || 'Operador'), 152, y + 4, { align: "center" });
@@ -14100,11 +15694,21 @@ function printOpReport(itemStr) {
   doc.save(`Ordem_Pulverizacao_Parcela_${item.parcela.replace(/\s+/g, '_')}_${item.data_aplicacao}.pdf`);
 }
 
-function printColheitaReport(itemStr) {
+async function printColheitaReport(itemStr) {
   const item = JSON.parse(decodeURIComponent(itemStr));
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   
+  // Load logo dynamically
+  let logoImg = null;
+  if (window.tenantConfig && window.tenantConfig.logo_url) {
+    try {
+      logoImg = await loadImg(window.tenantConfig.logo_url);
+    } catch(e) {
+      console.warn('Erro ao carregar logo para o PDF do Laudo:', e);
+    }
+  }
+
   // Cores
   const primaryColor = [27, 67, 50]; // Verde escuro agro
   const secondaryColor = [82, 183, 136]; // Verde claro
@@ -14120,14 +15724,23 @@ function printColheitaReport(itemStr) {
   doc.setFillColor(27, 67, 50);
   doc.rect(6, 6, 198, 25, 'F');
   
+  let textStartX = 12;
+  if (logoImg) {
+    // Add white background circle or rect for logo
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(10, 8, 21, 21, 2, 2, 'F');
+    doc.addImage(logoImg, 'PNG', 11, 9, 19, 19);
+    textStartX = 34;
+  }
+
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.text("PRODTEC - RASTREABILIDADE FITOSSANITÁRIA", 12, 16);
+  doc.setFontSize(14);
+  doc.text((window.tenantConfig && window.tenantConfig.name || "PRODTEC - RASTREABILIDADE FITOSSANITÁRIA").toUpperCase(), textStartX, 16);
   
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text("Certificação e Liberação de Áreas Produtivas", 12, 22);
+  doc.setFontSize(9);
+  doc.text("Certificação e Liberação de Áreas Produtivas", textStartX, 22);
   
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
@@ -14275,9 +15888,11 @@ function printColheitaReport(itemStr) {
   doc.setTextColor(33, 37, 41);
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text(String(item.eng_agronomo || 'Reinaldo Chotten'), 52, y + 4, { align: "center" });
+  const rtNome = window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome || 'Reinaldo Chotten';
+  const rtCrea = window.tenantConfig && window.tenantConfig.responsavel_tecnico_crea || 'CREA';
+  doc.text(String(item.eng_agronomo || rtNome), 52, y + 4, { align: "center" });
   doc.setFont("helvetica", "bold");
-  doc.text("Engenheiro Agrônomo / RT (CREA)", 52, y + 8, { align: "center" });
+  doc.text(`Engenheiro Agrônomo / RT (${rtCrea})`, 52, y + 8, { align: "center" });
   
   doc.setFont("helvetica", "normal");
   doc.text("Gerente de Operações / Qualidade", 152, y + 4, { align: "center" });
@@ -14358,6 +15973,258 @@ function stopEmpScanner() {
       console.error("Erro ao parar scanner:", err);
       empHtml5QrCode = null;
     });
+  }
+}
+
+// ══════════════════════════════════════
+// ABA VISITAS IDIARN (CADERNO DE CAMPO WEB)
+// ══════════════════════════════════════
+let newIdiarnSelectedProducts = new Set();
+
+async function loadIdiarnTable() {
+  try {
+    const { data, error } = await sb.from('caderno_campo_idiarn')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('data_aplicacao', { ascending: false });
+    if (!error && data) {
+      renderCcIdiarnTable(data);
+    } else {
+      renderCcIdiarnTable([]);
+    }
+  } catch (e) {
+    console.error('Erro ao carregar IDIARN:', e);
+    renderCcIdiarnTable([]);
+  }
+}
+
+function renderCcIdiarnTable(list) {
+  const tbody = $('ccIdiarnTableBody');
+  if (!tbody) return;
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Nenhuma visita IDIARN registrada.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(item => {
+    const formattedDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—';
+    const docLink = item.visualizar_url ? `<a href="${item.visualizar_url}" target="_blank" style="color:var(--orange); text-decoration:none; font-weight:700">📄 Ver PDF</a>` : '—';
+    return `
+      <tr style="border-bottom:1px solid var(--border); font-size:13px">
+        <td style="padding:12px 10px">${formattedDate}</td>
+        <td style="padding:12px 10px; font-weight:600">${item.documento || '—'}</td>
+        <td style="padding:12px 10px; font-weight:600">${item.parcela || '—'}</td>
+        <td style="padding:12px 10px">${item.safra_ciclo || '—'}</td>
+        <td style="padding:12px 10px">${item.produtos || '—'}</td>
+        <td style="padding:12px 10px; text-align:center">${item.area_ha ? item.area_ha + ' ha' : '—'}</td>
+        <td style="padding:12px 10px; text-align:center">${docLink}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function openNewIdiarnModal() {
+  newIdiarnSelectedProducts = new Set();
+  $('newIdiarnDate').value = today();
+  $('newIdiarnCiclo').value = '2024/2025';
+  $('newIdiarnArea').value = '';
+  $('newIdiarnVariedade').value = '';
+  $('newIdiarnFazenda').value = 'SANTA HELENA';
+  $('newIdiarnDocumento').value = '';
+  $('newIdiarnPdfUrl').value = '';
+  $('newIdiarnProdutoManual').value = '';
+  
+  // Carregar parcelas no select
+  const pSel = $('newIdiarnParcelSelect');
+  if (pSel) {
+    pSel.innerHTML = '<option value="">— Selecione a Parcela —</option>';
+    const list = window._infoParcelas || _infoParcelas || [];
+    list.forEach(p => {
+      pSel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.parcela2 || p.parcela} (${p.variedade || ''})</option>`);
+    });
+  }
+  
+  reloadNewIdiarnNumber();
+  $('newIdiarnOpChips').innerHTML = '';
+  $('newIdiarnModal').style.display = 'flex';
+}
+
+function closeNewIdiarnModal() {
+  $('newIdiarnModal').style.display = 'none';
+}
+
+async function reloadNewIdiarnNumber() {
+  try {
+    const { data } = await sb.from('caderno_campo_idiarn').select('numero_idiarn').order('numero_idiarn', { ascending: false }).limit(1);
+    const nextNum = (data && data[0] && data[0].numero_idiarn) ? parseInt(data[0].numero_idiarn) + 1 : 1;
+    $('newIdiarnNumero').value = nextNum;
+  } catch(e) {
+    $('newIdiarnNumero').value = 1;
+  }
+}
+
+async function onNewIdiarnParcelChange() {
+  const pId = $('newIdiarnParcelSelect').value;
+  const ip = (window._infoParcelas || _infoParcelas || []).find(x => x.id === pId);
+  const chipsEl = $('newIdiarnOpChips');
+  const statusEl = $('newIdiarnOpsStatus');
+  if (!chipsEl) return;
+  
+  chipsEl.innerHTML = '';
+  newIdiarnSelectedProducts = new Set();
+
+  if (!ip) {
+    $('newIdiarnArea').value = '';
+    $('newIdiarnVariedade').value = '';
+    return;
+  }
+  
+  $('newIdiarnArea').value = ip.area || '1.00';
+  $('newIdiarnVariedade').value = ip.variedade || '';
+  
+  // Buscar aplicações nos últimos 7 dias
+  const dateVal = $('newIdiarnDate').value || today();
+  const dateObj = new Date(dateVal + 'T12:00:00');
+  dateObj.setDate(dateObj.getDate() - 7);
+  const sevenDaysAgo = dateObj.toISOString().split('T')[0];
+  
+  const parcelCode = ip.parcela2 || ip.parcela;
+  
+  try {
+    const { data: ops } = await sb.from('caderno_campo_op')
+      .select('id, data_aplicacao, caderno_campo_op_itens(produto_nome, alvo)')
+      .eq('tenant_id', tenantId)
+      .or(`parcel_id.eq.${pId},parcela.eq.${parcelCode}`)
+      .gte('data_aplicacao', sevenDaysAgo);
+      
+    const opProducts = new Map();
+    if (ops && ops.length > 0) {
+      ops.forEach(op => {
+        (op.caderno_campo_op_itens || []).forEach(item => {
+          const key = item.produto_nome;
+          if (!opProducts.has(key)) {
+            opProducts.set(key, { alvo: item.alvo || '', datas: [] });
+          }
+          opProducts.get(key).datas.push(op.data_aplicacao);
+        });
+      });
+    }
+    
+    if (statusEl) statusEl.textContent = `Aplicações encontradas nos últimos 7 dias:`;
+    
+    if (opProducts.size === 0) {
+      chipsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);font-style:italic">Nenhuma aplicação encontrada nos últimos 7 dias. Adicione manualmente abaixo.</div>';
+    } else {
+      opProducts.forEach((info, nome) => {
+        newIdiarnSelectedProducts.add(nome);
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'btn on';
+        chip.style.cssText = 'font-size:12px; padding:6px 12px; border-radius:20px; font-weight:700; margin-right:6px; margin-bottom:6px; cursor:pointer';
+        chip.title = `Alvo: ${info.alvo || 'N/A'} | Datas: ${info.datas.join(', ')}`;
+        chip.innerHTML = `✓ ${nome}`;
+        chip.onclick = () => {
+          if (newIdiarnSelectedProducts.has(nome)) {
+            newIdiarnSelectedProducts.delete(nome);
+            chip.className = 'btn sec';
+            chip.innerHTML = nome;
+          } else {
+            newIdiarnSelectedProducts.add(nome);
+            chip.className = 'btn on';
+            chip.innerHTML = `✓ ${nome}`;
+          }
+        };
+        chipsEl.appendChild(chip);
+      });
+    }
+  } catch(e) {
+    console.warn('Erro ao carregar OPs para IDIARN:', e);
+  }
+}
+
+function addNewIdiarnManualProduct() {
+  const input = $('newIdiarnProdutoManual');
+  const nome = (input.value || '').trim().toUpperCase();
+  if (!nome) return;
+  
+  if (newIdiarnSelectedProducts.has(nome)) {
+    alert('Este produto já está na lista!');
+    return;
+  }
+  
+  newIdiarnSelectedProducts.add(nome);
+  const chipsEl = $('newIdiarnOpChips');
+  if (chipsEl) {
+    if (chipsEl.innerHTML.includes('Nenhuma aplicação encontrada')) {
+      chipsEl.innerHTML = '';
+    }
+    
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'btn on';
+    chip.style.cssText = 'font-size:12px; padding:6px 12px; border-radius:20px; font-weight:700; margin-right:6px; margin-bottom:6px; cursor:pointer';
+    chip.innerHTML = `✓ ${nome}`;
+    chip.onclick = () => {
+      newIdiarnSelectedProducts.delete(nome);
+      chip.remove();
+      if (newIdiarnSelectedProducts.size === 0) {
+        chipsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);font-style:italic">Nenhuma aplicação selecionada.</div>';
+      }
+    };
+    chipsEl.appendChild(chip);
+  }
+  input.value = '';
+}
+
+async function saveNewIdiarnDashboard() {
+  const numero = parseInt($('newIdiarnNumero').value) || null;
+  const ciclo = $('newIdiarnCiclo').value.trim();
+  const pId = $('newIdiarnParcelSelect').value;
+  const area = parseFloat($('newIdiarnArea').value) || null;
+  const variedade = $('newIdiarnVariedade').value.trim();
+  const date = $('newIdiarnDate').value;
+  const fazenda = $('newIdiarnFazenda').value.trim();
+  const documento = $('newIdiarnDocumento').value.trim();
+  const pdfUrl = $('newIdiarnPdfUrl').value.trim();
+  
+  const produtos = [...newIdiarnSelectedProducts].join(', ');
+  
+  if (!pId || !date || !documento || !ciclo) {
+    alert('Preencha Parcela, Ciclo/Safra, Data e Documento!');
+    return;
+  }
+  if (!produtos) {
+    alert('Selecione ou adicione pelo menos um produto fitossanitário!');
+    return;
+  }
+  
+  const ip = (window._infoParcelas || _infoParcelas || []).find(x => x.id === pId);
+  const parcelaCode = ip ? (ip.parcela2 || ip.parcela) : '';
+  
+  const record = {
+    tenant_id: tenantId,
+    numero_idiarn: numero,
+    safra_ciclo: ciclo,
+    parcel_id: pId,
+    parcela: parcelaCode,
+    area_ha: area,
+    variedade: variedade || null,
+    produtos: produtos,
+    data_aplicacao: date,
+    fazenda: fazenda || null,
+    documento: documento,
+    visualizar_url: pdfUrl || null,
+    synced: true
+  };
+  
+  try {
+    const { error } = await sb.from('caderno_campo_idiarn').insert([record]);
+    if (error) throw error;
+    
+    alert('✓ Visita IDIARN registrada com sucesso!');
+    closeNewIdiarnModal();
+    loadIdiarnTable();
+  } catch(e) {
+    alert('Erro ao salvar visita IDIARN: ' + e.message);
   }
 }
 </script><!-- DRAWER DE DESEMPENHO DO COLABORADOR -->

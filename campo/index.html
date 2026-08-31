@@ -1655,8 +1655,18 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
           <input id="opBicosInput" type="text" placeholder="Ex: Cone" style="font-size:13px">
         </div>
         <div class="form-field">
-          <label class="field-label">Vol (L/ha)</label>
-          <input id="opVolumeInput" type="text" placeholder="Ex: 200" style="font-size:13px">
+          <label class="field-label">Vol Calda (L/ha)</label>
+          <input id="opVolumeInput" type="number" step="1" value="500" placeholder="Ex: 500" oninput="updateOpCaldaSummary()" style="font-size:13px">
+        </div>
+      </div>
+
+      <!-- RESUMO DA CALDA TOTAL DA PARCELA -->
+      <div id="opCaldaSummaryBox" style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); border-radius:8px; padding:10px; font-size:12px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <span style="color:var(--muted2)">Área da Parcela: </span><strong id="opCaldaSummaryArea" style="color:var(--text)">0.00 ha</strong>
+        </div>
+        <div>
+          <span style="color:var(--muted2)">Calda Total: </span><strong id="opCaldaSummaryTotal" style="color:#60a5fa; font-size:14px">0 Litros</strong>
         </div>
       </div>
       
@@ -1702,60 +1712,92 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       </div>
     </div>
 
-    <!-- CALDA DE DEFENSIVOS -->
+    <!-- CALDA DE DEFENSIVOS E ADUBO FOLIAR SEPARADOS -->
     <div class="card" style="padding:16px; display:flex; flex-direction:column; gap:12px">
       <div style="font-size:13px; font-weight:700; color:var(--text); border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-        <span>4. Produtos na Calda</span>
+        <span>4. Produtos na Calda de Aplicação</span>
       </div>
       
-      <div id="opItemsList" style="display:flex; flex-direction:column; gap:8px;">
-        <!-- Lista de itens dinâmicos -->
+      <div id="opItemsList" style="display:flex; flex-direction:column; gap:12px;">
+        <!-- Lista de itens dinâmicos categorizados -->
       </div>
       
-      <button class="btn btn-sec" onclick="openOpAddProductModal()" style="font-size:12px; padding:8px; display:flex; align-items:center; justify-content:center; gap:6px;">
-        <i data-lucide="plus" style="width:14px;height:14px"></i> Adicionar Produto à Calda
-      </button>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px;">
+        <button class="btn btn-sec" onclick="openOpAddProductModal('DEFENSIVO')" style="font-size:11px; padding:10px 4px; display:flex; align-items:center; justify-content:center; gap:4px; border-color:rgba(239,68,68,0.4); color:#f87171;">
+          <i data-lucide="shield-alert" style="width:14px;height:14px"></i> + Defensivo Agrícola
+        </button>
+        <button class="btn btn-sec" onclick="openOpAddProductModal('FOLIAR')" style="font-size:11px; padding:10px 4px; display:flex; align-items:center; justify-content:center; gap:4px; border-color:rgba(34,197,94,0.4); color:#4ade80;">
+          <i data-lucide="leaf" style="width:14px;height:14px"></i> + Adubo Foliar
+        </button>
+      </div>
     </div>
 
     <button class="btn btn-primary btn-full" id="btnSaveOp" onclick="saveOpRecord()" style="margin-top:16px; display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="check" style="width:18px;height:18px"></i> Salvar Ordem de Aplicação</button>
   </div>
 </div>
 
-<!-- Modal para adicionar produto na calda -->
+<!-- Modal para adicionar produto na calda (Defensivo ou Foliar) -->
 <div id="opAddProductModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10000; align-items:center; justify-content:center; padding:16px">
-  <div class="card" style="width:100%; max-width:400px; padding:16px; display:flex; flex-direction:column; gap:12px">
-    <div style="font-weight:700; font-size:16px; color:var(--text)">Adicionar Defensivo</div>
+  <div class="card" style="width:100%; max-width:420px; padding:16px; display:flex; flex-direction:column; gap:12px; max-height:90vh; overflow-y:auto;">
+    <div id="opModalTitle" style="font-weight:700; font-size:16px; color:var(--text); display:flex; align-items:center; gap:6px;">
+      Adicionar Produto
+    </div>
     
     <div class="form-field">
-      <label class="field-label">Defensivo</label>
+      <label class="field-label" id="opModalSelectLabel">Selecione o Produto</label>
       <select id="opAddDefensivoSelect" onchange="onOpAddDefensivoChange()" style="font-size:13px"></select>
     </div>
     
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
       <div class="form-field">
-        <label class="field-label">Dosagem Real (L/ha)</label>
-        <input id="opAddDosagemReal" type="number" step="0.01" value="1.0" style="font-size:13px">
+        <label class="field-label">Dosagem Real (<span class="opAddUnitLabel">L/ha</span>)</label>
+        <input id="opAddDosagemReal" type="number" step="0.001" value="1.0" oninput="calculateOpModalTotals()" style="font-size:13px">
       </div>
       <div class="form-field">
-        <label class="field-label">Limite Legal</label>
-        <input id="opAddDosagemLimite" type="text" readonly style="font-size:13px; background:rgba(0,0,0,0.1)">
+        <label class="field-label">Limite Recomendado</label>
+        <input id="opAddDosagemLimite" type="text" readonly style="font-size:13px; background:rgba(0,0,0,0.15); font-weight:700">
+      </div>
+    </div>
+
+    <!-- PAINEL DE DOSAGEM TOTAL DA PARCELA E TANQUE -->
+    <div id="opAddCalcBox" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:8px; padding:10px; font-size:12px; display:flex; flex-direction:column; gap:4px;">
+      <div style="display:flex; justify-content:space-between;">
+        <span style="color:var(--muted2)">Total para a Parcela:</span>
+        <strong id="opAddTotalParcela" style="color:var(--text)">0.00</strong>
+      </div>
+      <div style="display:flex; justify-content:space-between;">
+        <span style="color:var(--muted2)">Qtd por Tanque (500L/ha):</span>
+        <strong id="opAddTotalTanque" style="color:#60a5fa">0.00</strong>
       </div>
     </div>
     
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
-      <div class="form-field">
+      <div class="form-field" id="opAddAlvoGroup">
         <label class="field-label">Alvo Principal</label>
         <input id="opAddAlvo" type="text" style="font-size:13px">
       </div>
       <div class="form-field">
         <label class="field-label">Carência (Dias)</label>
-        <input id="opAddCarencia" type="number" readonly style="font-size:13px; background:rgba(0,0,0,0.1)">
+        <input id="opAddCarencia" type="number" readonly style="font-size:13px; background:rgba(0,0,0,0.15)">
       </div>
     </div>
+    
+    <!-- Alerta de Violação de Dosagem -->
+    <div id="opAddDosagemWarning" style="display:none; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.5); padding:10px; border-radius:8px; font-size:11px; color:#f87171;">
+      <div style="font-weight:700; margin-bottom:2px">🚫 EXCESSO DE DOSAGEM DETECTADO!</div>
+      <div id="opAddDosagemWarningMsg">A dosagem informada excede o limite máximo permitido pelo órgão certificador.</div>
+      <button class="btn" onclick="applyOpDosagemCorrection()" style="margin-top:6px; background:#ef4444; color:#fff; padding:4px 8px; font-size:11px; font-weight:700; width:100%; border-radius:6px;">
+        ⚡ Ajustar Automaticamente para o Limite (<span id="opAddDosagemLimitVal"></span>)
+      </button>
+    </div>
 
-    <div style="display:flex; gap:8px; margin-top:8px">
+    <!-- Info Panel Defensivo -->
+    <div id="opAddDefensivoInfoPanel" style="display:none; background:rgba(0,0,0,0.3); padding:10px; border-radius:6px; font-size:11px; line-height:1.4; border:1px solid var(--border)">
+    </div>
+
+    <div style="display:flex; gap:8px; margin-top:4px">
       <button class="btn btn-sec btn-full" onclick="closeOpAddProductModal()">Cancelar</button>
-      <button class="btn btn-primary btn-full" onclick="confirmOpAddProduct()">Adicionar</button>
+      <button class="btn btn-primary btn-full" onclick="confirmOpAddProduct()">Adicionar à Calda</button>
     </div>
   </div>
 </div>
@@ -2002,6 +2044,7 @@ let sb, user, tenantId, tenantName;
 let employees  = [];   // [{id, name, role, barcode}]
 let parcelas   = [];   // [{id, code}]
 let infoParcelasData = [];
+let dbParcels = [];
 let defensivosData   = [];
 let mipRecordsData   = [];
 let opRecordsData    = [];
@@ -2046,7 +2089,7 @@ function showScreen(name) {
     phSign:'screenPhSign', stops:'screenStops', fieldOp:'screenFieldOp',
     infoParcelas:'screenInfoParcelas', mip:'screenMip', op:'screenOp',
     fertirrigacao:'screenFertirrigacao', idiarn:'screenIdiarn',
-    plantios:'screenPlantios'
+    plantios:'screenPlantios', e3d:'screenE3d'
   };
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active','behind'));
   const active = $(screens[name]);
@@ -2196,6 +2239,7 @@ async function syncQueue() {
       if (item.type === 'bulk_sale') await pushBulkSale(item.data);
       if (item.type === 'fertirrigacao') await pushFertirrigacao(item.data);
       if (item.type === 'idiarn') await pushIdiarn(item.data);
+      if (item.type === 'mip') await pushMip(item.data);
       await idbDelete(item.id);
       ok++;
     } catch(e) { 
@@ -2217,6 +2261,16 @@ async function initApp() {
   const savedTheme = localStorage.getItem('prodtech_campo_theme') || 'dark';
   updateThemeUI(savedTheme);
   sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+  // Monitorar erros de sessão (token expirado = 400 no refresh)
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'TOKEN_REFRESHED') return; // normal
+    if (isOnline && (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION'))) {
+      console.warn('Sessão expirada via onAuthStateChange no campo. Evento:', event);
+      doLogout();
+    }
+  });
+
   await initIDB();
   window.addEventListener('online',  () => { isOnline = true;  updateOnlineDots(); syncQueue(); });
   window.addEventListener('offline', () => { isOnline = false; updateOnlineDots(); });
@@ -2227,12 +2281,24 @@ async function initApp() {
 
   if (cachedUser && cachedTenantId) {
     // Auto-login imediato usando dados locais cacheados
-    await selectTenantAndContinueOffline();
+    await selectTenantAndContinueOffline(!isOnline);
     
     // Se estiver online, revalida a sessão em segundo plano silenciosamente
     if (isOnline) {
       try {
-        const { data: { session } } = await sb.auth.getSession();
+        const { data: { session }, error } = await sb.auth.getSession();
+        if (error) {
+          const isNetworkError = error.message?.includes('fetch') || error.message?.includes('NetworkError') || error.status === 0 || error.status === 502 || error.status === 503 || error.status === 504;
+          if (!isNetworkError) {
+            console.warn('Erro de autenticação no campo. Fazendo logout...', error);
+            await doLogout();
+            return;
+          }
+        } else if (!session) {
+          console.warn('Sessão expirada no campo. Fazendo logout...');
+          await doLogout();
+          return;
+        }
         if (session) {
           user = session.user;
           localStorage.setItem('prodtech_user', JSON.stringify(session.user));
@@ -2247,7 +2313,8 @@ async function initApp() {
             loadInfoParcelas(),
             loadDefensivos(),
             loadMipRecords(),
-            loadOpRecords()
+            loadOpRecords(),
+            loadDbParcels()
           ]).then(cacheOfflineData).catch(e => console.warn('Erro ao atualizar cache:', e));
         }
       } catch (e) {
@@ -2374,7 +2441,7 @@ async function doLogin() {
       const typedHash = await sha256(pass);
       const cachedEmail = u.email.toLowerCase();
       if ((cachedEmail === typedEmail || cachedEmail.split('@')[0] === typedEmail.split('@')[0]) && typedHash === cachedHash) {
-        await selectTenantAndContinueOffline();
+        await selectTenantAndContinueOffline(true);
         btn.disabled = false; btn.textContent = 'Entrar';
         return;
       }
@@ -2414,7 +2481,7 @@ async function doOfflineLogin() {
   const cachedTenantId = localStorage.getItem('prodtech_tenant_id');
   const cachedUser = localStorage.getItem('prodtech_user');
   if (cachedTenantId && cachedUser) {
-    await selectTenantAndContinueOffline();
+    await selectTenantAndContinueOffline(true);
   } else {
     toast('Sem dados em cache para login offline.', 'err');
   }
@@ -2427,7 +2494,7 @@ async function afterLogin(u) {
   if (!isOnline) {
     const cachedTenantId = localStorage.getItem('prodtech_tenant_id');
     if (cachedTenantId) {
-      await selectTenantAndContinueOffline();
+      await selectTenantAndContinueOffline(true);
       return;
     }
   }
@@ -2502,16 +2569,89 @@ function isSunday(dateStr) {
   return d.getDay() === 0;
 }
 
+function getEasterHolidayDates(year) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const L = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * L) / 451);
+  const month = Math.floor((h + L - 7 * m + 114) / 31);
+  const day = ((h + L - 7 * m + 114) % 31) + 1;
+  
+  const easter = new Date(year, month - 1, day);
+  
+  const sextaSanta = new Date(easter);
+  sextaSanta.setDate(easter.getDate() - 2);
+  
+  const carnaval = new Date(easter);
+  carnaval.setDate(easter.getDate() - 47);
+  
+  const corpusChristi = new Date(easter);
+  corpusChristi.setDate(easter.getDate() + 60);
+  
+  const toDateStr = d => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dayStr}`;
+  };
+  
+  return {
+    carnaval: toDateStr(carnaval),
+    sextaSanta: toDateStr(sextaSanta),
+    corpusChristi: toDateStr(corpusChristi)
+  };
+}
+
+function getHolidayName(dateStr) {
+  if (!dateStr) return null;
+  const s = String(dateStr).split('T')[0];
+  const parts = s.split('-');
+  if (parts.length !== 3) return null;
+  const year = parseInt(parts[0], 10);
+  const monthDay = `${parts[1]}-${parts[2]}`;
+  
+  const fixed = {
+    '01-01': 'Confraternização Universal',
+    '04-21': 'Tiradentes',
+    '05-01': 'Dia do Trabalho',
+    '09-07': 'Independência do Brasil',
+    '10-12': 'Nossa Senhora Aparecida',
+    '11-02': 'Finados',
+    '11-15': 'Proclamação da República',
+    '11-20': 'Dia da Consciência Negra',
+    '12-25': 'Natal'
+  };
+  
+  if (fixed[monthDay]) return fixed[monthDay];
+  
+  const mobile = getEasterHolidayDates(year);
+  if (s === mobile.carnaval) return 'Carnaval';
+  if (s === mobile.sextaSanta) return 'Sexta-feira Santa';
+  if (s === mobile.corpusChristi) return 'Corpus Christi';
+  
+  return null;
+}
+
 async function selectTenantAndContinue(tu) {
   tenantId   = tu.tenant_id;
   tenantName = tu.tenants?.name || 'Empresa';
   window.farmCode = tu.tenants?.farm_code || '4';
   window.pricePerCarrao = parseFloat(tu.tenants?.value_per_carrao || 2.00);
+  window.tenantConfig = tu.tenants || {};
 
   localStorage.setItem('prodtech_tenant_id', tenantId);
   localStorage.setItem('prodtech_tenant_name', tenantName);
   localStorage.setItem('prodtech_farm_code', window.farmCode);
   localStorage.setItem('prodtech_price_per_carrao', window.pricePerCarrao);
+  localStorage.setItem('prodtech_tenant_config', JSON.stringify(tu.tenants || {}));
 
   window.currentInspector = user.email.split('@')[0];
   $('homeTenant').textContent = tenantName;
@@ -2555,11 +2695,15 @@ async function selectTenantAndContinue(tu) {
   }
 }
 
-async function selectTenantAndContinueOffline() {
+async function selectTenantAndContinueOffline(showOfflineToast = false) {
   tenantId = localStorage.getItem('prodtech_tenant_id');
   tenantName = localStorage.getItem('prodtech_tenant_name') || 'Empresa';
   window.farmCode = localStorage.getItem('prodtech_farm_code') || '4';
   window.pricePerCarrao = parseFloat(localStorage.getItem('prodtech_price_per_carrao') || 2.00);
+  
+  const cachedConfig = localStorage.getItem('prodtech_tenant_config');
+  if (cachedConfig) window.tenantConfig = JSON.parse(cachedConfig);
+  else window.tenantConfig = {};
 
   const cachedUser = localStorage.getItem('prodtech_user');
   if (cachedUser) {
@@ -2582,6 +2726,7 @@ async function selectTenantAndContinueOffline() {
   operations = JSON.parse(localStorage.getItem('prodtech_operations') || '[]');
   machines = JSON.parse(localStorage.getItem('prodtech_machines') || '[]');
   infoParcelasData = JSON.parse(localStorage.getItem('prodtech_info_parcelas') || '[]');
+  dbParcels = JSON.parse(localStorage.getItem('prodtech_db_parcels') || '[]');
   defensivosData = JSON.parse(localStorage.getItem('prodtech_defensivos') || '[]');
   mipRecordsData = JSON.parse(localStorage.getItem('prodtech_mip_records') || '[]');
   opRecordsData = JSON.parse(localStorage.getItem('prodtech_op_records') || '[]');
@@ -2602,7 +2747,9 @@ async function selectTenantAndContinueOffline() {
 
   await updateSyncBadge();
   showScreen('home');
-  toast('⚡ Modo Offline Ativo (cache local)', 'ok');
+  if (showOfflineToast) {
+    toast('⚡ Modo Offline Ativo (cache local)', 'ok');
+  }
 }
 
 function cacheOfflineData() {
@@ -2619,6 +2766,7 @@ function cacheOfflineData() {
     localStorage.setItem('prodtech_operations', JSON.stringify(operations || []));
     localStorage.setItem('prodtech_machines', JSON.stringify(machines || []));
     localStorage.setItem('prodtech_info_parcelas', JSON.stringify(infoParcelasData || []));
+    localStorage.setItem('prodtech_db_parcels', JSON.stringify(dbParcels || []));
     localStorage.setItem('prodtech_defensivos', JSON.stringify(defensivosData || []));
     localStorage.setItem('prodtech_mip_records', JSON.stringify(mipRecordsData || []));
     localStorage.setItem('prodtech_op_records', JSON.stringify(opRecordsData || []));
@@ -2634,7 +2782,7 @@ async function loadParcelas() {
     parcelas = infoParcelasData
       .filter(p => p.ativo !== false)
       .map(p => ({
-        id: p.id,
+        id: p.parcel_id || p.id,
         code: p.parcela2 || `${p.parcela} ${p.letra || ''}`.trim(),
         label: buildParcelaLabel(p),
         cultura: p.cultura,
@@ -2689,12 +2837,19 @@ async function doLogout() {
 // DATA
 // ═══════════════════════════════════════════
 async function loadEmployees() {
-  const { data } = await sb.from('employees')
-    .select('id, name, role, barcode')
-    .eq('tenant_id', tenantId)
-    .eq('active', true)
-    .order('name');
-  employees = data || [];
+  try {
+    const { data, error } = await sb.from('employees')
+      .select('id, name, role, barcode, active')
+      .eq('tenant_id', tenantId)
+      .order('name');
+    if (error) {
+      console.error('Erro ao carregar funcionários:', error);
+    }
+    employees = (data || []).filter(e => e.active !== false);
+  } catch (err) {
+    console.error('Erro na chamada loadEmployees:', err);
+    employees = [];
+  }
   if (typeof populateOpEmployeeSelects === 'function') populateOpEmployeeSelects();
 }
 
@@ -2719,7 +2874,7 @@ function updateVarietyFilter() {
   }
 
   // Encontra o código da parcela selecionada
-  const pObj = infoParcelasData.find(p => p.id == pId);
+  const pObj = infoParcelasData.find(p => p.parcel_id == pId || p.id == pId);
   const pCode = pObj ? (pObj.parcela2 || pObj.parcela) : null;
 
   // Busca todas as variedades vinculadas a esta parcela física no infoParcelasData
@@ -2806,7 +2961,7 @@ let varieties = [];
     parcelas = infoParcelasData
       .filter(p => p.ativo !== false)
       .map(p => ({
-        id: p.id,
+        id: p.parcel_id || p.id,
         code: p.parcela2 || `${p.parcela} ${p.letra || ''}`.trim(),
         label: buildParcelaLabel(p),
         cultura: p.cultura,
@@ -2819,6 +2974,20 @@ let varieties = [];
 
     // Rebuild all selects that depend on parcelas
     rebuildAllParcelaSelects();
+  }
+
+  async function loadDbParcels() {
+    try {
+      const { data, error } = await sb.from('parcels')
+        .select('id, code')
+        .eq('tenant_id', tenantId);
+      if (!error && data) {
+        dbParcels = data;
+        localStorage.setItem('prodtech_db_parcels', JSON.stringify(data));
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar parcels do DB:', e);
+    }
   }
 
   function buildParcelaLabel(p) {
@@ -3266,7 +3435,7 @@ let varieties = [];
       <!-- CABEÇALHO MODELO 1 COM LOGO DA EMPRESA -->
       <div class="header-box" style="display:flex; align-items:center; justify-content:space-between; gap:16px;">
         <div style="flex:0 0 140px; text-align:left;">
-          <img src="logo.png" style="max-height:55px; max-width:130px; object-fit:contain;" alt="Logo" onerror="this.style.display='none'"/>
+          <img src="${(window.tenantConfig && window.tenantConfig.logo_url) || 'logo.png'}" style="max-height:55px; max-width:130px; object-fit:contain;" alt="Logo" onerror="this.src='logo.png'"/>
         </div>
         <div style="flex:1; text-align:center;">
           <div class="header-title">PASTA DE CAMPO (MODELO 1) — CADERNO DE CAMPO</div>
@@ -3393,8 +3562,32 @@ let varieties = [];
 
     const areaVal = parseFloat($('plArea').value) || null;
 
+    let physicalParcelId = null;
+    if (isOnline) {
+      try {
+        const uppercaseParcel = parcela.trim().toUpperCase();
+        let match = (dbParcels || []).find(dp => dp.code.trim().toUpperCase() === uppercaseParcel);
+        if (!match) {
+          const { data: newP, error: pErr } = await sb.from('parcels')
+            .insert([{ code: uppercaseParcel, active: true, tenant_id: tenantId }])
+            .select('id')
+            .single();
+          if (!pErr && newP) {
+            physicalParcelId = newP.id;
+            dbParcels.push({ id: newP.id, code: uppercaseParcel });
+            localStorage.setItem('prodtech_db_parcels', JSON.stringify(dbParcels));
+          }
+        } else {
+          physicalParcelId = match.id;
+        }
+      } catch(e) {
+        console.warn('Erro ao associar/criar parcela física:', e);
+      }
+    }
+
     const payload = {
       tenant_id: tenantId,
+      parcel_id: physicalParcelId,
       parcela,
       letra,
       parcela2,
@@ -3835,6 +4028,8 @@ let varieties = [];
     btn.innerHTML = 'Salvando...';
     
     try {
+      const hasParcel = (dbParcels || []).some(p => p.id === session.parcel_id);
+      if (!hasParcel) session.parcel_id = null;
       if (!isOnline) {
         await idbAdd({ type: 'fertirrigacao', data: { session: { ...session, synced: false }, items } });
         await updateSyncBadge();
@@ -3914,6 +4109,8 @@ let varieties = [];
     btn.innerHTML = 'Salvando...';
     
     try {
+      const hasParcel = (dbParcels || []).some(p => p.id === record.parcel_id);
+      if (!hasParcel) record.parcel_id = null;
       if (!isOnline) {
         await idbAdd({ type: 'idiarn', data: { ...record, synced: false } });
         await updateSyncBadge();
@@ -4046,20 +4243,34 @@ let varieties = [];
     </head>
     <body onload="window.print()">
       <div class="sheet">
-        <table class="hdr-table">
-          <tr>
-            <td class="hdr-left">ELABORADO, EMITIDO E REVISADO POR: EMANUELA MOREIRA</td>
-            <td class="hdr-right">DEPARTAMENTO: CAMPO</td>
-          </tr>
-          <tr>
-            <td class="hdr-left">AVALIADO POR: ADGF</td>
-            <td class="hdr-right">DOC: FICHA DE MONITORAMENTO E AMOSTRAGEM MIP</td>
-          </tr>
-          <tr>
-            <td class="hdr-left">APROVADO POR: ADGF</td>
-            <td class="hdr-right">EMISSÃO: 15/06/2026 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; VERSÃO: 01 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; COD: PC08</td>
-          </tr>
-        </table>
+        <!-- CABEÇALHO OFICIAL COM LOGO DO TENANT -->
+        <div style="display:flex; justify-content:space-between; align-items:stretch; margin-bottom:8px; border:1px solid #000;">
+          <div style="width:45%; padding:5px; display:flex; align-items:center; gap:10px; border-right:1px solid #000;">
+            ${window.tenantConfig && window.tenantConfig.logo_url ? `<img src="${window.tenantConfig.logo_url}" style="max-height:45px; max-width:135px; object-fit:contain;"/>` : `<div style="width:35px; height:35px; background:#ddd; display:flex; align-items:center; justify-content:center; border-radius:4px; font-weight:bold; font-size:16px; color:#555;">🌱</div>`}
+            <div>
+              <div style="font-size:9.5pt; font-weight:bold; color:#1b4332; text-transform:uppercase;">${(window.tenantConfig && window.tenantConfig.name || 'BOM JESUS AGRÍCOLA').toUpperCase()}</div>
+              <div style="font-size:6pt; color:#444; line-height:1.2;">
+                ${window.tenantConfig && window.tenantConfig.endereco ? `${window.tenantConfig.endereco}<br/>` : ''}
+                ${window.tenantConfig && window.tenantConfig.municipio ? `${window.tenantConfig.municipio}/${window.tenantConfig.uf || 'RN'}` : ''}
+                ${window.tenantConfig && window.tenantConfig.ggn_geral ? ` | GGN: ${window.tenantConfig.ggn_geral}` : ''}
+              </div>
+            </div>
+          </div>
+          <table class="hdr-table" style="width:55%; margin-bottom:0; border:none; table-layout:fixed;">
+            <tr>
+              <td class="hdr-left" style="border-top:none; border-left:none;">ELABORADO, EMITIDO E REVISADO: EMANUELA MOREIRA</td>
+              <td class="hdr-right" style="border-top:none; border-right:none;">DEPARTAMENTO: CAMPO</td>
+            </tr>
+            <tr>
+              <td class="hdr-left" style="border-left:none;">AVALIADO POR: ADGF</td>
+              <td class="hdr-right" style="border-right:none;">DOC: MONITORAMENTO E AMOSTRAGEM MIP</td>
+            </tr>
+            <tr>
+              <td class="hdr-left" style="border-left:none; border-bottom:none;">APROVADO POR: ADGF</td>
+              <td class="hdr-right" style="border-right:none; border-bottom:none; font-size:6pt;">EMISSÃO: 15/06/2026 &nbsp;&nbsp; VERSÃO: 01 &nbsp;&nbsp; COD: PC08</td>
+            </tr>
+          </table>
+        </div>
 
         <div class="main-title">MANEJO INTEGRADO DE PRAGAS — FICHA DE AMOSTRAGEM (MIP)</div>
 
@@ -4280,6 +4491,7 @@ let varieties = [];
     renderMipPoints();
     const dateInput = document.getElementById('opDateInput');
     if (dateInput) dateInput.value = today();
+    populateOpEmployeeSelects(); // Garantir que preenche no início
   }
 
   function populateMipSelects() {
@@ -4425,7 +4637,9 @@ let varieties = [];
     };
     
     try {
-      const { error } = await sb.from('caderno_campo_mip').insert(record);
+      const hasParcel = (dbParcels || []).some(p => p.id === record.parcel_id);
+      const cleanRecord = { ...record, parcel_id: hasParcel ? record.parcel_id : null };
+      const { error } = await sb.from('caderno_campo_mip').insert(cleanRecord);
       if (error) throw error;
       
       toast('✓ Amostragem MIP salva com sucesso!', 'ok');
@@ -4445,7 +4659,10 @@ let varieties = [];
       localStorage.setItem('prodtech_mip_records', JSON.stringify(mipRecordsData || []));
       renderMipHistory();
       
-      toast('✓ Amostragem MIP salva offline!', 'ok');
+      await idbAdd({ type: 'mip', data: record });
+      await updateSyncBadge();
+      
+      toast('📥 Salvo offline — sincronizará quando online', 'ok');
       showScreen('home');
       mipValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
       mipSelPoint = 0;
@@ -4454,6 +4671,24 @@ let varieties = [];
   }
 
   let opItems = [];
+  let opModalProductType = 'DEFENSIVO'; // 'DEFENSIVO' ou 'FOLIAR'
+
+  function updateOpCaldaSummary() {
+    const pId = (document.getElementById('opParcelSelect') || {}).value;
+    const pObj = pId ? parcelas.find(x => x.id == pId) : null;
+    const info = pObj ? (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code) : null;
+    
+    const areaHa = parseFloat(info ? info.area : (document.getElementById('opAreaInput')?.value || 1.0)) || 1.0;
+    const volCaldaLha = parseFloat((document.getElementById('opVolumeInput') || {}).value) || 500;
+    const totalCaldaLitros = areaHa * volCaldaLha;
+
+    const areaEl = document.getElementById('opCaldaSummaryArea');
+    const totalEl = document.getElementById('opCaldaSummaryTotal');
+    if (areaEl) areaEl.textContent = `${areaHa.toFixed(2)} ha`;
+    if (totalEl) totalEl.textContent = `${totalCaldaLitros.toLocaleString('pt-BR')} Litros`;
+
+    calculateOpModalTotals();
+  }
 
   function onOpParcelChange() {
     const pId = document.getElementById('opParcelSelect').value;
@@ -4469,31 +4704,74 @@ let varieties = [];
       if (cultInput) cultInput.value = pObj ? 'MELÃO' : '';
       if (areaInput) areaInput.value = '';
     }
+    updateOpCaldaSummary();
   }
 
-  function openOpAddProductModal() {
-    const select = document.getElementById('opAddDefensivoSelect');
-    select.innerHTML = '<option value="">Selecione um defensivo</option>';
-    
-    const cultura = document.getElementById('opCulturaInput').value;
+  function isFoliarProduct(d) {
     const norm = s => (s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-    const filtered = defensivosData.filter(d => {
-      if (!d.cultura || d.cultura === 'TODAS' || d.cultura === 'TODOS') return true;
-      return norm(d.cultura) === norm(cultura);
+    const t = norm(d.tipo);
+    const prod = norm(d.produto);
+    const ia = norm(d.ingrediente_ativo);
+    const alvo = norm(d.alvo);
+    return t.includes('FOLIAR') || t.includes('FERTILIZANTE') || t.includes('NUTRI') ||
+           prod.includes('FOLIAR') || prod.includes('ADUBO') || prod.includes('NUTRI') ||
+           ia.includes('FOLIAR') || ia.includes('FERTILIZANTE') ||
+           alvo.includes('FOLIAR') || alvo.includes('NUTRI');
+  }
+
+  function openOpAddProductModal(type = 'DEFENSIVO') {
+    opModalProductType = type;
+    const select = document.getElementById('opAddDefensivoSelect');
+    const titleEl = document.getElementById('opModalTitle');
+    const labelEl = document.getElementById('opModalSelectLabel');
+    const alvoGroup = document.getElementById('opAddAlvoGroup');
+    
+    if (type === 'FOLIAR') {
+      titleEl.innerHTML = '🍃 <span style="color:#4ade80">Adicionar Adubo Foliar / Nutriente</span>';
+      labelEl.textContent = 'Selecione o Adubo Foliar / Nutriente';
+      if (alvoGroup) alvoGroup.style.display = 'none';
+    } else {
+      titleEl.innerHTML = '🛡️ <span style="color:#f87171">Adicionar Defensivo Agrícola</span>';
+      labelEl.textContent = 'Selecione o Defensivo';
+      if (alvoGroup) alvoGroup.style.display = 'block';
+    }
+
+    select.innerHTML = `<option value="">Selecione um ${type === 'FOLIAR' ? 'adubo foliar' : 'defensivo'}</option>`;
+    
+    const cultura = (document.getElementById('opCulturaInput') || {}).value || '';
+    const norm = s => (s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+    
+    // Filtrar primeiro por Tipo (Foliar vs Defensivo)
+    const typeFiltered = defensivosData.filter(d => {
+      const isFol = isFoliarProduct(d);
+      return type === 'FOLIAR' ? isFol : !isFol;
     });
-    const listToUse = filtered.length > 0 ? filtered : defensivosData;
+
+    // Depois filtrar por Cultura
+    const filtered = typeFiltered.filter(d => {
+      if (!d.cultura || d.cultura === 'TODAS' || d.cultura === 'TODOS') return true;
+      const normalizedCultures = norm(d.cultura).split(',').map(s => s.trim());
+      return normalizedCultures.includes(norm(cultura));
+    });
+    
+    const listToUse = filtered.length > 0 ? filtered : typeFiltered;
     
     listToUse.forEach(d => {
       const doseVal = d.dose || d.dosagem_recomendada;
       const doseStr = doseVal ? ` | Dose: ${doseVal} ${d.unidade_dose || 'L/ha'}` : '';
       const alvoStr = d.alvo ? ` | Alvo: ${d.alvo}` : '';
-      select.insertAdjacentHTML('beforeend', `<option value="${d.id}">${d.produto} (${d.ingrediente_ativo || ''})${doseStr}${alvoStr}</option>`);
+      const carStr = d.carencia_dias !== undefined && d.carencia_dias !== null ? ` | Carência: ${d.carencia_dias}d` : '';
+      select.insertAdjacentHTML('beforeend', `<option value="${d.id}">${d.produto} (${d.ingrediente_ativo || 'Nutrição/Foliar'})${doseStr}${alvoStr}${carStr}</option>`);
     });
     
     document.getElementById('opAddDosagemReal').value = '1.0';
-    document.getElementById('opAddDosagemLimite').value = '';
-    document.getElementById('opAddCarencia').value = '';
-    document.getElementById('opAddAlvo').value = '';
+    document.getElementById('opAddDosagemLimite').value = '—';
+    document.getElementById('opAddCarencia').value = '0';
+    document.getElementById('opAddAlvo').value = type === 'FOLIAR' ? 'ADUBO FOLIAR' : '';
+    document.getElementById('opAddDosagemWarning').style.display = 'none';
+    document.getElementById('opAddDefensivoInfoPanel').style.display = 'none';
+    
+    calculateOpModalTotals();
     document.getElementById('opAddProductModal').style.display = 'flex';
   }
 
@@ -4501,53 +4779,163 @@ let varieties = [];
     document.getElementById('opAddProductModal').style.display = 'none';
   }
 
+  function calculateOpModalTotals() {
+    const id = document.getElementById('opAddDefensivoSelect').value;
+    const def = defensivosData.find(d => d.id === id);
+    const unitLabel = def ? (def.unidade_dose || def.unidade || 'L/ha') : 'L/ha';
+    
+    document.querySelectorAll('.opAddUnitLabel').forEach(el => el.textContent = unitLabel);
+
+    const dosagemReal = parseFloat(document.getElementById('opAddDosagemReal').value) || 0;
+    
+    const pId = (document.getElementById('opParcelSelect') || {}).value;
+    const pObj = pId ? parcelas.find(x => x.id == pId) : null;
+    const info = pObj ? (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code) : null;
+    
+    const areaHa = parseFloat(info ? info.area : (document.getElementById('opAreaInput')?.value || 1.0)) || 1.0;
+    const volCaldaLha = parseFloat((document.getElementById('opVolumeInput') || {}).value) || 500;
+    
+    const totalParcela = dosagemReal * areaHa;
+    // Quantidade por tanque assumindo calda de volCaldaLha L/ha
+    const totalTanque = volCaldaLha > 0 ? (dosagemReal / volCaldaLha) * 500 : dosagemReal;
+
+    const unitBase = unitLabel.replace('/ha', '').trim();
+    document.getElementById('opAddTotalParcela').textContent = `${totalParcela.toFixed(3)} ${unitBase}`;
+    document.getElementById('opAddTotalTanque').textContent = `${totalTanque.toFixed(3)} ${unitBase} (p/ 500L de água)`;
+
+    // Checar excedente de dosagem limite
+    if (def) {
+      const doseLimite = parseFloat(def.dose || def.dosagem_recomendada);
+      const warningBox = document.getElementById('opAddDosagemWarning');
+      if (doseLimite > 0 && dosagemReal > doseLimite) {
+        warningBox.style.display = 'block';
+        document.getElementById('opAddDosagemWarningMsg').textContent = `A dosagem informada (${dosagemReal} ${unitLabel}) excede a dosagem recomendada (${doseLimite} ${unitLabel}).`;
+        document.getElementById('opAddDosagemLimitVal').textContent = `${doseLimite} ${unitLabel}`;
+      } else {
+        warningBox.style.display = 'none';
+      }
+    }
+  }
+
+  function applyOpDosagemCorrection() {
+    const id = document.getElementById('opAddDefensivoSelect').value;
+    const def = defensivosData.find(d => d.id === id);
+    if (!def) return;
+    const doseLimite = parseFloat(def.dose || def.dosagem_recomendada) || 1.0;
+    document.getElementById('opAddDosagemReal').value = doseLimite;
+    calculateOpModalTotals();
+    toast('✓ Dosagem ajustada para o limite legal recomendado!', 'ok');
+  }
+
   function onOpAddDefensivoChange() {
     const id = document.getElementById('opAddDefensivoSelect').value;
     const def = defensivosData.find(d => d.id === id);
+    const infoPanel = document.getElementById('opAddDefensivoInfoPanel');
     if(def) {
       const doseVal = def.dose || def.dosagem_recomendada || 1.0;
-      document.getElementById('opAddDosagemLimite').value = doseVal;
+      const unit = def.unidade_dose || def.unidade || 'L/ha';
+      document.getElementById('opAddDosagemLimite').value = `${doseVal} ${unit}`;
       document.getElementById('opAddDosagemReal').value = doseVal;
       document.getElementById('opAddCarencia').value = def.carencia_dias || 0;
-      document.getElementById('opAddAlvo').value = def.alvo || '';
+      if (opModalProductType === 'DEFENSIVO') {
+        document.getElementById('opAddAlvo').value = def.alvo || '';
+      } else {
+        document.getElementById('opAddAlvo').value = 'ADUBO FOLIAR';
+      }
+      
+      calculateOpModalTotals();
+
+      infoPanel.style.display = 'block';
+      infoPanel.innerHTML = `
+        <div style="font-weight:700;color:var(--text);margin-bottom:4px">Ficha Agronômica: ${def.produto}</div>
+        <div><strong>I.A.:</strong> ${def.ingrediente_ativo || '—'} ${def.concentracao_ia ? '('+def.concentracao_ia+')' : ''}</div>
+        <div><strong>Tipo:</strong> ${def.tipo || (opModalProductType === 'FOLIAR' ? 'ADUBO FOLIAR' : 'DEFENSIVO')} | <strong>Classe Tox.:</strong> ${def.classe_toxicologica || '—'} (${def.tarja || '—'})</div>
+        <div><strong>Limite Max:</strong> ${doseVal} ${unit} | <strong>Reentrada:</strong> ${def.reentrada_dias || '—'} dias</div>
+        ${def.condicao_tesco ? `<div><strong>Tesco:</strong> ${def.condicao_tesco} (${def.medida_tesco || '—'})</div>` : ''}
+        <div style="margin-top:4px;border-top:1px dashed var(--border);padding-top:4px">
+          <strong>MRLs:</strong> BR: ${def.mrl_brasil || '—'} | EU: ${def.mrl_eu || '—'} | GB: ${def.mrl_gb || '—'}
+        </div>
+      `;
+    } else {
+      infoPanel.style.display = 'none';
     }
   }
 
   function confirmOpAddProduct() {
     const id = document.getElementById('opAddDefensivoSelect').value;
-    if(!id) { alert('Selecione o defensivo'); return; }
+    if(!id) { alert('Selecione o produto'); return; }
     
     const def = defensivosData.find(d => d.id === id);
     const dosagemReal = parseFloat(document.getElementById('opAddDosagemReal').value) || 0;
     const dosagemLimite = parseFloat(def.dose || def.dosagem_recomendada) || dosagemReal;
-    const dosagemCorrigida = dosagemReal > dosagemLimite ? dosagemLimite : dosagemReal;
-    const alvo = document.getElementById('opAddAlvo').value || def.alvo || '';
+    const unit = def.unidade_dose || def.unidade || 'L/ha';
+    
+    // Validação de Dosagem Limite
+    if (dosagemLimite > 0 && dosagemReal > dosagemLimite) {
+      alert(`🚫 DOSAGEM NÃO PERMITIDA — A dosagem real (${dosagemReal} ${unit}) é superior ao limite recomendado (${dosagemLimite} ${unit}). Use o botão de auto-correção para ajustar!`);
+      return;
+    }
+    
+    const dosagemCorrigida = dosagemReal;
+    const isFoliar = opModalProductType === 'FOLIAR' || isFoliarProduct(def);
+    const alvo = isFoliar ? 'ADUBO FOLIAR' : (document.getElementById('opAddAlvo').value || def.alvo || '');
     const carencia = parseInt(document.getElementById('opAddCarencia').value) || def.carencia_dias || 0;
     
-    // Validação 1: Duplicados por Praga/Alvo
-    if (alvo) {
-      const alreadyHasAlvo = opItems.some(item => (item.alvo || '').trim().toUpperCase() === alvo.trim().toUpperCase());
+    // Validação 1: Duplicados por Praga/Alvo (apenas para defensivos)
+    if (!isFoliar && alvo) {
+      const alreadyHasAlvo = opItems.some(item => !item.isFoliar && (item.alvo || '').trim().toUpperCase() === alvo.trim().toUpperCase());
       if (alreadyHasAlvo) {
         alert(`Você não pode aplicar dois defensivos para a mesma praga/alvo (${alvo}) na mesma calda!`);
         return;
       }
     }
     
-    // Validação 2: Conformidade MIP (pragas + pontos + validade)
     const pId = document.getElementById('opParcelSelect').value;
     const pObj = parcelas.find(x => x.id == pId);
     const parcelCode = pObj ? pObj.code : '';
     const opDate = document.getElementById('opDateInput').value || today();
     
-    const mipValidation = validateMipForOp(pId, parcelCode, alvo, opDate);
+    // Validação de Carência vs Previsão de Colheita
+    const ip = pObj ? (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code) : null;
+    if (ip && ip.previsao_colheita && carencia > 0) {
+      const harvestDateObj = new Date(ip.previsao_colheita + 'T12:00:00');
+      const appDateObj = new Date(opDate + 'T12:00:00');
+      const diffTime = harvestDateObj - appDateObj;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays < carencia) {
+        alert(`🚫 CARÊNCIA INVÁLIDA — A carência para ${def.produto} é de ${carencia} dias, mas a colheita está prevista para daqui a ${diffDays} dias (${ip.previsao_colheita.split('-').reverse().join('/')}). Você estaria colhendo dentro do intervalo de carência de segurança!`);
+        return;
+      }
+    }
+    
+    // Validação de Intervalo de Re-aplicação
+    const minInterval = def.intervalo_dias || 7;
+    const lastApp = (opRecordsData || []).find(op => {
+      if (op.parcel_id !== pId && op.parcela !== parcelCode) return false;
+      const items = op.caderno_campo_op_itens || [];
+      return items.some(item => item.produto_nome.toUpperCase() === def.produto.toUpperCase());
+    });
+    if (lastApp) {
+      const lastAppDate = new Date(lastApp.data_aplicacao + 'T12:00:00');
+      const currentAppDate = new Date(opDate + 'T12:00:00');
+      const diffTime = currentAppDate - lastAppDate;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays < minInterval) {
+        alert(`🚫 INTERVALO MÍNIMO NÃO RESPEITADO — O produto ${def.produto} já foi aplicado nesta parcela em ${lastApp.data_aplicacao.split('-').reverse().join('/')} (${diffDays} dias atrás). O intervalo mínimo recomendado entre aplicações é de ${minInterval} dias.`);
+        return;
+      }
+    }
+    
+    // Validação 2: Conformidade MIP (pragas + pontos + validade) — ISENTO PARA FOLIAR
+    const mipValidation = isFoliar 
+      ? { ok: true, blocked: false, message: 'Adubo Foliar/Nutriente — Isento de MIP', mipInfo: null }
+      : validateMipForOp(pId, parcelCode, alvo, opDate);
     
     if (mipValidation.blocked) {
-      // Mostrar bloqueio com formatação clara
       alert(mipValidation.message);
       return;
     }
     
-    // Aviso quando está no limite (3 dias úteis)
     if (mipValidation.warning) {
       const continuar = confirm(mipValidation.message + '\n\nDeseja continuar mesmo assim?');
       if (!continuar) return;
@@ -4559,9 +4947,11 @@ let varieties = [];
       alvo: alvo,
       dosagem_real: dosagemReal,
       dosagem_corrigida: dosagemCorrigida,
-      unidade: def.unidade || 'L/ha',
+      unidade: unit,
       carencia_dias: carencia,
-      mipValidation: mipValidation  // Guardar resultado para exibir no card
+      isFoliar: isFoliar,
+      tipo_produto: isFoliar ? 'FOLIAR' : 'DEFENSIVO',
+      mipValidation: mipValidation
     });
     
     renderOpItems();
@@ -4578,7 +4968,7 @@ let varieties = [];
     container.innerHTML = '';
     
     if(opItems.length === 0) {
-      container.innerHTML = '<div style="font-size:12px; color:var(--muted); text-align:center; padding:10px;">Nenhum produto adicionado.</div>';
+      container.innerHTML = '<div style="font-size:12px; color:var(--muted); text-align:center; padding:12px; background:rgba(0,0,0,0.15); border-radius:8px;">Nenhum produto adicionado na calda.</div>';
       return;
     }
     
@@ -4586,42 +4976,76 @@ let varieties = [];
     const pId = (document.getElementById('opParcelSelect') || {}).value;
     const pObj = pId ? parcelas.find(x => x.id == pId) : null;
     const parcelCode = pObj ? pObj.code : '';
+    const info = pObj ? (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code) : null;
+    const areaHa = parseFloat(info ? info.area : (document.getElementById('opAreaInput')?.value || 1.0)) || 1.0;
     
-    opItems.forEach((item, idx) => {
-      // Re-validar MIP para exibir status atualizado (pode ter mudado a data)
-      const validation = validateMipForOp(pId, parcelCode, item.alvo, opDate);
-      
-      let mipBadge = '';
-      if (validation.mipInfo === null && !validation.blocked) {
-        // Fertilizante — sem badge
-        mipBadge = '';
-      } else if (validation.blocked) {
-        mipBadge = `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#f87171;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-top:3px">🚫 MIP INVÁLIDO</span>`;
-      } else if (validation.warning) {
-        const mi = validation.mipInfo;
-        mipBadge = `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(234,179,8,0.15);border:1px solid rgba(234,179,8,0.4);color:#fbbf24;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-top:3px" title="${validation.message}">⚠️ MIP: ${mi.pontosPositivos}/10 pts · Dia 3/${mi.diasUteis} úteis</span>`;
-      } else if (validation.ok && validation.mipInfo) {
-        const mi = validation.mipInfo;
-        mipBadge = `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#4ade80;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-top:3px" title="${validation.message}">✅ MIP: ${mi.pontosPositivos}/10 pts · ${mi.diasUteis} dia(s) útil(eis)</span>`;
-      }
-      
-      const cardBorder = validation.blocked ? 'var(--red)' : validation.warning ? 'rgba(234,179,8,0.5)' : 'var(--border)';
-      
-      container.insertAdjacentHTML('beforeend', `
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid ${cardBorder}">
-          <div style="display:flex; flex-direction:column; flex:1; min-width:0;">
-            <span style="font-size:13px; font-weight:700; color:var(--text)">${item.produto_nome}</span>
-            <span style="font-size:11px; color:var(--muted)">Alvo: ${item.alvo || '—'} | Carência: ${item.carencia_dias} dias</span>
-            <span style="font-size:11px; color:var(--muted2)">Dosagem: ${item.dosagem_real} ${item.unidade} ${item.dosagem_real > item.dosagem_corrigida ? '<span style="color:var(--orange)">(Corrigida p/ Laudo: '+item.dosagem_corrigida+')</span>' : ''}</span>
-            ${mipBadge}
+    const defensivosList = opItems.filter(i => !i.isFoliar);
+    const foliaresList = opItems.filter(i => i.isFoliar);
+
+    let html = '';
+
+    // BLROCO 1: DEFENSIVOS AGRÍCOLAS
+    if (defensivosList.length > 0) {
+      html += `<div style="font-size:11px; font-weight:700; color:#f87171; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;">🛡️ Defensivos Agrícolas (${defensivosList.length})</div>`;
+      defensivosList.forEach(item => {
+        const idx = opItems.indexOf(item);
+        const validation = validateMipForOp(pId, parcelCode, item.alvo, opDate);
+        
+        let mipBadge = '';
+        if (validation.blocked) {
+          mipBadge = `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#f87171;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-top:3px">🚫 MIP INVÁLIDO</span>`;
+        } else if (validation.warning) {
+          const mi = validation.mipInfo;
+          mipBadge = `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(234,179,8,0.15);border:1px solid rgba(234,179,8,0.4);color:#fbbf24;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-top:3px">⚠️ MIP: ${mi.pontosPositivos}/10 pts · Dia 3/${mi.diasUteis} úteis</span>`;
+        } else if (validation.ok && validation.mipInfo) {
+          const mi = validation.mipInfo;
+          mipBadge = `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#4ade80;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-top:3px">✅ MIP: ${mi.pontosPositivos}/10 pts · ${mi.diasUteis} dia(s) útil(eis)</span>`;
+        }
+        
+        const cardBorder = validation.blocked ? 'var(--red)' : validation.warning ? 'rgba(234,179,8,0.5)' : 'rgba(239,68,68,0.3)';
+        const totalProd = (item.dosagem_real * areaHa).toFixed(3);
+        const unitBase = item.unidade.replace('/ha','').trim();
+
+        html += `
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; background:rgba(239,68,68,0.05); padding:10px; border-radius:8px; border:1px solid ${cardBorder}">
+            <div style="display:flex; flex-direction:column; flex:1; min-width:0;">
+              <span style="font-size:13px; font-weight:700; color:var(--text)">${item.produto_nome}</span>
+              <span style="font-size:11px; color:var(--muted)">Alvo: <strong>${item.alvo || '—'}</strong> | Carência: ${item.carencia_dias} dias</span>
+              <span style="font-size:11px; color:var(--text)">Dose: <strong>${item.dosagem_real} ${item.unidade}</strong> (Total Parcela: <strong>${totalProd} ${unitBase}</strong>)</span>
+              ${mipBadge}
+            </div>
+            <button onclick="removeOpItem(${idx})" class="btn" style="background:var(--red-dim); color:var(--red); padding:6px; border-radius:6px; flex-shrink:0; margin-left:8px;">
+              <i data-lucide="trash" style="width:14px;height:14px"></i>
+            </button>
           </div>
-          <button onclick="removeOpItem(${idx})" class="btn" style="background:var(--red-dim); color:var(--red); padding:6px; border-radius:6px; flex-shrink:0; margin-left:8px;">
-            <i data-lucide="trash" style="width:14px;height:14px"></i>
-          </button>
-        </div>
-      `);
-    });
-    
+        `;
+      });
+    }
+
+    // BLOCO 2: ADUBOS FOLIARES E NUTRIÇÃO
+    if (foliaresList.length > 0) {
+      html += `<div style="font-size:11px; font-weight:700; color:#4ade80; text-transform:uppercase; letter-spacing:0.5px; margin-top:6px;">🍃 Adubação Foliar / Nutrição (${foliaresList.length})</div>`;
+      foliaresList.forEach(item => {
+        const idx = opItems.indexOf(item);
+        const totalProd = (item.dosagem_real * areaHa).toFixed(3);
+        const unitBase = item.unidade.replace('/ha','').trim();
+
+        html += `
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; background:rgba(34,197,94,0.05); padding:10px; border-radius:8px; border:1px solid rgba(34,197,94,0.3)">
+            <div style="display:flex; flex-direction:column; flex:1; min-width:0;">
+              <span style="font-size:13px; font-weight:700; color:var(--text)">${item.produto_nome}</span>
+              <span style="font-size:11px; color:#4ade80">Adubo Foliar (Nutrição Isenta de Laudo MIP)</span>
+              <span style="font-size:11px; color:var(--text)">Dose: <strong>${item.dosagem_real} ${item.unidade}</strong> (Total Parcela: <strong>${totalProd} ${unitBase}</strong>)</span>
+            </div>
+            <button onclick="removeOpItem(${idx})" class="btn" style="background:var(--red-dim); color:var(--red); padding:6px; border-radius:6px; flex-shrink:0; margin-left:8px;">
+              <i data-lucide="trash" style="width:14px;height:14px"></i>
+            </button>
+          </div>
+        `;
+      });
+    }
+
+    container.innerHTML = html;
     if(window.lucide) lucide.createIcons();
   }
 
@@ -4643,8 +5067,15 @@ let varieties = [];
       return;
     }
 
+    const holidayName = getHolidayName(chosenDate);
+    if (holidayName) {
+      alert(`🚫 Trava de Auditoria: Não é permitido registrar Ordem de Pulverização (O.P) em feriados (${holidayName})!`);
+      return;
+    }
+
     const tratoristaVal = document.getElementById('opTratoristaInput').value.trim();
     const barristaVal = document.getElementById('opBarristaInput').value.trim();
+    const manipuladorVal = (document.getElementById('opManipuladorInput')?.value || '').trim();
     const tratorVal = document.getElementById('opTratorInput').value.trim();
     const startVal = document.getElementById('opHoraInicio').value;
     const endVal = document.getElementById('opHoraFim').value;
@@ -4698,16 +5129,22 @@ let varieties = [];
       });
       
       for (const op of conflicts) {
-        if (tratoristaVal && op.tratorista && op.tratorista.trim().toLowerCase() === tratoristaVal.toLowerCase()) {
-          alert(`Conflito de Horário! O tratorista ${tratoristaVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
+        const opEmps = [op.tratorista, op.barrista, op.manipulador].filter(Boolean).map(e => e.trim().toLowerCase());
+        
+        if (tratoristaVal && opEmps.includes(tratoristaVal.toLowerCase())) {
+          alert(`🚫 CONFLITO DE HORÁRIO — O colaborador ${tratoristaVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
           return;
         }
-        if (barristaVal && op.barrista && op.barrista.trim().toLowerCase() === barristaVal.toLowerCase()) {
-          alert(`Conflito de Horário! O barrista ${barristaVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
+        if (barristaVal && opEmps.includes(barristaVal.toLowerCase())) {
+          alert(`🚫 CONFLITO DE HORÁRIO — O colaborador ${barristaVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
+          return;
+        }
+        if (manipuladorVal && opEmps.includes(manipuladorVal.toLowerCase())) {
+          alert(`🚫 CONFLITO DE HORÁRIO — O colaborador ${manipuladorVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
           return;
         }
         if (tratorVal && op.trator && op.trator.trim().toLowerCase() === tratorVal.toLowerCase()) {
-          alert(`Conflito de Horário! O trator ${tratorVal} já está sendo utilizado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
+          alert(`🚫 CONFLITO DE HORÁRIO — O trator ${tratorVal} já está sendo utilizado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
           return;
         }
       }
@@ -4740,6 +5177,8 @@ let varieties = [];
     };
     
     try {
+      const hasParcel = (dbParcels || []).some(p => p.id === recordOP.parcel_id);
+      if (!hasParcel) recordOP.parcel_id = null;
       const { data: opData, error: opErr } = await sb.from('caderno_campo_op').insert(recordOP).select('id').single();
       if (opErr) throw opErr;
       
@@ -4781,7 +5220,7 @@ let defectTypes = [];
 
 async function initQualityForm() {
   await loadDefectTypes();
-  renderQEmpList(employees.filter(e => ['PACKER','EMBALADOR'].includes(e.role)));
+  renderQEmpList(employees.filter(e => e.role && ['PACKER','EMBALADOR'].includes(e.role.toUpperCase())));
 }
 
 async function loadDefectTypes() {
@@ -4902,7 +5341,7 @@ function renderQEmpList(list) {
 
 function filterQEmp() {
   const q = $('qEmpSearch').value.toLowerCase();
-  renderQEmpList(employees.filter(e => ['PACKER','EMBALADOR'].includes(e.role) && e.name.toLowerCase().includes(q)));
+  renderQEmpList(employees.filter(e => e.role && ['PACKER','EMBALADOR'].includes(e.role.toUpperCase()) && e.name.toLowerCase().includes(q)));
 }
 
 function selectQEmp(id, name, barcode) {
@@ -5036,7 +5475,7 @@ function resetQForm() {
   $('qReason').value = '';
   $('qEmpSearch').value = '';
   document.querySelectorAll('.issue-opt').forEach(el => el.classList.remove('on'));
-  renderQEmpList(employees.filter(e => ['PACKER','EMBALADOR'].includes(e.role)));
+  renderQEmpList(employees.filter(e => e.role && ['PACKER','EMBALADOR'].includes(e.role.toUpperCase())));
 }
 
 // -- Closure Screen --
@@ -5163,13 +5602,13 @@ function onRegisteredByChange(sel) {
 function initCarraoForm() {
   $('cDate').value = today();
   renderCFruitList();
-  renderCEmpList(employees.filter(e => e.role === 'COLHEDOR'));
+  renderCEmpList(employees.filter(e => e.role && e.role.toUpperCase() === 'COLHEDOR'));
 
   // 1. Carrega tratoristas
   const tSel = $('cTractor');
   if (tSel) {
     tSel.innerHTML = '<option value="">— Selecionar Tratorista —</option>';
-    const tractorists = employees.filter(e => e.role === 'TRATORISTA' || e.role === 'OPERADOR');
+    const tractorists = employees.filter(e => e.role && ['TRATORISTA', 'OPERADOR'].includes(e.role.toUpperCase()));
     (tractorists.length > 0 ? tractorists : employees).forEach(t => tSel.insertAdjacentHTML('beforeend', `<option value="${t.id}">${t.name}</option>`));
   }
 
@@ -5177,7 +5616,7 @@ function initCarraoForm() {
   const mOpSel = $('cMachineOperator');
   if (mOpSel) {
     mOpSel.innerHTML = '<option value="">— Selecionar Operador da Máquina (Opcional) —</option>';
-    const machineOps = employees.filter(e => e.role === 'OPERADOR' || e.role === 'TRATORISTA');
+    const machineOps = employees.filter(e => e.role && ['OPERADOR', 'TRATORISTA'].includes(e.role.toUpperCase()));
     (machineOps.length > 0 ? machineOps : employees).forEach(m => mOpSel.insertAdjacentHTML('beforeend', `<option value="${m.name}">${m.name} (${m.role || 'Operador'})</option>`));
     mOpSel.insertAdjacentHTML('beforeend', '<option value="OUTRO">+ Outro Operador...</option>');
   }
@@ -5233,7 +5672,7 @@ function renderCEmpList(list) {
 
 function filterCEmp() {
   const q = $('cEmpSearch').value.toLowerCase();
-  renderCEmpList(employees.filter(e => e.role === 'COLHEDOR' && e.name.toLowerCase().includes(q)));
+  renderCEmpList(employees.filter(e => e.role && e.role.toUpperCase() === 'COLHEDOR' && e.name.toLowerCase().includes(q)));
 }
 
 function toggleCWorker(id, name) {
@@ -5249,7 +5688,7 @@ function toggleCWorker(id, name) {
 }
 
 function toggleAllCEmp() {
-  const filtered = employees.filter(e => e.role === 'COLHEDOR' && document.querySelector(`.emp-item[data-id="${e.id}"]`));
+  const filtered = employees.filter(e => e.role && e.role.toUpperCase() === 'COLHEDOR' && document.querySelector(`.emp-item[data-id="${e.id}"]`));
   const allOn = filtered.every(e => cState.workers.has(String(e.id)));
   filtered.forEach(e => {
     const sid = String(e.id);
@@ -5449,9 +5888,12 @@ function renderSingleOrdemCard(item, nowStr, dateStr, timeStr) {
     <div class="ordem-card">
       <div>
         <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0f172a;padding-bottom:6px;margin-bottom:10px">
-          <div>
-            <h2 style="margin:0;font-size:17px;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;color:#0f172a">Ordem de Colheita</h2>
-            <p style="margin:2px 0 0;font-size:10px;color:#64748b">${tenantName} — Emitida em ${dateStr} às ${timeStr}</p>
+          <div style="display:flex;align-items:center;gap:10px">
+            ${window.tenantConfig && window.tenantConfig.logo_url ? `<img src="${window.tenantConfig.logo_url}" style="max-height:35px; max-width:80px; object-fit:contain;"/>` : ''}
+            <div>
+              <h2 style="margin:0;font-size:17px;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;color:#0f172a">Ordem de Colheita</h2>
+              <p style="margin:2px 0 0;font-size:10px;color:#64748b">${tenantName} — Emitida em ${dateStr} às ${timeStr}</p>
+            </div>
           </div>
           <div style="text-align:right">
             <div style="font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase">Nº DO CARROÇÃO</div>
@@ -5593,6 +6035,19 @@ function showOrdemColheita(list) {
 
 
 async function pushCarrao({ session, workers, carriageIds = [] }) {
+  // Resolves physical parcel_id if it was mapped to cycle id or is null
+  let resolvedParcelId = session.parcel_id;
+  const cycleMatch = (infoParcelasData || []).find(ip => ip.id === session.parcel_id);
+  if (cycleMatch) {
+    resolvedParcelId = cycleMatch.parcel_id;
+  }
+  if (!resolvedParcelId && session.parcela) {
+    const pMatch = (dbParcels || []).find(dp => 
+      dp.code.trim().toUpperCase() === session.parcela.trim().toUpperCase()
+    );
+    if (pMatch) resolvedParcelId = pMatch.id;
+  }
+
   // Gera UUID v4 no cliente para evitar conflitos de chave
   function clientUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -5625,6 +6080,7 @@ async function pushCarrao({ session, workers, carriageIds = [] }) {
     const sObj = {
       id: clientUUID(),
       ...session,
+      parcel_id: resolvedParcelId || null,
       qty_carrocoes: 1, 
       total_value: session.price_per_carrao, 
       value_per_employee: session.price_per_carrao / session.employee_count,
@@ -5705,7 +6161,7 @@ function resetCForm() {
   $('cRegisteredBy').value = '';
   $('cEmpSearch').value = '';
   // Somente COLHEDOR no reset
-  renderCEmpList(employees.filter(e => e.role === 'COLHEDOR'));
+  renderCEmpList(employees.filter(e => e.role && e.role.toUpperCase() === 'COLHEDOR'));
   updateCalcPreview();
   renderCarriageSelectors();
 }
@@ -6419,7 +6875,8 @@ async function pushFieldService({ session, workers }) {
 }
 
 async function pushFertirrigacao({ session, items }) {
-  const cleanSession = { ...session, synced: true };
+  const hasParcel = (dbParcels || []).some(p => p.id === session.parcel_id);
+  const cleanSession = { ...session, parcel_id: hasParcel ? session.parcel_id : null, synced: true };
   const { data: list, error: e1 } = await sb.from('caderno_campo_fertirrigacao').insert([cleanSession]).select('*');
   if (e1) throw e1;
   
@@ -6437,8 +6894,17 @@ async function pushFertirrigacao({ session, items }) {
 }
 
 async function pushIdiarn(record) {
-  const cleanRecord = { ...record, synced: true };
+  const hasParcel = (dbParcels || []).some(p => p.id === record.parcel_id);
+  const cleanRecord = { ...record, parcel_id: hasParcel ? record.parcel_id : null, synced: true };
   const { data, error } = await sb.from('caderno_campo_idiarn').insert([cleanRecord]).select('*');
+  if (error) throw error;
+  return data;
+}
+
+async function pushMip(record) {
+  const hasParcel = (dbParcels || []).some(p => p.id === record.parcel_id);
+  const cleanRecord = { ...record, parcel_id: hasParcel ? record.parcel_id : null };
+  const { data, error } = await sb.from('caderno_campo_mip').insert([cleanRecord]).select('*');
   if (error) throw error;
   return data;
 }
