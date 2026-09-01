@@ -765,85 +765,49 @@
       <form id="formWebPlantio" onsubmit="event.preventDefault(); saveWebPlantio();">
         <input type="hidden" id="webPlEditId"/>
 
-        <!-- Grid Principal em 2 Colunas para Desktop -->
+        <!-- Grid Principal de Identificação da Parcela -->
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px">
           
-          <!-- Coluna da Esquerda: Identificação + Área -->
-          <div style="display:flex; flex-direction:column; gap:20px">
-            <!-- Seção 1: Identificação -->
-            <div style="background:rgba(16,185,129,0.05); border:1px solid var(--border); border-radius:14px; padding:18px">
-              <div style="font-size:11px; font-weight:800; color:var(--green); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; display:flex; align-items:center; gap:6px">
-                <i data-lucide="map-pin" style="width:14px;height:14px"></i> Identificação da Parcela & Cultura
-              </div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
-                <div><label class="flabel">Parcela (Nº) *</label><input type="text" id="webPlParcela" placeholder="Ex: 33" required oninput="updateWebParcela2Preview()"/></div>
-                <div><label class="flabel">Letra / Linha *</label><input type="text" id="webPlLetra" placeholder="Ex: G" required style="text-transform:uppercase" oninput="updateWebParcela2Preview()"/></div>
-              </div>
-              <div style="margin-bottom:12px">
-                <label class="flabel">Identificador Gerado</label>
-                <input type="text" id="webPlParcela2Preview" readonly style="background:var(--input-bg); color:var(--green); font-weight:800; font-size:15px" placeholder="Ex: 33 G"/>
-              </div>
-              <div>
-                <label class="flabel">Cultura *</label>
-                <select id="webPlCultura" required onchange="calcWebPrevisaoColheita()" style="font-size:14px">
-                  <option value="">Selecione a Cultura</option>
-                  <option value="MELÃO">Melão</option>
-                  <option value="MELANCIA">Melancia</option>
-                  <option value="MAMÃO">Mamão</option>
-                </select>
-              </div>
+          <!-- Coluna 1: Parcela & Cultura -->
+          <div style="background:rgba(16,185,129,0.05); border:1px solid var(--border); border-radius:14px; padding:18px">
+            <div style="font-size:11px; font-weight:800; color:var(--green); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; display:flex; align-items:center; gap:6px">
+              <i data-lucide="map-pin" style="width:14px;height:14px"></i> Identificação da Parcela & Cultura
             </div>
-
-            <!-- Seção 2: Dimensões & Área -->
-            <div style="background:rgba(59,130,246,0.05); border:1px solid var(--border); border-radius:14px; padding:18px">
-              <div style="font-size:11px; font-weight:800; color:var(--blue); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; display:flex; align-items:center; gap:6px">
-                <i data-lucide="ruler" style="width:14px;height:14px"></i> Dimensões & Área Hectares
-              </div>
-              <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px">
-                <div><label class="flabel">Qtd. Linhas *</label><input type="number" id="webPlFileiras" placeholder="48" oninput="calcWebAreaHectares()"/></div>
-                <div><label class="flabel">Tam. Linha (m) *</label><input type="number" step="0.1" id="webPlTamanhoLinha" placeholder="200" oninput="calcWebAreaHectares()"/></div>
-                <div><label class="flabel">Espaçamento (m)</label><input type="number" step="0.01" id="webPlEspacamento" placeholder="0.04"/></div>
-                <div><label class="flabel">Área (ha) *</label><input type="number" step="0.01" id="webPlArea" placeholder="1.92"/></div>
-              </div>
-              <div id="webPlAreaHint" style="font-size:10px; color:var(--blue); margin-top:8px; font-weight:600">📐 Cálculo automático: (Qtd. Linhas × Tamanho da Linha) / 5.000</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+              <div><label class="flabel">Parcela (Nº) *</label><input type="text" id="webPlParcela" placeholder="Ex: 33" required oninput="updateWebParcela2Preview()"/></div>
+              <div><label class="flabel">Letra / Subdivisão *</label><input type="text" id="webPlLetra" placeholder="Ex: G" required style="text-transform:uppercase" oninput="updateWebParcela2Preview()"/></div>
+            </div>
+            <div style="margin-bottom:12px">
+              <label class="flabel">Identificador Gerado</label>
+              <input type="text" id="webPlParcela2Preview" readonly style="background:var(--input-bg); color:var(--green); font-weight:800; font-size:15px" placeholder="Ex: 33 G"/>
+            </div>
+            <div>
+              <label class="flabel">Cultura *</label>
+              <select id="webPlCultura" required onchange="calcWebPrevisaoColheita()" style="font-size:14px">
+                <option value="">Selecione a Cultura</option>
+                <option value="MELÃO">Melão</option>
+                <option value="MELANCIA">Melancia</option>
+                <option value="MAMÃO">Mamão</option>
+              </select>
             </div>
           </div>
 
-          <!-- Coluna da Direita: Datas + Registros Oficiais -->
-          <div style="display:flex; flex-direction:column; gap:20px">
-            <!-- Seção 3: Datas -->
-            <div style="background:rgba(139,92,246,0.05); border:1px solid var(--border); border-radius:14px; padding:18px">
-              <div style="font-size:11px; font-weight:800; color:var(--purple); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; display:flex; align-items:center; gap:6px">
-                <i data-lucide="calendar" style="width:14px;height:14px"></i> Datas do Ciclo de Produção
-              </div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
-                <div><label class="flabel">Semeadura (Viveiro)</label><input type="date" id="webPlSemeadura"/></div>
-                <div><label class="flabel">Transplante (Campo) *</label><input type="date" id="webPlTransplante" required onchange="calcWebPrevisaoColheita()"/></div>
-              </div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
-                <div>
-                  <label class="flabel">Previsão de Colheita</label>
-                  <input type="date" id="webPlPrevisao"/>
-                  <div id="webPlPrevisaoHint" style="font-size:10px; color:var(--yellow); margin-top:3px; font-weight:600"></div>
-                </div>
-                <div><label class="flabel">Data Registro Plantio</label><input type="date" id="webPlPlantio"/></div>
-              </div>
+          <!-- Coluna 2: Registros Oficiais & Previsão -->
+          <div style="background:rgba(139,92,246,0.05); border:1px solid var(--border); border-radius:14px; padding:18px">
+            <div style="font-size:11px; font-weight:800; color:var(--purple); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; display:flex; align-items:center; gap:6px">
+              <i data-lucide="file-badge" style="width:14px;height:14px"></i> Registros Oficiais & Previsão
             </div>
-
-            <!-- Seção 4: Identificação Oficial & Notas -->
-            <div style="background:rgba(236,72,153,0.05); border:1px solid var(--border); border-radius:14px; padding:18px">
-              <div style="font-size:11px; font-weight:800; color:#ec4899; text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; display:flex; align-items:center; gap:6px">
-                <i data-lucide="file-badge" style="width:14px;height:14px"></i> IDIARN, Termo e Notas Fiscais
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+              <div>
+                <label class="flabel">Previsão de Colheita</label>
+                <input type="date" id="webPlPrevisao"/>
+                <div id="webPlPrevisaoHint" style="font-size:10px; color:var(--yellow); margin-top:3px; font-weight:600"></div>
               </div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
-                <div><label class="flabel">IDIARN</label><input type="text" id="webPlIdiarn" placeholder="Ex: 24.08003..."/></div>
-                <div><label class="flabel">Termo / Autorização</label><input type="text" id="webPlTermo" placeholder="Ex: 51374"/></div>
-              </div>
-              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px">
-                <div><label class="flabel">NF Semente</label><input type="text" id="webPlNf" placeholder="Ex: 14738"/></div>
-                <div><label class="flabel">Fornecedor Semente</label><input type="text" id="webPlFornecedor" placeholder="Ex: SYNGENTA"/></div>
-                <div><label class="flabel">Viveiro / Muda</label><input type="text" id="webPlFornecedor2" placeholder="Ex: TOP PLANT"/></div>
-              </div>
+              <div><label class="flabel">IDIARN</label><input type="text" id="webPlIdiarn" placeholder="Ex: 24.08003..."/></div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+              <div><label class="flabel">Fornecedor Semente</label><input type="text" id="webPlFornecedor" placeholder="Ex: SYNGENTA"/></div>
+              <div><label class="flabel">Viveiro / Muda</label><input type="text" id="webPlFornecedor2" placeholder="Ex: TOP PLANT"/></div>
             </div>
           </div>
         </div>
@@ -12648,15 +12612,6 @@ function calcWebAreaHectares(isManualAreaEdit = false) {
     }
   }
 
-  if (totalLinhas === 0) {
-    totalLinhas = parseFloat($('webPlFileiras')?.value) || 0;
-    if (totalArea === 0 && totalLinhas > 0 && tamanhoLinha > 0) {
-      totalArea = (totalLinhas * tamanhoLinha) / 5000;
-    }
-  } else {
-    if ($('webPlFileiras')) $('webPlFileiras').value = totalLinhas;
-  }
-
   const areaInput = $('webPlArea');
   const hint = $('webPlAreaHint');
   if (areaInput && totalArea > 0) {
@@ -12675,14 +12630,12 @@ function openWebPlantioModal(editId) {
   const deleteBtn = $('webBtnDeletePlantio');
 
   // Reset form
-  ['webPlParcela','webPlLetra','webPlParcela2Preview','webPlCultura','webPlFileiras','webPlTamanhoLinha',
-   'webPlEspacamento','webPlArea','webPlSemeadura','webPlTransplante','webPlPrevisao',
-   'webPlPlantio','webPlIdiarn','webPlTermo','webPlNf','webPlFornecedor',
-   'webPlFornecedor2','webPlObs'].forEach(id => {
+  ['webPlParcela','webPlLetra','webPlParcela2Preview','webPlCultura','webPlPrevisao',
+   'webPlIdiarn','webPlFornecedor','webPlFornecedor2','webPlObs'].forEach(id => {
     const el = $(id);
     if (el) el.value = '';
   });
-  $('webPlPrevisaoHint').textContent = '';
+  if ($('webPlPrevisaoHint')) $('webPlPrevisaoHint').textContent = '';
   if ($('webPlAreaHint')) $('webPlAreaHint').textContent = '📐 Cálculo automático: (Linhas × Tamanho da Linha) / 5.000';
 
   webVariedadeRowCount = 0;
@@ -12702,37 +12655,28 @@ function openWebPlantioModal(editId) {
     updateWebParcela2Preview();
 
     $('webPlCultura').value = item.cultura || '';
-    $('webPlFileiras').value = item.linhas || '';
-    $('webPlTamanhoLinha').value = item.tamanho_linha || '';
-    $('webPlEspacamento').value = item.espacamento || '';
-    $('webPlArea').value = item.area || '';
-    $('webPlSemeadura').value = item.semeadura || '';
-    $('webPlTransplante').value = item.transplante || item.plantio || '';
     $('webPlPrevisao').value = item.previsao_colheita || '';
-    $('webPlPlantio').value = item.plantio || '';
     $('webPlIdiarn').value = item.idiarn || '';
-    $('webPlTermo').value = item.termo || '';
-    $('webPlNf').value = item.nf || '';
     $('webPlFornecedor').value = item.fornecedor || '';
     $('webPlFornecedor2').value = item.fornecedor2 || '';
     $('webPlObs').value = item.obs || '';
 
-    // Load variedades com linhas, data de plantio e área para até 10 variedades
+    // Load variedades com linhas, datas, áreas, nfs e termos individuais
     const varsArr = [
-      { nome: item.variedade, lote: item.lote, qtd: item.quantidade, linhas: item.linhas1 || item.linhas, data: item.data_plantio1 || item.plantio, area: item.area1 },
-      { nome: item.variedade2, lote: item.lote2, qtd: item.quantidade2, linhas: item.linhas2, data: item.data_plantio2, area: item.area2 },
-      { nome: item.variedade3, lote: item.lote3, qtd: item.quantidade3, linhas: item.linhas3, data: item.data_plantio3, area: item.area3 },
-      { nome: item.variedade4, lote: item.lote4, qtd: item.quantidade4, linhas: item.linhas4, data: item.data_plantio4, area: item.area4 },
-      { nome: item.variedade5, lote: item.lote5, qtd: item.quantidade5, linhas: item.linhas5, data: item.data_plantio5, area: item.area5 },
-      { nome: item.variedade6, lote: item.lote6, qtd: item.quantidade6, linhas: item.linhas6, data: item.data_plantio6, area: item.area6 },
-      { nome: item.variedade7, lote: item.lote7, qtd: item.quantidade7, linhas: item.linhas7, data: item.data_plantio7, area: item.area7 },
-      { nome: item.variedade8, lote: item.lote8, qtd: item.quantidade8, linhas: item.linhas8, data: item.data_plantio8, area: item.area8 },
-      { nome: item.variedade9, lote: item.lote9, qtd: item.quantidade9, linhas: item.linhas9, data: item.data_plantio9, area: item.area9 },
-      { nome: item.variedade10, lote: item.lote10, qtd: item.quantidade10, linhas: item.linhas10, data: item.data_plantio10, area: item.area10 },
+      { nome: item.variedade, lote: item.lote, qtd: item.quantidade, linhas: item.linhas1 || item.linhas, data: item.data_plantio1 || item.transplante || item.plantio, area: item.area1 || item.area, semeadura: item.semeadura, nf: item.nf, termo: item.termo },
+      { nome: item.variedade2, lote: item.lote2, qtd: item.quantidade2, linhas: item.linhas2, data: item.data_plantio2 || item.transplante2 || item.plantio2, area: item.area2, semeadura: item.semeadura2, nf: item.nf2, termo: item.termo2 },
+      { nome: item.variedade3, lote: item.lote3, qtd: item.quantidade3, linhas: item.linhas3, data: item.data_plantio3 || item.transplante3 || item.plantio3, area: item.area3, semeadura: item.semeadura3, nf: item.nf3, termo: item.termo3 },
+      { nome: item.variedade4, lote: item.lote4, qtd: item.quantidade4, linhas: item.linhas4, data: item.data_plantio4 || item.transplante4 || item.plantio4, area: item.area4, semeadura: item.semeadura4, nf: item.nf4, termo: item.termo4 },
+      { nome: item.variedade5, lote: item.lote5, qtd: item.quantidade5, linhas: item.linhas5, data: item.data_plantio5 || item.transplante5 || item.plantio5, area: item.area5, semeadura: item.semeadura5, nf: item.nf5, termo: item.termo5 },
+      { nome: item.variedade6, lote: item.lote6, qtd: item.quantidade6, linhas: item.linhas6, data: item.data_plantio6, area: item.area6, semeadura: item.semeadura6, nf: item.nf6, termo: item.termo6 },
+      { nome: item.variedade7, lote: item.lote7, qtd: item.quantidade7, linhas: item.linhas7, data: item.data_plantio7, area: item.area7, semeadura: item.semeadura7, nf: item.nf7, termo: item.termo7 },
+      { nome: item.variedade8, lote: item.lote8, qtd: item.quantidade8, linhas: item.linhas8, data: item.data_plantio8, area: item.area8, semeadura: item.semeadura8, nf: item.nf8, termo: item.termo8 },
+      { nome: item.variedade9, lote: item.lote9, qtd: item.quantidade9, linhas: item.linhas9, data: item.data_plantio9, area: item.area9, semeadura: item.semeadura9, nf: item.nf9, termo: item.termo9 },
+      { nome: item.variedade10, lote: item.lote10, qtd: item.quantidade10, linhas: item.linhas10, data: item.data_plantio10, area: item.area10, semeadura: item.semeadura10, nf: item.nf10, termo: item.termo10 },
     ].filter(v => v.nome);
 
     if (varsArr.length === 0) addWebVariedadeRow();
-    else varsArr.forEach(v => addWebVariedadeRow(v.nome, v.lote, v.qtd, v.linhas, v.data, v.area));
+    else varsArr.forEach(v => addWebVariedadeRow(v.nome, v.lote, v.qtd, v.linhas, v.data, v.area, v.semeadura, v.nf, v.termo));
 
   } else {
     if (title) title.innerHTML = `<i data-lucide="sprout" style="color:var(--green); width:22px; height:22px;"></i> Novo Plantio`;
@@ -12758,7 +12702,7 @@ function updateWebParcela2Preview() {
 }
 
 function calcWebPrevisaoColheita() {
-  const transplante = $('webPlTransplante')?.value;
+  const transplante = $('webPlDataPlantio1')?.value || $('webPlSemeaduraVar1')?.value;
   const cultura = $('webPlCultura')?.value;
   const hint = $('webPlPrevisaoHint');
 
@@ -12771,7 +12715,7 @@ function calcWebPrevisaoColheita() {
   const dt = new Date(transplante + 'T00:00:00');
   dt.setDate(dt.getDate() + dias);
   const iso = dt.toISOString().split('T')[0];
-  $('webPlPrevisao').value = iso;
+  if ($('webPlPrevisao')) $('webPlPrevisao').value = iso;
   if (hint) hint.textContent = `✅ Calculado automaticamente: transplante + ${dias} dias`;
 }
 
@@ -12802,7 +12746,7 @@ function addWebVariedadeRow(nomeVal = '', loteVal = '', qtdVal = '', linhasVal =
       </div>
       <div>
         <label class="flabel">Transplante / Plantio</label>
-        <input id="webPlDataPlantio${idx}" type="date" value="${dataVal && dataVal !== 'null' ? dataVal : ''}"/>
+        <input id="webPlDataPlantio${idx}" type="date" value="${dataVal && dataVal !== 'null' ? dataVal : ''}" onchange="if(${idx}===1) calcWebPrevisaoColheita();"/>
       </div>
       <div>
         <label class="flabel">Qtd. Mudas/Sementes</label>
