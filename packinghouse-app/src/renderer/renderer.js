@@ -512,8 +512,8 @@ window.addEventListener('DOMContentLoaded', () => {
                 activeFruitName = txt;
               }
             }
-            // Aguarda 800ms para dar tempo da câmera focar e do OCR em background processar a caixa
-            await new Promise(r => setTimeout(r, 800));
+            // Aguarda 300ms para estabilizar a foto da esteira e consultar a IA
+            await new Promise(r => setTimeout(r, 300));
             const cvRes = await window.api.cvAnalyze(activeFruitName);
             const statusEl = document.getElementById('cvStatus');
             const caliberEl = document.getElementById('cvCaliber');

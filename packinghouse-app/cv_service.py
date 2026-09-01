@@ -107,15 +107,7 @@ def analyze_box_ocr(frame, registered_boxes=None):
                 output = res.stdout
                 used_engine = "MAC_VISION"
             except Exception as e:
-                print(f"⚠️ Erro ao executar OCR nativo Mac fallback: {e}")
-        else:
-            print(f"❌ Fallback Mac: Executável OCR não encontrado em {OCR_PATH}")
-
-    output_upper = output.upper() if output else ""
-    if output_upper.strip():
-        print(f"🔍 [OCR] Texto lido com sucesso usando a engine {used_engine}!")
-
-    # 3. Processa a saída para achar modelo/marca e peso
+                print(f"⚠️ Erro ao executar OCR nativo    # 3. Processa a saída para achar modelo/marca e peso com tolerância a ruído OCR
     detected_weights = []
     # Procura por pesos explícitos (ex: "13KG", "15 KG", etc.)
     for w in [18, 16, 15, 13, 12, 10, 5]:
@@ -125,11 +117,13 @@ def analyze_box_ocr(frame, registered_boxes=None):
     detected_weight = detected_weights[0] if detected_weights else 0
     detected_model = "NÃO IDENTIF."
 
+    # Mapeamento com tolerância a substituições comuns de OCR (ex: 4 -> A, 3 -> E, 0 -> O)
+    clean_ocr = output_upper.replace('4', 'A').replace('3', 'E').replace('0', 'O').replace('1', 'I')
+    normalized_output = remove_accents(clean_ocr)
+
     # Matching dinâmico com caixas cadastradas no Electron
     if registered_boxes:
-        # Ordena caixas pelo comprimento do nome em ordem decrescente para priorizar nomes específicos/compostos
         sorted_boxes = sorted(registered_boxes, key=lambda x: len(str(x.get('name', ''))), reverse=True)
-        normalized_output = remove_accents(output_upper)
         for box in sorted_boxes:
             box_name = remove_accents(str(box.get('name', ''))).upper()
             if box_name and box_name in normalized_output:
@@ -138,59 +132,39 @@ def analyze_box_ocr(frame, registered_boxes=None):
                     detected_weight = box.get('weight_kg', 0)
                 break
 
-    # Fallbacks fixos se nenhum registro dinâmico bater (retrocompatibilidade)
+    # Fallbacks fixos reforçados se nenhum registro dinâmico bater
     if detected_model == "NÃO IDENTIF.":
-        if "DELISSIUM" in output_upper:
+        if "DELISSIUM" in normalized_output or "DELIS" in normalized_output:
             detected_model = "Delissium"
-            if detected_weight == 0:
-                detected_weight = 15
-        elif "SAMBA" in output_upper:
-            if "+DOCE" in output_upper or "DOCE" in output_upper:
+            if detected_weight == 0: detected_weight = 15
+        elif "SAMBA" in normalized_output:
+            if "DOCE" in normalized_output:
                 detected_model = "Samba +Doce"
             else:
                 detected_model = "Samba Preta"
-            if detected_weight == 0:
-                detected_weight = 13
-        elif "VERDE" in output_upper:
+            if detected_weight == 0: detected_weight = 13
+        elif "VERDE" in normalized_output:
             detected_model = "Caixa Verde"
-            if detected_weight == 0:
-                detected_weight = 13
-        elif "GENERICA" in output_upper or "GENÉRICA" in output_upper:
+            if detected_weight == 0: detected_weight = 13
+        elif "GENERICA" in normalized_output or "GENER" in normalized_output:
             detected_model = "Generica"
-            if detected_weight == 0:
-                detected_weight = 18
-        elif "NERO" in output_upper:
+            if detected_weight == 0: detected_weight = 18
+        elif "NERO" in normalized_output:
             detected_model = "Nero"
-            if detected_weight == 0:
-                detected_weight = 15
-        elif "COOPYFRUTAS" in output_upper:
+            if detected_weight == 0: detected_weight = 15
+        elif "COOPY" in normalized_output or "COOP" in normalized_output:
             detected_model = "Coopyfrutas"
-            if detected_weight == 0:
-                detected_weight = 13
-        elif "MIX MELON" in output_upper:
+            if detected_weight == 0: detected_weight = 13
+        elif "MIX" in normalized_output and "MELON" in normalized_output:
             detected_model = "Mix Melon"
-            if detected_weight == 0:
-                detected_weight = 13
+            if detected_weight == 0: detected_weight = 13
             
     return detected_model, detected_weight, detected_weights
 
-def is_solid_green_frame(frame):
-    if frame is None:
-        return False
-    # OpenCV uses BGR. Channels: 0=Blue, 1=Green, 2=Red. Mean returns (B, G, R, Alpha)
-    mean_b, mean_g, mean_r, _ = cv2.mean(frame)
-    # Virtual camera standby screens or driver failures often output a solid green frame (G > 150, B/R < 60)
-    if mean_g > 150 and mean_b < 60 and mean_r < 60:
-        std_dev = np.std(frame)
-        if std_dev < 30: # very low variance, i.e., solid uniform color
-            return True
-    return False
-
 def count_fruits(frame, fruit_type):
     """
-    Identifica e conta melões/melancias usando filtragem de cores HSV.
-    Quando roi_enabled=True, analisa apenas a ROI de frutas para evitar
-    contar frutas de caixas vizinhas ao fundo.
+    Identifica e conta melões/melancias usando filtragem HSV + Distance Transform / Watershed
+    para separar frutos colados/encostados.
     """
     if frame is None:
         return 0, frame
@@ -201,7 +175,6 @@ def count_fruits(frame, fruit_type):
     # ── Aplica ROI de frutas ──────────────────────────────────────────────────
     if roi_enabled:
         fruit_crop, (off_x, off_y) = crop_roi(frame, roi_fruits)
-        # Desenha o retângulo da ROI de frutas no frame anotado (azul claro)
         rx0 = int(roi_fruits["x"] * fw)
         ry0 = int(roi_fruits["y"] * fh)
         rx1 = min(fw, rx0 + int(roi_fruits["w"] * fw))
@@ -209,7 +182,7 @@ def count_fruits(frame, fruit_type):
         cv2.rectangle(annotated_frame, (rx0, ry0), (rx1, ry1), (255, 200, 0), 2)
         cv2.putText(annotated_frame, "FRUTAS", (rx0 + 4, ry0 + 18),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 200, 0), 1)
-        # Desenha o retângulo da ROI de etiqueta (laranja)
+
         lx0 = int(roi_label["x"] * fw)
         ly0 = int(roi_label["y"] * fh)
         lx1 = min(fw, lx0 + int(roi_label["w"] * fw))
@@ -225,7 +198,6 @@ def count_fruits(frame, fruit_type):
     hsv = cv2.cvtColor(fruit_crop, cv2.COLOR_BGR2HSV)
     fruit_type = str(fruit_type).upper()
     
-    # Define intervalos HSV para segmentar as cores da fruta
     mask = np.zeros((fruit_crop.shape[0], fruit_crop.shape[1]), dtype=np.uint8)
     
     is_yellow = "MELON" in fruit_type or "MELAO" in fruit_type or "MELÃO" in fruit_type
@@ -235,35 +207,42 @@ def count_fruits(frame, fruit_type):
         is_yellow = True
         is_green = True
 
+    # Ajuste de intervalos HSV mais rigoroso (evita papelão kraft)
     if is_yellow:
-        lower_y = np.array([5, 30, 30])
-        upper_y = np.array([45, 255, 255])
+        # Melão Amarelo: H (15-38), S (70-255), V (80-255) -> descarta papelão bege
+        lower_y = np.array([12, 60, 70])
+        upper_y = np.array([42, 255, 255])
         mask = cv2.bitwise_or(mask, cv2.inRange(hsv, lower_y, upper_y))
         
     if is_green:
-        lower_g = np.array([25, 20, 20])
-        upper_g = np.array([95, 255, 255])
+        # Melancia/Melão Verde: H (35-85), S (40-255), V (40-255)
+        lower_g = np.array([32, 35, 35])
+        upper_g = np.array([90, 255, 255])
         mask = cv2.bitwise_or(mask, cv2.inRange(hsv, lower_g, upper_g))
     
-    # Limpeza morfológica para separar frutos colados
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=3)
-    mask = cv2.GaussianBlur(mask, (5, 5), 0)
-    
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # Operações Morfológicas de Limpeza
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    opening = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=2)
+    sure_bg = cv2.dilate(opening, kernel, iterations=3)
+
+    # Transformada de Distância para separar frutos encostados
+    dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
+    ret, sure_fg = cv2.threshold(dist_transform, 0.35 * dist_transform.max() if dist_transform.max() > 0 else 0, 255, 0)
+    sure_fg = np.uint8(sure_fg)
+
+    # Identificação de frutos individuais
+    contours, _ = cv2.findContours(sure_fg if sure_fg.any() else opening, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
     fruit_count = 0
     
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        if 400 < area < 150000:
+        if 250 < area < 120000:
             perimeter = cv2.arcLength(cnt, True)
             if perimeter > 0:
                 circularity = 4 * np.pi * area / (perimeter * perimeter)
-                if circularity > 0.15:
+                if circularity > 0.12:
                     fruit_count += 1
-                    # Translada o contorno de volta para o espaço do frame original
                     cnt_shifted = cnt + np.array([[[off_x, off_y]]])
                     cv2.drawContours(annotated_frame, [cnt_shifted], -1, (255, 0, 0), 2)
                     M = cv2.moments(cnt)

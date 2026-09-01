@@ -12,6 +12,10 @@ let syncToSupabase = null;
 let syncFromSupabase = null;
 let analyzeBox = null;
 
+let mainWindow = null;
+let db = null;
+let service = null;
+
 try {
   initDb = require('./db').initDb;
   createAppService = require('./services/appService').createAppService;
@@ -20,13 +24,8 @@ try {
   syncFromSupabase = syncSvc.syncFromSupabase;
   analyzeBox = require('./services/cvService').analyzeBox;
 } catch (e) {
-  console.error('[main.js] Error requiring service modules:', e.message);
+  console.error('[main.js] Critical error requiring service modules:', e.stack || e.message);
 }
-
-
-let mainWindow = null;
-let db = null;
-let service = null;
 
 app.disableHardwareAcceleration();
 console.log('App: Hardware acceleration disabled.');
