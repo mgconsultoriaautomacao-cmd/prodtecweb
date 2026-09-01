@@ -12583,21 +12583,23 @@ function renderWebPlantiosTable(data) {
 }
 
 function calcWebAreaHectares(isManualAreaEdit = false) {
-  const tamanhoLinha = parseFloat($('webPlTamanhoLinha')?.value) || 0;
   let totalArea = 0;
   let totalLinhas = 0;
 
   for (let i = 1; i <= 10; i++) {
     const linhasEl = $(`webPlLinhas${i}`);
+    const tamLinhaEl = $(`webPlTamanhoLinhaVar${i}`);
     const areaEl = $(`webPlAreaVar${i}`);
     const badgeEl = $(`webPlAreaVarBadge${i}`);
+
     const linhasVar = parseFloat(linhasEl?.value) || 0;
+    const tamLinhaVar = parseFloat(tamLinhaEl?.value) || 0;
     
     let areaVar = 0;
     if (isManualAreaEdit && areaEl && areaEl.value !== '') {
       areaVar = parseFloat(areaEl.value) || 0;
-    } else if (linhasVar > 0) {
-      areaVar = (tamanhoLinha > 0) ? (linhasVar * tamanhoLinha) / 5000 : 0;
+    } else if (linhasVar > 0 && tamLinhaVar > 0) {
+      areaVar = (linhasVar * tamLinhaVar) / 5000;
       if (areaEl) areaEl.value = areaVar > 0 ? areaVar.toFixed(2) : '';
     } else if (areaEl && areaEl.value !== '') {
       areaVar = parseFloat(areaEl.value) || 0;
@@ -12612,11 +12614,7 @@ function calcWebAreaHectares(isManualAreaEdit = false) {
     }
   }
 
-  const areaInput = $('webPlArea');
   const hint = $('webPlAreaHint');
-  if (areaInput && totalArea > 0) {
-    areaInput.value = totalArea.toFixed(2);
-  }
   if (hint) {
     hint.textContent = `📐 Total: ${totalLinhas} linhas | Área Total Soma Variedades: ${totalArea.toFixed(2)} ha`;
   }
@@ -12630,13 +12628,12 @@ function openWebPlantioModal(editId) {
   const deleteBtn = $('webBtnDeletePlantio');
 
   // Reset form
-  ['webPlParcela','webPlLetra','webPlParcela2Preview','webPlCultura','webPlPrevisao',
+  ['webPlParcela','webPlLetra','webPlParcela2Preview','webPlCultura',
    'webPlIdiarn','webPlFornecedor','webPlFornecedor2','webPlObs'].forEach(id => {
     const el = $(id);
     if (el) el.value = '';
   });
-  if ($('webPlPrevisaoHint')) $('webPlPrevisaoHint').textContent = '';
-  if ($('webPlAreaHint')) $('webPlAreaHint').textContent = '📐 Cálculo automático: (Linhas × Tamanho da Linha) / 5.000';
+  if ($('webPlAreaHint')) $('webPlAreaHint').textContent = '📐 Cálculo automático por variedade: (Linhas × Tamanho da Linha) / 5.000';
 
   webVariedadeRowCount = 0;
   $('webVariedadesContainer').innerHTML = '';
@@ -12655,28 +12652,27 @@ function openWebPlantioModal(editId) {
     updateWebParcela2Preview();
 
     $('webPlCultura').value = item.cultura || '';
-    $('webPlPrevisao').value = item.previsao_colheita || '';
     $('webPlIdiarn').value = item.idiarn || '';
     $('webPlFornecedor').value = item.fornecedor || '';
     $('webPlFornecedor2').value = item.fornecedor2 || '';
     $('webPlObs').value = item.obs || '';
 
-    // Load variedades com linhas, datas, áreas, nfs e termos individuais
+    // Load variedades com linhas, tam_linha, datas, previsão, áreas, nfs e termos individuais
     const varsArr = [
-      { nome: item.variedade, lote: item.lote, qtd: item.quantidade, linhas: item.linhas1 || item.linhas, data: item.data_plantio1 || item.transplante || item.plantio, area: item.area1 || item.area, semeadura: item.semeadura, nf: item.nf, termo: item.termo },
-      { nome: item.variedade2, lote: item.lote2, qtd: item.quantidade2, linhas: item.linhas2, data: item.data_plantio2 || item.transplante2 || item.plantio2, area: item.area2, semeadura: item.semeadura2, nf: item.nf2, termo: item.termo2 },
-      { nome: item.variedade3, lote: item.lote3, qtd: item.quantidade3, linhas: item.linhas3, data: item.data_plantio3 || item.transplante3 || item.plantio3, area: item.area3, semeadura: item.semeadura3, nf: item.nf3, termo: item.termo3 },
-      { nome: item.variedade4, lote: item.lote4, qtd: item.quantidade4, linhas: item.linhas4, data: item.data_plantio4 || item.transplante4 || item.plantio4, area: item.area4, semeadura: item.semeadura4, nf: item.nf4, termo: item.termo4 },
-      { nome: item.variedade5, lote: item.lote5, qtd: item.quantidade5, linhas: item.linhas5, data: item.data_plantio5 || item.transplante5 || item.plantio5, area: item.area5, semeadura: item.semeadura5, nf: item.nf5, termo: item.termo5 },
-      { nome: item.variedade6, lote: item.lote6, qtd: item.quantidade6, linhas: item.linhas6, data: item.data_plantio6, area: item.area6, semeadura: item.semeadura6, nf: item.nf6, termo: item.termo6 },
-      { nome: item.variedade7, lote: item.lote7, qtd: item.quantidade7, linhas: item.linhas7, data: item.data_plantio7, area: item.area7, semeadura: item.semeadura7, nf: item.nf7, termo: item.termo7 },
-      { nome: item.variedade8, lote: item.lote8, qtd: item.quantidade8, linhas: item.linhas8, data: item.data_plantio8, area: item.area8, semeadura: item.semeadura8, nf: item.nf8, termo: item.termo8 },
-      { nome: item.variedade9, lote: item.lote9, qtd: item.quantidade9, linhas: item.linhas9, data: item.data_plantio9, area: item.area9, semeadura: item.semeadura9, nf: item.nf9, termo: item.termo9 },
-      { nome: item.variedade10, lote: item.lote10, qtd: item.quantidade10, linhas: item.linhas10, data: item.data_plantio10, area: item.area10, semeadura: item.semeadura10, nf: item.nf10, termo: item.termo10 },
+      { nome: item.variedade, lote: item.lote, qtd: item.quantidade, linhas: item.linhas1 || item.linhas, tamLinha: item.tamanho_linha1 || item.tamanho_linha, data: item.data_plantio1 || item.transplante || item.plantio, previsao: item.previsao_colheita1 || item.previsao_colheita, area: item.area1 || item.area, semeadura: item.semeadura, nf: item.nf, termo: item.termo },
+      { nome: item.variedade2, lote: item.lote2, qtd: item.quantidade2, linhas: item.linhas2, tamLinha: item.tamanho_linha2, data: item.data_plantio2 || item.transplante2 || item.plantio2, previsao: item.previsao_colheita2, area: item.area2, semeadura: item.semeadura2, nf: item.nf2, termo: item.termo2 },
+      { nome: item.variedade3, lote: item.lote3, qtd: item.quantidade3, linhas: item.linhas3, tamLinha: item.tamanho_linha3, data: item.data_plantio3 || item.transplante3 || item.plantio3, previsao: item.previsao_colheita3, area: item.area3, semeadura: item.semeadura3, nf: item.nf3, termo: item.termo3 },
+      { nome: item.variedade4, lote: item.lote4, qtd: item.quantidade4, linhas: item.linhas4, tamLinha: item.tamanho_linha4, data: item.data_plantio4 || item.transplante4 || item.plantio4, previsao: item.previsao_colheita4, area: item.area4, semeadura: item.semeadura4, nf: item.nf4, termo: item.termo4 },
+      { nome: item.variedade5, lote: item.lote5, qtd: item.quantidade5, linhas: item.linhas5, tamLinha: item.tamanho_linha5, data: item.data_plantio5 || item.transplante5 || item.plantio5, previsao: item.previsao_colheita5, area: item.area5, semeadura: item.semeadura5, nf: item.nf5, termo: item.termo5 },
+      { nome: item.variedade6, lote: item.lote6, qtd: item.quantidade6, linhas: item.linhas6, tamLinha: item.tamanho_linha6, data: item.data_plantio6, previsao: item.previsao_colheita6, area: item.area6, semeadura: item.semeadura6, nf: item.nf6, termo: item.termo6 },
+      { nome: item.variedade7, lote: item.lote7, qtd: item.quantidade7, linhas: item.linhas7, tamLinha: item.tamanho_linha7, data: item.data_plantio7, previsao: item.previsao_colheita7, area: item.area7, semeadura: item.semeadura7, nf: item.nf7, termo: item.termo7 },
+      { nome: item.variedade8, lote: item.lote8, qtd: item.quantidade8, linhas: item.linhas8, tamLinha: item.tamanho_linha8, data: item.data_plantio8, previsao: item.previsao_colheita8, area: item.area8, semeadura: item.semeadura8, nf: item.nf8, termo: item.termo8 },
+      { nome: item.variedade9, lote: item.lote9, qtd: item.quantidade9, linhas: item.linhas9, tamLinha: item.tamanho_linha9, data: item.data_plantio9, previsao: item.previsao_colheita9, area: item.area9, semeadura: item.semeadura9, nf: item.nf9, termo: item.termo9 },
+      { nome: item.variedade10, lote: item.lote10, qtd: item.quantidade10, linhas: item.linhas10, tamLinha: item.tamanho_linha10, data: item.data_plantio10, previsao: item.previsao_colheita10, area: item.area10, semeadura: item.semeadura10, nf: item.nf10, termo: item.termo10 },
     ].filter(v => v.nome);
 
     if (varsArr.length === 0) addWebVariedadeRow();
-    else varsArr.forEach(v => addWebVariedadeRow(v.nome, v.lote, v.qtd, v.linhas, v.data, v.area, v.semeadura, v.nf, v.termo));
+    else varsArr.forEach(v => addWebVariedadeRow(v.nome, v.lote, v.qtd, v.linhas, v.tamLinha, v.data, v.previsao, v.area, v.semeadura, v.nf, v.termo));
 
   } else {
     if (title) title.innerHTML = `<i data-lucide="sprout" style="color:var(--green); width:22px; height:22px;"></i> Novo Plantio`;
@@ -12701,25 +12697,21 @@ function updateWebParcela2Preview() {
   if (prev) prev.value = p && l ? `${p} ${l}` : p;
 }
 
-function calcWebPrevisaoColheita() {
-  const transplante = $('webPlDataPlantio1')?.value || $('webPlSemeaduraVar1')?.value;
+function calcWebPrevisaoColheitaRow(idx) {
+  const transplante = $(`webPlDataPlantio${idx}`)?.value || $(`webPlSemeaduraVar${idx}`)?.value;
   const cultura = $('webPlCultura')?.value;
-  const hint = $('webPlPrevisaoHint');
+  const prevEl = $(`webPlPrevisaoVar${idx}`);
 
-  if (!transplante || !cultura || cultura === 'MAMÃO') {
-    if (hint) hint.textContent = cultura === 'MAMÃO' ? 'Preencha manualmente para Mamão' : '';
-    return;
-  }
+  if (!transplante || !cultura || cultura === 'MAMÃO' || !prevEl) return;
 
   const dias = cultura === 'MELÃO' ? 65 : 60; // MELANCIA = 60
   const dt = new Date(transplante + 'T00:00:00');
   dt.setDate(dt.getDate() + dias);
   const iso = dt.toISOString().split('T')[0];
-  if ($('webPlPrevisao')) $('webPlPrevisao').value = iso;
-  if (hint) hint.textContent = `✅ Calculado automaticamente: transplante + ${dias} dias`;
+  prevEl.value = iso;
 }
 
-function addWebVariedadeRow(nomeVal = '', loteVal = '', qtdVal = '', linhasVal = '', dataVal = '', areaVal = '', semeaduraVal = '', nfVal = '', termoVal = '') {
+function addWebVariedadeRow(nomeVal = '', loteVal = '', qtdVal = '', linhasVal = '', tamLinhaVal = '', dataVal = '', previsaoVal = '', areaVal = '', semeaduraVal = '', nfVal = '', termoVal = '') {
   if (webVariedadeRowCount >= 10) { alert('Máximo de 10 variedades por plantio'); return; }
   webVariedadeRowCount++;
   const idx = webVariedadeRowCount;
@@ -12742,11 +12734,15 @@ function addWebVariedadeRow(nomeVal = '', loteVal = '', qtdVal = '', linhasVal =
       </div>
       <div>
         <label class="flabel">Semeadura</label>
-        <input id="webPlSemeaduraVar${idx}" type="date" value="${semeaduraVal && semeaduraVal !== 'null' ? semeaduraVal : ''}"/>
+        <input id="webPlSemeaduraVar${idx}" type="date" value="${semeaduraVal && semeaduraVal !== 'null' ? semeaduraVal : ''}" onchange="calcWebPrevisaoColheitaRow(${idx})"/>
       </div>
       <div>
         <label class="flabel">Transplante / Plantio</label>
-        <input id="webPlDataPlantio${idx}" type="date" value="${dataVal && dataVal !== 'null' ? dataVal : ''}" onchange="if(${idx}===1) calcWebPrevisaoColheita();"/>
+        <input id="webPlDataPlantio${idx}" type="date" value="${dataVal && dataVal !== 'null' ? dataVal : ''}" onchange="calcWebPrevisaoColheitaRow(${idx})"/>
+      </div>
+      <div>
+        <label class="flabel">Previsão Colheita</label>
+        <input id="webPlPrevisaoVar${idx}" type="date" value="${previsaoVal && previsaoVal !== 'null' ? previsaoVal : ''}"/>
       </div>
       <div>
         <label class="flabel">Qtd. Mudas/Sementes</label>
@@ -12767,6 +12763,10 @@ function addWebVariedadeRow(nomeVal = '', loteVal = '', qtdVal = '', linhasVal =
       <div>
         <label class="flabel">Linhas *</label>
         <input id="webPlLinhas${idx}" type="number" placeholder="24" value="${linhasVal || ''}" oninput="calcWebAreaHectares()"/>
+      </div>
+      <div>
+        <label class="flabel">Tam. Linha (m) *</label>
+        <input id="webPlTamanhoLinhaVar${idx}" type="number" step="0.1" placeholder="200" value="${tamLinhaVal || ''}" oninput="calcWebAreaHectares()"/>
       </div>
       <div>
         <label class="flabel" style="color:#3b82f6; font-weight:800">Área (ha)</label>
@@ -12875,33 +12875,34 @@ async function saveWebPlantio() {
   if (!parcela || !letra) return alert('Informe a Parcela e a Letra.');
   if (!cultura) return alert('Selecione a Cultura.');
 
-  const plantioDate = $('webPlTransplante').value || $('webPlPlantio').value || $('webPlSemeadura').value;
-  if (isSunday(plantioDate)) {
-    return alert('🚫 Trava de Auditoria: Não é permitido registrar plantio com data de domingo!');
-  }
-
-  const parcela2 = `${parcela} ${letra}`;
-  const tamanhoL = parseFloat($('webPlTamanhoLinha').value) || 0;
-
-  // Collect até 10 variedades com semeadura, transplante, nf, termo, quantidade e área conjugadas
+  // Collect até 10 variedades com semeadura, transplante, previsão, tam_linha, nf, termo, quantidade e área conjugadas
   const varsData = [];
+  let totalLinhas = 0;
+  let totalArea = 0;
+
   for (let i = 1; i <= 10; i++) {
     const nome = $(`webPlVar${i}`)?.value?.trim().toUpperCase();
     if (nome) {
       const linhasV = parseInt($(`webPlLinhas${i}`)?.value) || null;
+      const tamLinhaV = parseFloat($(`webPlTamanhoLinhaVar${i}`)?.value) || null;
       const dataV = $(`webPlDataPlantio${i}`)?.value || null;
+      const previsaoV = $(`webPlPrevisaoVar${i}`)?.value || null;
       const semeaduraV = $(`webPlSemeaduraVar${i}`)?.value || null;
       const nfV = $(`webPlNfVar${i}`)?.value?.trim() || null;
       const termoV = $(`webPlTermoVar${i}`)?.value?.trim() || null;
-      const areaVInput = parseFloat($(`webPlAreaVar${i}`)?.value);
-      const areaV = !isNaN(areaVInput) ? areaVInput : ((linhasV && tamanhoL > 0) ? parseFloat(((linhasV * tamanhoL) / 5000).toFixed(2)) : null);
+      const areaV = parseFloat($(`webPlAreaVar${i}`)?.value) || null;
+
+      if (linhasV) totalLinhas += linhasV;
+      if (areaV) totalArea += areaV;
 
       varsData.push({
         nome,
         lote: $(`webPlLote${i}`)?.value?.trim() || null,
         qtd: parseInt($(`webPlQtd${i}`)?.value) || null,
         linhas: linhasV,
+        tam_linha: tamLinhaV,
         data_plantio: dataV,
+        previsao: previsaoV,
         semeadura: semeaduraV,
         nf: nfV,
         termo: termoV,
@@ -12911,64 +12912,132 @@ async function saveWebPlantio() {
   }
   if (varsData.length === 0) return alert('Informe pelo menos 1 variedade.');
 
+  const plantioDate = varsData[0].data_plantio || varsData[0].semeadura;
+  if (isSunday(plantioDate)) {
+    return alert('🚫 Trava de Auditoria: Não é permitido registrar plantio com data de domingo!');
+  }
+
+  const parcela2 = `${parcela} ${letra}`;
+
+  // Montar payload UNIFICADO em uma ÚNICA LINHA no banco (info_parcelas)
+  const payload = {
+    tenant_id: tenantId,
+    parcela,
+    letra,
+    parcela2,
+    cultura,
+
+    variedade: varsData[0]?.nome || null,
+    variedade2: varsData[1]?.nome || null,
+    variedade3: varsData[2]?.nome || null,
+    variedade4: varsData[3]?.nome || null,
+    variedade5: varsData[4]?.nome || null,
+    variedade6: varsData[5]?.nome || null,
+    variedade7: varsData[6]?.nome || null,
+    variedade8: varsData[7]?.nome || null,
+    variedade9: varsData[8]?.nome || null,
+    variedade10: varsData[9]?.nome || null,
+
+    lote: varsData[0]?.lote || null,
+    lote2: varsData[1]?.lote || null,
+    lote3: varsData[2]?.lote || null,
+    lote4: varsData[3]?.lote || null,
+    lote5: varsData[4]?.lote || null,
+
+    quantidade: varsData[0]?.qtd || null,
+    quantidade2: varsData[1]?.qtd || null,
+    quantidade3: varsData[2]?.qtd || null,
+    quantidade4: varsData[3]?.qtd || null,
+    quantidade5: varsData[4]?.qtd || null,
+
+    linhas: totalLinhas || varsData[0]?.linhas || null,
+    linhas1: varsData[0]?.linhas || null,
+    linhas2: varsData[1]?.linhas || null,
+    linhas3: varsData[2]?.linhas || null,
+    linhas4: varsData[3]?.linhas || null,
+    linhas5: varsData[4]?.linhas || null,
+
+    tamanho_linha: varsData[0]?.tam_linha || null,
+    tamanho_linha1: varsData[0]?.tam_linha || null,
+    tamanho_linha2: varsData[1]?.tam_linha || null,
+    tamanho_linha3: varsData[2]?.tam_linha || null,
+    tamanho_linha4: varsData[3]?.tam_linha || null,
+    tamanho_linha5: varsData[4]?.tam_linha || null,
+
+    semeadura: varsData[0]?.semeadura || null,
+    semeadura2: varsData[1]?.semeadura || null,
+    semeadura3: varsData[2]?.semeadura || null,
+    semeadura4: varsData[3]?.semeadura || null,
+    semeadura5: varsData[4]?.semeadura || null,
+
+    transplante: varsData[0]?.data_plantio || null,
+    transplante2: varsData[1]?.data_plantio || null,
+    transplante3: varsData[2]?.data_plantio || null,
+    transplante4: varsData[3]?.data_plantio || null,
+    transplante5: varsData[4]?.data_plantio || null,
+
+    plantio: varsData[0]?.data_plantio || varsData[0]?.semeadura || null,
+    data_plantio1: varsData[0]?.data_plantio || null,
+    data_plantio2: varsData[1]?.data_plantio || null,
+    data_plantio3: varsData[2]?.data_plantio || null,
+    data_plantio4: varsData[3]?.data_plantio || null,
+    data_plantio5: varsData[4]?.data_plantio || null,
+
+    nf: varsData[0]?.nf || null,
+    nf2: varsData[1]?.nf || null,
+    nf3: varsData[2]?.nf || null,
+    nf4: varsData[3]?.nf || null,
+    nf5: varsData[4]?.nf || null,
+
+    termo: varsData[0]?.termo || null,
+    termo2: varsData[1]?.termo || null,
+    termo3: varsData[2]?.termo || null,
+    termo4: varsData[3]?.termo || null,
+    termo5: varsData[4]?.termo || null,
+
+    area: totalArea > 0 ? parseFloat(totalArea.toFixed(2)) : (varsData[0]?.area || null),
+    area_ha: totalArea > 0 ? parseFloat(totalArea.toFixed(2)) : (varsData[0]?.area || null),
+    area1: varsData[0]?.area || null,
+    area2: varsData[1]?.area || null,
+    area3: varsData[2]?.area || null,
+    area4: varsData[3]?.area || null,
+    area5: varsData[4]?.area || null,
+
+    previsao_colheita: varsData[0]?.previsao || null,
+    previsao_colheita1: varsData[0]?.previsao || null,
+    previsao_colheita2: varsData[1]?.previsao || null,
+    previsao_colheita3: varsData[2]?.previsao || null,
+    previsao_colheita4: varsData[3]?.previsao || null,
+    previsao_colheita5: varsData[4]?.previsao || null,
+
+    idiarn: $('webPlIdiarn')?.value?.trim() || null,
+    fornecedor: $('webPlFornecedor')?.value?.trim() || null,
+    fornecedor2: $('webPlFornecedor2')?.value?.trim() || null,
+    obs: $('webPlObs')?.value?.trim() || null,
+    ativo: true,
+  };
+
   btn.disabled = true;
   btn.textContent = 'Salvando...';
 
-  const areaVal = parseFloat($('webPlArea').value) || null;
-  const globalSemeadura = $('webPlSemeadura').value || null;
-  const globalTransplante = $('webPlTransplante').value || null;
-  const globalNf = $('webPlNf').value.trim() || null;
-  const globalTermo = $('webPlTermo').value.trim() || null;
-
   try {
-    // Para cada variedade conjugada, insere/atualiza um registro individual com a parcela física compartilhada
-    for (let idx = 0; idx < varsData.length; idx++) {
-      const v = varsData[idx];
-      const payload = {
-        tenant_id: tenantId,
-        parcela,
-        letra,
-        parcela2,
-        cultura,
-        variedade: v.nome,
-        lote: v.lote || null,
-        quantidade: v.qtd || null,
-        linhas: v.linhas || (parseInt($('webPlFileiras').value) || null),
-        tamanho_linha: tamanhoL || null,
-        espacamento: parseFloat($('webPlEspacamento').value) || null,
-        area: v.area || areaVal,
-        area_ha: v.area || areaVal,
-        semeadura: v.semeadura || globalSemeadura,
-        transplante: v.data_plantio || globalTransplante,
-        plantio: v.data_plantio || globalTransplante || globalSemeadura,
-        previsao_colheita: $('webPlPrevisao').value || null,
-        idiarn: $('webPlIdiarn').value.trim() || null,
-        termo: v.termo || globalTermo,
-        nf: v.nf || globalNf,
-        fornecedor: $('webPlFornecedor').value.trim() || null,
-        fornecedor2: $('webPlFornecedor2').value.trim() || null,
-        obs: $('webPlObs').value.trim() || null,
-        ativo: true,
-      };
+    let res;
+    if (editId) {
+      res = await sb.from('info_parcelas').update(payload).eq('id', editId).eq('tenant_id', tenantId);
+    } else {
+      res = await sb.from('info_parcelas').insert(payload);
+    }
 
-      let res;
-      if (editId && idx === 0) {
-        res = await sb.from('info_parcelas').update(payload).eq('id', editId).eq('tenant_id', tenantId);
-      } else {
-        res = await sb.from('info_parcelas').insert(payload);
-      }
-
-      if (res.error) {
-        if (res.error.message && (res.error.message.includes("'area'") || res.error.message.includes('area'))) {
-          delete payload.area;
-          if (editId && idx === 0) {
-            res = await sb.from('info_parcelas').update(payload).eq('id', editId).eq('tenant_id', tenantId);
-          } else {
-            res = await sb.from('info_parcelas').insert(payload);
-          }
+    if (res.error) {
+      if (res.error.message && (res.error.message.includes("'area'") || res.error.message.includes('area'))) {
+        delete payload.area;
+        if (editId) {
+          res = await sb.from('info_parcelas').update(payload).eq('id', editId).eq('tenant_id', tenantId);
+        } else {
+          res = await sb.from('info_parcelas').insert(payload);
         }
-        if (res.error) throw res.error;
       }
+      if (res.error) throw res.error;
     }
 
     toast(editId ? 'Plantio atualizado com sucesso! ✅' : 'Plantio cadastrado com sucesso! ✅', 'ok');
