@@ -12058,12 +12058,48 @@ function calculateAreaFromLines() {
   }
 }
 
+function normalizePestName(str) {
+  if (!str) return '';
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .trim();
+}
+
+function tokenizePestString(str) {
+  if (!str) return [];
+  const norm = normalizePestName(str);
+  // Quebra por -, /, ,, ;, +, " E ", " OU "
+  return norm.split(/[-/,\;\+]|\bE\b|\bOU\b/).map(s => s.replace(/[^A-Z0-9\s]/g, '').trim()).filter(Boolean);
+}
+
 function isMatchingPraga(mipPraga, defAlvo) {
   if (!mipPraga || !defAlvo) return false;
-  const clean = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-  const cMip = clean(mipPraga);
-  const cDef = clean(defAlvo);
-  return cMip.includes(cDef) || cDef.includes(cMip);
+
+  const mipTokens = tokenizePestString(mipPraga);
+  const defTokens = tokenizePestString(defAlvo);
+
+  const cleanMip = normalizePestName(mipPraga).replace(/[^A-Z0-9]/g, '');
+  const cleanDef = normalizePestName(defAlvo).replace(/[^A-Z0-9]/g, '');
+
+  if (cleanMip && cleanDef && (cleanMip.includes(cleanDef) || cleanDef.includes(cleanMip))) {
+    return true;
+  }
+
+  for (const tMip of mipTokens) {
+    const cMip = tMip.replace(/[^A-Z0-9]/g, '');
+    if (!cMip || cMip.length < 3) continue;
+    for (const tDef of defTokens) {
+      const cDef = tDef.replace(/[^A-Z0-9]/g, '');
+      if (!cDef || cDef.length < 3) continue;
+      if (cMip.includes(cDef) || cDef.includes(cMip)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 async function saveInfoParcela() {
@@ -15235,16 +15271,22 @@ function validateMipForOpDashboard(parcelId, parcelCode, alvo, opDate) {
   
   const mips = _mipRecords || [];
   const relevantMips = mips.filter(m => {
-    const matchesParcel = m.parcel_id == parcelId || m.parcela === parcelCode;
-    const pragaClean = (m.praga || '').toUpperCase();
-    return matchesParcel && (pragaClean.includes(cleanAlvo) || cleanAlvo.includes(pragaClean));
+    const matchesParcel = (m.parcel_id && m.parcel_id == parcelId) || (m.parcela && m.parcela === parcelCode);
+    if (!matchesParcel) return false;
+    
+    // Checa se a praga teve incidência/média > 0 (descarta zero)
+    const media = parseFloat(m.media || m.quantidade || m.indice || 0);
+    const presenca = media > 0 || m.presenca === true || m.status === 'INFESTADO';
+    if (!presenca) return false;
+
+    return isMatchingPraga(m.praga, alvo);
   });
   
   if (relevantMips.length === 0) {
     return {
       ok: false,
       blocked: true,
-      message: `🚫 NÃO CONFORMIDADE: A praga "${alvo}" NÃO foi identificada no monitoramento MIP desta parcela. Defensivos químicos só podem ser aplicados mediante justificativa de praga no MIP. (Fertilizantes e Adubos Foliares são isentos).`
+      message: `🚫 NÃO CONFORMIDADE: A praga/alvo "${alvo}" NÃO tem infestação confirmada (média > 0) no monitoramento MIP desta parcela. Defensivos químicos só podem ser aplicados mediante praga identificada no MIP.`
     };
   }
   
