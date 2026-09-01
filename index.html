@@ -1877,8 +1877,10 @@
     <!-- ABA 1: AMOSTRAGEM MIP -->
     <div id="ccTabMip" class="tab-pane-cc" style="display:none">
       <div class="card" style="margin-bottom:24px">
-        <div class="title"><i data-lucide="bug" class="btn-i"></i> Vistorias Realizadas no Campo (MIP)</div>
-        <p style="color:var(--muted); font-size:12px; margin-bottom:15px">Consulte as médias de infestações coletadas. Alvos com infestação acima de 1.00 ou com presença de doenças exigirão atenção.</p>
+        <div class="title" style="display:flex; justify-content:space-between; align-items:center"><div style="display:flex; align-items:center; gap:6px"><i data-lucide="bug" class="btn-i"></i> Vistorias Realizadas no Campo (MIP)</div>
+          <button onclick="openNewMipModal()" class="green" style="font-size:11px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="plus-circle" style="width:14px; height:14px"></i> + Nova Vistoria MIP</button>
+        </div>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:15px">Consulte as infestações coletadas por parcela (Planilha de 12 Alvos). Linhas em destaque vermelho indicam limiar de dano atingido.</p>
         <div style="overflow-x:auto">
           <table style="width:100%; border-collapse:collapse">
             <thead>
@@ -1886,9 +1888,9 @@
                 <th style="text-align:left; padding:10px">Data Vistoria</th>
                 <th style="text-align:left; padding:10px">Parcela</th>
                 <th style="text-align:left; padding:10px">Variedade</th>
-                <th style="text-align:left; padding:10px">Praga / Alvo</th>
-                <th style="text-align:center; padding:10px">Média (10 pts)</th>
-                <th style="text-align:center; padding:10px">Status Controle</th>
+                <th style="text-align:left; padding:10px">Pragas / Infestações Identificadas</th>
+                <th style="text-align:left; padding:10px">Monitor / Responsável</th>
+                <th style="text-align:center; padding:10px">Status Geral</th>
                 <th style="text-align:center; padding:10px">Ações</th>
               </tr>
             </thead>
@@ -1915,14 +1917,13 @@
                 <th style="text-align:left; padding:10px">Parcela</th>
                 <th style="text-align:left; padding:10px">Cultura / Variedade</th>
                 <th style="text-align:left; padding:10px">Defensivo / Princípio</th>
-                <th style="text-align:center; padding:10px">Dosagem</th>
                 <th style="text-align:center; padding:10px">Carência (Dias)</th>
                 <th style="text-align:center; padding:10px">Horário</th>
                 <th style="text-align:center; padding:10px">Laudos</th>
               </tr>
             </thead>
             <tbody id="ccOpTableBody">
-              <tr><td colspan="8" style="text-align:center; padding:20px; color:var(--muted)">Carregando histórico de O.P...</td></tr>
+              <tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Carregando histórico de O.P...</td></tr>
             </tbody>
           </table>
         </div>
@@ -2644,10 +2645,11 @@
         <div>
           <label class="flabel">Dosagem (mL ou g)</label>
           <input type="number" step="0.1" id="posDosagem" placeholder="Ex: 150" style="width:100%"/>
+          <div id="posDosagemCalcInfo" style="font-size:11px; margin-top:3px"></div>
         </div>
         <div>
           <label class="flabel">Volume Água (L)</label>
-          <input type="number" step="0.1" id="posVolumeAgua" placeholder="Ex: 100" style="width:100%"/>
+          <input type="number" step="0.1" id="posVolumeAgua" placeholder="Ex: 100" style="width:100%" oninput="onPosDefensivoChange()"/>
         </div>
         <div>
           <label class="flabel">Nº Carroções / Lote</label>
@@ -3062,10 +3064,17 @@
           <div><label class="flabel">Telefone</label><input id="cfgTelefone" placeholder="Ex: (84) 99999-9999"/></div>
           <div><label class="flabel">Registro Certificação</label><input id="cfgRegistroGlobalgap" placeholder="Ex: TESCO / SEDEX"/></div>
         </div>
-        <div style="display:grid; grid-template-columns:1fr 2fr 1.5fr; gap:12px; margin-top:16px; padding-top:12px; border-top:1px solid var(--border)">
-          <div><label class="flabel">GGN (GlobalGAP Number)</label><input id="cfgGgnGeral" placeholder="Ex: 4056186000000"/></div>
-          <div><label class="flabel">Responsável Técnico (RT)</label><input id="cfgRtNome" placeholder="Ex: Maria de Souza"/></div>
-          <div><label class="flabel">Registro RT (CREA/UF)</label><input id="cfgRtCrea" placeholder="Ex: 21085-D/RN"/></div>
+        <div style="display:grid; grid-template-columns:1fr 2fr 1.5fr 1fr; gap:12px; margin-top:16px; padding-top:12px; border-top:1px solid var(--border)">
+          <div><label class="flabel">GGN Geral (GlobalGAP)</label><input id="cfgGgnGeral" placeholder="Ex: 4056186000000"/></div>
+          <div><label class="flabel">Resp. Técnico 1 (Agrônomo Principal)</label><input id="cfgRtNome" placeholder="Ex: Maria de Souza"/></div>
+          <div><label class="flabel">Registro RT 1 (CREA/UF)</label><input id="cfgRtCrea" placeholder="Ex: 21085-D/RN"/></div>
+          <div><label class="flabel">GGN Fazenda/Unidade</label><input id="cfgGgnFazendas" placeholder="Ex: GGN-01..."/></div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 2fr 1.5fr 1fr; gap:12px; margin-top:10px;">
+          <div><label class="flabel">Reg. Tesco Nature's Choice</label><input id="cfgRegistroTesco" placeholder="Ex: TN-98765"/></div>
+          <div><label class="flabel">Resp. Técnico 2 (Agrônomo Auxiliar)</label><input id="cfgRt2Nome" placeholder="Ex: Reinaldo Chotten"/></div>
+          <div><label class="flabel">Registro RT 2 (CREA/UF)</label><input id="cfgRt2Crea" placeholder="Ex: 12345-D/RN"/></div>
+          <div><label class="flabel">Reg. SEDEX/Social</label><input id="cfgRegistroSedex" placeholder="Ex: SDX-001"/></div>
         </div>
       </div>
       <div class="card">
@@ -7027,8 +7036,13 @@ async function loadSettings(){
   if ($('cfgTelefone')) $('cfgTelefone').value = data.telefone || '';
   if ($('cfgRegistroGlobalgap')) $('cfgRegistroGlobalgap').value = data.registro_globalgap || '';
   if ($('cfgGgnGeral')) $('cfgGgnGeral').value = data.ggn_geral || '';
+  if ($('cfgGgnFazendas')) $('cfgGgnFazendas').value = data.ggn_fazendas || '';
+  if ($('cfgRegistroTesco')) $('cfgRegistroTesco').value = data.registro_tesco || '';
+  if ($('cfgRegistroSedex')) $('cfgRegistroSedex').value = data.registro_sedex || '';
   if ($('cfgRtNome')) $('cfgRtNome').value = data.responsavel_tecnico_nome || '';
   if ($('cfgRtCrea')) $('cfgRtCrea').value = data.responsavel_tecnico_crea || '';
+  if ($('cfgRt2Nome')) $('cfgRt2Nome').value = data.responsavel_tecnico2_nome || '';
+  if ($('cfgRt2Crea')) $('cfgRt2Crea').value = data.responsavel_tecnico2_crea || '';
 
   // Logo Preview load
   if (data.logo_url) {
@@ -7148,8 +7162,13 @@ async function saveSettings(){
     telefone: $('cfgTelefone')?.value?.trim() || null,
     registro_globalgap: $('cfgRegistroGlobalgap')?.value?.trim() || null,
     ggn_geral: $('cfgGgnGeral')?.value?.trim() || null,
+    ggn_fazendas: $('cfgGgnFazendas')?.value?.trim() || null,
+    registro_tesco: $('cfgRegistroTesco')?.value?.trim() || null,
+    registro_sedex: $('cfgRegistroSedex')?.value?.trim() || null,
     responsavel_tecnico_nome: $('cfgRtNome')?.value?.trim() || null,
     responsavel_tecnico_crea: $('cfgRtCrea')?.value?.trim() || null,
+    responsavel_tecnico2_nome: $('cfgRt2Nome')?.value?.trim() || null,
+    responsavel_tecnico2_crea: $('cfgRt2Crea')?.value?.trim() || null,
   };
 
   try {
@@ -7534,12 +7553,18 @@ async function exportHarvestOrderPDF(sidOrIds) {
             .eq('id', sid)
             .single();
           if (ccData) {
+            let pCodeStr = ccData.parcela || ccData.parcel_code || '';
+            if (!pCodeStr && ccData.parcel_id) {
+              const ip = (_infoParcelas || []).find(x => x.id === ccData.parcel_id || x.parcel_id === ccData.parcel_id);
+              const pObj = (window._parcels || []).find(x => x.id === ccData.parcel_id);
+              pCodeStr = ip ? (ip.parcela2 || ip.parcela) : (pObj ? pObj.code : '');
+            }
             s = {
               id: ccData.id,
               date: ccData.data_colheita,
-              parcels: { code: ccData.parcela, p_code: '—' },
+              parcels: { code: pCodeStr || '—', p_code: '—' },
               variety_name: ccData.variedade || '—',
-              qty_carrocoes: 1,
+              qty_carrocoes: ccData.quantidade_carrocoes || 1,
               julian_lot: ccData.rastreabilidade_codigo,
               carrao_seq: ccData.id.substring(0, 8),
               shift: 'MANHA',
@@ -7664,7 +7689,13 @@ async function exportHarvestOrderPDF(sidOrIds) {
     doc.setFontSize(7); doc.setFont('helvetica', 'bold');
     doc.text('PARCELA:', mg + 2, y + 4);
     doc.setFontSize(14); doc.setFont('helvetica', 'normal');
-    doc.text(s.parcels?.code || '—', mg + 10, y + 11);
+    let parcDisplay = s.parcels?.code || s.parcela || s.parcel_code || '';
+    if (!parcDisplay && s.parcel_id) {
+      const ip = (_infoParcelas || []).find(x => x.id === s.parcel_id || x.parcel_id === s.parcel_id);
+      const pObj = (window._parcels || []).find(x => x.id === s.parcel_id);
+      parcDisplay = ip ? (ip.parcela2 || ip.parcela) : (pObj ? pObj.code : '');
+    }
+    doc.text(String(parcDisplay || '—'), mg + 10, y + 11);
     
     doc.setFontSize(7); doc.setFont('helvetica', 'normal');
     doc.text('Nº da UP:', mg + 132, y + 4);
@@ -10013,7 +10044,6 @@ function printPastaCampoCapa(id) {
   if (!item) { alert('Ciclo de parcela não encontrado.'); return; }
   
   const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa';
-  
   const variedadesList = item.variedade ? item.variedade.split(',').map(v => v.trim()).filter(v => v) : [];
   let variedadesHtml = variedadesList.map(v => `<div>${v.toUpperCase()}</div>`).join('');
   if (!variedadesHtml) variedadesHtml = '—';
@@ -10035,71 +10065,22 @@ function printPastaCampoCapa(id) {
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 8pt; line-height: 1.3; }
       .sheet { width: 100%; }
-      
       .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
       .hdr-table td { border: 1px solid #000; padding: 3px 5px; font-size: 7.5pt; vertical-align: middle; }
       .hdr-left { width: 50%; font-weight: bold; }
       .hdr-right { width: 50%; font-family: 'Times New Roman', serif; font-size: 7.5pt; }
-      
-      .main-title {
-        font-family: 'Comic Sans MS', 'Arial', sans-serif;
-        font-size: 13pt;
-        font-weight: bold;
-        text-align: center;
-        padding: 5px 0;
-        border: 2px solid #000;
-        margin-bottom: 8px;
-        background: #f3f4f6;
-      }
-      
-      .section-title {
-        font-size: 9pt;
-        font-weight: bold;
-        margin: 10px 0 3px 0;
-        padding-bottom: 1px;
-        border-bottom: 1px solid #000;
-        text-transform: uppercase;
-      }
-      
+      .main-title { font-family: 'Comic Sans MS', 'Arial', sans-serif; font-size: 13pt; font-weight: bold; text-align: center; padding: 5px 0; border: 2px solid #000; margin-bottom: 8px; background: #f3f4f6; }
+      .section-title { font-size: 9pt; font-weight: bold; margin: 10px 0 3px 0; padding-bottom: 1px; border-bottom: 1px solid #000; text-transform: uppercase; }
       .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
       .grid-table td { border: 1px solid #000; padding: 4px 6px; vertical-align: top; }
-      
-      .signatures-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-        margin-top: 10px;
-      }
-      .sig-box {
-        border: 1px solid #000;
-        padding: 6px;
-        font-size: 7.5pt;
-        background: #fafafa;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-      }
-      .sig-line {
-        margin-top: 15px;
-        border-top: 1px dashed #000;
-        text-align: center;
-        padding-top: 2px;
-        font-size: 7pt;
-      }
-      
-      .obs-box {
-        margin-top: 10px;
-        border: 1px solid #000;
-        padding: 6px;
-        font-size: 7.5pt;
-        line-height: 1.3;
-        background: #fff;
-      }
+      .signatures-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+      .sig-box { border: 1px solid #000; padding: 6px; font-size: 7.5pt; background: #fafafa; display: flex; flex-direction: column; justify-content: space-between; }
+      .sig-line { margin-top: 15px; border-top: 1px dashed #000; text-align: center; padding-top: 2px; font-size: 7pt; }
+      .obs-box { margin-top: 10px; border: 1px solid #000; padding: 6px; font-size: 7.5pt; line-height: 1.3; background: #fff; }
     </style>
   </head>
   <body onload="window.print()">
     <div class="sheet">
-      <!-- CABEÇALHO OFICIAL COM LOGO DO TENANT -->
       <div style="display:flex; justify-content:space-between; align-items:stretch; margin-bottom:12px; border:1px solid #000;">
         <div style="width:45%; padding:6px; display:flex; align-items:center; gap:12px; border-right:1px solid #000;">
           ${window.tenantConfig && window.tenantConfig.logo_url ? `<img src="${window.tenantConfig.logo_url}" style="max-height:48px; max-width:140px; object-fit:contain;"/>` : `<div style="width:40px; height:40px; background:#ddd; display:flex; align-items:center; justify-content:center; border-radius:4px; font-weight:bold; font-size:18px; color:#555;">🌱</div>`}
@@ -10108,18 +10089,10 @@ function printPastaCampoCapa(id) {
             <div style="font-size:6.5pt; color:#444; line-height:1.2;">
               ${window.tenantConfig && window.tenantConfig.endereco ? `${window.tenantConfig.endereco}<br/>` : ''}
               ${window.tenantConfig && window.tenantConfig.municipio ? `${window.tenantConfig.municipio}/${window.tenantConfig.uf || 'RN'}` : ''}
-              ${window.tenantConfig && window.tenantConfig.ggn_geral ? ` | GGN: ${window.tenantConfig.ggn_geral}` : ''}
             </div>
           </div>
         </div>
         <table class="hdr-table" style="width:55%; margin-bottom:0; border:none; table-layout:fixed;">
-          <tr>
-            <td class="hdr-left" style="border-top:none; border-left:none;">ELABORADO, EMITIDO e REVISADO: EMANUELA MOREIRA</td>
-            <td class="hdr-right" style="border-top:none; border-right:none;">DEPARTAMENTO: CAMPO</td>
-          </tr>
-          <tr>
-            <td class="hdr-left" style="border-left:none;">Avaliado por: ADGF</td>
-            <td class="hdr-right" style="border-right:none;">NOME DO DOC: REGISTRO DA CULTURA</td>
           </tr>
           <tr>
             <td class="hdr-left" style="border-left:none;">Aprovado Por: ADGF</td>
@@ -10273,9 +10246,12 @@ function printPastaCampoOrdemPulv(itemStr) {
     const pDate = new Date(ip.plantio + 'T12:00:00');
     const aDate = new Date(item.data_aplicacao + 'T12:00:00');
     const diffTime = Math.abs(aDate - pDate);
-    idadeDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + ' dias';
+    idadeDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
   
+  // Buscar itens da calda do próprio item serializado
+  const itemsCalda = item.caderno_campo_op_itens || [];
+
   // Separation between Defensivos e Adubos Foliares
   const defsOnly = itemsCalda.filter(i => {
     const t = (i.tipo_produto || '').toUpperCase();
@@ -10288,66 +10264,77 @@ function printPastaCampoOrdemPulv(itemStr) {
     return t === 'FOLIAR' || t.includes('FOLIAR') || a.includes('FOLIAR');
   });
 
-  // Preencher até 3 linhas de defensivos para manter estrutura limpa
+  // Preencher até 2 linhas de defensivos
   const filledProducts = [...defsOnly];
-  while (filledProducts.length < 3) {
+  while (filledProducts.length < 2) {
     filledProducts.push({
       produto_nome: '', alvo: '', dosagem_real: '', dosagem_corrigida: '', unidade: '', carencia_dias: ''
     });
   }
   
   const productsRowsHtml = filledProducts.map((p, idx) => {
-    // Buscar ingrediente ativo, grupo e toxicologia do cadastro se disponível
     let activeIng = '—';
     let toxicClass = '—';
     let concentration = '—';
-    let regMapa = '—';
+    let numPermitidoCiclo = '3';
+    let intervBula = '7';
+    let doseBulaText = '—';
     
     if (p.produto_nome) {
       const match = _defensivos.find(d => d.produto.toUpperCase() === p.produto_nome.toUpperCase());
       if (match) {
         activeIng = match.ingrediente_ativo || '—';
         toxicClass = match.classe_toxicologica || '—';
-        regMapa = match.registro_mapa || '—';
         concentration = match.concentracao_ia || '—';
+        numPermitidoCiclo = match.num_aplicacoes_ciclo || '3';
+        intervBula = match.intervalo_aplicacao_dias || '7';
+        doseBulaText = match.dose_texto || `${p.dosagem_corrigida || '—'} ${p.unidade || 'L'}`;
       }
     }
     
-    const doseReal = p.dosagem_real ? `${p.dosagem_real} ${p.unidade || 'L'}` : '';
-    const doseCorr = p.dosagem_corrigida ? `${p.dosagem_corrigida} ${p.unidade || 'L'}` : '';
-    const carencia = p.carencia_dias !== '' && p.carencia_dias !== undefined ? `${p.carencia_dias} dias` : '';
+    const doseRealVal = parseFloat(p.dosagem_real) || 0;
+    const doseRealStr = doseRealVal ? `${p.dosagem_real} ${p.unidade || 'L'}` : '—';
+    const areaHa = parseFloat(item.area_ha) || 3.0;
+    const doseAreaStr = (doseRealVal > 0 && areaHa > 0) ? `${(doseRealVal / areaHa).toFixed(3)} ${p.unidade || 'L'}/ha` : '—';
+    const carenciaStr = p.carencia_dias !== '' && p.carencia_dias !== undefined ? `${p.carencia_dias} dias` : '—';
     
-    // Calcular data limite carência
-    let dataCarStr = '';
+    const numAplicRealizadas = p.produto_nome ? countOpAplicacoesCiclo(item.parcela, p.produto_nome) : '—';
+    
+    let dataCarStr = '—';
     if (item.data_aplicacao && p.carencia_dias) {
       const appDate = new Date(item.data_aplicacao + 'T12:00:00');
       appDate.setDate(appDate.getDate() + parseInt(p.carencia_dias));
       dataCarStr = appDate.toLocaleDateString('pt-BR');
     }
     
+    if (!p.produto_nome) {
+      return `
+        <tr style="height: 22px;">
+          <td class="cell-center">${idx + 1}</td>
+          <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>
+      `;
+    }
+    
     return `
       <tr>
-        <td style="font-size: 7.5pt; font-weight: bold;">${p.produto_nome || ''}</td>
-        <td style="font-size: 7.5pt;">${activeIng}</td>
-        <td class="cell-center" style="font-size: 7pt;">${concentration}</td>
-        <td class="cell-center" style="font-size: 7pt;">${p.unidade || ''}</td>
-        <td class="cell-center" style="font-weight: bold;">${carencia}</td>
-        <td style="font-size: 7.5pt;">${p.alvo || ''}</td>
-        <td class="cell-center">—</td>
-        <td class="cell-center">${p.produto_nome ? '1' : ''}</td>
-        <td class="cell-center">—</td>
-        <td class="cell-center">—</td>
-        <td class="cell-center" style="font-size: 7.5pt;">${doseCorr}</td>
-        <td class="cell-center" style="font-size: 7.5pt;">${doseReal}</td>
-        <td class="cell-center">—</td>
-        <td class="cell-center">${item.volume_calda || '—'} L</td>
-        <td class="cell-center">${item.volume_calda || '—'} L/ha</td>
-        <td class="cell-center">Barra</td>
-        <td class="cell-center">5 km/h</td>
-        <td class="cell-center" style="font-weight: bold;">${dataCarStr}</td>
+        <td class="cell-center" style="font-weight: bold;">${idx + 1}</td>
+        <td style="font-size: 7pt; font-weight: bold;">${p.produto_nome}</td>
+        <td style="font-size: 7pt;">${activeIng}</td>
+        <td class="cell-center" style="font-size: 6.5pt;">${concentration}</td>
+        <td class="cell-center" style="font-size: 6.5pt;">${doseBulaText}</td>
+        <td class="cell-center" style="font-weight: bold; font-size: 7pt;">${doseRealStr}</td>
+        <td class="cell-center" style="font-size: 6.5pt;">${doseAreaStr}</td>
+        <td style="font-size: 7pt;">${p.alvo || '—'}</td>
+        <td class="cell-center">${numPermitidoCiclo}</td>
+        <td class="cell-center">${numAplicRealizadas}</td>
+        <td class="cell-center">${intervBula}</td>
+        <td class="cell-center">0</td>
+        <td class="cell-center" style="font-weight: bold;">${carenciaStr}</td>
+        <td class="cell-center" style="font-weight: bold; color: #dc2626;">${dataCarStr}</td>
         <td class="cell-center">1 dia</td>
         <td class="cell-center">${toxicClass}</td>
-        <td class="cell-center">Depósito</td>
+        <td class="cell-center" style="font-size: 6.5pt;">Depósito</td>
       </tr>
     `;
   }).join('');
@@ -10375,6 +10362,8 @@ function printPastaCampoOrdemPulv(itemStr) {
   const isEnsolarado = (parseFloat(item.temperatura_c) > 22 && !(item.observacoes || '').toUpperCase().includes('CHUVA')) ? 'x' : '';
   const isNublado = (item.observacoes || '').toUpperCase().includes('NUBLADO') ? 'x' : '';
   const isChovendo = (item.observacoes || '').toUpperCase().includes('CHUVA') ? 'x' : '';
+  const isNoite = (item.observacoes || '').toUpperCase().includes('NOITE') ? 'x' : '';
+  const isVento = (item.observacoes || '').toUpperCase().includes('VENTO') ? 'x' : '';
 
   const printWin = window.open('', '_blank', 'width=1400,height=900');
   if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
@@ -10384,85 +10373,108 @@ function printPastaCampoOrdemPulv(itemStr) {
   <html>
   <head>
     <meta charset="utf-8"/>
-    <title>OC02 — Ordem de Pulverização</title>
+    <title>OC02 — Ordem de Autorização de Aplicação Fitossanitária</title>
     <style>
-      @page { size: A4 landscape; margin: 4mm 6mm; }
+      @page { size: A4 landscape; margin: 5mm 6mm; }
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 7.5pt; line-height: 1.3; }
+      body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 7pt; line-height: 1.25; }
       .sheet { width: 100%; }
       
       .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-      .hdr-table td { border: 1px solid #000; padding: 2px 4px; font-size: 7.5pt; vertical-align: middle; }
+      .hdr-table td { border: 1px solid #000; padding: 2px 4px; font-size: 6.5pt; vertical-align: middle; }
       .hdr-left { width: 45%; font-weight: bold; }
-      .hdr-right { width: 55%; font-family: 'Times New Roman', serif; font-size: 7pt; }
+      .hdr-right { width: 55%; font-family: 'Times New Roman', serif; font-size: 6.5pt; }
       
       .main-title {
-        font-family: 'Comic Sans MS', 'Arial', sans-serif;
+        color: #dc2626;
         font-size: 11pt;
         font-weight: bold;
         text-align: center;
-        padding: 4px 0;
-        margin-bottom: 4px;
-        letter-spacing: 0.2px;
+        padding: 3px 0;
+        margin: 4px 0;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
       }
       
-      .info-grid { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-      .info-grid td { border: 1px solid #000; padding: 3px 5px; vertical-align: middle; font-size: 7.5pt; }
+      .info-grid { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 7.5pt; }
+      .info-grid td { border: 1px solid #000; padding: 3px 5px; vertical-align: middle; }
       
+      .sec-title {
+        background: #f3f4f6;
+        font-weight: bold;
+        font-size: 7.5pt;
+        padding: 3px 5px;
+        border: 1px solid #000;
+        border-bottom: none;
+        text-transform: uppercase;
+      }
+
       .doc-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-      .doc-table th, .doc-table td { border: 1px solid #000; padding: 2px 3px; font-size: 7pt; vertical-align: middle; }
-      .doc-table th { background: #eef2f7; text-align: center; font-weight: bold; font-size: 7pt; }
+      .doc-table th, .doc-table td { border: 1px solid #000; padding: 2px 3px; font-size: 6.5pt; vertical-align: middle; }
+      .doc-table th { background: #f9fafb; text-align: center; font-weight: bold; }
       .cell-center { text-align: center; }
       
-      .epi-section { display: flex; justify-content: space-between; border: 1px solid #000; padding: 4px 8px; margin-bottom: 4px; font-weight: bold; font-size: 7.5pt; }
+      .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 7pt; }
+      .grid-table td { border: 1px solid #000; padding: 3px 5px; }
+
+      .footer-notes { font-size: 5.8pt; line-height: 1.2; color: #111; border: 1px solid #000; padding: 4px 6px; margin-top: 4px; }
       
-      .clim-section { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-      .clim-section td { border: 1px solid #000; padding: 3px; font-size: 7.5pt; }
-      
-      .footer-notes { font-size: 6.5pt; line-height: 1.25; margin-top: 4px; color: #111; }
-      .footer-notes ol { padding-left: 12px; }
-      
-      .signatures-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
-      .signatures-table td { border: 1px solid #000; padding: 4px 8px; font-size: 7.5pt; width: 33.33%; }
-      .sig-line { border-top: 1px dashed #000; margin-top: 16px; text-align: center; padding-top: 2px; }
+      .signatures-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+      .signatures-table td { border: 1px solid #000; padding: 4px 6px; font-size: 7pt; width: 33.33%; vertical-align: top; }
+      .sig-line { border-top: 1px dashed #000; margin-top: 14px; text-align: center; padding-top: 2px; font-size: 6.5pt; }
     </style>
   </head>
   <body onload="window.print()">
     <div class="sheet">
       <!-- CABEÇALHO OFICIAL COM LOGO DO TENANT -->
-      <div style="display:flex; justify-content:space-between; align-items:stretch; margin-bottom:6px; border:1px solid #000;">
-        <div style="width:45%; padding:6px; display:flex; align-items:center; gap:12px; border-right:1px solid #000;">
-          ${window.tenantConfig && window.tenantConfig.logo_url ? `<img src="${window.tenantConfig.logo_url}" style="max-height:48px; max-width:140px; object-fit:contain;"/>` : `<div style="width:40px; height:40px; background:#ddd; display:flex; align-items:center; justify-content:center; border-radius:4px; font-weight:bold; font-size:18px; color:#555;">🌱</div>`}
-          <div>
-            <div style="font-size:10pt; font-weight:bold; color:#1b4332; text-transform:uppercase;">${(window.tenantConfig && window.tenantConfig.name || 'BOM JESUS AGRÍCOLA').toUpperCase()}</div>
-            <div style="font-size:6.5pt; color:#444; line-height:1.2;">
-              ${window.tenantConfig && window.tenantConfig.endereco ? `${window.tenantConfig.endereco}<br/>` : ''}
-              ${window.tenantConfig && window.tenantConfig.municipio ? `${window.tenantConfig.municipio}/${window.tenantConfig.uf || 'RN'}` : ''} 
-              ${window.tenantConfig && window.tenantConfig.ggn_geral ? ` | GGN: ${window.tenantConfig.ggn_geral}` : ''}
+      <table class="hdr-table">
+        <tr>
+          <td style="width: 45%; border-right: 1px solid #000; padding: 4px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              ${window.tenantConfig && window.tenantConfig.logo_url ? `<img src="${window.tenantConfig.logo_url}" style="max-height:40px; max-width:120px; object-fit:contain;"/>` : `<span style="font-weight:bold; font-size:14px; color:#166534;">🌱</span>`}
+              <div>
+                <div style="font-size:9pt; font-weight:bold; text-transform:uppercase;">${(window.tenantConfig && window.tenantConfig.name || 'BOM JESUS AGRÍCOLA').toUpperCase()}</div>
+                <div style="font-size:6pt; color:#444;">
+                  ${window.tenantConfig && window.tenantConfig.endereco ? `${window.tenantConfig.endereco}<br/>` : ''}
+                  ${window.tenantConfig && window.tenantConfig.municipio ? `${window.tenantConfig.municipio}/${window.tenantConfig.uf || 'RN'}` : ''}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <table class="hdr-table" style="width:55%; margin-bottom:0; border:none; table-layout:fixed;">
-          <tr>
-            <td class="hdr-left" style="border-top:none; border-left:none;">ELABORADO, EMITIDO E REVISADO: EMANUELA MOREIRA</td>
-            <td class="hdr-right" style="border-top:none; border-right:none;">DEPARTAMENTO: CAMPO</td>
-          </tr>
-          <tr>
-            <td class="hdr-left" style="border-left:none;">AVALIADO POR: ADGF</td>
-            <td class="hdr-right" style="border-right:none;">NOME DO DOC: AUTORIZAÇÃO DE PULVERIZAÇÃO</td>
-          </tr>
-          <tr>
-            <td class="hdr-left" style="border-left:none;">APROVADO POR: ADGF</td>
-            <td class="hdr-right" style="border-right:none; font-size:6pt;">DATA EMISSÃO: 15/06/2026 &nbsp;&nbsp; MOD/APROV: 01/07/2026</td>
-          </tr>
-          <tr>
-            <td class="hdr-left" style="border-left:none; border-bottom:none;">FREQUENCIA: POR APLICAÇÃO</td>
-            <td class="hdr-right" style="border-right:none; border-bottom:none; font-size:6pt;">PAG: 01/01 &nbsp;&nbsp; COD: OC02 &nbsp;&nbsp; REV: ANUAL &nbsp;&nbsp; VERSÃO: 01</td>
-          </tr>
-        </table>
-      </div>
+          </td>
+          <td style="width: 55%; padding: 0;">
+            <table style="width:100%; border-collapse:collapse;">
+              <tr>
+                <td style="border-bottom:1px solid #000; border-right:1px solid #000; font-weight:bold;">DEPARTAMENTO: CAMPO</td>
+                <td style="border-bottom:1px solid #000; font-size:6pt;">NOME DO DOC: ORDEM DE AUTORIZAÇÃO DE APLICAÇÃO DE PRODUTOS FITOSSANITÁRIOS - CAMPO</td>
+              </tr>
+              <tr>
+                <td style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:6pt;">DATA EMISSÃO: 15/06/2026</td>
+                <td style="border-bottom:1px solid #000; font-size:6pt;">MOD. E APROVAÇÃO: 01/07/2026 &nbsp;&nbsp; U. REVISÃO: 01/07/2026</td>
+              </tr>
+              <tr>
+                <td style="border-right:1px solid #000; font-size:6pt;">PAG: 01 DE 01</td>
+                <td style="font-size:6pt;">COD: OC02 &nbsp;&nbsp;&nbsp; REVISÃO: ANUAL &nbsp;&nbsp;&nbsp; VERSÃO: 01</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
       
-      <div class="main-title">ORDEM DE AUTORIZAÇÃO DE APLICAÇÃO DE PRODUTOS FITOSSANITÁRIOS - CAMPO</div>
+      <!-- GRID DE INFORMAÇÕES DA ÁREA -->
+      <table class="info-grid">
+        <tr>
+          <td style="width: 25%;"><strong>PARCELA:</strong> <span style="font-size:10pt; font-weight:bold">${item.parcela}</span></td>
+          <td style="width: 15%;"><strong>IDADE:</strong> ${idadeDias} dias</td>
+          <td style="width: 20%;"><strong>TAMANHO DA ÁREA:</strong> ${item.area_ha || '3,00'} ha</td>
+          <td style="width: 20%;"><strong>CULTURA:</strong> ${(item.cultura || 'Melão').toUpperCase()}</td>
+          <td style="width: 20%;"><strong>TRANSPLANTIO:</strong> ${dataPlantioStr}</td>
+        </tr>
+        <tr>
+          <td colspan="2"><strong>VARIEDADE:</strong> ${item.variedade || '—'}</td>
+          <td><strong>PREVISÃO DE COLHEITA:</strong> ${prevColheitaStr}</td>
+          <td colspan="2"><strong>DATA DE APLICAÇÃO:</strong> <span style="font-size:9.5pt; font-weight:bold">${formattedDate}</span></td>
+        </tr>
+      </table>
       
       <!-- GRID DE INFORMAÇÕES DA ÁREA -->
       <table class="info-grid">
@@ -11964,8 +11976,10 @@ function renderInfoParcelasTable(list) {
           <small style="color:var(--muted)">Lote: ${item.lote || '—'}</small>
         </td>
         <td style="padding:10px 8px; text-align:right; white-space:nowrap">
-          <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoCapa('${item.id}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Capa</button>
-          <button class="sec" style="padding:3px 8px; margin-right:4px" onclick="openInfoParcelaModal('${item.id}')">✏️</button>
+          <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoCapa('${item.id}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Capa (PC01)</button>
+          <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoSementes('${item.id}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Sementes (PC03)</button>
+          <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoTratos('${item.id}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Tratos (PC05)</button>
+          <button class="sec" style="padding:3px 8px; margin-right:3px" onclick="openInfoParcelaModal('${item.id}')">✏️</button>
           <button class="danger" style="padding:3px 8px" onclick="deleteInfoParcela('${item.id}')">×</button>
         </td>
       </tr>
@@ -12512,8 +12526,10 @@ function renderWebPlantiosTable(data) {
           }
         </td>
         <td style="padding:12px; text-align:center; white-space:nowrap">
-          <button onclick="printPastaCampoCapa('${p.id}')" class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:12px; height:12px"></i> Capa</button>
-          <button onclick="openWebPlantioModal('${p.id}')" class="sec" style="padding:4px 8px; font-size:11px; margin-right:4px; display:inline-flex; align-items:center; gap:4px" title="Editar"><i data-lucide="edit-3" style="width:13px;height:13px"></i> Editar</button>
+          <button onclick="printPastaCampoCapa('${p.id}')" class="btn on" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:12px; height:12px"></i> Capa (PC01)</button>
+          <button onclick="printPastaCampoSementes('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:12px; height:12px"></i> Sementes (PC03)</button>
+          <button onclick="printPastaCampoTratos('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:12px; height:12px"></i> Tratos (PC05)</button>
+          <button onclick="openWebPlantioModal('${p.id}')" class="sec" style="padding:4px 8px; font-size:11px; margin-right:3px; display:inline-flex; align-items:center; gap:4px" title="Editar"><i data-lucide="edit-3" style="width:13px;height:13px"></i> Editar</button>
           <button onclick="deleteWebPlantio('${p.id}')" class="danger" style="padding:4px 8px; font-size:11px; display:inline-flex; align-items:center; gap:4px; background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:var(--red); border-radius:6px; cursor:pointer" title="Excluir Definitivamente"><i data-lucide="trash-2" style="width:13px;height:13px"></i> Excluir</button>
         </td>
       </tr>
@@ -13174,6 +13190,192 @@ function printPastaCampoMip(itemStr) {
   printWin.document.close();
 }
 
+// ═══════════════════════════════════════════════════════
+// MIP — AMOSTRAGEM FITOSSANITÁRIA COM 12 ALVOS FIXOS
+// ═══════════════════════════════════════════════════════
+
+const MIP_PESTS = [
+  { key: 'pulgao', name: 'Pulgão (Aphis gossypii)', limiar: 1.0, unit: '1/10cm' },
+  { key: 'mosca_branca', name: 'Mosca Branca (Bemisia tabaci)', limiar: 1.0, unit: '1 adult/pl' },
+  { key: 'acaro_rajado', name: 'Ácaro-rajado (Tetranychus urticae)', limiar: 1.0, unit: '1/folha' },
+  { key: 'mosca_minadora', name: 'Mosca Minadora (Liriomyza sp.)', limiar: 1.0, unit: '1 gal/folha' },
+  { key: 'lagarta_rosca', name: 'Lagarta Rosca / Curuquerê', limiar: 0.2, unit: '0.2/pl' },
+  { key: 'oidio', name: 'Oídio (Podosphaera sp.)', limiar: 0.0, unit: 'Presença' },
+  { key: 'mildio', name: 'Míldio (Pseudoperonospora)', limiar: 0.0, unit: 'Presença' },
+  { key: 'fusarium', name: 'Fusarium / Podridão Radicular', limiar: 0.0, unit: 'Presença' },
+  { key: 'viroses', name: 'Viroses', limiar: 0.0, unit: 'Presença' },
+  { key: 'nematoides', name: 'Nematoides', limiar: 100.0, unit: '100/200cc' },
+  { key: 'tripes', name: 'Tripes (Frankliniella sp.)', limiar: 1.0, unit: '1/flor' },
+  { key: 'outras_pragas', name: 'Outras Pragas / Obs. Geral', limiar: 1.0, unit: 'Obs' }
+];
+
+function openNewMipModal() {
+  const modal = $('newMipModal');
+  if (!modal) return;
+
+  const parcelSel = $('newMipParcelSelect');
+  if (parcelSel) {
+    parcelSel.innerHTML = '<option value="">-- Selecione a Parcela --</option>' +
+      (_infoParcelas || []).map(p => `<option value="${p.id}">${p.parcela2 || p.parcela} (${p.variedade || 'Sem var'})</option>`).join('');
+  }
+
+  $('newMipDate').value = today();
+  $('newMipPragueiro').value = '';
+  $('newMipTecnico').value = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || '';
+  if ($('newMipObs')) $('newMipObs').value = '';
+
+  renderNewMipTableRows();
+  modal.style.display = 'flex';
+}
+
+function closeNewMipModal() {
+  const modal = $('newMipModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function renderNewMipTableRows() {
+  const tbody = $('newMipTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = MIP_PESTS.map(p => {
+    let pInputs = '';
+    for (let i = 1; i <= 10; i++) {
+      pInputs += `<td style="padding:2px"><input type="number" step="0.1" min="0" id="mip_${p.key}_p${i}" value="0" oninput="calcMipRow('${p.key}')" style="width:42px; text-align:center; padding:3px 2px; font-size:11px; border-radius:4px; border:1px solid var(--border); background:rgba(255,255,255,0.05); color:var(--text)"/></td>`;
+    }
+    const limiarText = p.limiar === 0 ? 'Presença' : `> ${p.limiar}`;
+    return `
+      <tr id="mip_row_${p.key}" style="border-bottom:1px solid var(--border); height:34px">
+        <td style="text-align:left; padding:6px 12px; font-weight:600">${p.name}</td>
+        <td style="color:var(--muted); font-size:11px">${limiarText}</td>
+        ${pInputs}
+        <td style="font-weight:700; font-size:12px" id="mip_media_${p.key}">0.00</td>
+        <td><span class="badge" id="mip_status_${p.key}" style="background:rgba(16, 185, 129, 0.15); color:var(--green); font-size:10px">Sob Controle</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function calcMipRow(key) {
+  const pest = MIP_PESTS.find(p => p.key === key);
+  if (!pest) return;
+  let sum = 0;
+  for (let i = 1; i <= 10; i++) {
+    const inp = $(`mip_${key}_p${i}`);
+    const val = parseFloat(inp?.value) || 0;
+    sum += val;
+    if (inp) {
+      if (val > (pest.limiar > 0 ? pest.limiar : 0)) {
+        inp.style.background = 'rgba(239, 68, 68, 0.3)';
+        inp.style.color = '#ff8888';
+        inp.style.fontWeight = 'bold';
+      } else if (val > 0) {
+        inp.style.background = 'rgba(245, 158, 11, 0.25)';
+        inp.style.color = '#fbbf24';
+        inp.style.fontWeight = 'bold';
+      } else {
+        inp.style.background = 'rgba(255,255,255,0.05)';
+        inp.style.color = 'var(--text)';
+        inp.style.fontWeight = 'normal';
+      }
+    }
+  }
+  const media = sum / 10;
+  const mediaEl = $(`mip_media_${key}`);
+  const statusEl = $(`mip_status_${key}`);
+  const trEl = $(`mip_row_${key}`);
+
+  if (mediaEl) mediaEl.textContent = media.toFixed(2);
+
+  const acima = media > pest.limiar;
+  if (statusEl) {
+    statusEl.textContent = acima ? 'Recomenda Controle' : 'Sob Controle';
+    statusEl.style.background = acima ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.15)';
+    statusEl.style.color = acima ? 'var(--red)' : 'var(--green)';
+    statusEl.style.fontWeight = '700';
+  }
+  if (trEl) {
+    trEl.style.background = acima ? 'rgba(239, 68, 68, 0.12)' : '';
+  }
+}
+
+function clearMipFormInputs() {
+  MIP_PESTS.forEach(p => {
+    for (let i = 1; i <= 10; i++) {
+      const inp = $(`mip_${p.key}_p${i}`);
+      if (inp) inp.value = 0;
+    }
+    calcMipRow(p.key);
+  });
+}
+
+async function saveNewMipDashboard() {
+  const pId = $('newMipParcelSelect')?.value;
+  if (!pId) { alert('Selecione a parcela!'); return; }
+
+  const ip = _infoParcelas.find(x => x.id === pId);
+  const parcelCode = ip ? (ip.parcela2 || ip.parcela) : '';
+  const dateVal = $('newMipDate')?.value || today();
+  const pragueiroVal = $('newMipPragueiro')?.value?.trim() || '';
+  const tecnicoVal = $('newMipTecnico')?.value?.trim() || '';
+
+  const pragasData = {};
+  let maxMedia = 0;
+  const excedentes = [];
+
+  MIP_PESTS.forEach(p => {
+    let sum = 0;
+    const pontos = [];
+    for (let i = 1; i <= 10; i++) {
+      const val = parseFloat($(`mip_${p.key}_p${i}`)?.value) || 0;
+      pontos.push(val);
+      sum += val;
+    }
+    const media = sum / 10;
+    if (media > maxMedia) maxMedia = media;
+    const acima = media > p.limiar;
+    if (acima) {
+      excedentes.push(p.name.split('(')[0].trim());
+    }
+
+    pragasData[p.key] = {
+      name: p.name,
+      limiar: p.limiar,
+      pontos: pontos,
+      media: parseFloat(media.toFixed(2)),
+      acima_limiar: acima
+    };
+  });
+
+  let summaryPraga = 'Vistoria MIP Completa (Sob Controle)';
+  if (excedentes.length > 0) {
+    summaryPraga = `MIP Excedente: ${excedentes.join(', ')}`;
+  }
+
+  const record = {
+    tenant_id: tenantId,
+    parcela: parcelCode,
+    variedade: ip ? (ip.variedade || '') : '',
+    data_vistoria: dateVal,
+    praga: summaryPraga,
+    media: parseFloat(maxMedia.toFixed(2)),
+    responsavel_mip: pragueiroVal,
+    tecnico: tecnicoVal || (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS',
+    pragas_json: pragasData,
+    observacoes: $('newMipObs')?.value?.trim() || ''
+  };
+
+  try {
+    const { error } = await sb.from('caderno_campo_mip').insert(record);
+    if (error) throw error;
+    toast('✓ Vistoria MIP registrada com sucesso! 🐛', 'ok');
+    closeNewMipModal();
+    await loadMipTable();
+  } catch(e) {
+    console.error(e);
+    alert('Erro ao salvar vistoria MIP: ' + (e.message || 'Verifique sua conexão.'));
+  }
+}
+
 function renderCcMipTable(list) {
   const tbody = $('ccMipTableBody');
   if (!tbody) return;
@@ -13182,33 +13384,57 @@ function renderCcMipTable(list) {
     return;
   }
   tbody.innerHTML = list.map(item => {
-    let limiar = 1.0;
-    const pragaRaw = (item.praga || '').toUpperCase();
-    if (pragaRaw.includes('LAGARTA')) limiar = 0.2;
-    if (pragaRaw.includes('OÍDIO') || pragaRaw.includes('MÍLDIO')) limiar = 0.0;
-    
-    const mediaVal = parseFloat(item.media) || 0;
-    const acimaLimiar = mediaVal > limiar;
-    
-    const statusText = acimaLimiar ? 'Recomenda-se Controle' : 'Sob Controle';
-    const statusColor = acimaLimiar ? 'rgba(239, 68, 68, 0.1); color: var(--red)' : 'rgba(16, 185, 129, 0.1); color: var(--green)';
-    
     const formattedDate = item.data_vistoria ? item.data_vistoria.split('-').reverse().join('/') : '—';
-    const pragaFriendly = (item.praga || 'Geral').replace(/_/g, ' ');
     const itemStr = encodeURIComponent(JSON.stringify(item));
     
+    let pragasBadges = '';
+    let statusText = 'Sob Controle';
+    let statusColor = 'rgba(16, 185, 129, 0.15); color: var(--green)';
+
+    if (item.pragas_json && typeof item.pragas_json === 'object') {
+      const pragasObj = item.pragas_json;
+      const excedentes = [];
+      Object.keys(pragasObj).forEach(k => {
+        const info = pragasObj[k];
+        if (info && info.acima_limiar) {
+          excedentes.push(info.name ? info.name.split('(')[0].trim() : k);
+        }
+      });
+      if (excedentes.length > 0) {
+        statusText = 'Recomenda Controle';
+        statusColor = 'rgba(239, 68, 68, 0.15); color: var(--red)';
+        pragasBadges = excedentes.map(e => `<span class="badge" style="background:rgba(239,68,68,0.2); color:var(--red); font-size:10px; margin-right:3px">${e}</span>`).join('');
+      } else {
+        pragasBadges = '<span style="color:var(--muted); font-size:11px">Todas sob controle</span>';
+      }
+    } else {
+      // Regra legada
+      const pragaRaw = (item.praga || 'Geral').replace(/_/g, ' ');
+      const mediaVal = parseFloat(item.media) || 0;
+      let limiar = 1.0;
+      if (pragaRaw.toUpperCase().includes('LAGARTA')) limiar = 0.2;
+      if (pragaRaw.toUpperCase().includes('OÍDIO') || pragaRaw.toUpperCase().includes('MÍLDIO')) limiar = 0.0;
+      if (mediaVal > limiar) {
+        statusText = 'Recomenda Controle';
+        statusColor = 'rgba(239, 68, 68, 0.15); color: var(--red)';
+        pragasBadges = `<span class="badge" style="background:rgba(239,68,68,0.2); color:var(--red); font-size:10px">${pragaRaw} (${mediaVal.toFixed(2)})</span>`;
+      } else {
+        pragasBadges = `<span style="color:var(--muted); font-size:11px">${pragaRaw} (${mediaVal.toFixed(2)})</span>`;
+      }
+    }
+
     return `
       <tr style="border-bottom:1px solid var(--border); font-size:13px">
-        <td style="padding:12px 10px">${formattedDate}</td>
-        <td style="padding:12px 10px; font-weight:600">${item.parcela || '—'}</td>
+        <td style="padding:12px 10px; font-weight:700">${formattedDate}</td>
+        <td style="padding:12px 10px; font-weight:800; color:var(--green)">${item.parcela || '—'}</td>
         <td style="padding:12px 10px">${item.variedade || '—'}</td>
-        <td style="padding:12px 10px; font-weight:500">${pragaFriendly}</td>
-        <td style="padding:12px 10px; text-align:center; font-weight:700">${mediaVal.toFixed(2)}</td>
+        <td style="padding:12px 10px">${pragasBadges}</td>
+        <td style="padding:12px 10px; font-size:11px; color:var(--muted)">${item.responsavel_mip || item.tecnico || '—'}</td>
         <td style="padding:12px 10px; text-align:center">
           <span class="badge" style="background:${statusColor}; font-size:11px">${statusText}</span>
         </td>
         <td style="padding:12px 10px; text-align:center; white-space:nowrap">
-          <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoMip('${itemStr}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Relatório MIP</button>
+          <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoMip('${itemStr}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Ficha MIP</button>
           <button class="danger" style="padding:4px 8px; font-size:11px" onclick="deleteMipRecord('${item.id}')">Excluir</button>
         </td>
       </tr>
@@ -13217,11 +13443,161 @@ function renderCcMipTable(list) {
   if (window.lucide) lucide.createIcons();
 }
 
+function printPastaCampoMip(itemStr) {
+  const item = typeof itemStr === 'string' ? JSON.parse(decodeURIComponent(itemStr)) : itemStr;
+  const formattedDate = item.data_vistoria ? item.data_vistoria.split('-').reverse().join('/') : '—';
+  
+  const printWin = window.open('', '_blank', 'width=950,height=1200');
+  if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
+
+  const ip = (_infoParcelas || []).find(x => x.parcela2 === item.parcela || x.parcela === item.parcela);
+  const culturaStr = ip ? (ip.cultura || 'MELÃO').toUpperCase() : 'MELÃO';
+  const areaStr = ip && ip.area ? `${ip.area} ha` : '—';
+
+  let tableRowsHtml = '';
+
+  if (item.pragas_json && typeof item.pragas_json === 'object') {
+    tableRowsHtml = Object.keys(item.pragas_json).map(k => {
+      const pData = item.pragas_json[k];
+      const name = pData.name || k;
+      const limiar = pData.limiar ?? 1.0;
+      const media = pData.media ?? 0;
+      const acima = pData.acima_limiar || media > limiar;
+      const pts = pData.pontos || [0,0,0,0,0,0,0,0,0,0];
+
+      const rowBg = acima ? '#fee2e2' : '#ffffff';
+      const statusBg = acima ? '#ef4444' : '#10b981';
+      const statusTxt = acima ? 'RECOMENDA CONTROLE' : 'SOB CONTROLE';
+
+      const ptsTd = pts.map(v => {
+        const pVal = parseFloat(v) || 0;
+        const style = pVal > (limiar > 0 ? limiar : 0) ? 'background:#fca5a5; font-weight:bold;' : (pVal > 0 ? 'background:#fef3c7;' : '');
+        return `<td style="border:1px solid #000; text-align:center; ${style}">${pVal}</td>`;
+      }).join('');
+
+      return `
+        <tr style="background:${rowBg}">
+          <td style="border:1px solid #000; padding:4px 6px; font-weight:bold; text-align:left">${name}</td>
+          <td style="border:1px solid #000; text-align:center">${limiar === 0 ? 'Presença' : '> ' + limiar}</td>
+          ${ptsTd}
+          <td style="border:1px solid #000; text-align:center; font-weight:bold; font-size:9pt">${media.toFixed(2)}</td>
+          <td style="border:1px solid #000; text-align:center; background:${statusBg}; color:#fff; font-weight:bold; font-size:7pt">${statusTxt}</td>
+        </tr>
+      `;
+    }).join('');
+  } else {
+    // Fallback legado
+    const pragaFriendly = (item.praga || '').replace(/_/g, ' ').toUpperCase();
+    const mediaVal = parseFloat(item.media) || 0;
+    tableRowsHtml = `
+      <tr>
+        <td style="border:1px solid #000; padding:6px; font-weight:bold">${pragaFriendly}</td>
+        <td style="border:1px solid #000; text-align:center">1.0</td>
+        <td colspan="10" style="border:1px solid #000; text-align:center">Consolidado da Amostragem</td>
+        <td style="border:1px solid #000; text-align:center; font-weight:bold">${mediaVal.toFixed(2)}</td>
+        <td style="border:1px solid #000; text-align:center">${mediaVal > 1 ? 'RECOMENDA CONTROLE' : 'SOB CONTROLE'}</td>
+      </tr>
+    `;
+  }
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>MIP — Ficha de Amostragem Fitossanitária</title>
+    <style>
+      @page { size: A4 portrait; margin: 8mm 10mm; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 8pt; line-height: 1.3; }
+      .sheet { width: 100%; }
+      .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+      .hdr-table td { border: 1px solid #000; padding: 3px 5px; font-size: 7.5pt; vertical-align: middle; }
+      .hdr-left { width: 50%; font-weight: bold; }
+      .hdr-right { width: 50%; font-family: 'Times New Roman', serif; font-size: 7.5pt; }
+      .main-title { font-size: 11pt; font-weight: bold; text-align: center; padding: 4px 0; border: 2px solid #000; margin-bottom: 8px; background: #f3f4f6; text-transform: uppercase; }
+      .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 8pt; }
+      .grid-table td { border: 1px solid #000; padding: 4px 6px; vertical-align: top; }
+      .signatures-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+      .sig-box { border: 1px solid #000; padding: 6px; font-size: 7.5pt; background: #fafafa; display: flex; flex-direction: column; justify-content: space-between; }
+      .sig-line { margin-top: 18px; border-top: 1px dashed #000; text-align: center; padding-top: 2px; font-size: 7pt; }
+    </style>
+  </head>
+  <body onload="window.print()">
+    <div class="sheet">
+      <table class="hdr-table">
+        <tr>
+          <td class="hdr-left">EMPRESA: ${(window.tenantConfig && window.tenantConfig.name || 'PRODTEC AGRO').toUpperCase()}</td>
+          <td class="hdr-right">DOC: FICHA DE MONITORAMENTO E AMOSTRAGEM MIP (PC03)</td>
+        </tr>
+      </table>
+
+      <div class="main-title">MANEJO INTEGRADO DE PRAGAS — FICHA DE AMOSTRAGEM (MIP)</div>
+
+      <table class="grid-table">
+        <tr>
+          <td><strong>PARCELA:</strong> <span style="font-size:10pt; font-weight:bold">${item.parcela || '—'}</span></td>
+          <td><strong>CULTURA / VARIEDADE:</strong> ${culturaStr} / ${item.variedade || '—'}</td>
+          <td><strong>ÁREA:</strong> ${areaStr}</td>
+          <td><strong>DATA VISTORIA:</strong> <span style="font-size:10pt; font-weight:bold">${formattedDate}</span></td>
+        </tr>
+        <tr>
+          <td colspan="2"><strong>MONITOR / PRAGUEIRO:</strong> ${item.responsavel_mip || '—'}</td>
+          <td colspan="2"><strong>RESPONSÁVEL TÉCNICO:</strong> ${item.tecnico || (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || '—'}</td>
+        </tr>
+      </table>
+
+      <table class="grid-table" style="text-align:center; font-size:7.5pt">
+        <thead>
+          <tr style="background:#e5e7eb; font-weight:bold">
+            <th style="padding:4px; text-align:left; width:22%">PRAGA / ALVO FITOSSANITÁRIO</th>
+            <th style="width:9%">LIMIAR</th>
+            <th style="width:5%">P1</th><th style="width:5%">P2</th><th style="width:5%">P3</th><th style="width:5%">P4</th><th style="width:5%">P5</th>
+            <th style="width:5%">P6</th><th style="width:5%">P7</th><th style="width:5%">P8</th><th style="width:5%">P9</th><th style="width:5%">P10</th>
+            <th style="width:9%">MÉDIA</th>
+            <th style="width:15%">AVALIAÇÃO</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRowsHtml}
+        </tbody>
+      </table>
+
+      <div style="border:1px solid #000; padding:6px; margin-top:8px; font-size:7.5pt">
+        <strong>OBSERVAÇÕES DO PRAGUEIRO / AUDITORIA:</strong><br/>
+        ${item.observacoes || 'Nenhuma observação adicional registrada na amostragem.'}
+      </div>
+
+      <div class="signatures-grid">
+        <div class="sig-box">
+          <div>
+            <strong>${item.responsavel_mip || 'Monitor de Pragas (Pragueiro)'}</strong><br/>
+            Responsável pela Amostragem Fitossanitária de Campo
+          </div>
+          <div class="sig-line">Assinatura Monitor de Campo</div>
+        </div>
+        <div class="sig-box">
+          <div>
+            <strong>${item.tecnico || (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'Responsável Técnico'}</strong><br/>
+            Engenheiro Agrônomo / Validação Técnica
+          </div>
+          <div class="sig-line">Assinatura Responsável Técnico</div>
+        </div>
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
 function renderCcOpTable(list) {
   const tbody = $('ccOpTableBody');
   if (!tbody) return;
   if (!list || list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--muted)">Nenhuma ordem de pulverização registrada.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Nenhuma ordem de pulverização registrada.</td></tr>`;
     return;
   }
   tbody.innerHTML = list.map(item => {
@@ -13946,6 +14322,15 @@ let _posColheitaList = [];
 
 async function loadColheitasTable() {
   try {
+    if (!_infoParcelas || _infoParcelas.length === 0) {
+      const { data: ipData } = await sb.from('info_parcelas').select('*').eq('tenant_id', tenantId);
+      if (ipData) _infoParcelas = ipData;
+    }
+    if (!window._parcels || window._parcels.length === 0) {
+      const { data: pData } = await sb.from('parcels').select('id, code').eq('tenant_id', tenantId);
+      if (pData) window._parcels = pData;
+    }
+
     const [ccRes, fcRes] = await Promise.all([
       sb.from('caderno_campo_colheita')
         .select('*')
@@ -13959,32 +14344,49 @@ async function loadColheitasTable() {
 
     let list = [];
     if (ccRes.data) {
-      list = list.concat(ccRes.data.map(item => ({
-        id: item.id,
-        data_colheita: item.data_colheita,
-        parcela: item.parcela,
-        variedade: item.variedade,
-        quantidade_carrocoes: item.quantidade_carrocoes || 0,
-        quantidade_caixas: item.quantidade_caixas || 0,
-        pincelador1: item.pincelador1 || item.equipe_colheita || '—',
-        rastreabilidade_codigo: item.rastreabilidade_codigo || '—',
-        source: 'manual',
-        raw: item
-      })));
+      list = list.concat(ccRes.data.map(item => {
+        let pName = item.parcela || item.parcel_code || '';
+        if (!pName && item.parcel_id) {
+          const ip = (_infoParcelas || []).find(x => x.id === item.parcel_id || x.parcel_id === item.parcel_id);
+          const pObj = (window._parcels || []).find(x => x.id === item.parcel_id);
+          pName = ip ? (ip.parcela2 || ip.parcela) : (pObj ? pObj.code : '');
+        }
+        return {
+          id: item.id,
+          data_colheita: item.data_colheita,
+          parcela: pName || '—',
+          variedade: item.variedade || '—',
+          quantidade_carrocoes: item.quantidade_carrocoes || 0,
+          quantidade_caixas: item.quantidade_caixas || 0,
+          pincelador1: item.pincelador1 || item.equipe_colheita || '—',
+          rastreabilidade_codigo: item.rastreabilidade_codigo || '—',
+          source: 'manual',
+          raw: item
+        };
+      }));
     }
+
     if (fcRes.data) {
-      list = list.concat(fcRes.data.map(item => ({
-        id: item.id,
-        data_colheita: item.date,
-        parcela: item.parcels?.code || '—',
-        variedade: item.varieties?.name || '—',
-        quantidade_carrocoes: item.qty_carrocoes || 1,
-        quantidade_caixas: item.qty_caixas || 0,
-        pincelador1: item.field_carrao_employees?.map(e => e.employee_name).join(' / ') || 'Equipe de Campo',
-        rastreabilidade_codigo: item.julian_lot || '—',
-        source: 'PWA (Carroção)',
-        raw: item
-      })));
+      list = list.concat(fcRes.data.map(item => {
+        let pName = item.parcels?.code || item.parcela || item.parcel_code || '';
+        if (!pName && item.parcel_id) {
+          const ip = (_infoParcelas || []).find(x => x.id === item.parcel_id || x.parcel_id === item.parcel_id);
+          const pObj = (window._parcels || []).find(x => x.id === item.parcel_id);
+          pName = ip ? (ip.parcela2 || ip.parcela) : (pObj ? pObj.code : '');
+        }
+        return {
+          id: item.id,
+          data_colheita: item.date,
+          parcela: pName || '—',
+          variedade: item.varieties?.name || item.variedade || '—',
+          quantidade_carrocoes: item.qty_carrocoes || 1,
+          quantidade_caixas: item.qty_caixas || 0,
+          pincelador1: item.field_carrao_employees?.map(e => e.employee_name).join(' / ') || 'Equipe de Campo',
+          rastreabilidade_codigo: item.julian_lot || '—',
+          source: 'PWA (Carroção)',
+          raw: item
+        };
+      }));
     }
 
     list.sort((a, b) => new Date(b.data_colheita) - new Date(a.data_colheita));
@@ -14948,6 +15350,7 @@ function onPosDefensivoChange() {
   const sel = $('posProdutoSelect');
   if (!sel) return;
   const customInput = $('posProdutoNomeCustom');
+  const calcInfo = $('posDosagemCalcInfo');
   const val = sel.value;
 
   if (val === 'OUTRO') {
@@ -14958,15 +15361,37 @@ function onPosDefensivoChange() {
     $('posIngredienteAtivo').value = '';
     $('posCarencia').value = '0';
     $('posDosagem').value = '';
+    if (calcInfo) calcInfo.innerHTML = '';
     return;
   }
 
   if (customInput) customInput.style.display = 'none';
-  const opt = sel.options[sel.selectedIndex];
-  if (opt && opt.dataset) {
-    $('posIngredienteAtivo').value = opt.dataset.ing || '';
-    $('posCarencia').value = opt.dataset.car || '0';
-    $('posDosagem').value = opt.dataset.dose || '';
+  const def = (_defensivos || []).find(d => d.id === val);
+  if (def) {
+    $('posIngredienteAtivo').value = def.ingrediente_ativo || '';
+    $('posCarencia').value = def.carencia_dias || '0';
+    
+    const parsed = parseDoseTexto(def.dose_texto);
+    const doseMin = parsed ? parsed.min : (parseFloat(def.dose || def.dosagem_recomendada) || 0);
+    const unit = parsed?.unit || def.unidade_dose || 'mL/100L';
+
+    if (doseMin > 0) $('posDosagem').value = doseMin;
+    
+    const volAgua = parseFloat($('posVolumeAgua').value) || 100;
+    const criterio = (def.criterio_dosagem || 'L').toUpperCase();
+    if (parsed && calcInfo) {
+      const calcVal = criterio === 'L' ? (volAgua / 100) * doseMin : doseMin;
+      calcInfo.innerHTML = `🧮 <span style="color:var(--green); font-weight:bold">Bula: ${doseMin} ${unit}</span> &rarr; Total p/ ${volAgua}L água: <strong style="color:var(--green)">${calcVal.toFixed(1)} ${unit.replace('/100L','').replace('/100l','')}</strong>`;
+    } else if (calcInfo) {
+      calcInfo.innerHTML = '';
+    }
+  } else {
+    const opt = sel.options[sel.selectedIndex];
+    if (opt && opt.dataset) {
+      $('posIngredienteAtivo').value = opt.dataset.ing || '';
+      $('posCarencia').value = opt.dataset.car || '0';
+      $('posDosagem').value = opt.dataset.dose || '';
+    }
   }
 }
 
@@ -15112,6 +15537,59 @@ async function deleteOpRecord(id) {
     console.error(e);
     alert('Erro ao excluir O.P.');
   }
+}
+
+// ═══════════════════════════════════════════════════════
+// HELPERS — CÁLCULO DE DOSAGEM E VALIDAÇÕES POR CICLO
+// ═══════════════════════════════════════════════════════
+
+/**
+ * Extrai { min, max, unit } de strings como:
+ * "12,5 a 25 mL/100L", "0,3 - 0,4 L/ha", "200 - 300 g/há"
+ * Sempre retorna o menor valor como min.
+ */
+function parseDoseTexto(texto) {
+  if (!texto) return null;
+  // Normalizar separadores decimais e remover quebras de linha / texto extra
+  const linha = texto.replace(/\n[\s\S]*/g, '').trim()
+    .replace(/,/g, '.') // vírgula → ponto
+    .replace(/há/g, 'ha')
+    .replace(/\\/g, '/');
+
+  // Captura dois números (range) ex: "12.5 a 25" ou "0.3 - 0.4"
+  const rangeMatch = linha.match(/(\d+\.?\d*)\s*(?:a|-)\s*(\d+\.?\d*)/);
+  if (rangeMatch) {
+    const v1 = parseFloat(rangeMatch[1]);
+    const v2 = parseFloat(rangeMatch[2]);
+    // Extrair unidade: tudo após os dois números
+    const unitMatch = linha.match(/(\d+\.?\d*)\s*(?:a|-)\s*(\d+\.?\d*)\s*([A-Za-z\/\.]+)/);
+    const unit = unitMatch ? unitMatch[3].trim() : '';
+    return { min: Math.min(v1, v2), max: Math.max(v1, v2), unit };
+  }
+
+  // Valor único ex: "25 mL/100L"
+  const singleMatch = linha.match(/(\d+\.?\d*)\s*([A-Za-z\/\.]+)/);
+  if (singleMatch) {
+    const v = parseFloat(singleMatch[1]);
+    return { min: v, max: v, unit: singleMatch[2].trim() };
+  }
+  return null;
+}
+
+/**
+ * Conta quantas OPs já aplicaram um dado produto (por nome)
+ * nesta parcela DENTRO do ciclo atual (plantio → previsao_colheita).
+ */
+function countOpAplicacoesCiclo(parcelCode, produtoNome, cicloPlantio, cicloColheita) {
+  return (_opList || []).filter(op => {
+    if (op.parcela !== parcelCode) return false;
+    // Filtrar pelo ciclo atual
+    if (cicloPlantio && op.data_aplicacao < cicloPlantio) return false;
+    if (cicloColheita && op.data_aplicacao > cicloColheita) return false;
+    return (op.caderno_campo_op_itens || []).some(
+      i => (i.produto_nome || '').toUpperCase() === produtoNome.toUpperCase()
+    );
+  }).length;
 }
 
 function openNewOpModal() {
@@ -15263,14 +15741,80 @@ function onNewOpDefensivoChange() {
     const id = select.value;
     const def = (_defensivos || []).find(d => d.id === id);
     if (def) {
-      const doseVal = parseFloat(def.dose || def.dosagem_recomendada) || 1.00;
-      const unit = def.unidade_dose || def.unidade || 'L/ha';
-      $('newOpDosagemReal').value = doseVal;
+      // ── Calcular dosagem mínima automática ──────────────────────────
+      const pId = $('newOpParcelSelect').value;
+      const ip = pId ? (_infoParcelas || []).find(x => x.id === pId) : null;
+      const areaHa = parseFloat(ip?.area || $('newOpArea')?.value || 1.0) || 1.0;
+      const volCalda = parseFloat($('newOpVolumeCalda').value) || 200;
+      const criterio = (def.criterio_dosagem || 'H').toUpperCase();
+      const parsed = parseDoseTexto(def.dose_texto);
+
+      let dosePreenchida = parseFloat(def.dose || def.dosagem_recomendada) || 1.0;
+      let doseMin = dosePreenchida;
+      let doseMax = dosePreenchida;
+      let calcMinStr = '';
+      let calcMaxStr = '';
+      let unit = def.unidade_dose || def.unidade || (criterio === 'L' ? 'mL/100L' : 'L/ha');
+
+      if (parsed) {
+        doseMin = parsed.min;
+        doseMax = parsed.max;
+        if (parsed.unit) unit = parsed.unit;
+        if (criterio === 'L') {
+          // Por 100L de calda: (vol_tanque / 100) × dose
+          const calcMin = (volCalda / 100) * doseMin;
+          const calcMax = (volCalda / 100) * doseMax;
+          calcMinStr = `${calcMin.toFixed(1)} ${unit.replace('/100L','').replace('/100l','')} (p/ ${volCalda}L de calda)`;
+          calcMaxStr = `${calcMax.toFixed(1)} ${unit.replace('/100L','').replace('/100l','')} (p/ ${volCalda}L máx.)`;
+          dosePreenchida = doseMin; // campo mostra a dose bula mínima; o total é calculado
+        } else {
+          // Por hectare: dose × área
+          const calcMin = doseMin * areaHa;
+          const calcMax = doseMax * areaHa;
+          calcMinStr = `${calcMin.toFixed(3)} ${unit.replace('/ha','').trim()} (${areaHa} ha)`;
+          calcMaxStr = `${calcMax.toFixed(3)} ${unit.replace('/ha','').trim()} (${areaHa} ha máx.)`;
+          dosePreenchida = doseMin;
+        }
+      }
+
+      $('newOpDosagemReal').value = dosePreenchida;
       $('newOpDosagemUnit').textContent = unit;
       if (_newOpTabMode === 'DEFENSIVO') $('newOpAlvo').value = def.alvo || '';
       else $('newOpAlvo').value = 'ADUBO FOLIAR';
-      
-      // Mostrar ficha agronômica
+
+      // ── Contador de aplicações no ciclo ─────────────────────────────
+      const parcelCode = ip ? (ip.parcela2 || ip.parcela) : '';
+      const maxAplic = parseInt(def.num_aplicacoes_ciclo) || 0;
+      const jaAplicadas = parcelCode
+        ? countOpAplicacoesCiclo(parcelCode, def.produto, ip?.plantio, ip?.previsao_colheita)
+        : 0;
+      let contadorHtml = '';
+      if (maxAplic > 0) {
+        const restantes = maxAplic - jaAplicadas;
+        const corContador = jaAplicadas >= maxAplic ? 'var(--red)'
+          : jaAplicadas === maxAplic - 1 ? 'var(--yellow)' : 'var(--green)';
+        contadorHtml = `
+          <div style="grid-column:1/-1; background:rgba(0,0,0,0.1); border-radius:6px; padding:5px 8px; margin-top:4px; display:flex; align-items:center; gap:8px">
+            <span style="font-size:12px">📊 Aplicações no ciclo:</span>
+            <strong style="color:${corContador}; font-size:14px">${jaAplicadas} / ${maxAplic}</strong>
+            ${jaAplicadas >= maxAplic
+              ? '<span style="color:var(--red); font-size:11px; font-weight:700">⛔ LIMITE ATINGIDO</span>'
+              : restantes === 1
+              ? '<span style="color:var(--yellow); font-size:11px; font-weight:700">⚠️ Última aplicação permitida</span>'
+              : `<span style="color:var(--muted); font-size:11px">${restantes} restante(s)</span>`}
+          </div>`;
+      }
+
+      // ── Bloco de cálculo automático ──────────────────────────────────
+      const calcHtml = parsed ? `
+        <div style="grid-column:1/-1; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:6px; padding:6px 10px; margin-top:4px">
+          <div style="font-size:11px; font-weight:700; color:var(--green); margin-bottom:3px">🧮 Cálculo Automático (${criterio === 'L' ? 'por 100L de calda' : 'por hectare'})</div>
+          <div style="font-size:12px">Bula: <strong>${doseMin}${doseMin !== doseMax ? ' a ' + doseMax : ''} ${unit}</strong></div>
+          <div style="font-size:12px">✅ Mínimo calculado: <strong style="color:var(--green)">${calcMinStr}</strong></div>
+          ${doseMin !== doseMax ? `<div style="font-size:11px; color:var(--muted)">Máx. calculado: ${calcMaxStr}</div>` : ''}
+        </div>` : '';
+
+      // ── Mostrar ficha agronômica ─────────────────────────────────────
       if (fichaPanel) {
         fichaPanel.style.display = 'block';
         fichaPanel.innerHTML = `
@@ -15278,12 +15822,16 @@ function onNewOpDefensivoChange() {
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px 16px">
             <div><strong>I.A.:</strong> ${def.ingrediente_ativo || '—'} ${def.concentracao_ia ? '('+def.concentracao_ia+')' : ''}</div>
             <div><strong>Tipo:</strong> ${def.tipo || (_newOpTabMode === 'FOLIAR' ? 'ADUBO FOLIAR' : 'DEFENSIVO')}</div>
-            <div><strong>Dose Máx.:</strong> <span style="color:var(--green); font-weight:700">${doseVal} ${unit}</span></div>
+            <div><strong>Dose (bula):</strong> <span style="color:var(--green); font-weight:700">${def.dose_texto || (dosePreenchida + ' ' + unit)}</span></div>
             <div><strong>Carência:</strong> ${def.carencia_dias || 0} dias</div>
             <div><strong>Classe Tox.:</strong> ${def.classe_toxicologica || '—'} (${def.tarja || '—'})</div>
             <div><strong>Reentrada:</strong> ${def.reentrada_dias || '—'} dias</div>
+            <div><strong>Critério:</strong> ${criterio === 'L' ? 'Por 100L de calda' : 'Por hectare (ha)'}</div>
+            <div><strong>Intervalo mín.:</strong> ${def.intervalo_dias || '—'} dias</div>
             ${def.mrl_brasil || def.mrl_eu ? `<div style="grid-column:1/-1"><strong>MRLs:</strong> BR: ${def.mrl_brasil || '—'} | EU: ${def.mrl_eu || '—'} | GB: ${def.mrl_gb || '—'}</div>` : ''}
             ${def.condicao_tesco ? `<div style="grid-column:1/-1"><strong>Tesco:</strong> ${def.condicao_tesco} (${def.medida_tesco || '—'})</div>` : ''}
+            ${calcHtml}
+            ${contadorHtml}
           </div>
         `;
       }
@@ -15301,34 +15849,45 @@ function onNewOpDefensivoChange() {
 function calculateNewOpTotals() {
   const id = $('newOpDefensivoSelect').value;
   const def = id && id !== 'OUTRO' ? (_defensivos || []).find(d => d.id === id) : null;
-  const unit = def ? (def.unidade_dose || def.unidade || 'L/ha') : 'L/ha';
-  const unitBase = unit.replace('/ha', '').trim();
-  
+  const criterio = def ? (def.criterio_dosagem || 'H').toUpperCase() : 'H';
+  const parsed = def ? parseDoseTexto(def.dose_texto) : null;
+  const unit = def ? (def.unidade_dose || def.unidade || (criterio === 'L' ? 'mL/100L' : 'L/ha')) : 'L/ha';
+  const unitBase = unit.replace('/100L','').replace('/100l','').replace('/ha','').trim();
+
   $('newOpDosagemUnit').textContent = unit;
-  
+
   const dosagemReal = parseFloat($('newOpDosagemReal').value) || 0;
   const areaHa = parseFloat($('newOpArea').value) || 1.0;
-  const volCaldaLha = parseFloat($('newOpVolumeCalda').value) || 500;
-
-  const totalParcela = dosagemReal * areaHa;
-  const totalTanque = volCaldaLha > 0 ? (dosagemReal / volCaldaLha) * 500 : dosagemReal;
+  const volCalda = parseFloat($('newOpVolumeCalda').value) || 200;
 
   const totaisEl = $('newOpTotaisPanel');
   if (dosagemReal > 0) {
     totaisEl.style.display = 'grid';
-    $('newOpTotalParcela').textContent = `${totalParcela.toFixed(3)} ${unitBase}`;
-    $('newOpTotalTanque').textContent = `${totalTanque.toFixed(3)} ${unitBase} (p/ 500L)`;
+    if (criterio === 'L') {
+      // Por 100L de calda: total no tanque = (vol_calda / 100) × dose_bula
+      const totalTanque = (volCalda / 100) * dosagemReal;
+      const totalParcela = totalTanque; // aplicação inteira do tanque na parcela
+      $('newOpTotalParcela').textContent = `${totalTanque.toFixed(2)} ${unitBase} (tanque de ${volCalda}L)`;
+      $('newOpTotalTanque').textContent = `${dosagemReal} ${unit} de bula`;
+    } else {
+      // Por hectare: total = dose × área
+      const totalParcela = dosagemReal * areaHa;
+      const totalTanque = volCalda > 0 ? (dosagemReal / 1) * (volCalda / (volCalda || 1)) : dosagemReal;
+      $('newOpTotalParcela').textContent = `${totalParcela.toFixed(3)} ${unitBase} (${areaHa} ha)`;
+      $('newOpTotalTanque').textContent = `${dosagemReal} ${unit} por hectare`;
+    }
   } else {
     totaisEl.style.display = 'none';
   }
 
-  // Verificar excedente
-  if (def) {
-    const doseLimite = parseFloat(def.dose || def.dosagem_recomendada);
+  // Verificar excedente — compara dose informada vs máximo da bula
+  if (def && parsed) {
+    const doseMax = parsed.max;
     const warningEl = $('newOpDosagemWarning');
-    if (doseLimite > 0 && dosagemReal > doseLimite) {
+    if (doseMax > 0 && dosagemReal > doseMax) {
       warningEl.style.display = 'block';
-      $('newOpDosagemWarningMsg').textContent = ` A dosagem (${dosagemReal} ${unit}) excede o limite recomendado (${doseLimite} ${unit}).`;
+      $('newOpDosagemWarningMsg').textContent =
+        ` A dosagem (${dosagemReal} ${unit}) excede o MÁXIMO da bula (${doseMax} ${unit}). Ajuste para o mínimo (${parsed.min} ${unit}).`;
     } else {
       warningEl.style.display = 'none';
     }
@@ -15364,6 +15923,15 @@ function validateMipForOpDashboard(parcelId, parcelCode, alvo, opDate) {
   const relevantMips = mips.filter(m => {
     const matchesParcel = (m.parcel_id && m.parcel_id == parcelId) || (m.parcela && m.parcela === parcelCode);
     if (!matchesParcel) return false;
+
+    if (m.pragas_json && typeof m.pragas_json === 'object') {
+      const keys = Object.keys(m.pragas_json);
+      return keys.some(k => {
+        const item = m.pragas_json[k];
+        if (!item || parseFloat(item.media) <= 0) return false;
+        return isMatchingPraga(item.name || k, alvo);
+      });
+    }
     
     // Checa se a praga teve incidência/média > 0 (descarta zero)
     const media = parseFloat(m.media || m.quantidade || m.indice || 0);
@@ -15377,7 +15945,7 @@ function validateMipForOpDashboard(parcelId, parcelCode, alvo, opDate) {
     return {
       ok: false,
       blocked: true,
-      message: `🚫 NÃO CONFORMIDADE: A praga/alvo "${alvo}" NÃO tem infestação confirmada (média > 0) no monitoramento MIP desta parcela. Defensivos químicos só podem ser aplicados mediante praga identificada no MIP.`
+      message: `🚫 NÃO CONFORMIDADE DE AUDITORIA (MIP):\n\nA praga/alvo "${alvo}" NÃO possui amostragem recente com infestação (média > 0) no MIP da parcela ${parcelCode}.\n\nPara fins de certificação, defensivos químicos só podem ser recomendados mediante registro prévio de infestação na Ficha de Amostragem MIP.`
     };
   }
   
@@ -15503,6 +16071,28 @@ function addNewOpItem() {
       const pastDtBr = pastApp.data_aplicacao ? pastApp.data_aplicacao.split('-').reverse().join('/') : 'recentemente';
       alert(`🚫 INTERVALO MÍNIMO NÃO RESPEITADO — O defensivo ${def.produto} já foi aplicado nesta parcela em ${pastDtBr}. O intervalo recomendado entre aplicações é de ${minIntervalDays} dias.`);
       return;
+    }
+  }
+
+  // Validação 5-A: Número Máximo de Aplicações por Ciclo
+  if (!isCustom) {
+    const parcelCode = ip ? (ip.parcela2 || ip.parcela) : '';
+    const maxAplic = parseInt(def.num_aplicacoes_ciclo) || 0;
+    if (maxAplic > 0 && parcelCode) {
+      const jaAplicadas = countOpAplicacoesCiclo(
+        parcelCode, def.produto, ip?.plantio, ip?.previsao_colheita
+      );
+      if (jaAplicadas >= maxAplic) {
+        const prevColhBr = ip?.previsao_colheita
+          ? ip.previsao_colheita.split('-').reverse().join('/')
+          : 'fim do ciclo';
+        alert(`🚫 LIMITE DE APLICAÇÕES ATINGIDO\n\nO defensivo "${def.produto}" permite no máximo ${maxAplic} aplicação(ões) por ciclo de cultivo.\n\nJá foram realizadas ${jaAplicadas} aplicação(ões) nesta parcela no ciclo atual (até ${prevColhBr}).\n\nNão é possível adicionar mais aplicações deste produto neste ciclo.`);
+        return;
+      }
+      // Aviso de última aplicação
+      if (jaAplicadas === maxAplic - 1) {
+        toast(`⚠️ Atenção: Esta será a ÚLTIMA aplicação permitida de "${def.produto}" neste ciclo (máx. ${maxAplic}x).`, 'warning');
+      }
     }
   }
 

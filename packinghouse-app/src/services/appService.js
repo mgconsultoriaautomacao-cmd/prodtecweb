@@ -400,29 +400,39 @@ function createAppService(db) {
 
   async function parcelFruitsList({ parcelId }) {
     const pid = Number(parcelId);
-    if (!pid) return [];
-
-    return all(`
-      select distinct f.id, f.name
-      from parcel_fruit_varieties pfv
-      join fruits f on f.id = pfv.fruit_id
-      where pfv.parcel_id=? and f.active=1
-      order by f.name asc
-    `, [pid]);
+    let rows = [];
+    if (pid) {
+      rows = await all(`
+        select distinct f.id, f.name
+        from parcel_fruit_varieties pfv
+        join fruits f on f.id = pfv.fruit_id
+        where pfv.parcel_id=? and f.active=1
+        order by f.name asc
+      `, [pid]);
+    }
+    if (!rows || rows.length === 0) {
+      rows = await all(`select id, name from fruits where active=1 order by name asc`);
+    }
+    return rows;
   }
 
   async function parcelVarietiesList({ parcelId, fruitId }) {
     const pid = Number(parcelId);
     const fid = Number(fruitId);
-    if (!pid || !fid) return [];
-
-    return all(`
-      select distinct v.id, v.name
-      from parcel_fruit_varieties pfv
-      join varieties v on v.id = pfv.variety_id
-      where pfv.parcel_id=? and pfv.fruit_id=? and v.active=1
-      order by v.name asc
-    `, [pid, fid]);
+    let rows = [];
+    if (pid && fid) {
+      rows = await all(`
+        select distinct v.id, v.name
+        from parcel_fruit_varieties pfv
+        join varieties v on v.id = pfv.variety_id
+        where pfv.parcel_id=? and pfv.fruit_id=? and v.active=1
+        order by v.name asc
+      `, [pid, fid]);
+    }
+    if (!rows || rows.length === 0) {
+      rows = await all(`select id, name from varieties where active=1 order by name asc`);
+    }
+    return rows;
   }
 
   async function boxWeightsList() {

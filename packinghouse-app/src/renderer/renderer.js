@@ -617,10 +617,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const ctxVariety = $('ctxVariety');
 
     async function setupTraceSelectors() {
-      const cfg = await window.api.configGetAll();
-      if (cfg.culture_type !== 'MELAO_MELANCIA') {
-        return;
-      }
       if (traceContext) traceContext.style.display = 'grid';
 
       const ctx = await window.api.contextGet({ stationId, role: roleSelect.value });
