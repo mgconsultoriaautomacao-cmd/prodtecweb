@@ -2229,23 +2229,54 @@
       </div>
       
       <!-- Seção 3: Calda -->
-      <div style="font-weight:700; color:#fff; margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px; margin-top:16px">3. Calda de Defensivos</div>
-      <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap:10px; margin-bottom:12px; align-items:end">
+      <div style="font-weight:700; color:#fff; margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px; margin-top:16px">3. Calda de Defensivos &amp; Foliares</div>
+      
+      <!-- Abas: Defensivo vs Foliar -->
+      <div style="display:flex; gap:6px; margin-bottom:12px">
+        <button id="newOpTabDefensivo" onclick="switchNewOpTab('DEFENSIVO')" style="background:var(--blue); color:#fff; border:none; padding:7px 16px; border-radius:8px; font-weight:700; cursor:pointer; font-size:13px">🛡️ Defensivo</button>
+        <button id="newOpTabFoliar" onclick="switchNewOpTab('FOLIAR')" style="background:var(--card2); color:var(--muted); border:1px solid var(--border); padding:7px 16px; border-radius:8px; font-weight:700; cursor:pointer; font-size:13px">🍃 Adubo Foliar</button>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap:10px; margin-bottom:8px; align-items:end">
         <div>
-          <label class="flabel">Defensivo</label>
+          <label class="flabel" id="newOpDefensivoLabel">Defensivo</label>
           <select id="newOpDefensivoSelect" onchange="onNewOpDefensivoChange()" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px"></select>
         </div>
         <div>
-          <label class="flabel">Dosagem (L/ha)</label>
-          <input id="newOpDosagemReal" type="number" step="0.01" value="1.00" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+          <label class="flabel">Dosagem (<span id="newOpDosagemUnit">L/ha</span>)</label>
+          <input id="newOpDosagemReal" type="number" step="0.01" oninput="calculateNewOpTotals()" value="1.00" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
         </div>
-        <div>
+        <div id="newOpAlvoGroup">
           <label class="flabel">Alvo / Praga</label>
           <input id="newOpAlvo" type="text" placeholder="Ex: MOSCA BRANCA" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
         </div>
         <div>
+          <label class="flabel">&nbsp;</label>
           <button onclick="addNewOpItem()" style="background:var(--green); color:#fff; border:none; padding:7px 12px; border-radius:6px; width:100%; font-weight:700; cursor:pointer">+ Adicionar</button>
         </div>
+      </div>
+
+      <!-- Ficha Agronômica do produto selecionado -->
+      <div id="newOpFichaPanel" style="display:none; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.3); border-radius:8px; padding:10px 14px; margin-bottom:10px; font-size:12px; color:var(--text)">
+      </div>
+
+      <!-- Totais calculados de dosagem -->
+      <div id="newOpTotaisPanel" style="display:none; display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px">
+        <div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:8px; padding:8px 12px; text-align:center">
+          <div style="font-size:10px; color:var(--muted); text-transform:uppercase; margin-bottom:2px">Total por Parcela</div>
+          <div id="newOpTotalParcela" style="font-size:16px; font-weight:800; color:var(--green)">—</div>
+        </div>
+        <div style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); border-radius:8px; padding:8px 12px; text-align:center">
+          <div style="font-size:10px; color:var(--muted); text-transform:uppercase; margin-bottom:2px">Qtde p/ Tanque (500L)</div>
+          <div id="newOpTotalTanque" style="font-size:16px; font-weight:800; color:var(--yellow)">—</div>
+        </div>
+      </div>
+
+      <!-- Alerta de dosagem excedente -->
+      <div id="newOpDosagemWarning" style="display:none; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.4); border-radius:8px; padding:8px 12px; margin-bottom:10px; font-size:12px; color:var(--red)">
+        <strong>⚠️ Dosagem acima do limite recomendado!</strong>
+        <span id="newOpDosagemWarningMsg"></span>
+        <button onclick="applyNewOpDosagemCorrection()" style="margin-left:8px; background:rgba(239,68,68,0.2); color:var(--red); border:1px solid rgba(239,68,68,0.4); border-radius:6px; padding:3px 10px; font-size:11px; cursor:pointer; font-weight:700">Corrigir para limite</button>
       </div>
 
       <!-- Custom write-in for Foliar / Fertilizantes -->
@@ -14992,6 +15023,11 @@ function openNewOpModal() {
   $('newOpArea').value = "";
   
   populateNewOpDefensivesSelect();
+  _newOpTabMode = 'DEFENSIVO'; // Reset tab to defensivo on open
+  // Reset panels
+  if ($('newOpFichaPanel')) $('newOpFichaPanel').style.display = 'none';
+  if ($('newOpTotaisPanel')) $('newOpTotaisPanel').style.display = 'none';
+  if ($('newOpDosagemWarning')) $('newOpDosagemWarning').style.display = 'none';
   
   $('newOpModal').style.display = 'flex';
 }
@@ -15011,72 +15047,175 @@ function onNewOpParcelChange() {
     $('newOpArea').value = '';
   }
   populateNewOpDefensivesSelect();
+  calculateNewOpTotals(); // Recalcular ao mudar parcela (area pode mudar)
 }
 
 function populateNewOpDefensivesSelect() {
-  const select = $('newOpDefensivoSelect');
-  if (!select) return;
-
+  // Ensure defensivos data is populated
   if ((!_defensivos || _defensivos.length === 0) && webDefensivosData && webDefensivosData.length > 0) {
     _defensivos = webDefensivosData;
   }
+  // Delegate to the tab switcher so filtering is always consistent
+  switchNewOpTab(_newOpTabMode || 'DEFENSIVO');
+}
 
-  select.innerHTML = '<option value="">Selecione um defensivo</option>';
-  
-  const pId = $('newOpParcelSelect')?.value;
-  const ip = (_infoParcelas || []).find(x => x.id === pId);
-  const cultura = ip ? ip.cultura : '';
-  
-  const norm = s => (s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+let _newOpTabMode = 'DEFENSIVO'; // 'DEFENSIVO' ou 'FOLIAR'
 
-  let listToUse = _defensivos || [];
-  if (cultura && listToUse.length > 0) {
-    const normCult = norm(cultura);
-    const filtered = listToUse.filter(d => {
-      if (!d.cultura || d.cultura === 'TODAS' || d.cultura === 'TODOS') return true;
-      // Tratar múltiplos cultivos separados por vírgula no cadastro
-      const normalizedCultures = norm(d.cultura).split(',').map(s => s.trim());
-      return normalizedCultures.includes(normCult);
-    });
-    if (filtered.length > 0) listToUse = filtered;
+function switchNewOpTab(mode) {
+  _newOpTabMode = mode;
+  const tabDef = $('newOpTabDefensivo');
+  const tabFol = $('newOpTabFoliar');
+  const alvoGroup = $('newOpAlvoGroup');
+  const label = $('newOpDefensivoLabel');
+  
+  if (mode === 'FOLIAR') {
+    tabDef.style.background = 'var(--card2)';
+    tabDef.style.color = 'var(--muted)';
+    tabDef.style.border = '1px solid var(--border)';
+    tabFol.style.background = 'var(--green)';
+    tabFol.style.color = '#fff';
+    tabFol.style.border = 'none';
+    if (alvoGroup) alvoGroup.style.display = 'none';
+    if (label) label.textContent = 'Adubo Foliar / Nutriente';
+    $('newOpAlvo').value = 'ADUBO FOLIAR';
+  } else {
+    tabDef.style.background = 'var(--blue)';
+    tabDef.style.color = '#fff';
+    tabDef.style.border = 'none';
+    tabFol.style.background = 'var(--card2)';
+    tabFol.style.color = 'var(--muted)';
+    tabFol.style.border = '1px solid var(--border)';
+    if (alvoGroup) alvoGroup.style.display = '';
+    if (label) label.textContent = 'Defensivo';
+    $('newOpAlvo').value = '';
   }
-  
-  listToUse.forEach(d => {
+
+  // Re-popular o select com produtos do tipo correto
+  const select = $('newOpDefensivoSelect');
+  select.innerHTML = '';
+  const norm = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+  const isFol = d => {
+    const t = norm(d.tipo); const p = norm(d.produto); const ia = norm(d.ingrediente_ativo); const al = norm(d.alvo);
+    return t.includes('FOLIAR') || t.includes('FERTILIZ') || t.includes('NUTRI') || p.includes('FOLIAR') || p.includes('ADUBO') || p.includes('NUTRI') || ia.includes('FOLIAR') || ia.includes('FERTILIZ') || al.includes('FOLIAR') || al.includes('NUTRI');
+  };
+  const lista = (_defensivos || []).filter(d => mode === 'FOLIAR' ? isFol(d) : !isFol(d));
+  select.insertAdjacentHTML('beforeend', `<option value="">Selecione ${mode === 'FOLIAR' ? 'um adubo foliar' : 'um defensivo'}...</option>`);
+  lista.forEach(d => {
     const doseVal = d.dose || d.dosagem_recomendada;
     const doseStr = doseVal ? ` | Dose: ${doseVal} ${d.unidade_dose || 'L/ha'}` : '';
     const alvoStr = d.alvo ? ` | Alvo: ${d.alvo}` : '';
-    const ingStr = d.ingrediente_ativo ? ` (${d.ingrediente_ativo})` : '';
-    const carStr = d.carencia_dias !== undefined && d.carencia_dias !== null ? ` | Carência: ${d.carencia_dias}d` : '';
-    select.insertAdjacentHTML('beforeend', `<option value="${d.id}">${d.produto}${ingStr}${doseStr}${alvoStr}${carStr}</option>`);
+    const carStr = d.carencia_dias !== undefined ? ` | Carência: ${d.carencia_dias}d` : '';
+    select.insertAdjacentHTML('beforeend', `<option value="${d.id}">${d.produto} (${d.ingrediente_ativo || 'Nutrição'})${doseStr}${alvoStr}${carStr}</option>`);
   });
-  
-  select.insertAdjacentHTML('beforeend', '<option value="OUTRO">+ Digitar Outro (Foliar / Fertilizante / Defensivo)...</option>');
-  
-  onNewOpDefensivoChange();
+  select.insertAdjacentHTML('beforeend', `<option value="OUTRO">+ Digitar Outro...</option>`);
+
+  // Reset panel
+  $('newOpFichaPanel').style.display = 'none';
+  $('newOpTotaisPanel').style.display = 'none';
+  $('newOpDosagemWarning').style.display = 'none';
+  $('newOpDosagemReal').value = '1.00';
+  $('newOpDefensivoCustomContainer').style.display = 'none';
 }
 
 function onNewOpDefensivoChange() {
   const select = $('newOpDefensivoSelect');
   if (!select) return;
   const customContainer = $('newOpDefensivoCustomContainer');
+  const fichaPanel = $('newOpFichaPanel');
   
   if (select.value === 'OUTRO') {
     if (customContainer) customContainer.style.display = 'grid';
+    if (fichaPanel) fichaPanel.style.display = 'none';
     $('newOpDefensivoCustom').focus();
     $('newOpDosagemReal').value = '1.00';
-    $('newOpAlvo').value = 'ADUBAÇÃO FOLIAR';
+    if (_newOpTabMode === 'FOLIAR') $('newOpAlvo').value = 'ADUBO FOLIAR';
+    $('newOpTotaisPanel').style.display = 'none';
+    $('newOpDosagemWarning').style.display = 'none';
   } else {
     if (customContainer) customContainer.style.display = 'none';
     const id = select.value;
     const def = (_defensivos || []).find(d => d.id === id);
     if (def) {
-      $('newOpDosagemReal').value = def.dose || def.dosagem_recomendada || '1.00';
-      $('newOpAlvo').value = def.alvo || '';
+      const doseVal = parseFloat(def.dose || def.dosagem_recomendada) || 1.00;
+      const unit = def.unidade_dose || def.unidade || 'L/ha';
+      $('newOpDosagemReal').value = doseVal;
+      $('newOpDosagemUnit').textContent = unit;
+      if (_newOpTabMode === 'DEFENSIVO') $('newOpAlvo').value = def.alvo || '';
+      else $('newOpAlvo').value = 'ADUBO FOLIAR';
+      
+      // Mostrar ficha agronômica
+      if (fichaPanel) {
+        fichaPanel.style.display = 'block';
+        fichaPanel.innerHTML = `
+          <div style="font-weight:700; color:var(--text); margin-bottom:6px; font-size:13px">📋 Ficha Agronômica: ${def.produto}</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px 16px">
+            <div><strong>I.A.:</strong> ${def.ingrediente_ativo || '—'} ${def.concentracao_ia ? '('+def.concentracao_ia+')' : ''}</div>
+            <div><strong>Tipo:</strong> ${def.tipo || (_newOpTabMode === 'FOLIAR' ? 'ADUBO FOLIAR' : 'DEFENSIVO')}</div>
+            <div><strong>Dose Máx.:</strong> <span style="color:var(--green); font-weight:700">${doseVal} ${unit}</span></div>
+            <div><strong>Carência:</strong> ${def.carencia_dias || 0} dias</div>
+            <div><strong>Classe Tox.:</strong> ${def.classe_toxicologica || '—'} (${def.tarja || '—'})</div>
+            <div><strong>Reentrada:</strong> ${def.reentrada_dias || '—'} dias</div>
+            ${def.mrl_brasil || def.mrl_eu ? `<div style="grid-column:1/-1"><strong>MRLs:</strong> BR: ${def.mrl_brasil || '—'} | EU: ${def.mrl_eu || '—'} | GB: ${def.mrl_gb || '—'}</div>` : ''}
+            ${def.condicao_tesco ? `<div style="grid-column:1/-1"><strong>Tesco:</strong> ${def.condicao_tesco} (${def.medida_tesco || '—'})</div>` : ''}
+          </div>
+        `;
+      }
+      calculateNewOpTotals();
     } else {
       $('newOpDosagemReal').value = '1.00';
       $('newOpAlvo').value = '';
+      if (fichaPanel) fichaPanel.style.display = 'none';
+      $('newOpTotaisPanel').style.display = 'none';
+      $('newOpDosagemWarning').style.display = 'none';
     }
   }
+}
+
+function calculateNewOpTotals() {
+  const id = $('newOpDefensivoSelect').value;
+  const def = id && id !== 'OUTRO' ? (_defensivos || []).find(d => d.id === id) : null;
+  const unit = def ? (def.unidade_dose || def.unidade || 'L/ha') : 'L/ha';
+  const unitBase = unit.replace('/ha', '').trim();
+  
+  $('newOpDosagemUnit').textContent = unit;
+  
+  const dosagemReal = parseFloat($('newOpDosagemReal').value) || 0;
+  const areaHa = parseFloat($('newOpArea').value) || 1.0;
+  const volCaldaLha = parseFloat($('newOpVolumeCalda').value) || 500;
+
+  const totalParcela = dosagemReal * areaHa;
+  const totalTanque = volCaldaLha > 0 ? (dosagemReal / volCaldaLha) * 500 : dosagemReal;
+
+  const totaisEl = $('newOpTotaisPanel');
+  if (dosagemReal > 0) {
+    totaisEl.style.display = 'grid';
+    $('newOpTotalParcela').textContent = `${totalParcela.toFixed(3)} ${unitBase}`;
+    $('newOpTotalTanque').textContent = `${totalTanque.toFixed(3)} ${unitBase} (p/ 500L)`;
+  } else {
+    totaisEl.style.display = 'none';
+  }
+
+  // Verificar excedente
+  if (def) {
+    const doseLimite = parseFloat(def.dose || def.dosagem_recomendada);
+    const warningEl = $('newOpDosagemWarning');
+    if (doseLimite > 0 && dosagemReal > doseLimite) {
+      warningEl.style.display = 'block';
+      $('newOpDosagemWarningMsg').textContent = ` A dosagem (${dosagemReal} ${unit}) excede o limite recomendado (${doseLimite} ${unit}).`;
+    } else {
+      warningEl.style.display = 'none';
+    }
+  }
+}
+
+function applyNewOpDosagemCorrection() {
+  const id = $('newOpDefensivoSelect').value;
+  const def = id && id !== 'OUTRO' ? (_defensivos || []).find(d => d.id === id) : null;
+  if (!def) return;
+  const doseLimite = parseFloat(def.dose || def.dosagem_recomendada) || 1.0;
+  $('newOpDosagemReal').value = doseLimite;
+  calculateNewOpTotals();
+  toast('✓ Dosagem ajustada para o limite legal!', 'ok');
 }
 
 function validateMipForOpDashboard(parcelId, parcelCode, alvo, opDate) {
