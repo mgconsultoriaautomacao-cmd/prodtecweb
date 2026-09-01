@@ -7695,24 +7695,7 @@ async function exportHarvestOrderPDF(sidOrIds) {
     }
     y += h7;
 
-    // ── MESA / COLABORADORES ───────────────────────────────────────────────
-    y += 10;
-    doc.setFontSize(8); doc.setFont('helvetica', 'bold');
-    doc.text('EQUIPE DE TRABALHADORES (COLHEITA / PINCELADORES):', mg, y);
-    y += 4;
-    
-    doc.setFont('helvetica', 'normal');
-    let col = 0;
-    let rowY = y;
-    (emps || []).forEach((e, i) => {
-      const colX = mg + (col * 60);
-      doc.text(`• ${e.employee_name || e.employee_id || '—'}`, colX, rowY);
-      col++;
-      if (col > 2) {
-        col = 0;
-        rowY += 5;
-      }
-    });
+    // Colhedores não exibidos na Ordem de Colheita (removidos para caber em 1 folha)
   }
 
   const filename = ids.length === 1 ? `ordem-colheita-${ids[0]}.pdf` : `lote-ordens-colheita.pdf`;
@@ -13612,30 +13595,47 @@ function parseDefensivosCSVText(text) {
     return headers.findIndex(h => nameArr.some(n => h.includes(n)));
   };
 
+  // Detecção precisa: tenta match exato antes de parcial para evitar colisões
+  const getColIdxExact = (exactTerms) => {
+    return headers.findIndex(h => exactTerms.some(n => h === n));
+  };
+  const getColIdxPartial = (nameArr, excludeIdxs = []) => {
+    return headers.findIndex((h, idx) => !excludeIdxs.includes(idx) && nameArr.some(n => h.includes(n)));
+  };
+
+  // Mapear em sequência de prioridade, reservando índices já usados
+  const usedIdxs = [];
+  const reserveIdx = (idx) => { if (idx >= 0 && !usedIdxs.includes(idx)) usedIdxs.push(idx); return idx; };
+  const pickCol = (exactTerms, partialTerms) => {
+    let idx = getColIdxExact(exactTerms);
+    if (idx < 0) idx = getColIdxPartial(partialTerms, usedIdxs);
+    return reserveIdx(idx);
+  };
+
   const initialMapping = {
-    produto: getColIdx(['PRODUTO', 'NOME COMERCIAL', 'COMERCIAL']),
-    ingrediente: getColIdx(['INGREDIENTE', 'PRINCIPIO', 'ATIVO']),
-    tipo: getColIdx(['TIPO']),
-    classe_tox: getColIdx(['TOXICOLOG', 'CLASSE TOXICOL']),
-    tarja: getColIdx(['TARJA']),
-    classe_amb: getColIdx(['AMBIENTAL', 'CLASSE AMBIENTAL']),
-    concentracao: getColIdx(['CONCENTRA']),
-    alvo: getColIdx(['ALVO', 'PRAGA', 'DOENCA', 'CONTROLE']),
-    dose_texto: getColIdx(['DOSE DO', 'DOSE']),
-    unidade: getColIdx(['UNIDADE DE MEDIDA', 'UNIDADE']),
-    criterio: getColIdx(['CRITÉRIO', 'CRITERIO', 'H/L']),
-    vol_calda: getColIdx(['VOLUME', 'CALDA']),
-    num_aplic: getColIdx(['APLICAÇÕES', 'APLICACOES']),
-    intervalo: getColIdx(['INTERVALO']),
-    carencia: getColIdx(['CARÊNCIA', 'CARENCIA']),
-    reentrada: getColIdx(['REENTRADA']),
-    mrl_eu: getColIdx(['MRL  (EU', 'MRL EU', 'CODEX']),
-    mrl_gb: getColIdx(['MRL  (GB', 'MRL GB']),
-    mrl_brasil: getColIdx(['MRL  (BRASIL', 'MRL BRASIL', 'MRL  (Brasil']),
-    condicao_tesco: getColIdx(['TESCO', 'CONDIÇÃO']),
-    medida_tesco: getColIdx(['CONDIÇÃO DE', 'USO TESCO']),
-    mapa: getColIdx(['MAPA', 'REGISTRO']),
-    cultura: getColIdx(['CULTURA'])
+    produto:       pickCol(['NOME COMERCIAL', 'PRODUTO'], ['COMERCIAL', 'PRODUTO']),
+    ingrediente:   pickCol(['INGREDIENTE ATIVO', 'PRINCÍPIO ATIVO', 'PRINCIPIO ATIVO'], ['INGREDIENTE', 'PRINCIPIO', 'ING. ATIVO']),
+    tipo:          pickCol(['TIPO'], ['TIPO']),
+    classe_tox:    pickCol(['CLASSE TOXICOLÓGICA', 'CLASSE TOXICOLOGICA', 'TOXICOLÓGICA'], ['TOXICOLOG', 'CLASSE TOX']),
+    tarja:         pickCol(['TARJA'], ['TARJA']),
+    classe_amb:    pickCol(['CLASSE AMBIENTAL'], ['AMBIENTAL']),
+    concentracao:  pickCol(['CONCENTRAÇÃO I.A.', 'CONCENTRACAO IA', 'CONCENTRAÇÃO'], ['CONCENTRA']),
+    alvo:          pickCol(['ALVO / PRAGA', 'PRAGA / DOENÇA', 'ALVO/PRAGA', 'PRAGA/DOENÇA', 'ALVO', 'PRAGA'], ['ALVO', 'PRAGA', 'DOENCA', 'CONTROLE']),
+    dose_texto:    pickCol(['DOSE DO PRODUTO', 'DOSE RECOMENDADA', 'DOSE TEXTO'], ['DOSE DO', 'DOSE']),
+    unidade:       pickCol(['UNIDADE DE MEDIDA', 'UNIDADE DOSE'], ['UNIDADE']),
+    criterio:      pickCol(['CRITÉRIO H/L', 'CRITERIO H/L', 'H/L'], ['CRITÉRIO', 'CRITERIO', 'H/L']),
+    vol_calda:     pickCol(['VOLUME CALDA', 'VOL. CALDA'], ['VOLUME', 'CALDA']),
+    num_aplic:     pickCol(['Nº APLICAÇÕES', 'NUMERO DE APLICAÇÕES', 'NUM APLIC'], ['APLICAÇÕES', 'APLICACOES']),
+    intervalo:     pickCol(['INTERVALO ENTRE APLIC', 'INTERVALO (DIAS)', 'INTERVALO'], ['INTERVALO']),
+    carencia:      pickCol(['CARÊNCIA (DIAS)', 'PERÍODO DE CARÊNCIA', 'CARÊNCIA'], ['CARÊNCIA', 'CARENCIA']),
+    reentrada:     pickCol(['REENTRADA (DIAS)', 'INTERVALO DE REENTRADA'], ['REENTRADA']),
+    mrl_eu:        pickCol(['MRL (EU)', 'MRL EU', 'MRL (CODEX)', 'CODEX'], ['MRL  (EU', 'MRL EU', 'CODEX']),
+    mrl_gb:        pickCol(['MRL (GB)', 'MRL GB'], ['MRL  (GB', 'MRL GB']),
+    mrl_brasil:    pickCol(['MRL (BRASIL)', 'MRL BRASIL'], ['MRL  (BRASIL', 'MRL BRASIL', 'MRL  (Brasil']),
+    condicao_tesco: pickCol(['CONDIÇÃO TESCO', 'TESCO'], ['TESCO', 'CONDIÇÃO']),
+    medida_tesco:  pickCol(['MEDIDA TESCO', 'USO TESCO', 'CONDIÇÃO DE USO'], ['CONDIÇÃO DE', 'USO TESCO']),
+    mapa:          pickCol(['REGISTRO MAPA', 'N° MAPA', 'MAPA'], ['MAPA', 'REGISTRO']),
+    cultura:       pickCol(['CULTURA'], ['CULTURA'])
   };
 
   // Render Mapping Select Grid
@@ -15265,6 +15265,7 @@ function addNewOpItem() {
   let inputAlvo = '';
   let opDateStr = $('newOpDate')?.value || today();
   let ip = _infoParcelas.find(x => x.id === pId);
+  const areaHa = parseFloat(ip?.area || $('newOpArea')?.value || 1.0) || 1.0; // ✅ área real da parcela
   let targetAlvo = '';
   let cleanAlvo = '';
   let isCustom = false;
@@ -15323,9 +15324,14 @@ function addNewOpItem() {
     }
   }
   
-  // Validação 2: Checagem de Dosagem Excedente (Bloqueio estrito)
+  // ✅ Validação 2: Dosagem Total por Parcela (100% fiel à regra agronômica)
+  // Regra: dose_maxima/ha × área_ha = volume absoluto máximo permitido
   if (!isCustom && dosagemReal > dosagemLimite) {
-    alert(`🚫 DOSAGEM NÃO PERMITIDA — A dosagem real (${dosagemReal} ${def.unidade_dose || 'L/ha'}) excede o limite máximo permitido (${dosagemLimite} ${def.unidade_dose || 'L/ha'}). Reduza a dosagem para prosseguir!`);
+    const unit = def.unidade_dose || 'L/ha';
+    const unitBase = unit.replace('/ha', '').trim();
+    const totalPermitido = (dosagemLimite * areaHa).toFixed(3);
+    const totalInformado = (dosagemReal * areaHa).toFixed(3);
+    alert(`🚫 DOSAGEM NÃO PERMITIDA\n\nDosagem informada: ${dosagemReal} ${unit} × ${areaHa} ha = ${totalInformado} ${unitBase}\nLimite máximo: ${dosagemLimite} ${unit} × ${areaHa} ha = ${totalPermitido} ${unitBase}\n\nPara esta parcela de ${areaHa} ha, o máximo absoluto é ${totalPermitido} ${unitBase}.`);
     return;
   }
 
@@ -15393,6 +15399,10 @@ function addNewOpItem() {
     }
   }
   
+  // ✅ Calcular volume total por parcela
+  const dosagemTotalParcela = parseFloat((dosagemReal * areaHa).toFixed(4));
+  const unitFinal = def.unidade_dose || def.unidade || 'L/ha';
+  
   _newOpItems.push({
     produto_id: def.id,
     produto_nome: def.produto,
@@ -15400,7 +15410,10 @@ function addNewOpItem() {
     alvo: targetAlvo,
     dosagem_real: dosagemReal,
     dosagem_corrigida: dosagemCorrigida,
-    unidade: def.unidade_dose || def.unidade || 'L/ha',
+    dosagem_total_parcela: dosagemTotalParcela,
+    area_ha: areaHa,
+    unidade: unitFinal,
+    unidade_base: unitFinal.replace('/ha', '').trim(),
     carencia_dias: def.carencia_dias || 0
   });
   
@@ -15423,14 +15436,18 @@ function renderNewOpItems() {
   }
   
   _newOpItems.forEach((item, idx) => {
+    const totalStr = item.dosagem_total_parcela != null
+      ? `<span style="color:var(--blue); font-weight:700">&rarr; Total: ${item.dosagem_total_parcela} ${item.unidade_base || ''} (${item.area_ha} ha)</span> &bull; `
+      : '';
     container.insertAdjacentHTML('beforeend', `
       <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding:8px 0; font-size:13px;">
         <div>
           <strong style="color:var(--text); font-size:14px">${item.produto_nome}</strong> ${item.ingrediente_ativo ? `<span style="font-size:11px; color:var(--muted)">(${item.ingrediente_ativo})</span>` : ''}
           <div style="font-size:11px; color:var(--muted2); margin-top:2px">
-            <span style="color:var(--green); font-weight:700">Dose: ${item.dosagem_real} ${item.unidade}</span> • 
-            <span style="color:var(--yellow); font-weight:700">Alvo: ${item.alvo || 'N/A'}</span> • 
-            <span>Carência: ${item.carencia_dias} dias</span>
+            <span style="color:var(--green); font-weight:700">Dose: ${item.dosagem_real} ${item.unidade}</span> &bull;
+            ${totalStr}
+            <span style="color:var(--yellow); font-weight:700">Alvo: ${item.alvo || 'N/A'}</span> &bull;
+            <span>Car&ecirc;ncia: ${item.carencia_dias} dias</span>
           </div>
         </div>
         <button onclick="removeNewOpItem(${idx})" style="background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.3); padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:700;">Remover</button>
