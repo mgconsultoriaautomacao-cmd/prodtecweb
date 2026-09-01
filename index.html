@@ -13029,14 +13029,31 @@ async function saveWebPlantio() {
     }
 
     if (res.error) {
-      if (res.error.message && (res.error.message.includes("'area'") || res.error.message.includes('area'))) {
-        delete payload.area;
+      console.warn('Alerta do Supabase ao salvar plantio:', res.error);
+      
+      // Fallback seguro caso as colunas novas ainda não tenham sido criadas no Supabase via SQL
+      const cleanPayload = { ...payload };
+      ['tamanho_linha1','tamanho_linha2','tamanho_linha3','tamanho_linha4','tamanho_linha5',
+       'previsao_colheita1','previsao_colheita2','previsao_colheita3','previsao_colheita4','previsao_colheita5',
+       'linhas1','linhas2','linhas3','linhas4','linhas5',
+       'area1','area2','area3','area4','area5',
+       'data_plantio1','data_plantio2','data_plantio3','data_plantio4','data_plantio5'].forEach(k => delete cleanPayload[k]);
+
+      if (editId) {
+        res = await sb.from('info_parcelas').update(cleanPayload).eq('id', editId).eq('tenant_id', tenantId);
+      } else {
+        res = await sb.from('info_parcelas').insert(cleanPayload);
+      }
+
+      if (res.error && res.error.message && (res.error.message.includes("'area'") || res.error.message.includes('area'))) {
+        delete cleanPayload.area;
         if (editId) {
-          res = await sb.from('info_parcelas').update(payload).eq('id', editId).eq('tenant_id', tenantId);
+          res = await sb.from('info_parcelas').update(cleanPayload).eq('id', editId).eq('tenant_id', tenantId);
         } else {
-          res = await sb.from('info_parcelas').insert(payload);
+          res = await sb.from('info_parcelas').insert(cleanPayload);
         }
       }
+
       if (res.error) throw res.error;
     }
 
@@ -13045,7 +13062,7 @@ async function saveWebPlantio() {
     await loadWebPlantios();
   } catch (e) {
     console.error('Erro ao salvar plantio web:', e);
-    alert('Erro ao salvar plantio: ' + (e.message || 'Verifique sua conexão.'));
+    alert('Erro ao salvar plantio: ' + (e.message || 'Execute o comando SQL no Supabase.'));
   } finally {
     btn.disabled = false;
     btn.textContent = 'Salvar Plantio';
