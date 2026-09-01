@@ -6488,6 +6488,7 @@ async function loadVarieties(){
   try {
     const {data, error}=await sb.from('varieties').select('*, fruits(name)').eq('tenant_id',tenantId).eq('active',true).order('name');
     if(error) throw error;
+    window._varieties = data || [];
     
     $('varList').innerHTML = (data||[]).map(v => `
       <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
@@ -12008,6 +12009,80 @@ function filterInfoParcelasTable() {
   renderInfoParcelasTable(filtered);
 }
 
+function getRegisteredVarietiesList() {
+  const defaultList = [
+    'GOLD MINE', 'GOLDEX', 'GRAND PRIX', 'JADIAL', 'ASTURIA', 'GOLDMINE', 
+    'AMARELO', 'CEBALLOS', 'ROBICON', 'DINAMARCA', 'GAUCHA', 'SANCHO', 
+    'NATAL', 'ACCLAIM', 'MCKINLEY', 'FASCINATION', 'MAGNUM', 'PELE DE SAPO', 
+    'GALIA', 'CANTALOUPE', 'CHARENTAIS', 'MELANCIA PICKET', 'MELANCIA WATERMELON', 
+    'MAMÃO FORMOSA', 'MAMÃO PAPAYA'
+  ];
+  
+  const set = new Set(defaultList);
+  
+  if (window._varieties && Array.isArray(window._varieties)) {
+    window._varieties.forEach(v => {
+      if (v.name) set.add(v.name.trim().toUpperCase());
+    });
+  }
+  
+  if (window._infoParcelas && Array.isArray(window._infoParcelas)) {
+    window._infoParcelas.forEach(ip => {
+      if (ip.variedade) {
+        ip.variedade.split(',').forEach(v => {
+          const clean = v.trim().toUpperCase();
+          if (clean) set.add(clean);
+        });
+      }
+      if (ip.variedade2) set.add(ip.variedade2.trim().toUpperCase());
+      if (ip.variedade3) set.add(ip.variedade3.trim().toUpperCase());
+      if (ip.variedade4) set.add(ip.variedade4.trim().toUpperCase());
+      if (ip.variedade5) set.add(ip.variedade5.trim().toUpperCase());
+    });
+  }
+  
+  return Array.from(set).filter(Boolean).sort();
+}
+
+function renderVarietySelectOptions(selectedVal = '') {
+  const list = getRegisteredVarietiesList();
+  let html = '<option value="">-- Selecione a Variedade --</option>';
+  const selUpper = (selectedVal || '').trim().toUpperCase();
+  
+  let foundSelected = false;
+  list.forEach(v => {
+    const isSel = selUpper === v;
+    if (isSel) foundSelected = true;
+    html += `<option value="${v}" ${isSel ? 'selected' : ''}>${v}</option>`;
+  });
+  
+  if (selUpper && !foundSelected) {
+    html += `<option value="${selUpper}" selected>${selUpper}</option>`;
+  }
+  
+  html += '<option value="__OUTRA__">+ Outra / Cadastrar Nova Variedade...</option>';
+  return html;
+}
+
+function handleVarietySelectChange(el) {
+  if (el.value === '__OUTRA__') {
+    const nova = prompt('Informe o nome da nova variedade:');
+    if (nova && nova.trim()) {
+      const cleanNova = nova.trim().toUpperCase();
+      let opt = Array.from(el.options).find(o => o.value === cleanNova);
+      if (!opt) {
+        opt = document.createElement('option');
+        opt.value = cleanNova;
+        opt.textContent = cleanNova;
+        el.insertBefore(opt, el.lastElementChild);
+      }
+      el.value = cleanNova;
+    } else {
+      el.value = '';
+    }
+  }
+}
+
 function openInfoParcelaModal(id = '') {
   const modal = document.getElementById('infoParcelaModal');
   const modalTitle = document.getElementById('infoParcelaModalTitle');
@@ -12023,43 +12098,47 @@ function openInfoParcelaModal(id = '') {
   // Limpa/Configura abas do modal
   showModalIpTab(1);
   
-  if (id) {
+  const currentItem = id ? _infoParcelas.find(x => x.id === id) : null;
+  const selVar = document.getElementById('infoP_variedade');
+  if (selVar) {
+    selVar.innerHTML = renderVarietySelectOptions(currentItem ? currentItem.variedade : '');
+  }
+  
+  if (id && currentItem) {
     modalTitle.textContent = 'Editar Ciclo de Parcela';
-    const item = _infoParcelas.find(x => x.id === id);
-    if (!item) return;
     
-    document.getElementById('infoP_id').value = item.id;
-    document.getElementById('infoP_parcelId').value = item.parcel_id || '';
-    document.getElementById('infoP_letra').value = item.letra || '';
-    document.getElementById('infoP_cultura').value = item.cultura || 'MELÃO';
-    document.getElementById('infoP_variedade').value = item.variedade || '';
-    document.getElementById('infoP_area').value = item.area || '';
-    document.getElementById('infoP_linhas').value = item.linhas || '';
-    document.getElementById('infoP_quantidade').value = item.quantidade || '';
-    document.getElementById('infoP_plantio').value = item.plantio || '';
-    document.getElementById('infoP_previsao_colheita').value = item.previsao_colheita || '';
-    document.getElementById('infoP_nf').value = item.nf || '';
-    document.getElementById('infoP_emissao_nf').value = item.emissao_nf || '';
-    document.getElementById('infoP_lote').value = item.lote || '';
-    document.getElementById('infoP_fornecedor').value = item.fornecedor || '';
-    document.getElementById('infoP_semeadura').value = item.semeadura || '';
-    document.getElementById('infoP_nf2').value = item.nf2 || '';
-    document.getElementById('infoP_fornecedor2').value = item.fornecedor2 || '';
-    document.getElementById('infoP_lote2').value = item.lote2 || '';
-    document.getElementById('infoP_emissao_nf2').value = item.emissao_nf2 || '';
-    document.getElementById('infoP_quantidade2').value = item.quantidade2 || '';
-    document.getElementById('infoP_termo').value = item.termo || '';
-    document.getElementById('infoP_data_aplicacao').value = item.data_aplicacao || '';
-    document.getElementById('infoP_defensivo1').value = item.defensivo1 || '';
-    document.getElementById('infoP_defensivo2').value = item.defensivo2 || '';
-    document.getElementById('infoP_obs').value = item.obs || '';
+    document.getElementById('infoP_id').value = currentItem.id;
+    document.getElementById('infoP_parcelId').value = currentItem.parcel_id || '';
+    document.getElementById('infoP_letra').value = currentItem.letra || '';
+    document.getElementById('infoP_cultura').value = currentItem.cultura || 'MELÃO';
+    if (selVar) selVar.value = (currentItem.variedade || '').toUpperCase();
+    document.getElementById('infoP_area').value = currentItem.area || '';
+    document.getElementById('infoP_linhas').value = currentItem.linhas || '';
+    document.getElementById('infoP_quantidade').value = currentItem.quantidade || '';
+    document.getElementById('infoP_plantio').value = currentItem.plantio || '';
+    document.getElementById('infoP_previsao_colheita').value = currentItem.previsao_colheita || '';
+    document.getElementById('infoP_nf').value = currentItem.nf || '';
+    document.getElementById('infoP_emissao_nf').value = currentItem.emissao_nf || '';
+    document.getElementById('infoP_lote').value = currentItem.lote || '';
+    document.getElementById('infoP_fornecedor').value = currentItem.fornecedor || '';
+    document.getElementById('infoP_semeadura').value = currentItem.semeadura || '';
+    document.getElementById('infoP_nf2').value = currentItem.nf2 || '';
+    document.getElementById('infoP_fornecedor2').value = currentItem.fornecedor2 || '';
+    document.getElementById('infoP_lote2').value = currentItem.lote2 || '';
+    document.getElementById('infoP_emissao_nf2').value = currentItem.emissao_nf2 || '';
+    document.getElementById('infoP_quantidade2').value = currentItem.quantidade2 || '';
+    document.getElementById('infoP_termo').value = currentItem.termo || '';
+    document.getElementById('infoP_data_aplicacao').value = currentItem.data_aplicacao || '';
+    document.getElementById('infoP_defensivo1').value = currentItem.defensivo1 || '';
+    document.getElementById('infoP_defensivo2').value = currentItem.defensivo2 || '';
+    document.getElementById('infoP_obs').value = currentItem.obs || '';
   } else {
     modalTitle.textContent = 'Cadastrar Ciclo de Parcela';
     document.getElementById('infoP_id').value = '';
     document.getElementById('infoP_parcelId').value = '';
     document.getElementById('infoP_letra').value = '';
     document.getElementById('infoP_cultura').value = 'MELÃO';
-    document.getElementById('infoP_variedade').value = '';
+    if (selVar) selVar.value = '';
     document.getElementById('infoP_area').value = '';
     document.getElementById('infoP_linhas').value = '';
     document.getElementById('infoP_quantidade').value = '';
@@ -12712,8 +12791,10 @@ function addWebVariedadeRow(nomeVal = '', loteVal = '', qtdVal = '', linhasVal =
     ${idx > 1 ? `<button type="button" onclick="removeWebVariedadeRow(${idx})" style="position:absolute;top:10px;right:10px;width:24px;height:24px;border-radius:50%;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.2);color:var(--red);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>` : ''}
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; align-items:end">
       <div>
-        <label class="flabel">Cultivar / Nome *</label>
-        <input id="webPlVar${idx}" type="text" placeholder="Ex: GOLDMINE" value="${nomeVal || ''}" style="text-transform:uppercase; font-weight:700; font-size:13px" oninput="calcWebAreaHectares()"/>
+        <label class="flabel">Cultivar / Variedade *</label>
+        <select id="webPlVar${idx}" style="font-weight:700; font-size:13px; text-transform:uppercase" onchange="handleVarietySelectChange(this); calcWebAreaHectares();">
+          ${renderVarietySelectOptions(nomeVal)}
+        </select>
       </div>
       <div>
         <label class="flabel">Semeadura</label>
@@ -17199,8 +17280,8 @@ async function saveNewIdiarnDashboard() {
           </select>
         </div>
         <div>
-          <label class="flabel">Variedade</label>
-          <input type="text" id="infoP_variedade" placeholder="Ex: GOLDMINE"/>
+          <label class="flabel">Variedade *</label>
+          <select id="infoP_variedade" onchange="handleVarietySelectChange(this)"></select>
         </div>
         <div>
           <label class="flabel">Área (ha)</label>
