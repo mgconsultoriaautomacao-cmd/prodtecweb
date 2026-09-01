@@ -1377,7 +1377,7 @@
             <option value="MELANCIA">Melancia</option>
           </select>
         </div>
-        <div><label class="flabel">Parcela</label><select id="bulkParcel"></select></div>
+        <div><label class="flabel">Parcela</label><select id="bulkParcel" onchange="onBulkParcelChange()"></select></div>
         <div><label class="flabel">Variedade</label><select id="bulkVariety"></select></div>
         <div><label class="flabel">Cliente / Destino</label><input id="bulkCustomer" placeholder="Ex: CEASA / Descarte"/></div>
         <div><label class="flabel">Nota Fiscal</label><input id="bulkInvoice" placeholder="000..."/></div>
@@ -5559,22 +5559,61 @@ async function loadBulk() {
     </tr>
   `).join('') || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">Sem lançamentos.</td></tr>';
   
-  // Popula select de parcelas e variedades
-  const {data:parcels} = await sb.from('parcels').select('id,code').eq('tenant_id',tenantId).eq('active',true);
+  // Popula select de parcelas e variedades puxando do Caderno de Campo (_infoParcelas)
+  if (!_infoParcelas || _infoParcelas.length === 0) {
+    const { data: ipData } = await sb.from('info_parcelas').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
+    _infoParcelas = ipData || [];
+  }
   const {data:varieties} = await sb.from('varieties').select('id,name').eq('tenant_id',tenantId).eq('active',true);
 
-  ['bulkParcel', 'massParcel'].forEach(id => {
-    const el = $(id); if(!el) return;
-    const current = el.value;
-    el.innerHTML = (id === 'massParcel' ? '<option value="">Todas</option>' : '<option value="">— Selecionar —</option>') + (parcels||[]).map(p=>`<option value="${p.id}">${p.code}</option>`).join('');
-    el.value = current;
-  });
+  const bulkParcelEl = $('bulkParcel');
+  if (bulkParcelEl) {
+    const current = bulkParcelEl.value;
+    bulkParcelEl.innerHTML = '<option value="">— Selecionar Parcela —</option>' + (_infoParcelas || []).map(p => {
+      const pCode = p.parcela2 || p.parcela || p.letra;
+      const varStr = p.variedade ? ` (${p.variedade})` : '';
+      return `<option value="${p.id}">${pCode}${varStr}</option>`;
+    }).join('');
+    bulkParcelEl.value = current;
+  }
+
+  const massParcelEl = $('massParcel');
+  if (massParcelEl) {
+    const current = massParcelEl.value;
+    massParcelEl.innerHTML = '<option value="">Todas</option>' + (_infoParcelas || []).map(p => {
+      const pCode = p.parcela2 || p.parcela || p.letra;
+      return `<option value="${p.id}">${pCode}</option>`;
+    }).join('');
+    massParcelEl.value = current;
+  }
 
   const bVar = $('bulkVariety');
   if(bVar) {
     const current = bVar.value;
     bVar.innerHTML = '<option value="">— Selecionar —</option>' + (varieties||[]).map(v=>`<option value="${v.id}">${v.name}</option>`).join('');
     bVar.value = current;
+  }
+}
+
+function onBulkParcelChange() {
+  const pId = $('bulkParcel').value;
+  if (!pId) return;
+  const ip = (_infoParcelas || []).find(x => String(x.id) === String(pId) || (x.parcela2 || x.parcela) === pId);
+  if (!ip) return;
+
+  // Auto-preencher Variedade se houver correspondência
+  if (ip.variedade && $('bulkVariety')) {
+    const vSel = $('bulkVariety');
+    const opt = Array.from(vSel.options).find(o => o.text.toUpperCase().includes(ip.variedade.toUpperCase()) || o.value.toUpperCase().includes(ip.variedade.toUpperCase()));
+    if (opt) vSel.value = opt.value;
+  }
+
+  // Auto-preencher Fruta/Cultura
+  if (ip.cultura && $('bulkFruitSelect')) {
+    const fSel = $('bulkFruitSelect');
+    const cUpper = ip.cultura.toUpperCase();
+    if (cUpper.includes('MELANCIA')) fSel.value = 'MELANCIA';
+    else if (cUpper.includes('MELAO') || cUpper.includes('MELÃO')) fSel.value = 'MELAO';
   }
 }
 
@@ -15034,12 +15073,17 @@ function openNewOpModal() {
   
   $('newOpDate').value = today();
   
-  const emps = (_employees || []).filter(e => e.active !== false);
-  const empOpts = '<option value="">— Selecionar —</option>' + emps.map(e => `<option value="${e.name}">${e.name}${e.role ? ' (' + e.role + ')' : ''}</option>`).join('');
+  const allEmps = (_employees || []).filter(e => e.active !== false);
+  // ✅ Filtra exclusivamente funcionários com a função TRATORISTA
+  const tratoristas = allEmps.filter(e => e.role && e.role.toUpperCase().includes('TRATORISTA'));
+  const finalTratoristas = tratoristas.length > 0 ? tratoristas : allEmps;
   
-  if ($('newOpTratorista')) $('newOpTratorista').innerHTML = empOpts;
-  if ($('newOpBarrista')) $('newOpBarrista').innerHTML = empOpts;
-  if ($('newOpManipulador')) $('newOpManipulador').innerHTML = empOpts;
+  const tratoristaOpts = '<option value="">— Selecionar Tratorista —</option>' + finalTratoristas.map(e => `<option value="${e.name}">${e.name}${e.role ? ' (' + e.role + ')' : ''}</option>`).join('');
+  const allEmpOpts = '<option value="">— Selecionar —</option>' + allEmps.map(e => `<option value="${e.name}">${e.name}${e.role ? ' (' + e.role + ')' : ''}</option>`).join('');
+  
+  if ($('newOpTratorista')) $('newOpTratorista').innerHTML = tratoristaOpts;
+  if ($('newOpBarrista')) $('newOpBarrista').innerHTML = allEmpOpts;
+  if ($('newOpManipulador')) $('newOpManipulador').innerHTML = allEmpOpts;
 
   $('newOpTrator').value = "Trator 2";
   $('newOpEquipamento').value = "Pulverizador Turbo";
@@ -15074,9 +15118,9 @@ function closeNewOpModal() {
 
 function onNewOpParcelChange() {
   const pId = $('newOpParcelSelect').value;
-  const ip = _infoParcelas.find(x => x.id === pId);
+  const ip = (_infoParcelas || []).find(x => String(x.id) === String(pId) || (x.parcela2 || x.parcela) === pId);
   if (ip) {
-    $('newOpCultura').value = `${ip.cultura || 'MELÃO'} (${ip.variedade})`;
+    $('newOpCultura').value = `${ip.cultura || 'MELÃO'} (${ip.variedade || 'Padrão'})`;
     $('newOpArea').value = ip.area || '1.00';
   } else {
     $('newOpCultura').value = '';
@@ -16220,7 +16264,7 @@ function renderCcIdiarnTable(list) {
   }).join('');
 }
 
-function openNewIdiarnModal() {
+async function openNewIdiarnModal() {
   newIdiarnSelectedProducts = new Set();
   $('newIdiarnDate').value = today();
   $('newIdiarnCiclo').value = '2024/2025';
@@ -16231,13 +16275,21 @@ function openNewIdiarnModal() {
   $('newIdiarnPdfUrl').value = '';
   $('newIdiarnProdutoManual').value = '';
   
-  // Carregar parcelas no select
+  // Garantir que as parcelas do Caderno de Campo estejam carregadas
+  if (!_infoParcelas || _infoParcelas.length === 0) {
+    const { data: ipData } = await sb.from('info_parcelas').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
+    _infoParcelas = ipData || [];
+  }
+
+  // Carregar parcelas no select com exibição clara
   const pSel = $('newIdiarnParcelSelect');
   if (pSel) {
     pSel.innerHTML = '<option value="">— Selecione a Parcela —</option>';
-    const list = window._infoParcelas || _infoParcelas || [];
-    list.forEach(p => {
-      pSel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.parcela2 || p.parcela} (${p.variedade || ''})</option>`);
+    (_infoParcelas || []).forEach(p => {
+      const pCode = p.parcela2 || p.parcela || p.letra;
+      const varStr = p.variedade ? ` (${p.variedade})` : '';
+      const areaStr = p.area ? ` - ${p.area}ha` : '';
+      pSel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${pCode}${varStr}${areaStr}</option>`);
     });
   }
   
@@ -16262,9 +16314,8 @@ async function reloadNewIdiarnNumber() {
 
 async function onNewIdiarnParcelChange() {
   const pId = $('newIdiarnParcelSelect').value;
-  const ip = (window._infoParcelas || _infoParcelas || []).find(x => x.id === pId);
+  const ip = (_infoParcelas || []).find(x => String(x.id) === String(pId) || (x.parcela2 || x.parcela) === pId);
   const chipsEl = $('newIdiarnOpChips');
-  const statusEl = $('newIdiarnOpsStatus');
   if (!chipsEl) return;
   
   chipsEl.innerHTML = '';
@@ -16276,8 +16327,12 @@ async function onNewIdiarnParcelChange() {
     return;
   }
   
+  // Auto-preenchimento automático de Hectares (Área), Variedade e Documento IDIARN
   $('newIdiarnArea').value = ip.area || '1.00';
   $('newIdiarnVariedade').value = ip.variedade || '';
+  if (ip.idiarn && $('newIdiarnDocumento')) {
+    $('newIdiarnDocumento').value = ip.idiarn;
+  }
   
   // Buscar aplicações nos últimos 7 dias
   const dateVal = $('newIdiarnDate').value || today();
