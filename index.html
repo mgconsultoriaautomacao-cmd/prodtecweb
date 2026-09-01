@@ -1962,9 +1962,11 @@
       <div class="card" style="margin-bottom:24px">
         <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
           <div style="display:flex; align-items:center; gap:8px"><i data-lucide="shield" class="btn-i" style="color:var(--yellow)"></i> Cadastro Geral de Defensivos & Carência</div>
-          <div style="display:flex; gap:8px">
+          <div style="display:flex; gap:8px; flex-wrap:wrap">
             <button onclick="downloadDefensivosTemplateCSV()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="download" style="width:14px;height:14px"></i> Baixar Modelo CSV</button>
             <button onclick="openImportDefensivosModal()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="upload" style="width:14px;height:14px"></i> Importar Planilha</button>
+            <button onclick="cleanCorruptedDefensivos()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--yellow); border-color:rgba(245,158,11,0.4)" title="Remove automaticamente registros antigos onde dosagens ou números foram importados no lugar do nome do produto"><i data-lucide="sparkles" style="width:14px;height:14px"></i> Limpar Dados Corrompidos</button>
+            <button onclick="purgeAllDefensivos()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--red); border-color:rgba(239,68,68,0.4)" title="Apaga todos os defensivos para permitir reimportar limpo"><i data-lucide="trash-2" style="width:14px;height:14px"></i> Limpar Tudo</button>
             <button onclick="openDefensivoModal()" class="green" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; background:var(--green)"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> + Novo Defensivo</button>
           </div>
         </div>
@@ -13295,6 +13297,16 @@ function renderCcOpTable(list) {
 let webDefensivosData = [];
 let pendingImportDefensivos = [];
 
+function isCorruptedDefensivo(d) {
+  if (!d || !d.produto) return true;
+  const p = d.produto.trim().toUpperCase();
+  // Se o nome do produto começa com dosagem/unidade (ex: 120G/L, (2) 1000L, 0.05, 0,2) ou não tem letras
+  if (/^[\(\d\.,\s]+(G|KG|L|ML|G\/L|ML\/HA|L\/HA)/i.test(p)) return true;
+  if (/^\(\d+\)\s*\d+/.test(p)) return true;
+  if (!/[A-Z]{3,}/.test(p.normalize("NFD").replace(/[\u0300-\u036f]/g, ""))) return true;
+  return false;
+}
+
 async function loadDefensivosTable() {
   try {
     const { data, error } = await sb.from('caderno_campo_defensivos_cadastro')
@@ -13303,8 +13315,10 @@ async function loadDefensivosTable() {
       .order('produto', { ascending: true });
 
     if (!error && data) {
-      webDefensivosData = data;
-      _defensivos = data;
+      // Filtrar registros válidos e descartar corrompidos das importações antigas
+      const validData = data.filter(d => !isCorruptedDefensivo(d));
+      webDefensivosData = validData;
+      _defensivos = validData;
     } else {
       webDefensivosData = [];
       _defensivos = [];
@@ -13316,6 +13330,39 @@ async function loadDefensivosTable() {
   }
   filterDefensivosTable();
   if (typeof populateNewOpDefensivesSelect === 'function') populateNewOpDefensivesSelect();
+}
+
+async function cleanCorruptedDefensivos() {
+  if (!confirm('Deseja remover do banco Supabase os registros antigos com colunas corrompidas?')) return;
+  try {
+    const { data } = await sb.from('caderno_campo_defensivos_cadastro').select('id, produto').eq('tenant_id', tenantId);
+    const corrupted = (data || []).filter(d => isCorruptedDefensivo(d));
+    if (corrupted.length === 0) {
+      alert('Nenhum registro corrompido encontrado!');
+      return;
+    }
+    const ids = corrupted.map(c => c.id);
+    const { error } = await sb.from('caderno_campo_defensivos_cadastro').delete().in('id', ids);
+    if (error) throw error;
+    toast(`✓ ${ids.length} registros corrompidos foram removidos com sucesso!`, 'ok');
+    await loadDefensivosTable();
+  } catch(e) {
+    console.error(e);
+    alert('Erro ao limpar registros corrompidos: ' + e.message);
+  }
+}
+
+async function purgeAllDefensivos() {
+  if (!confirm('⚠️ ATENÇÃO: Isso excluirá TODOS os defensivos cadastrados para esta empresa para permitir uma nova importação limpa. Deseja continuar?')) return;
+  try {
+    const { error } = await sb.from('caderno_campo_defensivos_cadastro').delete().eq('tenant_id', tenantId);
+    if (error) throw error;
+    toast('✓ Todos os defensivos foram removidos. Você pode reimportar sua planilha agora!', 'ok');
+    await loadDefensivosTable();
+  } catch(e) {
+    console.error(e);
+    alert('Erro ao limpar defensivos: ' + e.message);
+  }
 }
 
 function filterDefensivosTable() {
