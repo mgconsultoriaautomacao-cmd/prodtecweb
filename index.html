@@ -10435,14 +10435,16 @@ function printPastaCampoOrdemPulv(itemStr) {
   const formattedDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—';
   
   // Buscar ciclo correspondente em _infoParcelas para preencher dados extras
-  const ip = _infoParcelas.find(x => x.parcela2 === item.parcela || x.parcela === item.parcela);
-  const dataPlantioStr = ip && ip.plantio ? ip.plantio.split('-').reverse().join('/') : '—';
+  const ip = (_infoParcelas || []).find(x => x.parcela2 === item.parcela || x.parcela === item.parcela);
+  const dataPlantioStr = ip && (ip.transplante || ip.plantio || ip.data_plantio1) ? (ip.transplante || ip.plantio || ip.data_plantio1).split('-').reverse().join('/') : '—';
   const prevColheitaStr = ip && ip.previsao_colheita ? ip.previsao_colheita.split('-').reverse().join('/') : '—';
+  const variedadeStr = (ip && ip.variedade) || item.variedade || '—';
+  const areaHa = parseFloat(item.area_ha || (ip && ip.area) || 1.0).toFixed(2);
   
   // Calcular idade (dias entre plantio e data_aplicacao)
   let idadeDias = '—';
-  if (ip && ip.plantio && item.data_aplicacao) {
-    const pDate = new Date(ip.plantio + 'T12:00:00');
+  if (ip && (ip.transplante || ip.plantio || ip.data_plantio1) && item.data_aplicacao) {
+    const pDate = new Date((ip.transplante || ip.plantio || ip.data_plantio1) + 'T12:00:00');
     const aDate = new Date(item.data_aplicacao + 'T12:00:00');
     const diffTime = Math.abs(aDate - pDate);
     idadeDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -10455,15 +10457,15 @@ function printPastaCampoOrdemPulv(itemStr) {
   const defsOnly = itemsCalda.filter(i => {
     const t = (i.tipo_produto || '').toUpperCase();
     const a = (i.alvo || '').toUpperCase();
-    return t === 'DEFENSIVO' || (!t.includes('FOLIAR') && !a.includes('FOLIAR'));
+    return t === 'DEFENSIVO' || (!t.includes('FOLIAR') && !a.includes('FOLIAR') && !a.includes('ADUBO'));
   });
   const foliaresOnly = itemsCalda.filter(i => {
     const t = (i.tipo_produto || '').toUpperCase();
     const a = (i.alvo || '').toUpperCase();
-    return t === 'FOLIAR' || t.includes('FOLIAR') || a.includes('FOLIAR');
+    return t === 'FOLIAR' || t.includes('FOLIAR') || a.includes('FOLIAR') || a.includes('ADUBO');
   });
 
-  // Preencher até 2 linhas de defensivos
+  // Preencher até 2 linhas de defensivos no mínimo para a tabela ficar bonita
   const filledProducts = [...defsOnly];
   while (filledProducts.length < 2) {
     filledProducts.push({
@@ -10472,32 +10474,41 @@ function printPastaCampoOrdemPulv(itemStr) {
   }
   
   const productsRowsHtml = filledProducts.map((p, idx) => {
+    if (!p.produto_nome) {
+      return `
+        <tr style="height: 22px;">
+          <td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>
+      `;
+    }
+
     let activeIng = '—';
     let toxicClass = '—';
     let concentration = '—';
     let numPermitidoCiclo = '3';
     let intervBula = '7';
     let doseBulaText = '—';
+    let reentradaDias = '1 dia';
     
-    if (p.produto_nome) {
-      const match = _defensivos.find(d => d.produto.toUpperCase() === p.produto_nome.toUpperCase());
-      if (match) {
-        activeIng = match.ingrediente_ativo || '—';
-        toxicClass = match.classe_toxicologica || '—';
-        concentration = match.concentracao_ia || '—';
-        numPermitidoCiclo = match.num_aplicacoes_ciclo || '3';
-        intervBula = match.intervalo_aplicacao_dias || '7';
-        doseBulaText = match.dose_texto || `${p.dosagem_corrigida || '—'} ${p.unidade || 'L'}`;
-      }
+    const match = (_defensivos || []).find(d => d.produto.toUpperCase() === p.produto_nome.toUpperCase());
+    if (match) {
+      activeIng = match.ingrediente_ativo || '—';
+      toxicClass = match.classe_toxicologica || '—';
+      concentration = match.concentracao_ia || '—';
+      numPermitidoCiclo = match.num_aplicacoes_ciclo || '3';
+      intervBula = match.intervalo_aplicacao_dias || '7';
+      doseBulaText = match.dose_texto || `${match.dose || p.dosagem_corrigida || '—'} ${p.unidade || 'L/ha'}`;
+      reentradaDias = match.reentrada_dias ? `${match.reentrada_dias} dia(s)` : '1 dia';
     }
-    
+
     const doseRealVal = parseFloat(p.dosagem_real) || 0;
-    const doseRealStr = doseRealVal ? `${p.dosagem_real} ${p.unidade || 'L'}` : '—';
-    const areaHa = parseFloat(item.area_ha) || 3.0;
-    const doseAreaStr = (doseRealVal > 0 && areaHa > 0) ? `${(doseRealVal / areaHa).toFixed(3)} ${p.unidade || 'L'}/ha` : '—';
-    const carenciaStr = p.carencia_dias !== '' && p.carencia_dias !== undefined ? `${p.carencia_dias} dias` : '—';
+    const doseRealStr = doseRealVal ? `${p.dosagem_real}` : '—';
+    const areaVal = parseFloat(areaHa) || 1.0;
+    const qtdTotalUtilizada = (doseRealVal * areaVal).toFixed(3);
+    const doseAreaStr = doseRealVal > 0 ? `${doseRealVal}` : '—';
+    const carenciaStr = p.carencia_dias !== '' && p.carencia_dias !== undefined ? `${p.carencia_dias}` : '—';
     
-    const numAplicRealizadas = p.produto_nome ? countOpAplicacoesCiclo(item.parcela, p.produto_nome) : '—';
+    const numAplicRealizadas = p.produto_nome ? (typeof countOpAplicacoesCiclo === 'function' ? countOpAplicacoesCiclo(item.parcela, p.produto_nome) : '1') : '—';
     
     let dataCarStr = '—';
     if (item.data_aplicacao && p.carencia_dias) {
@@ -10505,35 +10516,33 @@ function printPastaCampoOrdemPulv(itemStr) {
       appDate.setDate(appDate.getDate() + parseInt(p.carencia_dias));
       dataCarStr = appDate.toLocaleDateString('pt-BR');
     }
-    
-    if (!p.produto_nome) {
-      return `
-        <tr style="height: 22px;">
-          <td class="cell-center">${idx + 1}</td>
-          <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
-        </tr>
-      `;
-    }
-    
+
+    const volCaldaLtHa = item.volume_calda || 500;
+    const volCaldaTanque = item.volume_calda || 500;
+    const tipoAplic = item.equipamento || 'Barra';
+
     return `
       <tr>
-        <td class="cell-center" style="font-weight: bold;">${idx + 1}</td>
-        <td style="font-size: 7pt; font-weight: bold;">${p.produto_nome}</td>
-        <td style="font-size: 7pt;">${activeIng}</td>
-        <td class="cell-center" style="font-size: 6.5pt;">${concentration}</td>
-        <td class="cell-center" style="font-size: 6.5pt;">${doseBulaText}</td>
-        <td class="cell-center" style="font-weight: bold; font-size: 7pt;">${doseRealStr}</td>
-        <td class="cell-center" style="font-size: 6.5pt;">${doseAreaStr}</td>
-        <td style="font-size: 7pt;">${p.alvo || '—'}</td>
-        <td class="cell-center">${numPermitidoCiclo}</td>
-        <td class="cell-center">${numAplicRealizadas}</td>
-        <td class="cell-center">${intervBula}</td>
-        <td class="cell-center">0</td>
-        <td class="cell-center" style="font-weight: bold;">${carenciaStr}</td>
-        <td class="cell-center" style="font-weight: bold; color: #dc2626;">${dataCarStr}</td>
-        <td class="cell-center">1 dia</td>
-        <td class="cell-center">${toxicClass}</td>
-        <td class="cell-center" style="font-size: 6.5pt;">Depósito</td>
+        <td style="font-weight: bold; text-align: left;">${p.produto_nome}</td>
+        <td>${activeIng}</td>
+        <td>${concentration}</td>
+        <td>${p.unidade || 'L/ha'}</td>
+        <td style="font-weight: bold;">${carenciaStr}</td>
+        <td style="text-align: left;">${p.alvo || '—'}</td>
+        <td>${numPermitidoCiclo}</td>
+        <td>${numAplicRealizadas}</td>
+        <td>${intervBula}</td>
+        <td>—</td>
+        <td>${doseBulaText}</td>
+        <td style="font-weight: bold;">${qtdTotalUtilizada}</td>
+        <td style="font-weight: bold;">${doseAreaStr}</td>
+        <td>${volCaldaTanque}</td>
+        <td>${volCaldaLtHa}</td>
+        <td>${tipoAplic}</td>
+        <td style="font-weight: bold; color: #dc2626;">${dataCarStr}</td>
+        <td>${reentradaDias}</td>
+        <td>${toxicClass}</td>
+        <td>Depósito Excedentes</td>
       </tr>
     `;
   }).join('');
@@ -10541,28 +10550,37 @@ function printPastaCampoOrdemPulv(itemStr) {
   // Formatar HTML de Adubos Foliares
   let foliaresRowsHtml = '';
   if (foliaresOnly.length > 0) {
-    foliaresRowsHtml = foliaresOnly.map(f => `
-      <tr>
-        <td style="font-size: 7.5pt; font-weight: bold; color: #166534;">${f.produto_nome}</td>
-        <td style="font-size: 7.5pt;" colspan="2">Adubo Foliar / Nutrição</td>
-        <td class="cell-center" style="font-size: 7.5pt; font-weight: bold;">${f.dosagem_real} ${f.unidade}</td>
-        <td style="font-size: 7.5pt;" colspan="2">Aplicação via calda de pulverização (Isento de MIP)</td>
-      </tr>
-    `).join('');
+    foliaresRowsHtml = foliaresOnly.map(f => {
+      const doseRealVal = parseFloat(f.dosagem_real) || 0;
+      const areaVal = parseFloat(areaHa) || 1.0;
+      const qtdTotal = (doseRealVal * areaVal).toFixed(3);
+      return `
+        <tr>
+          <td style="font-weight: bold; color: #166534; text-align: left;">${f.produto_nome}</td>
+          <td>${f.unidade || 'KG ou LT'}</td>
+          <td style="font-weight: bold; text-align: center;">${qtdTotal}</td>
+        </tr>
+      `;
+    }).join('');
   } else {
     foliaresRowsHtml = `
       <tr>
-        <td style="font-size: 7.5pt; color: #666;" colspan="6">Nenhum adubo foliar adicionado a esta calda.</td>
+        <td style="color: #666; text-align: left;" colspan="3">Nenhum adubo foliar adicionado a esta calda.</td>
       </tr>
     `;
   }
 
   // Clima
-  const isEnsolarado = (parseFloat(item.temperatura_c) > 22 && !(item.observacoes || '').toUpperCase().includes('CHUVA')) ? 'x' : '';
-  const isNublado = (item.observacoes || '').toUpperCase().includes('NUBLADO') ? 'x' : '';
-  const isChovendo = (item.observacoes || '').toUpperCase().includes('CHUVA') ? 'x' : '';
-  const isNoite = (item.observacoes || '').toUpperCase().includes('NOITE') ? 'x' : '';
-  const isVento = (item.observacoes || '').toUpperCase().includes('VENTO') ? 'x' : '';
+  const obsUpper = (item.observacoes || '').toUpperCase();
+  const isEnsolarado = (parseFloat(item.temperatura_c) > 22 && !obsUpper.includes('CHUVA')) ? 'x' : '';
+  const isNublado = obsUpper.includes('NUBLADO') ? 'x' : '';
+  const isChovendo = obsUpper.includes('CHUVA') ? 'x' : '';
+  const isNoite = obsUpper.includes('NOITE') ? 'x' : '';
+  const isVento = obsUpper.includes('VENTO') ? 'x' : '';
+
+  const opCod = item.id ? String(item.id).substring(0, 6).toUpperCase() : '02';
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'EMPRESA';
+  const elaborador = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'EMANUELA MOREIRA';
 
   const printWin = window.open('', '_blank', 'width=1400,height=900');
   if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
@@ -10572,248 +10590,218 @@ function printPastaCampoOrdemPulv(itemStr) {
   <html>
   <head>
     <meta charset="utf-8"/>
-    <title>OC02 — Ordem de Autorização de Aplicação Fitossanitária</title>
+    <title>OC02 — Ordem de Autorização de Aplicação de Produtos Fitossanitários</title>
     <style>
-      @page { size: A4 landscape; margin: 5mm 6mm; }
+      @page { size: A4 landscape; margin: 4mm 5mm; }
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 7pt; line-height: 1.25; }
+      body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 7.5pt; line-height: 1.2; }
       .sheet { width: 100%; }
       
-      .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-      .hdr-table td { border: 1px solid #000; padding: 2px 4px; font-size: 6.5pt; vertical-align: middle; }
-      .hdr-left { width: 45%; font-weight: bold; }
-      .hdr-right { width: 55%; font-family: 'Times New Roman', serif; font-size: 6.5pt; }
+      /* Cabeçalho Auditoria OC02 */
+      .hdr-audit-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; border: 2px solid #000; }
+      .hdr-audit-table td { border: 1px solid #000; padding: 2px 5px; font-size: 7pt; vertical-align: middle; }
       
-      .main-title {
-        color: #dc2626;
-        font-size: 11pt;
-        font-weight: bold;
-        text-align: center;
-        padding: 3px 0;
-        margin: 4px 0;
-        letter-spacing: 0.3px;
-        text-transform: uppercase;
-      }
-      
-      .info-grid { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 7.5pt; }
-      .info-grid td { border: 1px solid #000; padding: 3px 5px; vertical-align: middle; }
-      
-      .sec-title {
-        background: #f3f4f6;
-        font-weight: bold;
-        font-size: 7.5pt;
-        padding: 3px 5px;
-        border: 1px solid #000;
-        border-bottom: none;
-        text-transform: uppercase;
-      }
+      /* Identificação da Parcela */
+      .parcel-grid { width: 100%; border-collapse: collapse; margin-bottom: 4px; border: 1px solid #000; font-size: 8pt; }
+      .parcel-grid td { border: 1px solid #000; padding: 3px 6px; vertical-align: middle; }
 
-      .doc-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-      .doc-table th, .doc-table td { border: 1px solid #000; padding: 2px 3px; font-size: 6.5pt; vertical-align: middle; }
-      .doc-table th { background: #f9fafb; text-align: center; font-weight: bold; }
-      .cell-center { text-align: center; }
-      
-      .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 7pt; }
-      .grid-table td { border: 1px solid #000; padding: 3px 5px; }
+      /* Tabela 1: Defensivos */
+      .def-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 6.2pt; }
+      .def-table th, .def-table td { border: 1px solid #000; padding: 2px 2px; vertical-align: middle; text-align: center; }
+      .def-table th { background: #d8d8d8; color: #e36c09; font-weight: bold; font-size: 6.2pt; text-transform: uppercase; }
 
-      .footer-notes { font-size: 5.8pt; line-height: 1.2; color: #111; border: 1px solid #000; padding: 4px 6px; margin-top: 4px; }
-      
-      .signatures-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
-      .signatures-table td { border: 1px solid #000; padding: 4px 6px; font-size: 7pt; width: 33.33%; vertical-align: top; }
-      .sig-line { border-top: 1px dashed #000; margin-top: 14px; text-align: center; padding-top: 2px; font-size: 6.5pt; }
+      /* Tabela 2: Adubos Foliares */
+      .foliar-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 7.5pt; }
+      .foliar-table th, .foliar-table td { border: 1px solid #000; padding: 3px 6px; vertical-align: middle; }
+      .foliar-table th { background: #f0fdf4; color: #166534; font-weight: bold; text-align: left; }
+
+      /* Parâmetros Operacionais */
+      .ops-grid { width: 100%; border-collapse: collapse; margin-bottom: 4px; border: 1px solid #000; font-size: 7.5pt; }
+      .ops-grid td { border: 1px solid #000; padding: 3px 6px; vertical-align: middle; }
+
+      /* Assinaturas */
+      .sig-grid { width: 100%; border-collapse: collapse; margin-bottom: 4px; border: 1px solid #000; font-size: 7.5pt; }
+      .sig-grid td { border: 1px solid #000; padding: 6px; width: 33.33%; vertical-align: top; text-align: center; }
+      .sig-line { border-top: 1px dashed #000; margin-top: 18px; padding-top: 2px; font-weight: bold; font-size: 7pt; }
+
+      /* As 10 Regras de Ouro */
+      .gold-rules { border: 1px solid #000; padding: 4px 6px; font-size: 5.8pt; line-height: 1.25; background: #fff; }
+      .gold-rules ol { margin-left: 14px; }
+      .emerg-msg { font-weight: bold; text-align: center; margin-top: 3px; color: #dc2626; font-size: 6.5pt; text-transform: uppercase; }
     </style>
   </head>
   <body onload="window.print()">
     <div class="sheet">
-      <!-- CABEÇALHO OFICIAL COM LOGO DO TENANT -->
-      <table class="hdr-table">
+      
+      <!-- CABEÇALHO AUDITORIA OFICIAL (OC02) -->
+      <table class="hdr-audit-table">
         <tr>
-          <td style="width: 45%; border-right: 1px solid #000; padding: 4px;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              ${window.tenantConfig && window.tenantConfig.logo_url ? `<img src="${window.tenantConfig.logo_url}" style="max-height:40px; max-width:120px; object-fit:contain;"/>` : `<span style="font-weight:bold; font-size:14px; color:#166534;">🌱</span>`}
-              <div>
-                <div style="font-size:9pt; font-weight:bold; text-transform:uppercase;">${(window.tenantConfig && window.tenantConfig.name || 'BOM JESUS AGRÍCOLA').toUpperCase()}</div>
-                <div style="font-size:6pt; color:#444;">
-                  ${window.tenantConfig && window.tenantConfig.endereco ? `${window.tenantConfig.endereco}<br/>` : ''}
-                  ${window.tenantConfig && window.tenantConfig.municipio ? `${window.tenantConfig.municipio}/${window.tenantConfig.uf || 'RN'}` : ''}
-                </div>
-              </div>
-            </div>
-          </td>
-          <td style="width: 55%; padding: 0;">
-            <table style="width:100%; border-collapse:collapse;">
-              <tr>
-                <td style="border-bottom:1px solid #000; border-right:1px solid #000; font-weight:bold;">DEPARTAMENTO: CAMPO</td>
-                <td style="border-bottom:1px solid #000; font-size:6pt;">NOME DO DOC: ORDEM DE AUTORIZAÇÃO DE APLICAÇÃO DE PRODUTOS FITOSSANITÁRIOS - CAMPO</td>
-              </tr>
-              <tr>
-                <td style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:6pt;">DATA EMISSÃO: 15/06/2026</td>
-                <td style="border-bottom:1px solid #000; font-size:6pt;">MOD. E APROVAÇÃO: 01/07/2026 &nbsp;&nbsp; U. REVISÃO: 01/07/2026</td>
-              </tr>
-              <tr>
-                <td style="border-right:1px solid #000; font-size:6pt;">PAG: 01 DE 01</td>
-                <td style="font-size:6pt;">COD: OC02 &nbsp;&nbsp;&nbsp; REVISÃO: ANUAL &nbsp;&nbsp;&nbsp; VERSÃO: 01</td>
-              </tr>
-            </table>
-          </td>
+          <td style="width: 45%; font-weight: bold;">ELABORADO, EMITIDO E REVISADO POR: ${elaborador}</td>
+          <td style="width: 55%; font-weight: bold; text-align: right;">DEPARTAMENTO: CAMPO</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold;">AVALIADO POR: ADGF</td>
+          <td style="font-weight: bold; color: #e36c09;">NOME DO DOC: ORDEM DE AUTORIZAÇÃO DE APLICAÇÃO DE PRODUTOS FITOSSANITÁRIOS - CAMPO</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold;">APROVADO POR: ADGF</td>
+          <td>DATA EMISSÃO: 15/06/2026 &nbsp;&nbsp;&nbsp;&nbsp; MOD. E APROVAÇÃO: 01/07/2026 &nbsp;&nbsp;&nbsp;&nbsp; U. REVISÃO: 01/07/2026</td>
+        </tr>
+        <tr>
+          <td>FREQUÊNCIA: POR APLICAÇÃO EM CAMPO</td>
+          <td>PAG: 01 DE 01 &nbsp;&nbsp;&nbsp;&nbsp; COD: OC02 &nbsp;&nbsp;&nbsp;&nbsp; REVISÃO: ANUAL &nbsp;&nbsp;&nbsp;&nbsp; VERSÃO: 01</td>
         </tr>
       </table>
-      
-      <!-- GRID DE INFORMAÇÕES DA ÁREA -->
-      <table class="info-grid">
+
+      <!-- IDENTIFICAÇÃO DA PARCELA E CICLO -->
+      <table class="parcel-grid">
         <tr>
-          <td style="width: 25%;"><strong>PARCELA:</strong> <span style="font-size:10pt; font-weight:bold">${item.parcela}</span></td>
+          <td style="width: 25%;"><strong>PARCELA:</strong> <span style="font-size: 10pt; font-weight: 800; color: #e36c09;">${item.parcela}</span></td>
           <td style="width: 15%;"><strong>IDADE:</strong> ${idadeDias} dias</td>
-          <td style="width: 20%;"><strong>TAMANHO DA ÁREA:</strong> ${item.area_ha || '3,00'} ha</td>
-          <td style="width: 20%;"><strong>CULTURA:</strong> ${(item.cultura || 'Melão').toUpperCase()}</td>
+          <td style="width: 20%;"><strong>TAMANHO DA ÁREA:</strong> ${areaHa} ha</td>
+          <td style="width: 20%;"><strong>CULTURA:</strong> ${(item.cultura || 'MELÃO').toUpperCase()}</td>
           <td style="width: 20%;"><strong>TRANSPLANTIO:</strong> ${dataPlantioStr}</td>
         </tr>
         <tr>
-          <td colspan="2"><strong>VARIEDADE:</strong> ${item.variedade || '—'}</td>
-          <td><strong>PREVISÃO DE COLHEITA:</strong> ${prevColheitaStr}</td>
-          <td colspan="2"><strong>DATA DE APLICAÇÃO:</strong> <span style="font-size:9.5pt; font-weight:bold">${formattedDate}</span></td>
+          <td colspan="2"><strong>Nº DA ORDEM:</strong> <span style="font-weight:bold; color:#166534">OP #${opCod}</span></td>
+          <td colspan="2"><strong>VARIEDADE:</strong> ${variedadeStr}</td>
+          <td><strong>PREVISÃO COLHEITA:</strong> ${prevColheitaStr}</td>
         </tr>
       </table>
-      
-      <!-- GRID DE INFORMAÇÕES DA ÁREA -->
-      <table class="info-grid">
+
+      <!-- EPIs OBRIGATÓRIOS E CONDIÇÕES CLIMÁTICAS -->
+      <table class="parcel-grid" style="background: #f9fafb;">
         <tr>
-          <td style="width: 25%;"><strong>PARCELA:</strong> ${item.parcela}</td>
-          <td style="width: 15%;"><strong>IDADE:</strong> ${idadeDias}</td>
-          <td style="width: 20%;"><strong>TAMANHO DA ÁREA:</strong> ${item.area_ha || '3.00'} ha</td>
-          <td style="width: 20%;"><strong>CULTURA:</strong> ${(item.cultura || 'Melão').toUpperCase()}</td>
-          <td style="width: 20%;"><strong>TRANSPLANTIO:</strong> ${dataPlantioStr}</td>
-        </tr>
-        <tr>
-          <td colspan="2"><strong>VARIEDADE:</strong> ${item.variedade || '—'}</td>
-          <td><strong>PREVISÃO DE COLHEITA:</strong> ${prevColheitaStr}</td>
-          <td colspan="2"><strong>Nº DA ORDEM DE PULV:</strong> OP #${item.id ? item.id.substring(0,6).toUpperCase() : '02'}</td>
+          <td style="width: 50%;">
+            <strong>USO OBRIGATÓRIO DE EPI:</strong> &nbsp;&nbsp;
+            [<b>X</b>] Máscara &nbsp;&nbsp;
+            [<b>X</b>] Luvas PVC &nbsp;&nbsp;
+            [<b>X</b>] Botas PVC &nbsp;&nbsp;
+            [<b>X</b>] Óculos &nbsp;&nbsp;
+            [<b>X</b>] Conjunto Roupa Completo c/ avental
+          </td>
+          <td style="width: 50%;">
+            <strong>DATA DE APLICAÇÃO:</strong> <span style="font-weight:800; font-size:9pt; color:#e36c09;">${formattedDate}</span> &nbsp;&nbsp;&nbsp;
+            <strong>CLIMA:</strong> 
+            (${isChovendo ? '<b>X</b>' : '&nbsp;'}) Chuvendo &nbsp;
+            (${isEnsolarado ? '<b>X</b>' : '&nbsp;'}) Ensolarado &nbsp;
+            (${isNublado ? '<b>X</b>' : '&nbsp;'}) Nublado &nbsp;
+            (${isVento ? '<b>X</b>' : '&nbsp;'}) Vento
+          </td>
         </tr>
       </table>
-      
-      <!-- SEÇÃO USO OBRIGATÓRIO (EPI) -->
-      <div class="epi-section">
-        <span>USO OBRIGATÓRIO DE EPI:</span>
-        <span>( X ) Máscara</span>
-        <span>( X ) Luvas em PVC</span>
-        <span>( X ) Botas PVC</span>
-        <span>( X ) Óculos</span>
-        <span>( X ) Conj. de Roupa Completo com avental</span>
+
+      <!-- TABELA 1: PRODUTOS AUTORIZADOS (DEFENSIVOS) -->
+      <div style="font-weight: bold; font-size: 7.5pt; color: #e36c09; text-transform: uppercase; margin-top: 4px; margin-bottom: 2px;">
+        PRODUTOS AUTORIZADOS A SEREM APLICADOS (PREENCHIDO PELO ENGENHEIRO AGRÔNOMO)
       </div>
-      
-      <!-- TABELA PRODUTOS AUTORIZADOS -->
-      <table class="doc-table">
+      <table class="def-table">
         <thead>
           <tr>
-            <th style="width: 9%;">Nome Comercial de acordo com Bula</th>
-            <th style="width: 8%;">Ingrediente Ativo</th>
-            <th style="width: 3%;">Conc.</th>
-            <th style="width: 3%;">Und</th>
+            <th style="width: 12%;">Nome Comercial Bula</th>
+            <th style="width: 10%;">Ingrediente Ativo</th>
+            <th style="width: 4%;">Concentr.</th>
+            <th style="width: 4%;">Und</th>
             <th style="width: 4%;">Carência</th>
-            <th style="width: 8%;">Alvo Biológico (Praga/Doença)</th>
+            <th style="width: 10%;">Justificativa (Praga Alvo / Doença)</th>
             <th style="width: 4%;">Nº max ciclo</th>
-            <th style="width: 3%;">Nº aplic</th>
-            <th style="width: 3%;">Interv. bula</th>
-            <th style="width: 3%;">Ult. aplic (dias)</th>
+            <th style="width: 4%;">Nº aplic realiz</th>
+            <th style="width: 4%;">Interv. bula</th>
+            <th style="width: 4%;">Últ. aplic</th>
             <th style="width: 6%;">Dosagem Bula</th>
             <th style="width: 5%;">Qtd Utilizada</th>
-            <th style="width: 4%;">Dose/Área</th>
-            <th style="width: 5%;">Vol. Calda (Tanque)</th>
-            <th style="width: 5%;">Vol. Calda (Lt/ha)</th>
-            <th style="width: 5%;">Tipo Aplic.</th>
-            <th style="width: 5%;">Veloc. Trator</th>
+            <th style="width: 5%;">Dose / área</th>
+            <th style="width: 4%;">Vol. Tanque</th>
+            <th style="width: 4%;">Vol. Lt/ha</th>
+            <th style="width: 4%;">Tipo Aplic.</th>
             <th style="width: 6%;">Data Limite Carência</th>
             <th style="width: 4%;">Reentrada</th>
-            <th style="width: 3%;">Classe Tox.</th>
+            <th style="width: 4%;">Classe Tox.</th>
             <th style="width: 4%;">Local Excedente</th>
           </tr>
         </thead>
         <tbody>
-          ${productsRowsHtml} 
+          ${productsRowsHtml}
         </tbody>
       </table>
-      
-      <!-- ADUBOS FOLIARES -->
-      <table class="doc-table" style="margin-top: 4px;">
+
+      <!-- TABELA 2: ADUBOS FOLIARES -->
+      <div style="font-weight: bold; font-size: 7.5pt; color: #166534; text-transform: uppercase; margin-top: 4px; margin-bottom: 2px;">
+        ADUBOS FOLIARES E NUTRIÇÃO DE PLANTA INSERIDOS NA CALDA
+      </div>
+      <table class="foliar-table">
         <thead>
           <tr>
-            <th colspan="6" style="background: #f0fdf4; color: #166534; text-align: left; font-size: 8pt; padding: 4px 6px;">🍃 ADUBAÇÃO FOLIAR E NUTRIENTES INSERIDOS NA CALDA</th>
-          </tr>
-          <tr>
-            <th style="width: 25%;">Nome Comercial</th>
-            <th style="width: 20%;" colspan="2">Categoria</th>
-            <th style="width: 15%;">Dosagem / ha</th>
-            <th style="width: 40%;" colspan="2">Instruções de Mistura / Observações</th>
+            <th style="width: 50%;">NOME COMERCIAL</th>
+            <th style="width: 25%;">UNIDADE (KG ou LT)</th>
+            <th style="width: 25%; text-align: center;">QUANTIDADE UTILIZADA</th>
           </tr>
         </thead>
         <tbody>
           ${foliaresRowsHtml}
         </tbody>
       </table>
-      
-      <!-- DETALHES DE OPERAÇÃO E CONDIÇÕES CLIMÁTICAS -->
-      <table class="clim-section" style="margin-top: 4px;">
+
+      <!-- PARÂMETROS OPERACIONAIS DE APLICAÇÃO -->
+      <table class="ops-grid">
         <tr>
-          <td style="width: 30%;">
-            <strong>Volume Calda (Lt/ha):</strong> ${item.volume_calda || '500'}<br/>
-            <strong>Volume Calda (Tanque):</strong> ${item.volume_calda ? item.volume_calda * 3 : '1500'}<br/>
-            <strong>Tipo de Aplicação:</strong> Barra<br/>
-            <strong>Velocidade do Trator:</strong> 5 KM/H
-          </td>
-          <td style="width: 30%;">
-            <strong>Nº do Trator:</strong> ${item.trator || 'Trator 2'}<br/>
-            <strong>Nº do Pulverizador:</strong> Pulverizador Turbo<br/>
-            <strong>Pressão:</strong> ${item.pressao || '70 psi'}<br/>
-            <strong>Rotação:</strong> 1600 RPM
-          </td>
-          <td style="width: 40%;">
-            <strong>Horário Aplicação:</strong> Inicial: ${item.horario_inicio || '07:30'} &nbsp;&nbsp; Final: ${item.horario_fim || '11:30'}<br/>
-            <strong>Temperatura / Umidade / Vento:</strong> ${item.temperatura_c || '—'}°C / ${item.umidade_rel_pct || '—'}% / ${item.velocidade_vento_kmh || '—'} km/h<br/>
-            <strong>Condições Climáticas:</strong> 
-            ( ${isChovendo ? 'X' : '&nbsp;'} ) Chovendo &nbsp;&nbsp; 
-            ( ${isEnsolarado ? 'X' : '&nbsp;'} ) Ensolarado &nbsp;&nbsp; 
-            ( ${isNublado ? 'X' : '&nbsp;'} ) Nublado
-          </td>
+          <td><strong>Volume Calda (Lt/ha):</strong> ${item.volume_calda || '500'} L/ha</td>
+          <td><strong>Volume Calda (Tanque):</strong> ${item.volume_calda || '500'} L</td>
+          <td><strong>Tipo de Aplicação:</strong> ${item.equipamento || 'Barra'}</td>
+          <td><strong>Velocidade do Trator:</strong> ${item.velocidade_vento_kmh ? item.velocidade_vento_kmh + ' KM/H' : '5 KM/H'}</td>
+        </tr>
+        <tr>
+          <td><strong>Nº do Trator:</strong> ${item.trator || '1'}</td>
+          <td><strong>Nº do Pulverizador:</strong> ${item.bicos || '2'}</td>
+          <td><strong>Pressão:</strong> ${item.pressao || '70'} psi</td>
+          <td><strong>Rotação:</strong> 1600 RPM</td>
+        </tr>
+        <tr>
+          <td colspan="4"><strong>Horário de Aplicação:</strong> Inicial: <strong>${item.horario_inicio || '07:00'}</strong> &nbsp;&nbsp;&nbsp;&nbsp; Final: <strong>${item.horario_fim || '08:00'}</strong></td>
         </tr>
       </table>
-      
-      <!-- ASSINATURAS -->
-      <table class="signatures-table">
+
+      <!-- ASSINATURAS RESPONSÁVEIS -->
+      <table class="sig-grid">
         <tr>
           <td>
-            <strong>Nome do Manipulador:</strong> ${item.tratorista || 'ROBSON RAFAEL'}<br/>
+            <strong>Nome do Manipulador dos Químicos:</strong><br/>${item.manipulador || item.tratorista || 'ROBSON RAFAEL'}
             <div class="sig-line">Assinatura do Manipulador</div>
           </td>
           <td>
-            <strong>Nome do Aplicador:</strong> FELIPE OLIVEIRA<br/>
+            <strong>Nome e Assinatura do Aplicador:</strong><br/>${item.barrista || item.tratorista || 'FELIPE OLIVEIRA'}
             <div class="sig-line">Assinatura do Aplicador</div>
           </td>
           <td>
-            <strong>Nome do Técnico Responsável:</strong> ${item.tecnico || 'IVANOSCA MARTINS'}<br/>
-            <div class="sig-line">Assinatura do Técnico Responsável / Agrônomo</div>
+            <strong>Nome e Assinatura do Técnico Responsável:</strong><br/>${item.eng_agronomo || item.tecnico || 'IVANOSCA MARTINS'}
+            <div class="sig-line">Assinatura do Técnico / Agrônomo Responsável</div>
           </td>
         </tr>
       </table>
-      
-      <!-- FOOTER RULES -->
-      <div class="footer-notes">
+
+      <!-- INSTRUÇÕES E REGRAS DE SEGURANÇA (OC02) -->
+      <div class="gold-rules">
         <ol>
           <li>A escolha do equipamento é imprescindível para uma boa aplicação. Observar se os mesmos estão aptos para uso;</li>
-          <li>Ao receber a ordem de pulverização, o manipulador deve se dirigir ao depósito de produtos a fim de levar a quantidade necessária à aplicação para o ponto de mistrura. Sempre fazendo o uso correto dos EPI's, o manipulador deve realizar o preparo da calda para aplicação, obedecendo as instruções prescritas;</li>
+          <li>Ao receber a ordem de pulverização, o manipulador deve se dirigir ao depósito de produtos a fim de levar a quantidade necessária à aplicação para o ponto de mistura. Sempre fazendo o uso correto dos EPI's, o manipulador deve realizar o preparo da calda para aplicação, obedecendo as instruções prescritas;</li>
           <li>Os produtos necessários à mistura devem ser depositados no pulverizador com bastante atenção para não haver derrames;</li>
-          <li>Caso a embalagem do produto esvazie, o mesmo deve passar por tríplice lavagem e esta água deve retornar à mistura no pulverizador;</li>
+          <li>Caso a embalagem do produto esvazie, o mesmo deve passar por tríplice lavagem e esta água deve retornar à mistura no pulverizador. As embalagens que passaram pela tríplice lavagem devem ser furadas e armazenadas em local específico;</li>
           <li>O aplicador deve ser devidamente treinado para esta atividade, bem como portar devidamente todos os EPI's necessários à aplicação;</li>
           <li>É terminantemente proibido utilizar roupas comuns durante o preparo da calda ou pulverização, bem como EPI incompleto;</li>
-          <li>Não pulverizar quando estiver chovendo. Caso sobre calda de pulverização, solicitar ajuda do responsável técnico para descarte da mesma;</li>
+          <li>Não pulverizar quando estiver chovendo;</li>
+          <li>Caso sobre calda de pulverização, solicitar ajuda do responsável técnico para descarte da mesma;</li>
+          <li>Respeitando às ordens de vestuário de EPI, o aplicador deve se dirigir ao vestuário para retirar seu EPI de acordo com o treinamento. As vestimentas devem ser colocadas em locais adequados para posterior lavagem e o profissional deve tomar banho com água e sabão;</li>
+          <li>Não é permitido utilizar o EPI para outras atividades, tampouco levar o equipamento para ser lavado em casa;</li>
         </ol>
-        <div style="font-weight: bold; text-align: center; margin-top: 2px;">QUALQUER SITUAÇÃO DE EMERGÊNCIA, COMUNICAR A SAÚDE, SEGURANÇA E GERENCIA DA EMPRESA.</div>
+        <div class="emerg-msg">QUALQUER SITUAÇÃO DE EMERGÊNCIA, COMUNICAR A SAÚDE, SEGURANÇA E GERÊNCIA DA EMPRESA.</div>
       </div>
-      
+
     </div>
   </body>
   </html>
   `;
   
+  printWin.document.open();
   printWin.document.write(html);
   printWin.document.close();
 }
@@ -16757,262 +16745,7 @@ async function saveNewOpDashboard() {
 }
 
 async function printOpReport(itemStr) {
-  const item = JSON.parse(decodeURIComponent(itemStr));
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  
-  // Load logo dynamically
-  let logoImg = null;
-  if (window.tenantConfig && window.tenantConfig.logo_url) {
-    try {
-      logoImg = await loadImg(window.tenantConfig.logo_url);
-    } catch(e) {
-      console.warn('Erro ao carregar logo para o PDF da OP:', e);
-    }
-  }
-
-  // Cores
-  const primaryColor = [27, 67, 50]; // Verde escuro agro
-  const secondaryColor = [82, 183, 136]; // Verde claro
-  const textColor = [33, 37, 41];
-  const lightBg = [248, 249, 250];
-  
-  // Desenhar borda externa fina decorativa
-  doc.setDrawColor(27, 67, 50);
-  doc.setLineWidth(0.5);
-  doc.rect(5, 5, 200, 287);
-  
-  // Cabeçalho
-  doc.setFillColor(27, 67, 50);
-  doc.rect(6, 6, 198, 25, 'F');
-  
-  let textStartX = 12;
-  if (logoImg) {
-    // Add white background circle or rect for logo
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(10, 8, 21, 21, 2, 2, 'F');
-    doc.addImage(logoImg, 'PNG', 11, 9, 19, 19);
-    textStartX = 34;
-  }
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.text((window.tenantConfig && window.tenantConfig.name || "PRODTEC - GESTÃO AGRÍCOLA").toUpperCase(), textStartX, 16);
-  
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text("Caderno de Campo Digital - Rastreabilidade e Aplicações", textStartX, 22);
-  
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.text("ORDEM DE PULVERIZAÇÃO (PC 02)", 192, 16, { align: "right" });
-  
-  const formattedDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—';
-  doc.setFontSize(9);
-  doc.text(`Data Emissão: ${formattedDate}`, 192, 22, { align: "right" });
-  
-  let y = 38;
-  
-  // Seção 1: Identificação da Parcela
-  doc.setFillColor(240, 247, 244);
-  doc.rect(8, y, 194, 8, 'F');
-  doc.setTextColor(27, 67, 50);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("1. IDENTIFICAÇÃO DA ÁREA DE CULTIVO", 12, y + 6);
-  
-  y += 10;
-  doc.setTextColor(33, 37, 41);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  
-  // Tabela de Info
-  doc.rect(8, y, 194, 20);
-  doc.line(8, y + 10, 202, y + 10);
-  doc.line(70, y, 70, y + 20);
-  doc.line(140, y, 140, y + 20);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("Parcela física:", 10, y + 6);
-  doc.setFont("helvetica", "normal");
-  doc.text(String(item.parcela), 38, y + 6);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("Cultura:", 72, y + 6);
-  doc.setFont("helvetica", "normal");
-  doc.text(String(item.cultura), 90, y + 6);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("Variedade:", 142, y + 6);
-  doc.setFont("helvetica", "normal");
-  doc.text(String(item.variedade), 164, y + 6);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("Área Tratada (ha):", 10, y + 16);
-  doc.setFont("helvetica", "normal");
-  doc.text(`${item.area_ha || '1.00'} ha`, 44, y + 16);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("Safra / Ciclo ID:", 72, y + 16);
-  doc.setFont("helvetica", "normal");
-  doc.text("Ciclo Ativo", 102, y + 16);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("Status Regulação:", 142, y + 16);
-  doc.setFont("helvetica", "normal");
-  doc.text("Conforme IDIARN", 175, y + 16);
-  
-  y += 28;
-  
-  // Seção 2: Especificação do Defensivo / Agroquímico
-  doc.setFillColor(240, 247, 244);
-  doc.rect(8, y, 194, 8, 'F');
-  doc.setTextColor(27, 67, 50);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("2. ESPECIFICAÇÃO TÉCNICA DA CALDA (PRODUTOS)", 12, y + 6);
-  
-  y += 10;
-  
-  const itemsCalda = item.caderno_campo_op_itens || [];
-  
-  doc.rect(8, y, 194, 8);
-  doc.setTextColor(33, 37, 41);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.text("Produto Comercial", 10, y + 5);
-  doc.text("Alvo Biológico", 85, y + 5);
-  doc.text("Carência", 130, y + 5);
-  doc.text("Regulamentar", 155, y + 5);
-  doc.text("Campo", 180, y + 5);
-  
-  y += 8;
-  
-  doc.setFont("helvetica", "normal");
-  if(itemsCalda.length === 0) {
-    doc.rect(8, y, 194, 10);
-    doc.text("Nenhum produto registrado nesta aplicação.", 12, y + 6);
-    y += 10;
-  } else {
-    itemsCalda.forEach(i => {
-      doc.rect(8, y, 194, 10);
-      doc.text(String(i.produto_nome).substring(0, 35), 10, y + 6);
-      doc.text(String(i.alvo || '—').substring(0, 20), 85, y + 6);
-      doc.text(`${i.carencia_dias} dias`, 130, y + 6);
-      doc.text(`${i.dosagem_corrigida} ${i.unidade}`, 155, y + 6);
-      doc.text(`${i.dosagem_real} ${i.unidade}`, 180, y + 6);
-      y += 10;
-    });
-  }
-  
-  y += 6;
-  
-  // Seção 3: Operação de Campo
-  doc.setFillColor(240, 247, 244);
-  doc.rect(8, y, 194, 8, 'F');
-  doc.setTextColor(27, 67, 50);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("3. PARÂMETROS E DADOS DA APLICAÇÃO DE CAMPO", 12, y + 6);
-  
-  y += 10;
-  doc.rect(8, y, 194, 40);
-  doc.line(8, y + 10, 202, y + 10);
-  doc.line(8, y + 20, 202, y + 20);
-  doc.line(8, y + 30, 202, y + 30);
-  doc.line(100, y, 100, y + 40);
-  
-  doc.setTextColor(33, 37, 41);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  
-  // Linha 1
-  doc.text("Tratorista / Operador:", 10, y + 6);
-  doc.setFont("helvetica", "normal");
-  doc.text(String(item.tratorista || '—'), 48, y + 6);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("Barrista / Manipulador:", 102, y + 6);
-  doc.setFont("helvetica", "normal");
-  doc.text(`${item.barrista || '—'}${item.manipulador ? ' / ' + item.manipulador : ''}`, 145, y + 6);
-  
-  // Linha 2
-  doc.setFont("helvetica", "bold");
-  doc.text("Equipamento / Trator:", 10, y + 16);
-  doc.setFont("helvetica", "normal");
-  doc.text(String(item.trator || '—'), 48, y + 16);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("Bicos / Pressão:", 102, y + 16);
-  doc.setFont("helvetica", "normal");
-  doc.text(`${item.bicos || '—'} / ${item.pressao || '—'}`, 135, y + 16);
-  
-  // Linha 3
-  doc.setFont("helvetica", "bold");
-  doc.text("Horário de Operação:", 10, y + 26);
-  doc.setFont("helvetica", "normal");
-  doc.text(`${item.horario_inicio || '—'} às ${item.horario_fim || '—'}`, 48, y + 26);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("Volume de Calda:", 102, y + 26);
-  doc.setFont("helvetica", "normal");
-  doc.text(`${item.volume_calda || '—'} L/ha`, 135, y + 26);
-  
-  // Linha 4
-  doc.setFont("helvetica", "bold");
-  doc.text("Clima (T / U / V):", 10, y + 36);
-  doc.setFont("helvetica", "normal");
-  doc.text(`${item.temperatura_c||'—'}°C / ${item.umidade_rel_pct||'—'}% / ${item.velocidade_vento_kmh||'—'} km/h`, 48, y + 36);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("Responsável:", 102, y + 36);
-  doc.setFont("helvetica", "normal");
-  doc.text(String(item.tecnico || '—'), 135, y + 36);
-  
-  y += 48;
-  
-  // Seção 4: Observações e Assinaturas
-  doc.setFillColor(240, 247, 244);
-  doc.rect(8, y, 194, 8, 'F');
-  doc.setTextColor(27, 67, 50);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("4. OBSERVAÇÕES E RESPONSABILIDADE TÉCNICA", 12, y + 6);
-  
-  y += 10;
-  doc.rect(8, y, 194, 20);
-  doc.setTextColor(33, 37, 41);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text(item.observacoes || "Aplicação realizada conforme planejamento e de acordo com as normas de segurança.", 10, y + 6, { maxWidth: 190 });
-  
-  y += 40;
-  
-  // Assinaturas
-  doc.line(15, y, 90, y);
-  doc.line(115, y, 190, y);
-  
-  doc.setFontSize(9);
-  doc.setTextColor(33, 37, 41);
-  const rtNome = window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome || 'Reinaldo Chotten';
-  const rtCrea = window.tenantConfig && window.tenantConfig.responsavel_tecnico_crea || 'CREA';
-  doc.text(String(item.eng_agronomo || rtNome), 52, y + 4, { align: "center" });
-  doc.setFont("helvetica", "bold");
-  doc.text(`Responsável Técnico (Agrônomo / ${rtCrea})`, 52, y + 8, { align: "center" });
-  
-  doc.setFont("helvetica", "normal");
-  doc.text(String(item.tratorista || 'Operador'), 152, y + 4, { align: "center" });
-  doc.setFont("helvetica", "bold");
-  doc.text("Aplicador Responsável (Operador)", 152, y + 8, { align: "center" });
-  
-  // Rodapé decorativo
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(150, 150, 150);
-  doc.text(`Documento emitido eletronicamente pelo Sistema Prodtech Web em ${new Date().toLocaleString('pt-BR')}.`, 105, 280, { align: "center" });
-  
-  doc.save(`Ordem_Pulverizacao_Parcela_${item.parcela.replace(/\s+/g, '_')}_${item.data_aplicacao}.pdf`);
+  return printPastaCampoOrdemPulv(itemStr);
 }
 
 async function printColheitaReport(itemStr) {
