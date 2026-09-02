@@ -4870,6 +4870,11 @@ let varieties = [];
     const dosagemLimite = parseFloat(def.dose || def.dosagem_recomendada) || dosagemReal;
     const unit = def.unidade_dose || def.unidade || 'L/ha';
     
+    if (isNaN(dosagemReal) || dosagemReal <= 0) {
+      alert("🚫 DOSAGEM INVÁLIDA — A dosagem informada deve ser maior que zero!");
+      return;
+    }
+    
     // Validação de Dosagem Limite
     if (dosagemLimite > 0 && dosagemReal > dosagemLimite) {
       alert(`🚫 DOSAGEM NÃO PERMITIDA — A dosagem real (${dosagemReal} ${unit}) é superior ao limite recomendado (${dosagemLimite} ${unit}). Use o botão de auto-correção para ajustar!`);

@@ -15377,7 +15377,7 @@ async function saveTrato() {
   }
 
   const payload = {
-    tenant_id,
+    tenant_id: tenantId,
     parcel_id: selectedP ? selectedP.id : null,
     parcela,
     data_trato,
@@ -16431,13 +16431,22 @@ function addNewOpItem() {
     def = _defensivos.find(d => d.id === id);
     if (!def) return;
     dosagemReal = parseFloat($('newOpDosagemReal').value) || 0;
-    dosagemLimite = parseFloat(def.dose || def.dosagem_recomendada) || dosagemReal;
-    dosagemCorrigida = dosagemReal > dosagemLimite ? dosagemLimite : dosagemReal;
+    
+    const parsedDose = parseDoseTexto(def.dose_texto);
+    const maxFromTexto = parsedDose ? parsedDose.max : 0;
+    const doseRef = parseFloat(def.dose || def.dosagem_recomendada) || 0;
+    dosagemLimite = maxFromTexto > 0 ? maxFromTexto : (doseRef > 0 ? doseRef : dosagemReal);
+    dosagemCorrigida = (dosagemLimite > 0 && dosagemReal > dosagemLimite) ? dosagemLimite : dosagemReal;
     inputAlvo = ($('newOpAlvo')?.value || def.alvo || '').trim().toUpperCase();
     targetAlvo = inputAlvo || def.alvo || '';
     cleanAlvo = targetAlvo.toUpperCase();
   }
 
+  // ✅ Validação 0: Dosagem Positiva Obrigatória
+  if (isNaN(dosagemReal) || dosagemReal <= 0) {
+    alert("🚫 DOSAGEM INVÁLIDA — A dosagem informada deve ser maior que zero!");
+    return;
+  }
   
   // Validação 1: Justificativa de MIP para Defensivos Químicos vs Isenção para Foliares
   if (!isCustom) {
@@ -16460,12 +16469,12 @@ function addNewOpItem() {
   
   // ✅ Validação 2: Dosagem Total por Parcela (100% fiel à regra agronômica)
   // Regra: dose_maxima/ha × área_ha = volume absoluto máximo permitido
-  if (!isCustom && dosagemReal > dosagemLimite) {
+  if (!isCustom && dosagemLimite > 0 && dosagemReal > dosagemLimite) {
     const unit = def.unidade_dose || 'L/ha';
     const unitBase = unit.replace('/ha', '').trim();
     const totalPermitido = (dosagemLimite * areaHa).toFixed(3);
     const totalInformado = (dosagemReal * areaHa).toFixed(3);
-    alert(`🚫 DOSAGEM NÃO PERMITIDA\n\nDosagem informada: ${dosagemReal} ${unit} × ${areaHa} ha = ${totalInformado} ${unitBase}\nLimite máximo: ${dosagemLimite} ${unit} × ${areaHa} ha = ${totalPermitido} ${unitBase}\n\nPara esta parcela de ${areaHa} ha, o máximo absoluto é ${totalPermitido} ${unitBase}.`);
+    alert(`🚫 DOSAGEM NÃO PERMITIDA — ERRO DE AUDITORIA DE APLICAÇÃO\n\nDosagem informada (${dosagemReal} ${unit}) excede o limite máximo permitido pela bula (${dosagemLimite} ${unit}).\n\nVolume total para a parcela de ${areaHa} ha:\n• Informado: ${totalInformado} ${unitBase}\n• Limite Máximo Permitido: ${totalPermitido} ${unitBase}\n\nA aplicação deste produto foi BLOQUEADA! Ajuste a dosagem para o limite recomendado.`);
     return;
   }
 
@@ -17386,6 +17395,7 @@ async function onNewIdiarnParcelChange() {
   const pId = $('newIdiarnParcelSelect').value;
   const ip = (_infoParcelas || []).find(x => String(x.id) === String(pId) || (x.parcela2 || x.parcela) === pId);
   const chipsEl = $('newIdiarnOpChips');
+  const statusEl = $('newIdiarnOpStatus');
   if (!chipsEl) return;
   
   chipsEl.innerHTML = '';
