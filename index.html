@@ -10008,8 +10008,242 @@ function printPastaCampoSementes(id) {
   alert('Imprimir Sementes (PC03) em construção...');
 }
 
-function printPastaCampoTratos(id) {
-  alert('Imprimir Tratos (PC05) em construção...');
+async function printPastaCampoTratos(id) {
+  const item = _infoParcelas.find(x => x.id === id);
+  if (!item) { alert('Parcela não encontrada.'); return; }
+  
+  const printWin = window.open('', '_blank', 'width=900,height=1200');
+  if (!printWin) { alert('Permita popups para imprimir.'); return; }
+
+  // Fetch tratos para esta parcela
+  const { data: tratos, error } = await sb.from('caderno_campo_tratos')
+    .select('*')
+    .eq('parcel_id', id)
+    .order('data_trato', { ascending: true });
+    
+  if (error || !tratos || tratos.length === 0) {
+    alert('Nenhum trato cultural registrado para esta parcela.');
+    printWin.close();
+    return;
+  }
+  
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa';
+  const variedadesList = item.variedade ? item.variedade.split(',').map(v => v.trim()).filter(v => v) : [];
+  let variedadesHtml = variedadesList.map(v => `<div>${v.toUpperCase()}</div>`).join('');
+  if (!variedadesHtml) variedadesHtml = '—';
+
+  const rowsHtml = tratos.map(t => {
+    const fmtDate = t.data_trato ? t.data_trato.split('-').reverse().join('/') : '—';
+    return `
+      <tr>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center">${fmtDate}</td>
+        <td style="border:1px solid #000; padding:4px 6px">${t.atividade || '—'}</td>
+        <td style="border:1px solid #000; padding:4px 6px">${t.implemento || '—'}</td>
+        <td style="border:1px solid #000; padding:4px 6px">${t.operador || '—'}</td>
+        <td style="border:1px solid #000; padding:4px 6px"></td>
+      </tr>
+    `;
+  }).join('');
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Tratos Culturais — ${item.parcela2 || item.parcela}</title>
+    <style>
+      @page { size: A4 portrait; margin: 10mm; }
+      body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; font-size: 9pt; }
+      .header-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+      .header-table td { border: 1px solid #000; padding: 4px 6px; }
+      .main-title { font-size: 14pt; font-weight: bold; text-align: center; text-transform: uppercase; margin-bottom: 15px; }
+      .grid-table { width: 100%; border-collapse: collapse; }
+      .grid-table th, .grid-table td { border: 1px solid #000; padding: 6px; text-align: left; }
+      .grid-table th { background: #f3f4f6; }
+    </style>
+  </head>
+  <body>
+    <div class="main-title">FICHA DE TRATOS CULTURAIS - PC05</div>
+    
+    <table class="header-table">
+      <tr>
+        <td width="25%"><strong>EMPRESA:</strong><br/>${tenantName}</td>
+        <td width="25%"><strong>FAZENDA:</strong><br/>${item.fazenda || '—'}</td>
+        <td width="25%"><strong>CULTURA:</strong><br/>${item.cultura || 'MELÃO'}</td>
+        <td width="25%"><strong>PARCELA:</strong><br/>${item.parcela2 || item.parcela}</td>
+      </tr>
+      <tr>
+        <td><strong>ÁREA (ha):</strong><br/>${item.area || '—'}</td>
+        <td colspan="3"><strong>VARIEDADES:</strong><br/><div style="display:flex; gap:10px">${variedadesHtml}</div></td>
+      </tr>
+    </table>
+
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th width="15%" style="text-align:center">Data</th>
+          <th width="35%">Atividade / Trato Cultural</th>
+          <th width="25%">Implemento</th>
+          <th width="15%">Operador</th>
+          <th width="10%">Visto</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+      </tbody>
+    </table>
+    
+    <div style="margin-top:40px; text-align:center; display:flex; justify-content:space-around;">
+      <div>
+        <div style="border-top:1px solid #000; width:200px; margin:0 auto; padding-top:4px;">Responsável Técnico</div>
+      </div>
+    </div>
+    
+    <script>
+      window.onload = function() { window.print(); }
+    </script>
+  </body>
+  </html>
+  `;
+  
+  printWin.document.open();
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
+async function printPastaCampoIdiarn(id) {
+  const item = _infoParcelas.find(x => x.id === id);
+  if (!item) { alert('Parcela não encontrada.'); return; }
+  
+  if (!window._opList) {
+    alert('Os dados de pulverização ainda estão carregando. Tente novamente em alguns segundos.');
+    loadOpTable();
+    return;
+  }
+  
+  const ops = window._opList.filter(o => o.parcela === item.parcela2 || o.parcela === item.parcela);
+  if (ops.length === 0) {
+    alert('Nenhuma ordem de pulverização (OP) registrada para esta parcela. Não é possível gerar o IDIARN sem pulverizações.');
+    return;
+  }
+  
+  const printWin = window.open('', '_blank', 'width=1000,height=1200');
+  if (!printWin) { alert('Permita popups para imprimir.'); return; }
+
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa';
+  const fazenda = item.fazenda || '—';
+  
+  const mapCientifico = {
+    'MOSCA BRANCA': 'Bemisia tabaci',
+    'TRIPES': 'Thrips tabaci / Frankliniella spp.',
+    'PULGÃO': 'Aphis gossypii',
+    'MINADORA': 'Liriomyza spp.',
+    'BROCA': 'Diaphania spp.',
+    'ÁCARO': 'Tetranychus urticae',
+    'LAGARTA': 'Spodoptera spp. / Helicoverpa spp.',
+    'OÍDIO': 'Podosphaera xanthii',
+    'MÍLDIO': 'Pseudoperonospora cubensis'
+  };
+  
+  const pulverizacoes = [];
+  ops.sort((a,b) => new Date(a.data_aplicacao) - new Date(b.data_aplicacao)).forEach(op => {
+     const dt = op.data_aplicacao ? op.data_aplicacao.split('-').reverse().join('/') : '—';
+     if (op.caderno_campo_op_itens) {
+        op.caderno_campo_op_itens.forEach(it => {
+           let alvo = (it.alvo || '').toUpperCase().trim();
+           let nomeCientifico = mapCientifico[alvo] || '—';
+           
+           pulverizacoes.push({
+             data: dt,
+             produto: it.produto_nome,
+             ingrediente: it.ingrediente_ativo || '—',
+             dosagem: `${it.dosagem_real || ''} ${it.unidade || ''}`.trim(),
+             alvo: alvo,
+             nome_cientifico: nomeCientifico
+           });
+        });
+     }
+  });
+
+  const rowsHtml = pulverizacoes.map(p => `
+    <tr>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">${p.data}</td>
+      <td style="border:1px solid #000; padding:4px 6px">${p.produto}</td>
+      <td style="border:1px solid #000; padding:4px 6px">${p.ingrediente}</td>
+      <td style="border:1px solid #000; padding:4px 6px">${p.alvo}</td>
+      <td style="border:1px solid #000; padding:4px 6px; font-style:italic">${p.nome_cientifico}</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">${p.dosagem}</td>
+    </tr>
+  `).join('');
+
+  const variedadesList = item.variedade ? item.variedade.split(',').map(v => v.trim()).filter(v => v) : [];
+  let variedadesStr = variedadesList.join(', ');
+  if (!variedadesStr) variedadesStr = '—';
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>IDIARN — ${item.parcela2 || item.parcela}</title>
+    <style>
+      @page { size: A4 landscape; margin: 10mm; }
+      body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; font-size: 9pt; }
+      .header-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+      .header-table td { border: 1px solid #000; padding: 4px 6px; }
+      .main-title { font-size: 14pt; font-weight: bold; text-align: center; text-transform: uppercase; margin-bottom: 15px; background: #ea580c; color: white; padding: 6px; border: 2px solid #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+      .grid-table th, .grid-table td { border: 1px solid #000; padding: 6px; text-align: left; }
+      .grid-table th { background: #f3f4f6; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    </style>
+  </head>
+  <body>
+    <div class="main-title">RELATÓRIO DE PULVERIZAÇÕES (MODELO IDIARN)</div>
+    
+    <table class="header-table">
+      <tr>
+        <td width="25%"><strong>EMPRESA:</strong><br/>${tenantName}</td>
+        <td width="25%"><strong>FAZENDA:</strong><br/>${fazenda}</td>
+        <td width="25%"><strong>PARCELA:</strong><br/>${item.parcela2 || item.parcela}</td>
+        <td width="25%"><strong>ÁREA TOTAL:</strong><br/>${item.area ? item.area + ' ha' : '—'}</td>
+      </tr>
+      <tr>
+        <td colspan="4"><strong>CULTURA / VARIEDADES:</strong><br/>${item.cultura || 'MELÃO'} — ${variedadesStr}</td>
+      </tr>
+    </table>
+
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th width="10%" style="text-align:center">Data</th>
+          <th width="20%">Produto Comercial</th>
+          <th width="20%">Princípio Ativo</th>
+          <th width="15%">Praga / Doença (Alvo)</th>
+          <th width="20%">Nome Científico</th>
+          <th width="15%" style="text-align:center">Dosagem</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+      </tbody>
+    </table>
+    
+    <div style="margin-top:40px; text-align:center; display:flex; justify-content:space-around;">
+      <div>
+        <div style="border-top:1px solid #000; width:250px; margin:0 auto; padding-top:4px;">Assinatura do Responsável Técnico</div>
+      </div>
+    </div>
+    
+    <script>
+      window.onload = function() { window.print(); }
+    </script>
+  </body>
+  </html>
+  `;
+  
+  printWin.document.open();
+  printWin.document.write(html);
+  printWin.document.close();
 }
 
 function printPastaCampoCapa(id) {
@@ -12585,6 +12819,7 @@ function renderWebPlantiosTable(data) {
           <button onclick="printPastaCampoCapa('${p.id}')" class="btn on" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:12px; height:12px"></i> Capa (PC01)</button>
           <button onclick="printPastaCampoSementes('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:12px; height:12px"></i> Sementes (PC03)</button>
           <button onclick="printPastaCampoTratos('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:12px; height:12px"></i> Tratos (PC05)</button>
+          <button onclick="printPastaCampoIdiarn('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(234,88,12,0.15); color:#ea580c; border:1px solid rgba(234,88,12,0.3)"><i data-lucide="file-check" style="width:12px; height:12px"></i> Ficha IDIARN</button>
           <button onclick="openWebPlantioModal('${p.id}')" class="sec" style="padding:4px 8px; font-size:11px; margin-right:3px; display:inline-flex; align-items:center; gap:4px" title="Editar"><i data-lucide="edit-3" style="width:13px;height:13px"></i> Editar</button>
           <button onclick="deleteWebPlantio('${p.id}')" class="danger" style="padding:4px 8px; font-size:11px; display:inline-flex; align-items:center; gap:4px; background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:var(--red); border-radius:6px; cursor:pointer" title="Excluir Definitivamente"><i data-lucide="trash-2" style="width:13px;height:13px"></i> Excluir</button>
         </td>
@@ -13602,49 +13837,85 @@ function printPastaCampoMip(itemStr) {
 
   let tableRowsHtml = '';
 
+  const listaPragasBase = [
+    { name: 'Mosca Branca', limiar: 1.0 },
+    { name: 'Tripes', limiar: 1.0 },
+    { name: 'Pulgão', limiar: 1.0 },
+    { name: 'Minadora', limiar: 1.0 },
+    { name: 'Broca', limiar: 1.0 },
+    { name: 'Ácaro', limiar: 1.0 },
+    { name: 'Lagarta', limiar: 0.2 },
+    { name: 'Oídio', limiar: 0.0 },
+    { name: 'Míldio', limiar: 0.0 }
+  ];
+
+  // Normalizar pragas preenchidas
+  const pragasPreenchidas = {};
   if (item.pragas_json && typeof item.pragas_json === 'object') {
-    tableRowsHtml = Object.keys(item.pragas_json).map(k => {
-      const pData = item.pragas_json[k];
-      const name = pData.name || k;
-      const limiar = pData.limiar ?? 1.0;
-      const media = pData.media ?? 0;
-      const acima = pData.acima_limiar || media > limiar;
-      const pts = pData.pontos || [0,0,0,0,0,0,0,0,0,0];
-
-      const rowBg = acima ? '#fee2e2' : '#ffffff';
-      const statusBg = acima ? '#ef4444' : '#10b981';
-      const statusTxt = acima ? 'RECOMENDA CONTROLE' : 'SOB CONTROLE';
-
-      const ptsTd = pts.map(v => {
-        const pVal = parseFloat(v) || 0;
-        const style = pVal > (limiar > 0 ? limiar : 0) ? 'background:#fca5a5; font-weight:bold;' : (pVal > 0 ? 'background:#fef3c7;' : '');
-        return `<td style="border:1px solid #000; text-align:center; ${style}">${pVal}</td>`;
-      }).join('');
-
-      return `
-        <tr style="background:${rowBg}">
-          <td style="border:1px solid #000; padding:4px 6px; font-weight:bold; text-align:left">${name}</td>
-          <td style="border:1px solid #000; text-align:center">${limiar === 0 ? 'Presença' : '> ' + limiar}</td>
-          ${ptsTd}
-          <td style="border:1px solid #000; text-align:center; font-weight:bold; font-size:9pt">${media.toFixed(2)}</td>
-          <td style="border:1px solid #000; text-align:center; background:${statusBg}; color:#fff; font-weight:bold; font-size:7pt">${statusTxt}</td>
-        </tr>
-      `;
-    }).join('');
-  } else {
+    Object.keys(item.pragas_json).forEach(k => {
+      const p = item.pragas_json[k];
+      const pName = (p.name || k).toUpperCase().trim();
+      pragasPreenchidas[pName] = p;
+    });
+  } else if (item.praga) {
     // Fallback legado
-    const pragaFriendly = (item.praga || '').replace(/_/g, ' ').toUpperCase();
-    const mediaVal = parseFloat(item.media) || 0;
-    tableRowsHtml = `
-      <tr>
-        <td style="border:1px solid #000; padding:6px; font-weight:bold">${pragaFriendly}</td>
-        <td style="border:1px solid #000; text-align:center">1.0</td>
-        <td colspan="10" style="border:1px solid #000; text-align:center">Consolidado da Amostragem</td>
-        <td style="border:1px solid #000; text-align:center; font-weight:bold">${mediaVal.toFixed(2)}</td>
-        <td style="border:1px solid #000; text-align:center">${mediaVal > 1 ? 'RECOMENDA CONTROLE' : 'SOB CONTROLE'}</td>
+    const pName = item.praga.replace(/_/g, ' ').toUpperCase().trim();
+    pragasPreenchidas[pName] = {
+      name: item.praga.replace(/_/g, ' '),
+      media: parseFloat(item.media) || 0,
+      pontos: [0,0,0,0,0,0,0,0,0,0]
+    };
+  }
+
+  // Mesclar com a lista base
+  const pragasFinais = [];
+  listaPragasBase.forEach(pb => {
+    const key = pb.name.toUpperCase().trim();
+    if (pragasPreenchidas[key]) {
+      pragasFinais.push({ ...pb, ...pragasPreenchidas[key], name: pb.name });
+      delete pragasPreenchidas[key];
+    } else {
+      pragasFinais.push({ ...pb, media: 0, pontos: [0,0,0,0,0,0,0,0,0,0], acima_limiar: false });
+    }
+  });
+
+  // Adicionar quaisquer pragas extras preenchidas que não estão na lista base
+  Object.keys(pragasPreenchidas).forEach(k => {
+    pragasFinais.push(pragasPreenchidas[k]);
+  });
+
+  tableRowsHtml = pragasFinais.map(pData => {
+    const name = pData.name;
+    const limiar = pData.limiar ?? 1.0;
+    const media = pData.media ?? 0;
+    const acima = pData.acima_limiar || media > limiar;
+    const pts = pData.pontos || [0,0,0,0,0,0,0,0,0,0];
+
+    const rowBg = acima ? '#fee2e2' : '#ffffff';
+    const statusBg = acima ? '#ef4444' : '#10b981';
+    const statusTxt = acima ? 'RECOMENDA CONTROLE' : 'SOB CONTROLE';
+
+    const ptsTd = pts.map(v => {
+      const pVal = parseFloat(v) || 0;
+      let style = '';
+      if (pVal > 0) {
+         if (limiar === 0) style = 'background:#fca5a5; font-weight:bold;';
+         else if (pVal > limiar) style = 'background:#fca5a5; font-weight:bold;';
+         else style = 'background:#fef3c7;';
+      }
+      return `<td style="border:1px solid #000; text-align:center; ${style}">${pVal}</td>`;
+    }).join('');
+
+    return `
+      <tr style="background:${rowBg}">
+        <td style="border:1px solid #000; padding:4px 6px; font-weight:bold; text-align:left">${name}</td>
+        <td style="border:1px solid #000; text-align:center">${limiar === 0 ? 'Presença' : '> ' + limiar}</td>
+        ${ptsTd}
+        <td style="border:1px solid #000; text-align:center; font-weight:bold; font-size:9pt">${media.toFixed(2)}</td>
+        <td style="border:1px solid #000; text-align:center; background:${statusBg}; color:#fff; font-weight:bold; font-size:7pt">${statusTxt}</td>
       </tr>
     `;
-  }
+  }).join('');
 
   const html = `
   <!DOCTYPE html>
@@ -15068,6 +15339,19 @@ async function openNewTratoModal() {
   $('tratoImplemento').value = '';
   $('tratoOperador').value = '';
 
+  const ops = [...new Set((typeof _tratosList !== 'undefined' ? _tratosList : []).map(t => t.operador).filter(Boolean))].sort();
+  let datalist = $('tratoristasList');
+  if (!datalist) {
+    datalist = document.createElement('datalist');
+    datalist.id = 'tratoristasList';
+    document.body.appendChild(datalist);
+  }
+  datalist.innerHTML = ops.map(o => `<option value="${o}">`).join('');
+
+  if ($('tratoOperador')) {
+    $('tratoOperador').setAttribute('list', 'tratoristasList');
+  }
+
   modal.style.display = 'flex';
 }
 
@@ -15088,6 +15372,17 @@ async function saveTrato() {
   if (!atividade) { alert('Informe a atividade/trato.'); return; }
 
   const selectedP = _infoParcelas.find(p => (p.parcela2 || p.parcela) === parcela);
+
+  if (selectedP) {
+    const isGrade = atividade.includes('GRADE') || atividade.includes('ARADORA') || atividade.includes('ARADA');
+    const dtPlantio = selectedP.transplante || selectedP.plantio || selectedP.data_plantio1;
+    if (isGrade && dtPlantio) {
+       if (new Date(data_trato) > new Date(dtPlantio)) {
+         alert(`Não é permitido registrar '${atividade}' em uma data (${data_trato.split('-').reverse().join('/')}) posterior ao Plantio/Transplante da parcela (${dtPlantio.split('-').reverse().join('/')}).`);
+         return;
+       }
+    }
+  }
 
   const payload = {
     tenant_id,
