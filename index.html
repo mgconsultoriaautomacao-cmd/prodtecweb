@@ -12697,6 +12697,12 @@ function updateWebParcela2Preview() {
   if (prev) prev.value = p && l ? `${p} ${l}` : p;
 }
 
+function calcWebPrevisaoColheita() {
+  for (let i = 1; i <= 10; i++) {
+    calcWebPrevisaoColheitaRow(i);
+  }
+}
+
 function calcWebPrevisaoColheitaRow(idx) {
   const transplante = $(`webPlDataPlantio${idx}`)?.value || $(`webPlSemeaduraVar${idx}`)?.value;
   const cultura = $('webPlCultura')?.value;
@@ -13021,36 +13027,43 @@ async function saveWebPlantio() {
   btn.textContent = 'Salvando...';
 
   try {
+    let currentPayload = { ...payload };
     let res;
     if (editId) {
-      res = await sb.from('info_parcelas').update(payload).eq('id', editId).eq('tenant_id', tenantId);
+      res = await sb.from('info_parcelas').update(currentPayload).eq('id', editId).eq('tenant_id', tenantId);
     } else {
-      res = await sb.from('info_parcelas').insert(payload);
+      res = await sb.from('info_parcelas').insert(currentPayload);
     }
 
     if (res.error) {
       console.warn('Alerta do Supabase ao salvar plantio:', res.error);
       
-      // Fallback seguro caso as colunas novas ainda não tenham sido criadas no Supabase via SQL
-      const cleanPayload = { ...payload };
-      ['tamanho_linha1','tamanho_linha2','tamanho_linha3','tamanho_linha4','tamanho_linha5',
-       'previsao_colheita1','previsao_colheita2','previsao_colheita3','previsao_colheita4','previsao_colheita5',
-       'linhas1','linhas2','linhas3','linhas4','linhas5',
-       'area1','area2','area3','area4','area5',
-       'data_plantio1','data_plantio2','data_plantio3','data_plantio4','data_plantio5'].forEach(k => delete cleanPayload[k]);
-
-      if (editId) {
-        res = await sb.from('info_parcelas').update(cleanPayload).eq('id', editId).eq('tenant_id', tenantId);
-      } else {
-        res = await sb.from('info_parcelas').insert(cleanPayload);
-      }
-
-      if (res.error && res.error.message && (res.error.message.includes("'area'") || res.error.message.includes('area'))) {
-        delete cleanPayload.area;
-        if (editId) {
-          res = await sb.from('info_parcelas').update(cleanPayload).eq('id', editId).eq('tenant_id', tenantId);
+      let attempts = 0;
+      while (res.error && attempts < 15) {
+        attempts++;
+        const errMsg = res.error.message || '';
+        const match = errMsg.match(/'([^']+)' column|column "([^"]+)"|'([^']+)' of 'info_parcelas'/i);
+        const badCol = match ? (match[1] || match[2] || match[3]) : null;
+        
+        if (badCol && badCol in currentPayload) {
+          console.warn(`Removendo coluna inexistente '${badCol}' e re-tentando salvar (${attempts})...`);
+          delete currentPayload[badCol];
         } else {
-          res = await sb.from('info_parcelas').insert(cleanPayload);
+          // Remove todas as colunas numeradas estendidas e tenta salvar
+          Object.keys(currentPayload).forEach(k => {
+            if (/^(variedade|lote|quantidade|linhas|tamanho_linha|semeadura|transplante|data_plantio|previsao_colheita|nf|termo|area)\d+$/i.test(k) || k === 'area_ha') {
+              delete currentPayload[k];
+            }
+          });
+          if (res.error && res.error.message && res.error.message.includes('area')) {
+            delete currentPayload.area;
+          }
+        }
+        
+        if (editId) {
+          res = await sb.from('info_parcelas').update(currentPayload).eq('id', editId).eq('tenant_id', tenantId);
+        } else {
+          res = await sb.from('info_parcelas').insert(currentPayload);
         }
       }
 
