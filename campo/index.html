@@ -2409,8 +2409,9 @@ function jsSha256(ascii) {
 }
 
 async function doLogin() {
-  let email = $('loginEmail').value.trim();
-  const pass  = $('loginPass').value;
+  let rawEmail = $('loginEmail').value || '';
+  let email = rawEmail.toLowerCase().trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
+  const pass  = ($('loginPass').value || '').trim();
   const btn   = $('loginBtn');
   const err   = $('loginErr');
   err.style.display = 'none';

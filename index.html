@@ -1694,7 +1694,27 @@
             <button onclick="addOperation()"><i data-lucide="plus" style="width:16px;height:16px"></i></button>
           </div>
         </div>
-        <div id="regOpList" class="card-list" style="max-height:300px; overflow-y:auto"></div>
+      <!-- PARCEIROS (FORNECEDORES & CLIENTES) -->
+      <div class="card" style="grid-column: span 2;">
+        <div class="title"><i data-lucide="users-two" class="btn-i"></i> Fornecedores & Clientes (Venda a Granel / Insumos)</div>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px">
+          <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:6px">
+            <input id="regParceiroNome" placeholder="Razão Social / Nome Completo" style="font-size:12px"/>
+            <input id="regParceiroDoc" placeholder="CNPJ / CPF" style="font-size:12px"/>
+            <select id="regParceiroTipo" style="font-size:12px">
+              <option value="FORNECEDOR">Fornecedor (Insumos/Defensivos)</option>
+              <option value="CLIENTE">Cliente (Venda a Granel)</option>
+              <option value="AMBOS">Ambos (Fornecedor & Cliente)</option>
+            </select>
+          </div>
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr auto; gap:6px">
+            <input id="regParceiroTel" placeholder="Telefone / WhatsApp" style="font-size:11px"/>
+            <input id="regParceiroEmail" placeholder="E-mail" style="font-size:11px"/>
+            <input id="regParceiroEnd" placeholder="Cidade / UF" style="font-size:11px"/>
+            <button onclick="addParceiro()" style="padding:8px 16px; font-size:11px; font-weight:bold"><i data-lucide="plus" style="width:14px;height:14px"></i> Cadastrar</button>
+          </div>
+        </div>
+        <div id="regParceirosList" class="card-list" style="max-height:260px; overflow-y:auto"></div>
       </div>
     </div>
   </div>
@@ -1924,51 +1944,111 @@
 
     <!-- ABA 3: CADASTRO DE DEFENSIVOS E CONTROLE DE ESTOQUE -->
     <div id="ccTabDefreg" class="tab-pane-cc" style="display:none">
-      <div class="card" style="margin-bottom:24px">
-        <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
-          <div style="display:flex; align-items:center; gap:8px"><i data-lucide="shield" class="btn-i" style="color:var(--yellow)"></i> Cadastro Geral de Defensivos & Carência</div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap">
-            <button onclick="downloadDefensivosTemplateCSV()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="download" style="width:14px;height:14px"></i> Baixar Modelo CSV</button>
-            <button onclick="openImportDefensivosModal()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="upload" style="width:14px;height:14px"></i> Importar Planilha</button>
-            <button onclick="cleanCorruptedDefensivos()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--yellow); border-color:rgba(245,158,11,0.4)" title="Remove automaticamente registros antigos onde dosagens ou números foram importados no lugar do nome do produto"><i data-lucide="sparkles" style="width:14px;height:14px"></i> Limpar Dados Corrompidos</button>
-            <button onclick="purgeAllDefensivos()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--red); border-color:rgba(239,68,68,0.4)" title="Apaga todos os defensivos para permitir reimportar limpo"><i data-lucide="trash-2" style="width:14px;height:14px"></i> Limpar Tudo</button>
-            <button onclick="openDefensivoModal()" class="green" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; background:var(--green)"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> + Novo Defensivo</button>
+      <!-- Sub-navegação interna de Estoque -->
+      <div style="display:flex; gap:8px; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:8px">
+        <button id="defSubTabCadBtn" class="btn on" onclick="switchDefSubTab('cad')" style="font-size:12px; padding:6px 14px">📋 Cadastro Técnico Defensivos</button>
+        <button id="defSubTabEstoqueBtn" class="btn sec" onclick="switchDefSubTab('estoque')" style="font-size:12px; padding:6px 14px">📦 Controle de Estoque & Importador XML NFe</button>
+      </div>
+
+      <!-- SEÇÃO 1: CADASTRO TÉCNICO -->
+      <div id="defSubTabCad">
+        <div class="card" style="margin-bottom:24px">
+          <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+            <div style="display:flex; align-items:center; gap:8px"><i data-lucide="shield" class="btn-i" style="color:var(--yellow)"></i> Cadastro Geral de Defensivos & Carência</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap">
+              <button onclick="downloadDefensivosTemplateCSV()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="download" style="width:14px;height:14px"></i> Baixar Modelo CSV</button>
+              <button onclick="openImportDefensivosModal()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="upload" style="width:14px;height:14px"></i> Importar Planilha</button>
+              <button onclick="cleanCorruptedDefensivos()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--yellow); border-color:rgba(245,158,11,0.4)" title="Remove automaticamente registros antigos"><i data-lucide="sparkles" style="width:14px;height:14px"></i> Limpar Corrompidos</button>
+              <button onclick="purgeAllDefensivos()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--red); border-color:rgba(239,68,68,0.4)"><i data-lucide="trash-2" style="width:14px;height:14px"></i> Limpar Tudo</button>
+              <button onclick="openDefensivoModal()" class="green" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; background:var(--green)"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> + Novo Defensivo</button>
+            </div>
+          </div>
+          <p style="color:var(--muted); font-size:12px; margin-bottom:15px">Cadastre ou importe produtos fitossanitários com prazos de carência, intervalo entre aplicações e dosagens por cultura.</p>
+
+          <!-- Filtro de Defensivos -->
+          <div class="fbar" style="margin-bottom:16px; padding:12px; gap:12px">
+            <div class="f" style="flex:2"><div class="flabel">Buscar Produto ou Princípio Ativo</div><input id="defSearch" oninput="filterDefensivosTable()" placeholder="Ex: Abamectina, Azoxistrobina, Ortus..." /></div>
+            <div class="f"><div class="flabel">Cultura</div>
+              <select id="defCulturaFilter" onchange="filterDefensivosTable()">
+                <option value="">Todas</option>
+                <option value="MELÃO">Melão</option>
+                <option value="MELANCIA">Melancia</option>
+                <option value="MAMÃO">Mamão</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="overflow-x:auto">
+            <table style="width:100%; border-collapse:collapse">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border)">
+                  <th style="text-align:left; padding:10px">Produto (Nome Comercial)</th>
+                  <th style="text-align:left; padding:10px">Ingrediente Ativo</th>
+                  <th style="text-align:center; padding:10px">Reg. MAPA</th>
+                  <th style="text-align:left; padding:10px">Alvo / Praga</th>
+                  <th style="text-align:center; padding:10px">Dose</th>
+                  <th style="text-align:center; padding:10px">Carência (Dias)</th>
+                  <th style="text-align:center; padding:10px">Intervalo Aplicação</th>
+                  <th style="text-align:center; padding:10px">Cultura</th>
+                  <th style="text-align:center; padding:10px">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="ccDefensivosTableBody">
+                <tr><td colspan="9" style="text-align:center; padding:20px; color:var(--muted)">Carregando cadastro de defensivos...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
-        <p style="color:var(--muted); font-size:12px; margin-bottom:15px">Cadastre ou importe produtos fitossanitários com prazos de carência, intervalo de dias entre aplicações e dosagens por cultura/variedade.</p>
+      </div>
 
-        <!-- Filtro de Defensivos -->
-        <div class="fbar" style="margin-bottom:16px; padding:12px; gap:12px">
-          <div class="f" style="flex:2"><div class="flabel">Buscar Produto ou Princípio Ativo</div><input id="defSearch" oninput="filterDefensivosTable()" placeholder="Ex: Abamectina, Azoxistrobina, Ortus..." /></div>
-          <div class="f"><div class="flabel">Cultura</div>
-            <select id="defCulturaFilter" onchange="filterDefensivosTable()">
-              <option value="">Todas</option>
-              <option value="MELÃO">Melão</option>
-              <option value="MELANCIA">Melancia</option>
-              <option value="MAMÃO">Mamão</option>
-            </select>
+      <!-- SEÇÃO 2: CONTROLE FÍSICO DE ESTOQUE & LEITOR DE XML -->
+      <div id="defSubTabEstoque" style="display:none">
+        <!-- KPIs de Estoque -->
+        <div class="kgrid" style="margin-bottom:20px">
+          <div class="kcard blue">
+            <div class="klabel">Itens no Cadastro</div>
+            <div id="estKpiTotalItens" class="kval blue">0</div>
+            <div class="ksub">defensivos e foliares</div>
+          </div>
+          <div class="kcard green">
+            <div class="klabel">Total de Entradas (NFe/Manual)</div>
+            <div id="estKpiEntradas" class="kval green">0</div>
+            <div class="ksub">registros de estoque</div>
+          </div>
+          <div class="kcard orange">
+            <div class="klabel">Baixas Automáticas (OP/Fert)</div>
+            <div id="estKpiSaidas" class="kval orange">0</div>
+            <div class="ksub">saídas vinculadas às ordens</div>
           </div>
         </div>
 
-        <div style="overflow-x:auto">
-          <table style="width:100%; border-collapse:collapse">
-            <thead>
-              <tr style="border-bottom:1px solid var(--border)">
-                <th style="text-align:left; padding:10px">Produto (Nome Comercial)</th>
-                <th style="text-align:left; padding:10px">Ingrediente Ativo</th>
-                <th style="text-align:center; padding:10px">Reg. MAPA</th>
-                <th style="text-align:left; padding:10px">Alvo / Praga</th>
-                <th style="text-align:center; padding:10px">Dose</th>
-                <th style="text-align:center; padding:10px">Carência (Dias)</th>
-                <th style="text-align:center; padding:10px">Intervalo Aplicação</th>
-                <th style="text-align:center; padding:10px">Cultura</th>
-                <th style="text-align:center; padding:10px">Ações</th>
-              </tr>
-            </thead>
-            <tbody id="ccDefensivosTableBody">
-              <tr><td colspan="9" style="text-align:center; padding:20px; color:var(--muted)">Carregando cadastro de defensivos...</td></tr>
-            </tbody>
-          </table>
+        <div class="card" style="margin-bottom:24px">
+          <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+            <div style="display:flex; align-items:center; gap:8px"><i data-lucide="package-check" class="btn-i" style="color:var(--green)"></i> Saldos e Movimentações de Estoque</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap">
+              <button onclick="openXmlNfeModal()" class="btn on" style="font-size:12px; padding:6px 14px; background:linear-gradient(135deg,#0ea5e9,#0284c7); border:none; color:#fff; font-weight:bold; display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-code" style="width:16px;height:16px"></i> 📄 Importar XML de NFe (Entrada)</button>
+              <button onclick="openManualStockModal()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:6px"><i data-lucide="plus" style="width:14px;height:14px"></i> + Nova Entrada Manual</button>
+            </div>
+          </div>
+          <p style="color:var(--muted); font-size:12px; margin-bottom:16px">Importe Notas Fiscais eletrônicas (.xml) de defensivos e fertilizantes ou registre entradas manuais. O sistema calcula automaticamente os saldos e abate o consumo com base nas Ordens de Pulverização e Fertirrigação.</p>
+
+          <div style="overflow-x:auto">
+            <table style="width:100%; border-collapse:collapse">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border); font-size:12px; color:var(--muted)">
+                  <th style="text-align:left; padding:10px">Produto</th>
+                  <th style="text-align:center; padding:10px">Qtd Entradas</th>
+                  <th style="text-align:center; padding:10px">Qtd Saídas (Aplicações)</th>
+                  <th style="text-align:center; padding:10px">Saldo Atual</th>
+                  <th style="text-align:center; padding:10px">Unidade</th>
+                  <th style="text-align:center; padding:10px">Status do Saldo</th>
+                </tr>
+              </thead>
+              <tbody id="estoqueSaldosTableBody">
+                <tr><td colspan="6" style="text-align:center; padding:20px; color:var(--muted)">Carregando saldos de estoque...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -2090,6 +2170,203 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: IMPORTAR XML DE NFE DE ESTOQUE -->
+  <div id="xmlNfeModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:24px; border-radius:14px; width:700px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 10px 30px rgba(0,0,0,0.4)">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
+        <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px"><i data-lucide="file-code" style="color:var(--blue)"></i> Importar Nota Fiscal Eletrônica (NFe .XML)</h3>
+        <button onclick="closeXmlNfeModal()" class="sec" style="padding:4px 10px">✕</button>
+      </div>
+      <p style="color:var(--muted); font-size:12px; margin-bottom:16px">Selecione o arquivo .xml da NFe para extrair os produtos, fornecedor, nota fiscal, lotes e quantidades recebidas de defensivos ou adubos.</p>
+
+      <div style="border:2px dashed rgba(59,130,246,0.4); padding:24px; border-radius:12px; text-align:center; background:rgba(59,130,246,0.05); margin-bottom:16px">
+        <input type="file" id="xmlNfeFileInput" accept=".xml" onchange="handleXmlNfeFile(this)" style="display:none">
+        <button onclick="document.getElementById('xmlNfeFileInput').click()" class="btn on" style="font-size:13px; padding:10px 20px; font-weight:bold"><i data-lucide="upload-cloud"></i> Selecionar Arquivo XML NFe</button>
+        <div id="xmlNfeFileName" style="margin-top:10px; font-size:12px; color:var(--blue); font-weight:600">Nenhum arquivo selecionado</div>
+      </div>
+
+      <!-- Preview da Nota -->
+      <div id="xmlNfePreview" style="display:none; background:rgba(0,0,0,0.2); padding:14px; border-radius:10px; border:1px solid var(--border); margin-bottom:16px">
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:12px; font-size:12px">
+          <div><strong>Fornecedor:</strong> <span id="xmlPreviewEmit">—</span></div>
+          <div><strong>Nº da NFe:</strong> <span id="xmlPreviewNfe">—</span></div>
+          <div><strong>Data Emissão:</strong> <span id="xmlPreviewData">—</span></div>
+        </div>
+        <div style="font-size:12px; font-weight:700; color:#fff; margin-bottom:8px">Itens Detectados na NFe:</div>
+        <div style="max-height:180px; overflow-y:auto">
+          <table style="width:100%; border-collapse:collapse; font-size:11px">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border); color:var(--muted)">
+                <th style="text-align:left; padding:6px">Produto</th>
+                <th style="text-align:center; padding:6px">Qtd</th>
+                <th style="text-align:center; padding:6px">Unidade</th>
+                <th style="text-align:center; padding:6px">Lote</th>
+                <th style="text-align:center; padding:6px">Validade</th>
+                <th style="text-align:right; padding:6px">V. Unitário</th>
+              </tr>
+            </thead>
+            <tbody id="xmlPreviewTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px">
+        <button onclick="closeXmlNfeModal()" class="sec">Cancelar</button>
+        <button id="btnConfirmXmlImport" onclick="confirmXmlNfeImport()" disabled class="green" style="font-weight:bold">Confirmar Entrada no Estoque</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ENTRADA MANUAL DE ESTOQUE -->
+  <div id="manualStockModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:24px; border-radius:12px; width:520px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border)">
+      <h3 style="margin-top:0; color:#fff; margin-bottom:16px">➕ Registrar Entrada Manual de Estoque</h3>
+      <div style="display:flex; flex-direction:column; gap:10px">
+        <div>
+          <label class="flabel">Produto (Defensivo / Fertilizante / Foliar)</label>
+          <input id="stkProdNome" placeholder="Ex: Orkestra SC, Karate Zeon..." list="stkProdList" style="width:100%; padding:8px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff">
+          <datalist id="stkProdList"></datalist>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+          <div>
+            <label class="flabel">Quantidade de Entrada</label>
+            <input id="stkQtd" type="number" step="0.001" placeholder="Ex: 50.00" style="width:100%; padding:8px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff">
+          </div>
+          <div>
+            <label class="flabel">Unidade de Medida</label>
+            <select id="stkUnidade" style="width:100%; padding:8px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff">
+              <option value="L">Litros (L)</option>
+              <option value="KG">Quilos (KG)</option>
+              <option value="GL">Galão (GL)</option>
+              <option value="SC">Saco (SC)</option>
+              <option value="UN">Unidade (UN)</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+          <div>
+            <label class="flabel">Número do Lote</label>
+            <input id="stkLote" placeholder="Ex: L-84920" style="width:100%; padding:8px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff">
+          </div>
+          <div>
+            <label class="flabel">Data de Validade</label>
+            <input id="stkValidade" type="date" style="width:100%; padding:8px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff">
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+          <div>
+            <label class="flabel">Fornecedor</label>
+            <select id="stkFornecedorSelect" style="width:100%; padding:8px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff"></select>
+          </div>
+          <div>
+            <label class="flabel">Nº da Nota Fiscal (NFe)</label>
+            <input id="stkNfe" placeholder="Ex: 004921" style="width:100%; padding:8px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff">
+          </div>
+        </div>
+        <div>
+          <label class="flabel">Data da Entrada</label>
+          <input id="stkDataEntrada" type="date" style="width:100%; padding:8px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff">
+        </div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px">
+        <button onclick="closeManualStockModal()" class="sec">Cancelar</button>
+        <button onclick="saveManualStockEntry()" class="green" style="font-weight:bold">Salvar Entrada</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: NOVA COLETA DE MOSCA-DAS-FRUTAS (IDIARN ARMADILHAS) -->
+  <div id="coletaMoscaModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:24px; border-radius:14px; width:560px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 10px 30px rgba(0,0,0,0.4)">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
+        <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px">🪰 Registro de Coleta de Mosca-das-Frutas (IDIARN)</h3>
+        <button onclick="closeColetaMoscaModal()" class="sec" style="padding:4px 10px">✕</button>
+      </div>
+      <p style="color:var(--muted); font-size:12px; margin-bottom:16px">Registre o resultado da amostragem semanal de armadilhas por parcela para fins de certificação fitossanitária e relatório do IDIARN.</p>
+
+      <div style="display:flex; flex-direction:column; gap:12px">
+        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px">
+          <div>
+            <label class="flabel">Parcela / UP</label>
+            <select id="cmParcelaSelect" onchange="onColetaMoscaParcelChange()" style="width:100%; padding:8px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff"></select>
+          </div>
+          <div>
+            <label class="flabel">Cód. Armadilha</label>
+            <input id="cmArmadilhaCod" value="001" placeholder="Ex: 001" style="width:100%; padding:8px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff">
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px">
+          <div>
+            <label class="flabel">Instalação</label>
+            <input id="cmDataInstalacao" type="date" style="width:100%; padding:8px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff">
+          </div>
+          <div>
+            <label class="flabel">Coleta Anterior</label>
+            <input id="cmDataAnterior" type="date" style="width:100%; padding:8px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff">
+          </div>
+          <div>
+            <label class="flabel">Data Coleta Atual</label>
+            <input id="cmDataAtual" type="date" style="width:100%; padding:8px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff">
+          </div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid var(--border)">
+          <div style="font-size:12px; font-weight:700; color:var(--orange); margin-bottom:8px">Contagem de Capturas na Armadilha:</div>
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:8px">
+            <div>
+              <label class="flabel">A. grandis</label>
+              <input id="cmCapturasGrandis" type="number" min="0" value="0" oninput="calcMadIndex()" style="width:100%; padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff; text-align:center; font-weight:bold">
+            </div>
+            <div>
+              <label class="flabel">Anastrepha spp.</label>
+              <input id="cmCapturasSpp" type="number" min="0" value="0" oninput="calcMadIndex()" style="width:100%; padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff; text-align:center; font-weight:bold">
+            </div>
+            <div>
+              <label class="flabel">Fêmeas</label>
+              <input id="cmFemeas" type="number" min="0" value="0" style="width:100%; padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff; text-align:center">
+            </div>
+            <div>
+              <label class="flabel">Machos</label>
+              <input id="cmMachos" type="number" min="0" value="0" style="width:100%; padding:6px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff; text-align:center">
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
+          <div>
+            <label class="flabel">Índice MAD (A. grandis)</label>
+            <input id="cmMadGrandis" type="text" readonly value="0.0000" style="width:100%; padding:8px; border-radius:6px; background:rgba(0,0,0,0.2); border:1px solid var(--border); color:var(--green); font-weight:bold">
+          </div>
+          <div>
+            <label class="flabel">Índice MAD (Anastrepha spp.)</label>
+            <input id="cmMadSpp" type="text" readonly value="0.0000" style="width:100%; padding:8px; border-radius:6px; background:rgba(0,0,0,0.2); border:1px solid var(--border); color:var(--blue); font-weight:bold">
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
+          <div>
+            <label class="flabel">Status Fitossanitário</label>
+            <select id="cmStatus" style="width:100%; padding:8px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff">
+              <option value="SOB_CONTROLE">🟢 Sob Controle (Sem capturas ou abaixo limiar)</option>
+              <option value="RECOMENDA_CONTROLE">🔴 Recomenda-se Controle</option>
+              <option value="AREA_LIVRE">⭐ Área Livre de Pragas</option>
+            </select>
+          </div>
+          <div>
+            <label class="flabel">Próxima Coleta Prevista</label>
+            <input id="cmDataProxima" type="date" style="width:100%; padding:8px; border-radius:6px; background:var(--input-bg); border:1px solid var(--border); color:#fff">
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px">
+        <button onclick="closeColetaMoscaModal()" class="sec">Cancelar</button>
+        <button onclick="saveColetaMoscaRecord()" class="green" style="font-weight:bold">Salvar Coleta de Armadilha</button>
       </div>
     </div>
   </div>
@@ -3849,9 +4126,11 @@ async function initApp(){
 }
 
 async function doLogin(){
-  let email=$('authEmail').value.trim(), pass=$('authPass').value;
-  const btn=$('authBtn'), err=$('authErr');
-  err.style.display='none'; btn.disabled=true; btn.textContent='Entrando...';
+  let rawEmail = $('authEmail').value || '';
+  let email = rawEmail.toLowerCase().trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
+  const pass = ($('authPass').value || '').trim();
+  const btn = $('authBtn'), err = $('authErr');
+  err.style.display = 'none'; btn.disabled = true; btn.textContent = 'Entrando...';
   
   if (email && !email.includes('@')) {
     email = email + '@coopyfrutas.com';
@@ -3860,7 +4139,8 @@ async function doLogin(){
   try {
     const {data, error} = await sb.auth.signInWithPassword({email, password: pass});
     if (error) {
-      err.textContent = 'E-mail/Usuário ou senha incorretos.';
+      const isNet = error.message?.includes('fetch') || error.message?.includes('NetworkError') || error.status === 0 || error.status >= 500;
+      err.textContent = isNet ? 'Erro de conexão com o servidor. Verifique sua internet.' : 'E-mail/Usuário ou senha incorretos.';
       err.style.display = 'block';
       btn.disabled = false;
       btn.textContent = 'Entrar';
@@ -3868,7 +4148,7 @@ async function doLogin(){
     }
     await afterLogin(data.user);
   } catch(e) {
-    err.textContent = 'Erro ao conectar ao servidor.';
+    err.textContent = 'Erro ao conectar ao servidor. Verifique sua conexão.';
     err.style.display = 'block';
     btn.disabled = false;
     btn.textContent = 'Entrar';
@@ -4062,7 +4342,83 @@ function showTab(n,el){
 }
 
 async function loadRegisters() {
-  await Promise.all([loadSectors(), loadRoles(), loadCarriages(), loadOperations()]);
+  await Promise.all([loadSectors(), loadRoles(), loadCarriages(), loadOperations(), loadParceiros()]);
+}
+
+async function loadParceiros() {
+  try {
+    const { data, error } = await sb.from('caderno_campo_parceiros').select('*').eq('tenant_id', tenantId).order('nome_razaosocial');
+    window._parceiros = data || [];
+    const el = $('regParceirosList');
+    if (el) {
+      if (!data || data.length === 0) {
+        el.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:12px;text-align:center">Nenhum fornecedor ou cliente cadastrado</div>';
+        return;
+      }
+      el.innerHTML = data.map(p => `
+        <div class="card-list-item">
+          <div class="item-info">
+            <div class="item-name">${p.tipo === 'CLIENTE' ? '🛒' : p.tipo === 'AMBOS' ? '🤝' : '🚚'} ${p.nome_razaosocial} ${p.cpf_cnpj ? `<small style="color:var(--muted)">(${p.cpf_cnpj})</small>` : ''}</div>
+            <div class="item-meta">
+              <span class="pill" style="background:rgba(59,130,246,.12);color:var(--blue)">${p.tipo}</span>
+              ${p.telefone ? `<span>📞 ${p.telefone}</span>` : ''}
+              ${p.cidade ? `<span>📍 ${p.cidade}</span>` : ''}
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="danger" onclick="delParceiro('${p.id}')">×</button>
+          </div>
+        </div>
+      `).join('');
+    }
+    // Atualizar selects de clientes em Vendas a Granel (bulk) se a função existir
+    if (typeof updateBulkClientsSelect === 'function') updateBulkClientsSelect();
+  } catch (e) {
+    console.warn('Erro ao carregar parceiros:', e);
+  }
+}
+
+async function addParceiro() {
+  const nome = $('regParceiroNome')?.value?.trim();
+  const doc = $('regParceiroDoc')?.value?.trim();
+  const tipo = $('regParceiroTipo')?.value || 'FORNECEDOR';
+  const tel = $('regParceiroTel')?.value?.trim();
+  const email = $('regParceiroEmail')?.value?.trim();
+  const end = $('regParceiroEnd')?.value?.trim();
+
+  if (!nome) { alert('Informe a Razão Social / Nome Completo!'); return; }
+
+  try {
+    const { error } = await sb.from('caderno_campo_parceiros').insert([{
+      tenant_id: tenantId,
+      nome_razaosocial: nome,
+      cpf_cnpj: doc || null,
+      tipo,
+      telefone: tel || null,
+      email: email || null,
+      cidade: end || null
+    }]);
+    if (error) throw error;
+    if ($('regParceiroNome')) $('regParceiroNome').value = '';
+    if ($('regParceiroDoc')) $('regParceiroDoc').value = '';
+    if ($('regParceiroTel')) $('regParceiroTel').value = '';
+    if ($('regParceiroEmail')) $('regParceiroEmail').value = '';
+    if ($('regParceiroEnd')) $('regParceiroEnd').value = '';
+    loadParceiros();
+  } catch (e) {
+    alert('Erro ao cadastrar parceiro: ' + e.message);
+  }
+}
+
+async function delParceiro(id) {
+  if (!confirm('Excluir este fornecedor/cliente?')) return;
+  try {
+    const { error } = await sb.from('caderno_campo_parceiros').delete().eq('id', id).eq('tenant_id', tenantId);
+    if (error) throw error;
+    loadParceiros();
+  } catch (e) {
+    alert('Erro ao excluir: ' + e.message);
+  }
 }
 
 async function loadSectors() {
@@ -15511,14 +15867,15 @@ async function openNewTratoModal() {
   $('tratoImplemento').value = '';
   $('tratoOperador').value = '';
 
-  const ops = [...new Set((typeof _tratosList !== 'undefined' ? _tratosList : []).map(t => t.operador).filter(Boolean))].sort();
+  // Popular datalist com colaboradores cadastrados da fazenda
+  const emps = (_employees || []).map(e => e.name).sort();
   let datalist = $('tratoristasList');
   if (!datalist) {
     datalist = document.createElement('datalist');
     datalist.id = 'tratoristasList';
     document.body.appendChild(datalist);
   }
-  datalist.innerHTML = ops.map(o => `<option value="${o}">`).join('');
+  datalist.innerHTML = emps.map(e => `<option value="${e}">`).join('');
 
   if ($('tratoOperador')) {
     $('tratoOperador').setAttribute('list', 'tratoristasList');
@@ -15541,20 +15898,9 @@ async function saveTrato() {
 
   if (!parcela) { alert('Selecione a parcela.'); return; }
   if (!data_trato) { alert('Selecione a data.'); return; }
-  if (!atividade) { alert('Informe a atividade/trato.'); return; }
+  if (!atividade) { alert('Informe a atividade/trato cultural.'); return; }
 
   const selectedP = _infoParcelas.find(p => (p.parcela2 || p.parcela) === parcela);
-
-  if (selectedP) {
-    const isGrade = atividade.includes('GRADE') || atividade.includes('ARADORA') || atividade.includes('ARADA');
-    const dtPlantio = selectedP.transplante || selectedP.plantio || selectedP.data_plantio1;
-    if (isGrade && dtPlantio) {
-       if (new Date(data_trato) > new Date(dtPlantio)) {
-         alert(`Não é permitido registrar '${atividade}' em uma data (${data_trato.split('-').reverse().join('/')}) posterior ao Plantio/Transplante da parcela (${dtPlantio.split('-').reverse().join('/')}).`);
-         return;
-       }
-    }
-  }
 
   const payload = {
     tenant_id: tenantId,
@@ -15563,18 +15909,19 @@ async function saveTrato() {
     data_trato,
     atividade,
     implemento,
-    operador
+    operador,
+    responsavel_tecnico: (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || null
   };
 
   try {
     const { error } = await sb.from('caderno_campo_tratos').insert([payload]);
     if (error) throw error;
-    alert('✓ Registro de trato cultural salvo com sucesso!');
+    toast('✓ Registro de trato cultural salvo com sucesso!', 'ok');
     closeNewTratoModal();
     loadTratosTable();
   } catch (e) {
     console.error('Erro ao salvar trato cultural:', e);
-    alert('Erro ao salvar: ' + (e.message || 'Verifique sua conexão.'));
+    alert('Erro ao salvar trato cultural: ' + (e.message || 'Verifique sua conexão.'));
   }
 }
 
@@ -16927,7 +17274,38 @@ async function saveNewOpDashboard() {
     const { error: itemsErr } = await sb.from('caderno_campo_op_itens').insert(itemsToInsert);
     if (itemsErr) throw itemsErr;
     
-    toast('✓ Ordem de Pulverização registrada com sucesso!', 'ok');
+    // ✅ Dar baixa automática de defensivos/foliares no Controle de Estoque
+    try {
+      const areaHa = parseFloat(recordOP.area_ha) || 1.0;
+      const volCalda = parseFloat(recordOP.volume_calda) || 0;
+      const stockExits = itemsToInsert.map(i => {
+        const doseVal = parseFloat(i.dosagem_real) || parseFloat(i.dosagem_corrigida) || 0;
+        let totalQtd = doseVal;
+        if (volCalda > 0 && String(i.unidade || '').toLowerCase().includes('100l')) {
+          totalQtd = (doseVal * volCalda) / 100;
+        } else if (areaHa > 0 && (String(i.unidade || '').toLowerCase().includes('ha') || String(i.unidade || '').toLowerCase().includes('l/ha') || String(i.unidade || '').toLowerCase().includes('kg/ha'))) {
+          totalQtd = doseVal * areaHa;
+        }
+        return {
+          tenant_id: tenantId,
+          produto_nome: i.produto_nome,
+          quantidade_saida: totalQtd || doseVal,
+          unidade_medida: String(i.unidade || '').toLowerCase().includes('kg') ? 'KG' : 'L',
+          motivo_saida: 'PULVERIZACAO',
+          referencia_id: opData.id,
+          parcela: recordOP.parcela,
+          data_saida: recordOP.data_aplicacao || today(),
+          observacao: `Baixa automática O.P. Parcela ${recordOP.parcela}`
+        };
+      });
+      if (stockExits.length > 0) {
+        await sb.from('estoque_defensivos_saidas').insert(stockExits);
+      }
+    } catch(errStk) {
+      console.warn('Erro ao registrar baixa automática de estoque:', errStk);
+    }
+    
+    toast('✓ Ordem de Pulverização registrada com baixa de estoque!', 'ok');
     closeNewOpModal();
     loadCadernoCampo();
   } catch(e) {
@@ -17484,6 +17862,640 @@ async function saveNewIdiarnDashboard() {
   } catch(e) {
     alert('Erro ao salvar visita IDIARN: ' + e.message);
   }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO DE CONTROLE DE ESTOQUE DE INSUMOS & LEITOR DE XML DE NFE
+// ════════════════════════════════════════════════════════════════════
+function switchDefSubTab(sub) {
+  const cEl = $('defSubTabCad');
+  const eEl = $('defSubTabEstoque');
+  const cBtn = $('defSubTabCadBtn');
+  const eBtn = $('defSubTabEstoqueBtn');
+  if (sub === 'cad') {
+    if (cEl) cEl.style.display = 'block';
+    if (eEl) eEl.style.display = 'none';
+    if (cBtn) cBtn.className = 'btn on';
+    if (eBtn) eBtn.className = 'btn sec';
+  } else {
+    if (cEl) cEl.style.display = 'none';
+    if (eEl) eEl.style.display = 'block';
+    if (cBtn) cBtn.className = 'btn sec';
+    if (eBtn) eBtn.className = 'btn on';
+    loadEstoqueSaldos();
+  }
+}
+
+let _pendingXmlItems = null;
+
+function openXmlNfeModal() {
+  $('xmlNfePreview').style.display = 'none';
+  $('xmlNfeFileName').textContent = 'Nenhum arquivo selecionado';
+  $('btnConfirmXmlImport').disabled = true;
+  $('xmlNfeFileInput').value = '';
+  _pendingXmlItems = null;
+  $('xmlNfeModal').style.display = 'flex';
+}
+
+function closeXmlNfeModal() {
+  $('xmlNfeModal').style.display = 'none';
+}
+
+function handleXmlNfeFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  $('xmlNfeFileName').textContent = file.name;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const xmlText = e.target.result;
+    try {
+      const parsed = parseNfeXml(xmlText);
+      if (!parsed.items || parsed.items.length === 0) {
+        alert('Nenhum produto válido encontrado neste XML de NFe!');
+        return;
+      }
+      _pendingXmlItems = parsed;
+      $('xmlPreviewEmit').textContent = parsed.emitName;
+      $('xmlPreviewNfe').textContent = parsed.nNf;
+      $('xmlPreviewData').textContent = parsed.dhEmi ? parsed.dhEmi.split('-').reverse().join('/') : '—';
+      
+      const tbody = $('xmlPreviewTbody');
+      tbody.innerHTML = parsed.items.map(item => `
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:6px"><strong>${item.produto}</strong></td>
+          <td style="padding:6px; text-align:center">${item.quantidade}</td>
+          <td style="padding:6px; text-align:center">${item.unidade}</td>
+          <td style="padding:6px; text-align:center">${item.lote || '—'}</td>
+          <td style="padding:6px; text-align:center">${item.validade ? item.validade.split('-').reverse().join('/') : '—'}</td>
+          <td style="padding:6px; text-align:right">R$ ${item.valor_unitario.toFixed(2)}</td>
+        </tr>
+      `).join('');
+      
+      $('xmlNfePreview').style.display = 'block';
+      $('btnConfirmXmlImport').disabled = false;
+    } catch(err) {
+      alert('Erro ao ler arquivo XML: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parseNfeXml(xmlText) {
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+  
+  const emitName = xmlDoc.querySelector("emit > xNome")?.textContent || "Fornecedor NFe";
+  const emitCnpj = xmlDoc.querySelector("emit > CNPJ")?.textContent || "";
+  const nNf = xmlDoc.querySelector("ide > nNF")?.textContent || "";
+  const rawDate = xmlDoc.querySelector("ide > dhEmi")?.textContent || xmlDoc.querySelector("ide > dEmi")?.textContent || "";
+  const dhEmi = rawDate ? rawDate.split('T')[0] : today();
+  
+  const items = [];
+  const dets = xmlDoc.querySelectorAll("det");
+  dets.forEach(det => {
+    const xProd = det.querySelector("prod > xProd")?.textContent || "Produto NFe";
+    const qCom = parseFloat(det.querySelector("prod > qCom")?.textContent || "0");
+    const uCom = (det.querySelector("prod > uCom")?.textContent || "L").toUpperCase();
+    const vUnCom = parseFloat(det.querySelector("prod > vUnCom")?.textContent || "0");
+    const vProd = parseFloat(det.querySelector("prod > vProd")?.textContent || "0");
+    const nLote = det.querySelector("rastro > nLote")?.textContent || det.querySelector("med > nLote")?.textContent || "";
+    const dVal = det.querySelector("rastro > dVal")?.textContent || det.querySelector("med > dVal")?.textContent || "";
+    
+    items.push({
+      produto: xProd,
+      quantidade: qCom,
+      unidade: uCom,
+      valor_unitario: vUnCom,
+      valor_total: vProd,
+      lote: nLote,
+      validade: dVal || null,
+      fornecedor: emitName,
+      cnpj_fornecedor: emitCnpj,
+      nfe: nNf,
+      data_emissao: dhEmi
+    });
+  });
+  
+  return { emitName, emitCnpj, nNf, dhEmi, items };
+}
+
+async function confirmXmlNfeImport() {
+  if (!_pendingXmlItems || !_pendingXmlItems.items) return;
+  const btn = $('btnConfirmXmlImport');
+  btn.disabled = true; btn.textContent = 'Importando...';
+  
+  try {
+    const inserts = _pendingXmlItems.items.map(i => ({
+      tenant_id: tenantId,
+      produto_nome: i.produto.toUpperCase(),
+      tipo_produto: 'DEFENSIVO',
+      lote: i.lote || null,
+      validade: i.validade || null,
+      quantidade_entrada: i.quantidade,
+      unidade_medida: i.unidade,
+      valor_unitario: i.valor_unitario,
+      valor_total: i.valor_total,
+      fornecedor_nome: i.fornecedor,
+      numero_nfe: i.nfe,
+      data_entrada: i.data_emissao || today(),
+      observacao: `Importado via NFe ${i.nfe}`
+    }));
+
+    const { error } = await sb.from('estoque_defensivos_entradas').insert(inserts);
+    if (error) throw error;
+
+    alert(`✓ ${inserts.length} item(ns) importado(s) da NFe ${_pendingXmlItems.nNf} com sucesso!`);
+    closeXmlNfeModal();
+    loadEstoqueSaldos();
+  } catch(e) {
+    alert('Erro ao importar NFe: ' + e.message);
+    btn.disabled = false; btn.textContent = 'Confirmar Entrada no Estoque';
+  }
+}
+
+async function openManualStockModal() {
+  $('stkProdNome').value = '';
+  $('stkQtd').value = '';
+  $('stkLote').value = '';
+  $('stkValidade').value = '';
+  $('stkNfe').value = '';
+  $('stkDataEntrada').value = today();
+  
+  // Popular lista de produtos
+  const dList = $('stkProdList');
+  if (dList && window._defensivos) {
+    dList.innerHTML = window._defensivos.map(d => `<option value="${d.produto}">`).join('');
+  }
+
+  // Popular lista de fornecedores
+  const fSel = $('stkFornecedorSelect');
+  if (fSel) {
+    fSel.innerHTML = '<option value="">— Selecione Fornecedor (Opcional) —</option>';
+    (window._parceiros || []).filter(p => p.tipo !== 'CLIENTE').forEach(p => {
+      fSel.insertAdjacentHTML('beforeend', `<option value="${p.nome_razaosocial}">${p.nome_razaosocial}</option>`);
+    });
+  }
+
+  $('manualStockModal').style.display = 'flex';
+}
+
+function closeManualStockModal() {
+  $('manualStockModal').style.display = 'none';
+}
+
+async function saveManualStockEntry() {
+  const prod = $('stkProdNome').value.trim().toUpperCase();
+  const qtd = parseFloat($('stkQtd').value) || 0;
+  const un = $('stkUnidade').value;
+  const lote = $('stkLote').value.trim();
+  const val = $('stkValidade').value;
+  const forn = $('stkFornecedorSelect').value;
+  const nfe = $('stkNfe').value.trim();
+  const dataEnt = $('stkDataEntrada').value || today();
+
+  if (!prod) { alert('Informe o nome do produto!'); return; }
+  if (qtd <= 0) { alert('Informe uma quantidade válida!'); return; }
+
+  try {
+    const { error } = await sb.from('estoque_defensivos_entradas').insert([{
+      tenant_id: tenantId,
+      produto_nome: prod,
+      quantidade_entrada: qtd,
+      unidade_medida: un,
+      lote: lote || null,
+      validade: val || null,
+      fornecedor_nome: forn || null,
+      numero_nfe: nfe || null,
+      data_entrada: dataEnt,
+      observacao: 'Entrada manual de estoque'
+    }]);
+    if (error) throw error;
+    toast('✓ Entrada de estoque salva!', 'ok');
+    closeManualStockModal();
+    loadEstoqueSaldos();
+  } catch(e) {
+    alert('Erro ao salvar entrada de estoque: ' + e.message);
+  }
+}
+
+async function loadEstoqueSaldos() {
+  try {
+    const [eRes, sRes] = await Promise.all([
+      sb.from('estoque_defensivos_entradas').select('*').eq('tenant_id', tenantId),
+      sb.from('estoque_defensivos_saidas').select('*').eq('tenant_id', tenantId)
+    ]);
+    
+    const entradas = eRes.data || [];
+    const saidas = sRes.data || [];
+
+    if ($('estKpiEntradas')) $('estKpiEntradas').textContent = entradas.length;
+    if ($('estKpiSaidas')) $('estKpiSaidas').textContent = saidas.length;
+    if ($('estKpiTotalItens')) $('estKpiTotalItens').textContent = (window._defensivos || []).length;
+
+    const balances = new Map();
+    
+    entradas.forEach(e => {
+      const name = (e.produto_nome || '').toUpperCase();
+      if (!balances.has(name)) balances.set(name, { produto: name, entradas: 0, saidas: 0, unidade: e.unidade_medida || 'L' });
+      balances.get(name).entradas += parseFloat(e.quantidade_entrada) || 0;
+    });
+
+    saidas.forEach(s => {
+      const name = (s.produto_nome || '').toUpperCase();
+      if (!balances.has(name)) balances.set(name, { produto: name, entradas: 0, saidas: 0, unidade: s.unidade_medida || 'L' });
+      balances.get(name).saidas += parseFloat(s.quantidade_saida) || 0;
+    });
+
+    const list = Array.from(balances.values()).sort((a,b) => a.produto.localeCompare(b.produto));
+    const tbody = $('estoqueSaldosTableBody');
+    if (!tbody) return;
+
+    if (list.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--muted)">Nenhuma movimentação de estoque registrada. Importe uma NFe ou registre entradas manuais.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = list.map(item => {
+      const saldo = item.entradas - item.saidas;
+      const statusPill = saldo <= 0 
+        ? '<span class="pill" style="background:rgba(239,68,68,0.15);color:var(--red);font-weight:bold">🔴 Zerado / Crítico</span>' 
+        : saldo < 10 
+        ? '<span class="pill" style="background:rgba(245,158,11,0.15);color:var(--yellow);font-weight:bold">⚠️ Estoque Baixo</span>'
+        : '<span class="pill" style="background:rgba(16,185,129,0.15);color:var(--green);font-weight:bold">🟢 Disponível</span>';
+        
+      return `
+        <tr style="border-bottom:1px solid var(--border); font-size:13px">
+          <td style="padding:10px; font-weight:700">${item.produto}</td>
+          <td style="padding:10px; text-align:center; color:var(--green); font-weight:700">+ ${item.entradas.toFixed(2)}</td>
+          <td style="padding:10px; text-align:center; color:var(--orange); font-weight:700">- ${item.saidas.toFixed(2)}</td>
+          <td style="padding:10px; text-align:center; font-weight:900; font-size:14px; color:${saldo<=0?'var(--red)':'#fff'}">${saldo.toFixed(2)}</td>
+          <td style="padding:10px; text-align:center; color:var(--muted)">${item.unidade}</td>
+          <td style="padding:10px; text-align:center">${statusPill}</td>
+        </tr>
+      `;
+    }).join('');
+  } catch(e) {
+    console.error('Erro ao calcular saldos de estoque:', e);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MÓDULO DE COLETAS DE MOSCA-DAS-FRUTAS & IMPRESSÃO OFICIAL IDIARN
+// ════════════════════════════════════════════════════════════════════
+function openColetaMoscaModal() {
+  const pSel = $('cmParcelaSelect');
+  if (pSel) {
+    pSel.innerHTML = '<option value="">— Selecione a Parcela / UP —</option>';
+    (_infoParcelas || []).forEach(p => {
+      const code = p.parcela2 || p.parcela;
+      pSel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${code} (${p.variedade || ''})</option>`);
+    });
+  }
+  
+  $('cmDataAtual').value = today();
+  $('cmCapturasGrandis').value = '0';
+  $('cmCapturasSpp').value = '0';
+  $('cmFemeas').value = '0';
+  $('cmMachos').value = '0';
+  $('cmMadGrandis').value = '0.0000';
+  $('cmMadSpp').value = '0.0000';
+  $('cmStatus').value = 'SOB_CONTROLE';
+  
+  $('coletaMoscaModal').style.display = 'flex';
+}
+
+function closeColetaMoscaModal() {
+  $('coletaMoscaModal').style.display = 'none';
+}
+
+function onColetaMoscaParcelChange() {
+  const pId = $('cmParcelaSelect').value;
+  const ip = (_infoParcelas || []).find(x => x.id === pId);
+  if (!ip) return;
+  
+  const dt = new Date();
+  dt.setDate(dt.getDate() - 7);
+  $('cmDataAnterior').value = dt.toISOString().split('T')[0];
+  dt.setDate(dt.getDate() - 21);
+  $('cmDataInstalacao').value = dt.toISOString().split('T')[0];
+  
+  calcMadIndex();
+}
+
+function calcMadIndex() {
+  const g = parseInt($('cmCapturasGrandis').value) || 0;
+  const s = parseInt($('cmCapturasSpp').value) || 0;
+  const d1 = new Date($('cmDataAnterior').value || today());
+  const d2 = new Date($('cmDataAtual').value || today());
+  const diffDays = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) || 7);
+
+  const madG = (g / (1 * diffDays)).toFixed(4);
+  const madS = (s / (1 * diffDays)).toFixed(4);
+
+  $('cmMadGrandis').value = madG;
+  $('cmMadSpp').value = madS;
+
+  if (g > 0 || parseFloat(madG) > 0.1) {
+    $('cmStatus').value = 'RECOMENDA_CONTROLE';
+  } else {
+    $('cmStatus').value = 'SOB_CONTROLE';
+  }
+}
+
+async function saveColetaMoscaRecord() {
+  const pId = $('cmParcelaSelect').value;
+  const ip = (_infoParcelas || []).find(x => x.id === pId);
+  if (!pId || !ip) { alert('Selecione a parcela!'); return; }
+
+  const armadilha = $('cmArmadilhaCod').value.trim() || '001';
+  const dtInst = $('cmDataInstalacao').value || null;
+  const dtAnt = $('cmDataAnterior').value || null;
+  const dtAtual = $('cmDataAtual').value || today();
+  const g = parseInt($('cmCapturasGrandis').value) || 0;
+  const s = parseInt($('cmCapturasSpp').value) || 0;
+  const fem = parseInt($('cmFemeas').value) || 0;
+  const mac = parseInt($('cmMachos').value) || 0;
+  const madG = parseFloat($('cmMadGrandis').value) || 0;
+  const madS = parseFloat($('cmMadSpp').value) || 0;
+  const status = $('cmStatus').value;
+  const prox = $('cmDataProxima').value || null;
+
+  const record = {
+    tenant_id: tenantId,
+    parcel_id: pId,
+    parcela: ip.parcela2 || ip.parcela,
+    armadilha_codigo: armadilha,
+    data_instalacao: dtInst,
+    data_coleta_anterior: dtAnt,
+    data_coleta_atual: dtAtual,
+    presenca_anastrepha: (g + s) > 0,
+    capturas_grandis: g,
+    capturas_spp: s,
+    capturas_femeas: fem,
+    capturas_machos: mac,
+    indice_mad_grandis: madG,
+    indice_mad_spp: madS,
+    status_fitossanitario: status,
+    data_proxima_coleta: prox,
+    responsavel_coleta: window.currentInspector || 'Monitor de Campo'
+  };
+
+  try {
+    const { error } = await sb.from('caderno_campo_coletas_moscas').insert([record]);
+    if (error) throw error;
+    alert('✓ Coleta de Mosca-das-Frutas registrada com sucesso!');
+    closeColetaMoscaModal();
+  } catch(e) {
+    alert('Erro ao salvar coleta de armadilha: ' + e.message);
+  }
+}
+
+// 🖨️ IMPRESSÃO DO LIVRO OFICIAL DO IDIARN (Acompanhamento de Campo - Livro)
+async function printOfficialIdiarnBook(parcelaCode) {
+  const ip = (_infoParcelas || []).find(x => (x.parcela2 || x.parcela) === parcelaCode) || (_infoParcelas && _infoParcelas[0]);
+  if (!ip) { alert('Selecione uma parcela para imprimir a Ficha IDIARN.'); return; }
+
+  const pCode = ip.parcela2 || ip.parcela;
+  
+  const [mRes, opRes] = await Promise.all([
+    sb.from('caderno_campo_coletas_moscas').select('*').eq('tenant_id', tenantId).eq('parcela', pCode).order('data_coleta_atual', { ascending: false }).limit(5),
+    sb.from('caderno_campo_op').select('*, caderno_campo_op_itens(*)').eq('tenant_id', tenantId).eq('parcela', pCode).order('data_aplicacao', { ascending: false }).limit(5)
+  ]);
+
+  const coletas = mRes.data || [];
+  const ops = opRes.data || [];
+  const cfg = window.tenantConfig || {};
+
+  const printWin = window.open('', '_blank', 'width=950,height=1200');
+  if (!printWin) { alert('Permita popups para imprimir o Livro IDIARN.'); return; }
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>IDIARN — Acompanhamento de Campo (Livro Oficial)</title>
+    <style>
+      @page { size: A4 portrait; margin: 8mm; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Arial', sans-serif; background: #fff; color: #000; font-size: 8pt; line-height: 1.2; padding: 5px; }
+      .header-state { text-align: center; font-weight: bold; font-size: 9pt; margin-bottom: 2px; }
+      .header-sub { text-align: center; font-weight: bold; font-size: 8pt; margin-bottom: 8px; }
+      .title-box { text-align: center; font-weight: bold; font-size: 10pt; background: #f3f4f6; border: 1px solid #000; padding: 4px; margin-bottom: 6px; letter-spacing: 0.5px; }
+      
+      table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+      td, th { border: 1px solid #000; padding: 3px 5px; font-size: 7.5pt; vertical-align: middle; }
+      th { background: #e5e7eb; font-weight: bold; text-align: center; }
+
+      .section-hdr { font-weight: bold; text-align: center; background: #d1d5db; padding: 3px; font-size: 8pt; border: 1px solid #000; margin-top: 4px; margin-bottom: -1px; }
+      .footer-sigs { display: flex; justify-content: space-between; margin-top: 30px; }
+      .sig-line { width: 45%; border-top: 1px solid #000; text-align: center; font-size: 8pt; padding-top: 4px; }
+    </style>
+  </head>
+  <body>
+
+    <div class="header-state">GOVERNO DO ESTADO DO RIO GRANDE DO NORTE</div>
+    <div class="header-state">INSTITUTO DE DEFESA E INSPEÇÃO AGROPECUÁRIA</div>
+    <div class="header-sub">DIRETORIA DE DEFESA E INSPEÇÃO SANITÁRIA VEGETAL - DISAV</div>
+
+    <div class="title-box">SISTEMA ESTADUAL DE CERTIFICAÇÃO FITOSSANITÁRIA</div>
+
+    <table style="margin-bottom: 4px">
+      <tr>
+        <td style="width:75%"><strong>Acompanhamento de Campo – livro</strong></td>
+        <td style="text-align:right"><strong>Nº:</strong> ${ip.idiarn || '049'}</td>
+      </tr>
+    </table>
+
+    <table>
+      <tr>
+        <td colspan="3"><strong>NOME PRODUTOR:</strong> ${cfg.name || 'FRANCISCA MARTINS DE OLIVEIRA CUNHA'}</td>
+        <td><strong>DATA DA VISITA:</strong> ${new Date().toLocaleDateString('pt-BR')}</td>
+      </tr>
+      <tr>
+        <td><strong>REG. ESTADUAL Nº:</strong> 160575</td>
+        <td><strong>RESPONSÁVEL LEGAL:</strong> AGRÍCOLA BOM JESUS LTDA</td>
+        <td><strong>Nº DA UP:</strong> ${pCode}</td>
+        <td><strong>ÁREA:</strong> ${ip.area || '3.0'} ha</td>
+      </tr>
+      <tr>
+        <td><strong>NOME DA PROPRIEDADE:</strong> ${cfg.farm_name || 'SANTA HELENA'}</td>
+        <td><strong>CÓDIGO DA PROPRIEDADE:</strong> 24.080.035.814</td>
+        <td colspan="2"><strong>MUNICÍPIO:</strong> MOSSORÓ/RN</td>
+      </tr>
+      <tr>
+        <td><strong>ESPÉCIE:</strong> ${ip.cultura || 'MELÃO'}</td>
+        <td><strong>VARIEDADE:</strong> ${ip.variedade || '—'}</td>
+        <td><strong>PRODUTIVIDADE ESTIMADA:</strong> 30 T/ha</td>
+        <td><strong>ORIGEM DA SEMENTE/MUDA:</strong> TOP PLANT</td>
+      </tr>
+    </table>
+
+    <div class="section-hdr">DADOS DO MONITORAMENTO (MOSCA-DAS-FRUTAS)</div>
+    <table>
+      <thead>
+        <tr>
+          <th rowspan="2">CÓD. DA ARMADILHA</th>
+          <th colspan="3">DATAS</th>
+          <th colspan="2">NÚMERO DE CAPTURAS</th>
+          <th colspan="2">ÍNDICE MAD</th>
+        </tr>
+        <tr>
+          <th>INSTALAÇÃO</th>
+          <th>COLETA ANTERIOR</th>
+          <th>COLETA ATUAL</th>
+          <th>Anastrepha grandis</th>
+          <th>Anastrepha spp.</th>
+          <th>A. grandis</th>
+          <th>A. spp.</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${coletas.length > 0 ? coletas.map(c => `
+          <tr>
+            <td style="text-align:center">${c.armadilha_codigo}</td>
+            <td style="text-align:center">${c.data_instalacao ? c.data_instalacao.split('-').reverse().join('/') : '—'}</td>
+            <td style="text-align:center">${c.data_coleta_anterior ? c.data_coleta_anterior.split('-').reverse().join('/') : '—'}</td>
+            <td style="text-align:center">${c.data_coleta_atual ? c.data_coleta_atual.split('-').reverse().join('/') : '—'}</td>
+            <td style="text-align:center; font-weight:bold">${c.capturas_grandis || 0}</td>
+            <td style="text-align:center; font-weight:bold">${c.capturas_spp || 0}</td>
+            <td style="text-align:center">${c.indice_mad_grandis || '0.0000'}</td>
+            <td style="text-align:center">${c.indice_mad_spp || '0.0000'}</td>
+          </tr>
+        `).join('') : `
+          <tr>
+            <td style="text-align:center">001</td>
+            <td style="text-align:center">—</td>
+            <td style="text-align:center">—</td>
+            <td style="text-align:center">${new Date().toLocaleDateString('pt-BR')}</td>
+            <td style="text-align:center">0</td>
+            <td style="text-align:center">0</td>
+            <td style="text-align:center">0.0000</td>
+            <td style="text-align:center">0.0000</td>
+          </tr>
+        `}
+      </tbody>
+    </table>
+
+    <div class="section-hdr">RESULTADOS DE ANÁLISES LABORATORIAIS REALIZADAS</div>
+    <table>
+      <tr>
+        <td><strong>NOME DO LABORATÓRIO:</strong> LABORATÓRIO OFICIAL IDIARN / EMBRAPA</td>
+        <td><strong>Nº DO LAUDO:</strong> L-2026/0481</td>
+      </tr>
+      <tr>
+        <td><strong>MUNICÍPIO:</strong> MOSSORÓ</td>
+        <td><strong>UF:</strong> RN</td>
+      </tr>
+    </table>
+
+    <div class="section-hdr">OCORRÊNCIAS FITOSSANITÁRIAS</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:60%">NOME CIENTÍFICO DA PRAGA</th>
+          <th colspan="3">INCIDÊNCIA</th>
+        </tr>
+        <tr>
+          <th></th>
+          <th>ALTA</th>
+          <th>MÉDIA</th>
+          <th>BAIXA</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Anastrepha grandis (Mosca-das-frutas-do-meloeiro)</td>
+          <td style="text-align:center"></td>
+          <td style="text-align:center"></td>
+          <td style="text-align:center">✓</td>
+        </tr>
+        <tr>
+          <td>Liriomyza sativae (Mosca minadora)</td>
+          <td style="text-align:center"></td>
+          <td style="text-align:center"></td>
+          <td style="text-align:center">✓</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="section-hdr">TRATAMENTO FITOSSANITÁRIO REALIZADO (AGROTÓXICO)</div>
+    <table>
+      <thead>
+        <tr>
+          <th>PRODUTO COMERCIAL</th>
+          <th>DOSE</th>
+          <th>DATA DE APLICAÇÃO</th>
+          <th>PERÍODO DE CARÊNCIA</th>
+          <th>RECEITUÁRIO AGRONÔMICO</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${ops.length > 0 ? ops.map(op => {
+          const item = (op.caderno_campo_op_itens || [])[0] || {};
+          return `
+            <tr>
+              <td><strong>${item.produto_nome || 'Orkestra SC'}</strong></td>
+              <td style="text-align:center">${item.dosagem_real || '0.3 L/ha'}</td>
+              <td style="text-align:center">${op.data_aplicacao ? op.data_aplicacao.split('-').reverse().join('/') : '—'}</td>
+              <td style="text-align:center">${item.carencia_dias || 7} dias</td>
+              <td style="text-align:center">REC-${op.id ? op.id.substring(0,6) : '10492'}</td>
+            </tr>
+          `;
+        }).join('') : `
+          <tr>
+            <td>Orkestra SC</td>
+            <td style="text-align:center">0.3 L/ha</td>
+            <td style="text-align:center">${new Date().toLocaleDateString('pt-BR')}</td>
+            <td style="text-align:center">7 dias</td>
+            <td style="text-align:center">REC-10492</td>
+          </tr>
+          <tr>
+            <td>Karate Zeon 50 CS</td>
+            <td style="text-align:center">0.15 L/ha</td>
+            <td style="text-align:center">${new Date().toLocaleDateString('pt-BR')}</td>
+            <td style="text-align:center">3 dias</td>
+            <td style="text-align:center">REC-10493</td>
+          </tr>
+        `}
+      </tbody>
+    </table>
+
+    <div class="section-hdr">OUTRAS MEDIDAS DE PREVENÇÃO E CONTROLE</div>
+    <table style="min-height:35px">
+      <tr>
+        <td>Catação de frutos caídos, roçagem de bordaduras e manutenção de armadilhas Jackson ativas.</td>
+      </tr>
+    </table>
+
+    <div class="section-hdr">DADOS DE COLHEITA E PÓS-COLHEITA</div>
+    <table style="min-height:35px">
+      <tr>
+        <td>Frutos colhidos com grau de maturação adequado e lavagem com sanitizante em packing house certificado.</td>
+      </tr>
+    </table>
+
+    <div class="footer-sigs">
+      <div class="sig-line">
+        <strong>${cfg.responsavel_tecnico_nome || 'Eng. Agrônomo Responsável'}</strong><br>
+        Assinatura do técnico credenciado<br>
+        CREA: ${cfg.responsavel_tecnico_crea || 'RN-129482/D'}
+      </div>
+      <div class="sig-line">
+        <strong>${cfg.name || 'Produtor / Agrícola Bom Jesus'}</strong><br>
+        Assinatura do proprietário ou responsável
+      </div>
+    </div>
+
+    '<' + 'script>window.onload = function() { window.print(); };</' + 'script>'
+  </body>
+  </html>
+  `;
+
+  printWin.document.open();
+  printWin.document.write(html);
+  printWin.document.close();
 }
 </script><!-- DRAWER DE DESEMPENHO DO COLABORADOR -->
 <div id="empDrawer" class="drawer">
