@@ -10554,8 +10554,9 @@ function printPastaCampoOrdemPulv(itemStr) {
   
   // Calcular idade (dias entre plantio e data_aplicacao)
   let idadeDias = '—';
-  if (ip && (ip.transplante || ip.plantio || ip.data_plantio1) && item.data_aplicacao) {
-    const pDate = new Date((ip.transplante || ip.plantio || ip.data_plantio1) + 'T12:00:00');
+  const firstIp = matchingIps[0];
+  if (firstIp && (firstIp.transplante || firstIp.plantio || firstIp.data_plantio1) && item.data_aplicacao) {
+    const pDate = new Date((firstIp.transplante || firstIp.plantio || firstIp.data_plantio1) + 'T12:00:00');
     const aDate = new Date(item.data_aplicacao + 'T12:00:00');
     const diffTime = Math.abs(aDate - pDate);
     idadeDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
