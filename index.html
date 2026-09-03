@@ -9979,7 +9979,7 @@ function generateSingleCapaHtml(item) {
         </tr>
         <tr>
           <td><span class="lbl">Nº DA PARCELA:</span> ${item.parcela2 || item.parcela || '—'}</td>
-          <td><span class="lbl">ÁREA DA PARCELA:</span> ${item.area ? item.area + ' ha' : '—'}</td>
+          <td><span class="lbl">ÁREA DA PARCELA:</span> ${totalAreaStr + ' ha'}</td>
         </tr>
         <tr>
           <td colspan="2"><span class="lbl">VARIEDADE(S):</span> ${variedadesHtml}</td>
@@ -10032,8 +10032,10 @@ async function printPastaCampoTratos(id) {
   const item = _infoParcelas.find(x => x.id === id);
   if (!item) { alert('Parcela não encontrada.'); return; }
   
-  const printWin = window.open('', '_blank', 'width=900,height=1200');
-  if (!printWin) { alert('Permita popups para imprimir.'); return; }
+  const info = getParcelaCompleteInfo(item || id, _infoParcelas);
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa';
+  const variedadesHtml = info ? info.variedadesBlockHtml : '—';
+  const totalAreaStr = info ? info.area : (item.area || '—');
 
   // Fetch tratos para esta parcela
   const { data: tratos, error } = await sb.from('caderno_campo_tratos')
@@ -10043,34 +10045,11 @@ async function printPastaCampoTratos(id) {
     
   if (error || !tratos || tratos.length === 0) {
     alert('Nenhum trato cultural registrado para esta parcela.');
-    printWin.close();
     return;
   }
   
-  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa';
-  
-  // Buscar todas as variedades para a mesma parcela em _infoParcelas
-  const matchingIpsCapa = (_infoParcelas || []).filter(x => 
-    (x.parcela2 && item.parcela2 && String(x.parcela2).trim() === String(item.parcela2).trim()) ||
-    (x.parcela && item.parcela && String(x.parcela).trim() === String(item.parcela).trim()) ||
-    (x.id === item.id)
-  );
-
-  const capaVarsSet = new Set();
-  let totalAreaCapa = 0;
-  matchingIpsCapa.forEach(p => {
-    if (p.variedade) {
-      p.variedade.split(/[,;\/]+/).forEach(v => { const cv = v.trim(); if(cv) capaVarsSet.add(cv.toUpperCase()); });
-    }
-    if (p.area) totalAreaCapa += parseFloat(p.area) || 0;
-  });
-  if (item.variedade) {
-    item.variedade.split(/[,;\/]+/).forEach(v => { const cv = v.trim(); if(cv) capaVarsSet.add(cv.toUpperCase()); });
-  }
-
-  const variedadesList = Array.from(capaVarsSet);
-  let variedadesHtml = variedadesList.map(v => `<div>${v}</div>`).join('');
-  if (!variedadesHtml) variedadesHtml = '—';
+  const printWin = window.open('', '_blank', 'width=900,height=1200');
+  if (!printWin) { alert('Permita popups para imprimir.'); return; }
 
   const rowsHtml = tratos.map(t => {
     const fmtDate = t.data_trato ? t.data_trato.split('-').reverse().join('/') : '—';
@@ -10113,8 +10092,8 @@ async function printPastaCampoTratos(id) {
         <td width="25%"><strong>PARCELA:</strong><br/>${item.parcela2 || item.parcela}</td>
       </tr>
       <tr>
-        <td><strong>ÁREA (ha):</strong><br/>${item.area || '—'}</td>
-        <td colspan="3"><strong>VARIEDADES:</strong><br/><div style="display:flex; gap:10px">${variedadesHtml}</div></td>
+        <td><strong>ÁREA TOTAL (ha):</strong><br/>${totalAreaStr}</td>
+        <td colspan="3"><strong>VARIEDADES:</strong><br/>${variedadesHtml}</td>
       </tr>
     </table>
 
@@ -10147,9 +10126,14 @@ async function printPastaCampoTratos(id) {
   printWin.document.close();
 }
 
+
 async function printPastaCampoIdiarn(id) {
   const item = _infoParcelas.find(x => x.id === id);
   if (!item) { alert('Parcela não encontrada.'); return; }
+  
+  const info = getParcelaCompleteInfo(item || id, _infoParcelas);
+  const variedadesStr = info ? info.variedade : (item.variedade || '—');
+  const totalAreaStr = info ? info.area : (item.area || '—');
   
   if (!window._opList) {
     alert('Os dados de pulverização ainda estão carregando. Tente novamente em alguns segundos.');
@@ -10212,10 +10196,6 @@ async function printPastaCampoIdiarn(id) {
     </tr>
   `).join('');
 
-  const variedadesList = item.variedade ? item.variedade.split(',').map(v => v.trim()).filter(v => v) : [];
-  let variedadesStr = variedadesList.join(', ');
-  if (!variedadesStr) variedadesStr = '—';
-
   const html = `
   <!DOCTYPE html>
   <html>
@@ -10241,7 +10221,7 @@ async function printPastaCampoIdiarn(id) {
         <td width="25%"><strong>EMPRESA:</strong><br/>${tenantName}</td>
         <td width="25%"><strong>FAZENDA:</strong><br/>${fazenda}</td>
         <td width="25%"><strong>PARCELA:</strong><br/>${item.parcela2 || item.parcela}</td>
-        <td width="25%"><strong>ÁREA TOTAL:</strong><br/>${item.area ? item.area + ' ha' : '—'}</td>
+        <td width="25%"><strong>ÁREA TOTAL:</strong><br/>${totalAreaStr} ha</td>
       </tr>
       <tr>
         <td colspan="4"><strong>CULTURA / VARIEDADES:</strong><br/>${item.cultura || 'MELÃO'} — ${variedadesStr}</td>
@@ -10278,39 +10258,21 @@ async function printPastaCampoIdiarn(id) {
   printWin.document.close();
 }
 
+
 function printPastaCampoCapa(id) {
   const item = _infoParcelas.find(x => x.id === id);
   if (!item) { alert('Ciclo de parcela não encontrado.'); return; }
   
+  const info = getParcelaCompleteInfo(item || id, _infoParcelas);
   const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa';
-  
-  // Buscar todas as variedades para a mesma parcela em _infoParcelas
-  const matchingIpsCapa = (_infoParcelas || []).filter(x => 
-    (x.parcela2 && item.parcela2 && String(x.parcela2).trim() === String(item.parcela2).trim()) ||
-    (x.parcela && item.parcela && String(x.parcela).trim() === String(item.parcela).trim()) ||
-    (x.id === item.id)
-  );
-
-  const capaVarsSet = new Set();
-  let totalAreaCapa = 0;
-  matchingIpsCapa.forEach(p => {
-    if (p.variedade) {
-      p.variedade.split(/[,;\/]+/).forEach(v => { const cv = v.trim(); if(cv) capaVarsSet.add(cv.toUpperCase()); });
-    }
-    if (p.area) totalAreaCapa += parseFloat(p.area) || 0;
-  });
-  if (item.variedade) {
-    item.variedade.split(/[,;\/]+/).forEach(v => { const cv = v.trim(); if(cv) capaVarsSet.add(cv.toUpperCase()); });
-  }
-
-  const variedadesList = Array.from(capaVarsSet);
-  let variedadesHtml = variedadesList.map(v => `<div>${v}</div>`).join('');
-  if (!variedadesHtml) variedadesHtml = '—';
+  const variedadesHtml = info ? info.variedadesBlockHtml : '—';
+  const totalAreaStr = info ? info.area : (item.area || '—');
   
   const dtPlantio = item.plantio ? new Date(item.plantio + 'T12:00:00') : null;
   const anoStr = dtPlantio ? `${dtPlantio.getFullYear()}/${dtPlantio.getFullYear() + 1}` : new Date().getFullYear();
   
   const printWin = window.open('', '_blank', 'width=900,height=1200');
+  if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
   if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
   
   const html = `
@@ -10375,7 +10337,7 @@ function printPastaCampoCapa(id) {
         </tr>
         <tr>
           <td colspan="2"><strong>VARIEDADES:</strong><br/>${variedadesHtml}</td>
-          <td><strong>TOTAL HECTARES:</strong><br/><span style="font-size: 10pt; font-weight: bold;">${item.area ? item.area + ' ha' : '—'}</span></td>
+          <td><strong>TOTAL HECTARES:</strong><br/><span style="font-size: 10pt; font-weight: bold;">${totalAreaStr + ' ha'}</span></td>
         </tr>
       </table>
       
@@ -10505,70 +10467,106 @@ const _opReportIcons = {
 
 
 
-function getParcelaCompleteInfo(parcelaCode, dataArray) {
-  if (!parcelaCode) return null;
+
+function normalizeParcelCode(val) {
+  if (!val) return '';
+  const s = String(val).trim().toUpperCase();
+  const digits = s.match(/\d+/);
+  return digits ? digits[0] : s;
+}
+
+function getParcelaCompleteInfo(parcelInput, dataArray) {
+  if (!parcelInput) return null;
   const list = dataArray || window._infoParcelas || window.infoParcelasData || [];
   if (!Array.isArray(list) || list.length === 0) return null;
-  
-  const cleanCode = String(parcelaCode).trim().toUpperCase();
-  
-  const matches = list.filter(x => {
-    if (!x) return false;
-    const p1 = x.parcela2 ? String(x.parcela2).trim().toUpperCase() : '';
-    const p2 = x.parcela ? String(x.parcela).trim().toUpperCase() : '';
-    const p3 = x.code ? String(x.code).trim().toUpperCase() : '';
-    const p4 = x.id ? String(x.id).trim().toUpperCase() : '';
-    const p5 = x.parcel_id ? String(x.parcel_id).trim().toUpperCase() : '';
-    return p1 === cleanCode || p2 === cleanCode || p3 === cleanCode || p4 === cleanCode || p5 === cleanCode;
-  });
 
-  if (matches.length === 0) {
-    const digitMatch = cleanCode.match(/\d+/);
-    if (digitMatch) {
-      const numOnly = digitMatch[0];
-      const flexMatches = list.filter(x => {
-        if (!x) return false;
-        const p1 = x.parcela2 ? String(x.parcela2).trim() : '';
-        const p2 = x.parcela ? String(x.parcela).trim() : '';
-        return p1 === numOnly || p2 === numOnly || (p1.match(/\d+/) && p1.match(/\d+/)[0] === numOnly);
-      });
-      if (flexMatches.length > 0) matches.push(...flexMatches);
+  let targetCode = '';
+  let targetId = '';
+
+  if (typeof parcelInput === 'object') {
+    targetCode = parcelInput.parcela2 || parcelInput.parcela || parcelInput.code || parcelInput.parcel_id || '';
+    targetId = parcelInput.id || parcelInput.parcel_id || '';
+  } else {
+    const inputStr = String(parcelInput).trim();
+    const foundById = list.find(x => x && (String(x.id) === inputStr || String(x.parcel_id) === inputStr));
+    if (foundById) {
+      targetCode = foundById.parcela2 || foundById.parcela || foundById.code || '';
+      targetId = foundById.id;
+    } else {
+      targetCode = inputStr;
     }
   }
+
+  const normTarget = normalizeParcelCode(targetCode);
+
+  const matches = list.filter(x => {
+    if (!x) return false;
+    if (targetId && String(x.id) === String(targetId)) return true;
+    const p1 = normalizeParcelCode(x.parcela2);
+    const p2 = normalizeParcelCode(x.parcela);
+    const p3 = normalizeParcelCode(x.code);
+    return (p1 && normTarget && p1 === normTarget) || 
+           (p2 && normTarget && p2 === normTarget) || 
+           (p3 && normTarget && p3 === normTarget);
+  });
 
   if (matches.length === 0) return null;
 
   const first = matches[0];
   const varietiesSet = new Set();
+  const varietiesWithArea = [];
   let totalArea = 0;
   let plantioDates = [];
   let prevColheitaDates = [];
 
   matches.forEach(m => {
+    let mArea = parseFloat(m.area);
+    if (!isNaN(mArea) && mArea > 0) totalArea += mArea;
+
     if (m.variedade) {
       m.variedade.split(/[,;\/]+/).forEach(v => {
-        const cv = v.trim();
-        if (cv) varietiesSet.add(cv.toUpperCase());
+        const cv = v.trim().toUpperCase();
+        if (cv && !varietiesSet.has(cv)) {
+          varietiesSet.add(cv);
+          varietiesWithArea.push({
+            nome: cv,
+            area: (!isNaN(mArea) && mArea > 0) ? mArea.toFixed(2) : '—'
+          });
+        }
       });
     }
-    if (m.area) {
-      const aVal = parseFloat(m.area);
-      if (!isNaN(aVal) && aVal > 0) totalArea += aVal;
-    }
+
     const pDt = m.transplante || m.plantio || m.data_plantio1;
     if (pDt) plantioDates.push(pDt);
     if (m.previsao_colheita) prevColheitaDates.push(m.previsao_colheita);
   });
 
+  if (typeof parcelInput === 'object' && parcelInput.variedade) {
+    parcelInput.variedade.split(/[,;\/]+/).forEach(v => {
+      const cv = v.trim().toUpperCase();
+      if (cv && !varietiesSet.has(cv)) {
+        varietiesSet.add(cv);
+        varietiesWithArea.push({ nome: cv, area: '—' });
+      }
+    });
+  }
+
   const varietiesList = Array.from(varietiesSet);
   const formattedVariedade = varietiesList.length > 0 ? varietiesList.join(', ') : (first.variedade || '—');
-  const formattedArea = totalArea > 0 ? totalArea.toFixed(2) : (first.area ? parseFloat(first.area).toFixed(2) : '0.00');
+  const formattedArea = totalArea > 0 ? totalArea.toFixed(2) : (first.area ? parseFloat(first.area).toFixed(2) : '1.00');
+
+  const variedadesBlockHtml = varietiesWithArea.length > 0
+    ? varietiesWithArea.map(v => `<div style="display:flex; justify-content:space-between; width:180px;"><span style="font-weight:bold; color:#dc2626;">${v.nome}</span><span style="color:#dc2626; font-weight:bold;">${v.area !== '—' ? v.area.replace('.', ',') : ''}</span></div>`).join('')
+    : `<div style="font-weight:bold; color:#dc2626;">${formattedVariedade}</div>`;
 
   return {
     ...first,
     matches: matches,
+    parcelaNum: normTarget || first.parcela2 || first.parcela || '—',
     variedade: formattedVariedade,
     variedadesList: varietiesList,
+    varietiesWithArea: varietiesWithArea,
+    variedadesBlockHtml: variedadesBlockHtml,
     area: formattedArea,
     area_ha: formattedArea,
     transplante: plantioDates[0] || first.transplante || first.plantio || first.data_plantio1 || null,
@@ -10583,60 +10581,21 @@ function printPastaCampoOrdemPulv(itemStr) {
   const formattedDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—';
   
   // Buscar TODOS os ciclos correspondentes a esta parcela em _infoParcelas para preencher TODAS as variedades e área total
-  const matchingIps = (_infoParcelas || []).filter(x => 
-    (x.parcela2 && String(x.parcela2).trim() === String(item.parcela).trim()) || 
-    (x.parcela && String(x.parcela).trim() === String(item.parcela).trim()) ||
-    (x.id && item.parcel_id && String(x.id) === String(item.parcel_id))
-  );
-
-  const varietiesSet = new Set();
-  let calculatedArea = 0;
-  let firstPlantio = '—';
-  let firstPrevColheita = '—';
-
-  matchingIps.forEach(p => {
-    if (p.variedade) {
-      p.variedade.split(/[,;\/]+/).forEach(v => {
-        const cleanV = v.trim();
-        if (cleanV) varietiesSet.add(cleanV.toUpperCase());
-      });
-    }
-    if (p.area) {
-      calculatedArea += parseFloat(p.area) || 0;
-    }
-    const pDt = p.transplante || p.plantio || p.data_plantio1;
-    if (pDt && firstPlantio === '—') {
-      firstPlantio = pDt.split('-').reverse().join('/');
-    }
-    if (p.previsao_colheita && firstPrevColheita === '—') {
-      firstPrevColheita = p.previsao_colheita.split('-').reverse().join('/');
-    }
-  });
-
-  if (item.variedade) {
-    item.variedade.split(/[,;\/]+/).forEach(v => {
-      const cleanV = v.trim();
-      if (cleanV) varietiesSet.add(cleanV.toUpperCase());
-    });
-  }
-
-  const variedadesList = Array.from(varietiesSet);
-  const variedadeStr = variedadesList.length > 0 ? variedadesList.join(', ') : '—';
-  const areaHa = calculatedArea > 0 ? calculatedArea.toFixed(2) : parseFloat(item.area_ha || 1.0).toFixed(2);
-  const dataPlantioStr = firstPlantio;
-  const prevColheitaStr = firstPrevColheita;
+  const info = getParcelaCompleteInfo(item.parcela || item, _infoParcelas);
+  const variedadeStr = info ? info.variedade : (item.variedade || '—');
+  const areaHa = info ? info.area : parseFloat(item.area_ha || 1.0).toFixed(2);
+  const dataPlantioStr = info && info.plantio ? info.plantio.split('-').reverse().join('/') : '—';
+  const prevColheitaStr = info && info.previsao_colheita ? info.previsao_colheita.split('-').reverse().join('/') : '—';
   
   // Calcular idade (dias entre plantio e data_aplicacao)
   let idadeDias = '—';
-  const firstIp = matchingIps[0];
-  if (firstIp && (firstIp.transplante || firstIp.plantio || firstIp.data_plantio1) && item.data_aplicacao) {
-    const pDate = new Date((firstIp.transplante || firstIp.plantio || firstIp.data_plantio1) + 'T12:00:00');
+  if (info && (info.transplante || info.plantio || info.data_plantio1) && item.data_aplicacao) {
+    const pDate = new Date((info.transplante || info.plantio || info.data_plantio1) + 'T12:00:00');
     const aDate = new Date(item.data_aplicacao + 'T12:00:00');
     const diffTime = Math.abs(aDate - pDate);
     idadeDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
   
-  // Buscar itens da calda do próprio item serializado
   const itemsCalda = item.caderno_campo_op_itens || [];
 
   // Separation between Defensivos e Adubos Foliares
@@ -12377,7 +12336,7 @@ function renderInfoParcelasTable(list) {
           <div style="font-weight:600; margin-top:2px">${item.variedade || '—'}</div>
         </td>
         <td style="padding:10px 8px">
-          ${item.area ? item.area + ' ha' : '—'}<br/>
+          ${totalAreaStr + ' ha'}<br/>
           <small style="color:var(--muted)">${item.linhas ? item.linhas + ' linhas' : '—'}</small>
         </td>
         <td style="padding:10px 8px">${item.plantio || '—'}</td>

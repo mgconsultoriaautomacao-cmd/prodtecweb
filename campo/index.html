@@ -4191,70 +4191,106 @@ let varieties = [];
   }
 
   
-function getParcelaCompleteInfo(parcelaCode, dataArray) {
-  if (!parcelaCode) return null;
+
+function normalizeParcelCode(val) {
+  if (!val) return '';
+  const s = String(val).trim().toUpperCase();
+  const digits = s.match(/\d+/);
+  return digits ? digits[0] : s;
+}
+
+function getParcelaCompleteInfo(parcelInput, dataArray) {
+  if (!parcelInput) return null;
   const list = dataArray || window._infoParcelas || window.infoParcelasData || [];
   if (!Array.isArray(list) || list.length === 0) return null;
-  
-  const cleanCode = String(parcelaCode).trim().toUpperCase();
-  
-  const matches = list.filter(x => {
-    if (!x) return false;
-    const p1 = x.parcela2 ? String(x.parcela2).trim().toUpperCase() : '';
-    const p2 = x.parcela ? String(x.parcela).trim().toUpperCase() : '';
-    const p3 = x.code ? String(x.code).trim().toUpperCase() : '';
-    const p4 = x.id ? String(x.id).trim().toUpperCase() : '';
-    const p5 = x.parcel_id ? String(x.parcel_id).trim().toUpperCase() : '';
-    return p1 === cleanCode || p2 === cleanCode || p3 === cleanCode || p4 === cleanCode || p5 === cleanCode;
-  });
 
-  if (matches.length === 0) {
-    const digitMatch = cleanCode.match(/\d+/);
-    if (digitMatch) {
-      const numOnly = digitMatch[0];
-      const flexMatches = list.filter(x => {
-        if (!x) return false;
-        const p1 = x.parcela2 ? String(x.parcela2).trim() : '';
-        const p2 = x.parcela ? String(x.parcela).trim() : '';
-        return p1 === numOnly || p2 === numOnly || (p1.match(/\d+/) && p1.match(/\d+/)[0] === numOnly);
-      });
-      if (flexMatches.length > 0) matches.push(...flexMatches);
+  let targetCode = '';
+  let targetId = '';
+
+  if (typeof parcelInput === 'object') {
+    targetCode = parcelInput.parcela2 || parcelInput.parcela || parcelInput.code || parcelInput.parcel_id || '';
+    targetId = parcelInput.id || parcelInput.parcel_id || '';
+  } else {
+    const inputStr = String(parcelInput).trim();
+    const foundById = list.find(x => x && (String(x.id) === inputStr || String(x.parcel_id) === inputStr));
+    if (foundById) {
+      targetCode = foundById.parcela2 || foundById.parcela || foundById.code || '';
+      targetId = foundById.id;
+    } else {
+      targetCode = inputStr;
     }
   }
+
+  const normTarget = normalizeParcelCode(targetCode);
+
+  const matches = list.filter(x => {
+    if (!x) return false;
+    if (targetId && String(x.id) === String(targetId)) return true;
+    const p1 = normalizeParcelCode(x.parcela2);
+    const p2 = normalizeParcelCode(x.parcela);
+    const p3 = normalizeParcelCode(x.code);
+    return (p1 && normTarget && p1 === normTarget) || 
+           (p2 && normTarget && p2 === normTarget) || 
+           (p3 && normTarget && p3 === normTarget);
+  });
 
   if (matches.length === 0) return null;
 
   const first = matches[0];
   const varietiesSet = new Set();
+  const varietiesWithArea = [];
   let totalArea = 0;
   let plantioDates = [];
   let prevColheitaDates = [];
 
   matches.forEach(m => {
+    let mArea = parseFloat(m.area);
+    if (!isNaN(mArea) && mArea > 0) totalArea += mArea;
+
     if (m.variedade) {
       m.variedade.split(/[,;\/]+/).forEach(v => {
-        const cv = v.trim();
-        if (cv) varietiesSet.add(cv.toUpperCase());
+        const cv = v.trim().toUpperCase();
+        if (cv && !varietiesSet.has(cv)) {
+          varietiesSet.add(cv);
+          varietiesWithArea.push({
+            nome: cv,
+            area: (!isNaN(mArea) && mArea > 0) ? mArea.toFixed(2) : '—'
+          });
+        }
       });
     }
-    if (m.area) {
-      const aVal = parseFloat(m.area);
-      if (!isNaN(aVal) && aVal > 0) totalArea += aVal;
-    }
+
     const pDt = m.transplante || m.plantio || m.data_plantio1;
     if (pDt) plantioDates.push(pDt);
     if (m.previsao_colheita) prevColheitaDates.push(m.previsao_colheita);
   });
 
+  if (typeof parcelInput === 'object' && parcelInput.variedade) {
+    parcelInput.variedade.split(/[,;\/]+/).forEach(v => {
+      const cv = v.trim().toUpperCase();
+      if (cv && !varietiesSet.has(cv)) {
+        varietiesSet.add(cv);
+        varietiesWithArea.push({ nome: cv, area: '—' });
+      }
+    });
+  }
+
   const varietiesList = Array.from(varietiesSet);
   const formattedVariedade = varietiesList.length > 0 ? varietiesList.join(', ') : (first.variedade || '—');
-  const formattedArea = totalArea > 0 ? totalArea.toFixed(2) : (first.area ? parseFloat(first.area).toFixed(2) : '0.00');
+  const formattedArea = totalArea > 0 ? totalArea.toFixed(2) : (first.area ? parseFloat(first.area).toFixed(2) : '1.00');
+
+  const variedadesBlockHtml = varietiesWithArea.length > 0
+    ? varietiesWithArea.map(v => `<div style="display:flex; justify-content:space-between; width:180px;"><span style="font-weight:bold; color:#dc2626;">${v.nome}</span><span style="color:#dc2626; font-weight:bold;">${v.area !== '—' ? v.area.replace('.', ',') : ''}</span></div>`).join('')
+    : `<div style="font-weight:bold; color:#dc2626;">${formattedVariedade}</div>`;
 
   return {
     ...first,
     matches: matches,
+    parcelaNum: normTarget || first.parcela2 || first.parcela || '—',
     variedade: formattedVariedade,
     variedadesList: varietiesList,
+    varietiesWithArea: varietiesWithArea,
+    variedadesBlockHtml: variedadesBlockHtml,
     area: formattedArea,
     area_ha: formattedArea,
     transplante: plantioDates[0] || first.transplante || first.plantio || first.data_plantio1 || null,
