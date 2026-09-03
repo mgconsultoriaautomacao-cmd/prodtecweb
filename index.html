@@ -13915,20 +13915,14 @@ function deleteWebPlantioFromModal() {
 }
 
 async function loadCadernoCampo() {
-  // 0. Carregar Plantios Web
-  try {
-    await loadWebPlantios();
-  } catch(e) {
-    console.error('Erro ao carregar plantios em loadCadernoCampo:', e);
-  }
+  // Exibir a sub-aba inicial imediatamente para evitar tela em branco
+  showCcTab('plantios');
 
-  // 1. Carregar MIP
-  await loadMipTable();
-
-  // 2. Carregar O.P
-  await loadOpTable();
+  // Carregar dados de cada sub-aba de forma resiliente
+  try { await loadWebPlantios(); } catch(e) { console.error('Erro em loadWebPlantios:', e); }
+  try { await loadMipTable(); } catch(e) { console.error('Erro em loadMipTable:', e); }
+  try { await loadOpTable(); } catch(e) { console.error('Erro em loadOpTable:', e); }
   
-  // 3. Carregar parcelas para popular o select de Nova O.P
   try {
     if (!_infoParcelas || _infoParcelas.length === 0) {
       const { data: ipData } = await sb.from('info_parcelas').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
@@ -13938,7 +13932,6 @@ async function loadCadernoCampo() {
     _infoParcelas = [];
   }
   
-  // 4. Carregar cadastro de defensivos
   try {
     const { data: defData, error: defError } = await sb.from('caderno_campo_defensivos_cadastro').select('*').eq('tenant_id', tenantId).order('produto', { ascending: true });
     if (!defError && defData) {
@@ -13946,24 +13939,23 @@ async function loadCadernoCampo() {
     }
   } catch(e) {}
 
-  // 5. Carregar Colheitas por Parcela & Pós-Colheita
-  try {
-    await loadColheitasTable();
-    await loadPosColheitaTable();
-    await loadCalagemTable();
-    await loadFertTable();
-    await loadTratosTable();
-    loadMudasTable();
-  } catch(e) {}
+  try { await loadColheitasTable(); } catch(e) {}
+  try { await loadPosColheitaTable(); } catch(e) {}
+  try { await loadCalagemTable(); } catch(e) {}
+  try { await loadFertTable(); } catch(e) {}
+  try { await loadTratosTable(); } catch(e) {}
+  try { await loadMudasTable(); } catch(e) {}
+  try { if (typeof loadIdiarnTable === 'function') await loadIdiarnTable(); } catch(e) {}
   
-  const opSel = $('newOpParcelSelect');
-  if (opSel && _infoParcelas) {
-    opSel.innerHTML = '<option value="">— Selecione a Parcela —</option>';
-    _infoParcelas.forEach(ip => {
-      opSel.insertAdjacentHTML('beforeend', `<option value="${ip.id}">${ip.parcela2 || ip.parcela} (${ip.variedade || ''})</option>`);
-    });
-  }
-  showCcTab('plantios');
+  try {
+    const opSel = $('newOpParcelSelect');
+    if (opSel && _infoParcelas) {
+      opSel.innerHTML = '<option value="">— Selecione a Parcela —</option>';
+      _infoParcelas.forEach(ip => {
+        opSel.insertAdjacentHTML('beforeend', `<option value="${ip.id}">${ip.parcela2 || ip.parcela} (${ip.variedade || ''})</option>`);
+      });
+    }
+  } catch(e) {}
 }
 
 function printPastaCampoMip(itemStr) {
