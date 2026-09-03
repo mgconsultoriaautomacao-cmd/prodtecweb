@@ -9931,8 +9931,28 @@ function printSelectedPlantioCapas() {
 
 function generateSingleCapaHtml(item) {
   const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa';
-  const variedadesList = item.variedade ? item.variedade.split(',').map(v => v.trim()).filter(v => v) : [];
-  let variedadesHtml = variedadesList.map(v => `<div>${v.toUpperCase()}</div>`).join('');
+  
+  // Buscar todas as variedades para a mesma parcela em _infoParcelas
+  const matchingIpsCapa = (_infoParcelas || []).filter(x => 
+    (x.parcela2 && item.parcela2 && String(x.parcela2).trim() === String(item.parcela2).trim()) ||
+    (x.parcela && item.parcela && String(x.parcela).trim() === String(item.parcela).trim()) ||
+    (x.id === item.id)
+  );
+
+  const capaVarsSet = new Set();
+  let totalAreaCapa = 0;
+  matchingIpsCapa.forEach(p => {
+    if (p.variedade) {
+      p.variedade.split(/[,;\/]+/).forEach(v => { const cv = v.trim(); if(cv) capaVarsSet.add(cv.toUpperCase()); });
+    }
+    if (p.area) totalAreaCapa += parseFloat(p.area) || 0;
+  });
+  if (item.variedade) {
+    item.variedade.split(/[,;\/]+/).forEach(v => { const cv = v.trim(); if(cv) capaVarsSet.add(cv.toUpperCase()); });
+  }
+
+  const variedadesList = Array.from(capaVarsSet);
+  let variedadesHtml = variedadesList.map(v => `<div>${v}</div>`).join('');
   if (!variedadesHtml) variedadesHtml = '—';
   
   const dtPlantio = item.plantio ? new Date(item.plantio + 'T12:00:00') : null;
@@ -10028,8 +10048,28 @@ async function printPastaCampoTratos(id) {
   }
   
   const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa';
-  const variedadesList = item.variedade ? item.variedade.split(',').map(v => v.trim()).filter(v => v) : [];
-  let variedadesHtml = variedadesList.map(v => `<div>${v.toUpperCase()}</div>`).join('');
+  
+  // Buscar todas as variedades para a mesma parcela em _infoParcelas
+  const matchingIpsCapa = (_infoParcelas || []).filter(x => 
+    (x.parcela2 && item.parcela2 && String(x.parcela2).trim() === String(item.parcela2).trim()) ||
+    (x.parcela && item.parcela && String(x.parcela).trim() === String(item.parcela).trim()) ||
+    (x.id === item.id)
+  );
+
+  const capaVarsSet = new Set();
+  let totalAreaCapa = 0;
+  matchingIpsCapa.forEach(p => {
+    if (p.variedade) {
+      p.variedade.split(/[,;\/]+/).forEach(v => { const cv = v.trim(); if(cv) capaVarsSet.add(cv.toUpperCase()); });
+    }
+    if (p.area) totalAreaCapa += parseFloat(p.area) || 0;
+  });
+  if (item.variedade) {
+    item.variedade.split(/[,;\/]+/).forEach(v => { const cv = v.trim(); if(cv) capaVarsSet.add(cv.toUpperCase()); });
+  }
+
+  const variedadesList = Array.from(capaVarsSet);
+  let variedadesHtml = variedadesList.map(v => `<div>${v}</div>`).join('');
   if (!variedadesHtml) variedadesHtml = '—';
 
   const rowsHtml = tratos.map(t => {
@@ -10243,8 +10283,28 @@ function printPastaCampoCapa(id) {
   if (!item) { alert('Ciclo de parcela não encontrado.'); return; }
   
   const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa';
-  const variedadesList = item.variedade ? item.variedade.split(',').map(v => v.trim()).filter(v => v) : [];
-  let variedadesHtml = variedadesList.map(v => `<div>${v.toUpperCase()}</div>`).join('');
+  
+  // Buscar todas as variedades para a mesma parcela em _infoParcelas
+  const matchingIpsCapa = (_infoParcelas || []).filter(x => 
+    (x.parcela2 && item.parcela2 && String(x.parcela2).trim() === String(item.parcela2).trim()) ||
+    (x.parcela && item.parcela && String(x.parcela).trim() === String(item.parcela).trim()) ||
+    (x.id === item.id)
+  );
+
+  const capaVarsSet = new Set();
+  let totalAreaCapa = 0;
+  matchingIpsCapa.forEach(p => {
+    if (p.variedade) {
+      p.variedade.split(/[,;\/]+/).forEach(v => { const cv = v.trim(); if(cv) capaVarsSet.add(cv.toUpperCase()); });
+    }
+    if (p.area) totalAreaCapa += parseFloat(p.area) || 0;
+  });
+  if (item.variedade) {
+    item.variedade.split(/[,;\/]+/).forEach(v => { const cv = v.trim(); if(cv) capaVarsSet.add(cv.toUpperCase()); });
+  }
+
+  const variedadesList = Array.from(capaVarsSet);
+  let variedadesHtml = variedadesList.map(v => `<div>${v}</div>`).join('');
   if (!variedadesHtml) variedadesHtml = '—';
   
   const dtPlantio = item.plantio ? new Date(item.plantio + 'T12:00:00') : null;
@@ -10448,12 +10508,49 @@ function printPastaCampoOrdemPulv(itemStr) {
   const item = JSON.parse(decodeURIComponent(itemStr));
   const formattedDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—';
   
-  // Buscar ciclo correspondente em _infoParcelas para preencher dados extras
-  const ip = (_infoParcelas || []).find(x => x.parcela2 === item.parcela || x.parcela === item.parcela);
-  const dataPlantioStr = ip && (ip.transplante || ip.plantio || ip.data_plantio1) ? (ip.transplante || ip.plantio || ip.data_plantio1).split('-').reverse().join('/') : '—';
-  const prevColheitaStr = ip && ip.previsao_colheita ? ip.previsao_colheita.split('-').reverse().join('/') : '—';
-  const variedadeStr = (ip && ip.variedade) || item.variedade || '—';
-  const areaHa = parseFloat(item.area_ha || (ip && ip.area) || 1.0).toFixed(2);
+  // Buscar TODOS os ciclos correspondentes a esta parcela em _infoParcelas para preencher TODAS as variedades e área total
+  const matchingIps = (_infoParcelas || []).filter(x => 
+    (x.parcela2 && String(x.parcela2).trim() === String(item.parcela).trim()) || 
+    (x.parcela && String(x.parcela).trim() === String(item.parcela).trim()) ||
+    (x.id && item.parcel_id && String(x.id) === String(item.parcel_id))
+  );
+
+  const varietiesSet = new Set();
+  let calculatedArea = 0;
+  let firstPlantio = '—';
+  let firstPrevColheita = '—';
+
+  matchingIps.forEach(p => {
+    if (p.variedade) {
+      p.variedade.split(/[,;\/]+/).forEach(v => {
+        const cleanV = v.trim();
+        if (cleanV) varietiesSet.add(cleanV.toUpperCase());
+      });
+    }
+    if (p.area) {
+      calculatedArea += parseFloat(p.area) || 0;
+    }
+    const pDt = p.transplante || p.plantio || p.data_plantio1;
+    if (pDt && firstPlantio === '—') {
+      firstPlantio = pDt.split('-').reverse().join('/');
+    }
+    if (p.previsao_colheita && firstPrevColheita === '—') {
+      firstPrevColheita = p.previsao_colheita.split('-').reverse().join('/');
+    }
+  });
+
+  if (item.variedade) {
+    item.variedade.split(/[,;\/]+/).forEach(v => {
+      const cleanV = v.trim();
+      if (cleanV) varietiesSet.add(cleanV.toUpperCase());
+    });
+  }
+
+  const variedadesList = Array.from(varietiesSet);
+  const variedadeStr = variedadesList.length > 0 ? variedadesList.join(', ') : '—';
+  const areaHa = calculatedArea > 0 ? calculatedArea.toFixed(2) : parseFloat(item.area_ha || 1.0).toFixed(2);
+  const dataPlantioStr = firstPlantio;
+  const prevColheitaStr = firstPrevColheita;
   
   // Calcular idade (dias entre plantio e data_aplicacao)
   let idadeDias = '—';
