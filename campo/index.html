@@ -4243,34 +4243,44 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
   let plantioDates = [];
   let prevColheitaDates = [];
 
-  matches.forEach(m => {
-    let mArea = parseFloat(m.area);
-    if (!isNaN(mArea) && mArea > 0) totalArea += mArea;
+  const varPropKeys = ['variedade', 'variedade1', 'variedade2', 'variedade3', 'variedade4', 'variedade5', 'variedade6', 'variedade7', 'variedade8', 'variedade9', 'variedade10'];
 
-    if (m.variedade) {
-      m.variedade.split(/[,;\/]+/).forEach(v => {
-        const cv = v.trim().toUpperCase();
-        if (cv && !varietiesSet.has(cv)) {
-          varietiesSet.add(cv);
-          varietiesWithArea.push({
-            nome: cv,
-            area: (!isNaN(mArea) && mArea > 0) ? mArea.toFixed(2) : '—'
-          });
-        }
-      });
-    }
+  matches.forEach(m => {
+    varPropKeys.forEach((vk, idx) => {
+      const vVal = m[vk];
+      if (vVal) {
+        const areaKey = idx === 0 ? 'area' : (m[`area${idx+1}`] ? `area${idx+1}` : `area${idx}`);
+        const mArea = parseFloat(m[areaKey] || (idx === 0 ? m.area1 || m.area : 0));
+        if (!isNaN(mArea) && mArea > 0) totalArea += mArea;
+
+        String(vVal).split(/[,;\/]+/).forEach(v => {
+          const cv = v.trim().toUpperCase();
+          if (cv && !varietiesSet.has(cv)) {
+            varietiesSet.add(cv);
+            varietiesWithArea.push({
+              nome: cv,
+              area: (!isNaN(mArea) && mArea > 0) ? mArea.toFixed(2) : '—'
+            });
+          }
+        });
+      }
+    });
 
     const pDt = m.transplante || m.plantio || m.data_plantio1;
     if (pDt) plantioDates.push(pDt);
     if (m.previsao_colheita) prevColheitaDates.push(m.previsao_colheita);
   });
 
-  if (typeof parcelInput === 'object' && parcelInput.variedade) {
-    parcelInput.variedade.split(/[,;\/]+/).forEach(v => {
-      const cv = v.trim().toUpperCase();
-      if (cv && !varietiesSet.has(cv)) {
-        varietiesSet.add(cv);
-        varietiesWithArea.push({ nome: cv, area: '—' });
+  if (typeof parcelInput === 'object') {
+    varPropKeys.forEach(vk => {
+      if (parcelInput[vk]) {
+        String(parcelInput[vk]).split(/[,;\/]+/).forEach(v => {
+          const cv = v.trim().toUpperCase();
+          if (cv && !varietiesSet.has(cv)) {
+            varietiesSet.add(cv);
+            varietiesWithArea.push({ nome: cv, area: '—' });
+          }
+        });
       }
     });
   }
@@ -4298,7 +4308,6 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
     previsao_colheita: prevColheitaDates[0] || first.previsao_colheita || null
   };
 }
-
 
 function printPastaCampoMip(itemStr) {
     const item = typeof itemStr === 'string' ? JSON.parse(decodeURIComponent(itemStr)) : itemStr;
