@@ -10994,187 +10994,58 @@ function printPastaCampoOrdemPulv(itemStr) {
       return `
         <tr style="height: 24px;">
           <td style="text-align:center;">${idx + 1}</td>
-          <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
-        </tr>
-      `;
-    }
-
-    let activeIng = '—';
-    let toxicClass = '—';
-    let concentration = '—';
-    let numPermitidoCiclo = '3';
-    let intervBula = '7';
-    let doseBulaText = '—';
-    let reentradaDias = '1 dia';
-    
-    const match = (_defensivos || []).find(d => d.produto.toUpperCase() === p.produto_nome.toUpperCase());
-    if (match) {
-      activeIng = match.ingrediente_ativo || '—';
-      toxicClass = match.classe_toxicologica || '—';
-      concentration = match.concentracao_ia || '—';
-      numPermitidoCiclo = match.num_aplicacoes_ciclo || '3';
-      intervBula = match.intervalo_aplicacao_dias || '7';
-      doseBulaText = match.dose_texto || `${match.dose || p.dosagem_corrigida || '—'} ${p.unidade || 'L/ha'}`;
-      reentradaDias = match.reentrada_dias ? `${match.reentrada_dias} dia(s)` : '1 dia';
-    }
-
-    const doseRealVal = parseFloat(p.dosagem_real) || 0;
-    const doseRealStr = doseRealVal ? `${p.dosagem_real}` : '—';
-    const areaVal = parseFloat(areaHa) || 1.0;
-    const qtdTotalUtilizada = (doseRealVal * areaVal).toFixed(3);
-    const doseAreaStr = doseRealVal > 0 ? `${doseRealVal}` : '—';
-    const carenciaStr = p.carencia_dias !== '' && p.carencia_dias !== undefined ? `${p.carencia_dias}` : '—';
-    
-    const numAplicRealizadas = p.produto_nome ? (typeof countOpAplicacoesCiclo === 'function' ? countOpAplicacoesCiclo(item.parcela, p.produto_nome) : '1') : '—';
-    
-    let dataCarStr = '—';
-    if (item.data_aplicacao && p.carencia_dias) {
-      const appDate = new Date(item.data_aplicacao + 'T12:00:00');
-      appDate.setDate(appDate.getDate() + parseInt(p.carencia_dias));
-      dataCarStr = appDate.toLocaleDateString('pt-BR');
-    }
-
-    const volCaldaLtHa = item.volume_calda || 500;
-    const volCaldaTanque = item.volume_calda || 500;
-    const tipoAplic = item.equipamento || 'Barra';
-
-    return `
-      <tr style="background: ${idx % 2 === 1 ? '#f8fafc' : '#ffffff'};">
-        <td style="font-weight: bold; text-align: left; padding: 4px 6px;">${p.produto_nome}</td>
-        <td style="font-size: 6pt;">${activeIng}</td>
-        <td style="text-align:center;">${concentration}</td>
-        <td style="text-align:center;">${p.unidade || 'L/ha'}</td>
-        <td style="font-weight: bold; text-align:center;">${carenciaStr}</td>
-        <td style="text-align: left; font-size: 6pt;">${p.alvo || '—'}</td>
-        <td style="text-align:center;">${numPermitidoCiclo}</td>
-        <td style="text-align:center;">${numAplicRealizadas}</td>
-        <td style="text-align:center;">${intervBula}</td>
-        <td style="text-align:center;">—</td>
-        <td style="color: #d97706; font-weight: bold; text-align:left;">${doseBulaText}</td>
-        <td style="font-weight: bold; text-align:center;">${qtdTotalUtilizada.replace('.', ',')}</td>
-        <td style="color: #d97706; font-weight: bold; text-align:center;">${doseAreaStr.replace('.', ',')}</td>
-        <td style="text-align:center;">${volCaldaTanque}</td>
-        <td style="text-align:center;">${volCaldaLtHa}</td>
-        <td style="text-align:center;">${tipoAplic}</td>
-        <td style="color: #d97706; font-weight: bold; text-align:center;">${dataCarStr}</td>
-        <td style="text-align:center;">${reentradaDias}</td>
-        <td style="text-align:center;">${toxicClass}</td>
-        <td style="text-align:center;">Depósito Excedentes</td>
-      </tr>
-    `;
-  }).join('');
-
-  // Formatar HTML de Adubos Foliares
-  let foliaresRowsHtml = '';
-  if (foliaresOnly.length > 0) {
-    foliaresRowsHtml = foliaresOnly.map((f, idx) => {
-      const doseRealVal = parseFloat(f.dosagem_real) || 0;
-      const areaVal = parseFloat(areaHa) || 1.0;
-      const qtdTotal = (doseRealVal * areaVal).toFixed(3);
-      return `
-        <tr style="background: ${idx % 2 === 1 ? '#f8fafc' : '#ffffff'};">
-          <td style="font-weight: bold; color: #166534; text-align: left; padding: 4px 6px;">${f.produto_nome}</td>
-          <td style="text-align:center;">${f.unidade || 'KG ou LT'}</td>
-          <td style="font-weight: bold; text-align: center; color: #d97706;">${qtdTotal.replace('.', ',')}</td>
-        </tr>
-      `;
-    }).join('');
-  } else {
-    foliaresRowsHtml = `
-      <tr>
-        <td style="color: #666; text-align: left;" colspan="3">Nenhum adubo foliar adicionado a esta calda.</td>
-      </tr>
-    `;
-  }
-
-  // Clima
-  const obsUpper = (item.observacoes || '').toUpperCase();
-  const isEnsolarado = (parseFloat(item.temperatura_c) > 22 && !obsUpper.includes('CHUVA'));
-  const isNublado = obsUpper.includes('NUBLADO');
-  const isChovendo = obsUpper.includes('CHUVA');
-  const isNoite = obsUpper.includes('NOITE');
-  const isVento = obsUpper.includes('VENTO');
-
-  const opCod = item.id ? String(item.id).substring(0, 6).toUpperCase() : '3';
-  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'EMPRESA';
-  const elaborador = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'EMANUELA MOREIRA';
-
-  const printWin = window.open('', '_blank', 'width=1400,height=900');
-  if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
-
-  const html = `
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <meta charset="utf-8"/>
-    <title>OC02 — Ordem de Autorização de Aplicação de Produtos Fitossanitários</title>
-    <style>
-      @page { size: A4 landscape; margin: 4mm 5mm; }
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 7.5pt; line-height: 1.2; }
-      .sheet { width: 100%; }
-      
-      /* Cabeçalho Auditoria OC02 */
-      .hdr-audit-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; border: 2px solid #000; }
-      .hdr-audit-table td { border: 1px solid #000; padding: 4px 6px; font-size: 7.5pt; vertical-align: middle; }
-      
-      /* Identificação da Parcela */
-      .parcel-grid { width: 100%; border-collapse: collapse; margin-bottom: 4px; border: 2px solid #000; font-size: 8pt; }
-      .parcel-grid td { border: 1px solid #000; padding: 4px 6px; vertical-align: middle; }
-
-      /* Tabela 1: Defensivos */
-      .def-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 6.5pt; }
-      .def-table th, .def-table td { border: 1px solid #000; padding: 3px 3px; vertical-align: middle; text-align: center; }
-      .def-table th { background: #e5e7eb; color: #000; font-weight: bold; font-size: 6.5pt; text-transform: uppercase; }
-
-      /* Tabela 2: Adubos Foliares */
-      .foliar-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 7.5pt; }
-      .foliar-table th, .foliar-table td { border: 1px solid #000; padding: 3px 6px; vertical-align: middle; }
-      .foliar-table th { background: #f0fdf4; color: #166534; font-weight: bold; text-align: left; }
-
-      /* Parâmetros Operacionais */
-      .ops-grid { width: 100%; border-collapse: collapse; margin-bottom: 4px; border: 1px solid #000; font-size: 7.5pt; }
-      .ops-grid td { border: 1px solid #000; padding: 4px 6px; vertical-align: middle; }
-
-      /* Assinaturas */
-      .sig-grid { width: 100%; border-collapse: collapse; margin-bottom: 4px; border: 1px solid #000; font-size: 7.5pt; }
-      .sig-grid td { border: 1px solid #000; padding: 6px; width: 33.33%; vertical-align: top; text-align: center; }
-      .sig-line { border-top: 1px dashed #000; margin-top: 20px; padding-top: 2px; font-weight: bold; font-size: 7pt; }
-
-      /* As 10 Regras de Ouro */
-      .gold-rules { border: 1px solid #000; padding: 4px 6px; font-size: 6pt; line-height: 1.25; background: #fff; }
-      .gold-rules ol { margin-left: 14px; }
-      .emerg-msg { font-weight: bold; text-align: center; margin-top: 4px; color: #dc2626; font-size: 7pt; text-transform: uppercase; }
-    </style>
-  </head>
-  <body onload="window.print()">
+          <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>  <body onload="window.print()">
     <div class="sheet">
       
-      <!-- CABEÇALHO AUDITORIA OFICIAL (OC02) -->
+      <!-- CABEÇALHO AUDITORIA OFICIAL (OC02) - 3 COLUNAS -->
       <table class="hdr-audit-table">
         <tr>
-          <td style="width: 40%; vertical-align: middle; text-align: center; padding: 6px;">
-            <img src="logo.png" style="max-height: 55px; max-width: 100%; object-fit: contain;" alt="Logo Empresa" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"/>
-            <div style="display:none; font-weight:bold; font-size:11pt;">${tenantName}</div>
+          <td style="width: 32%; vertical-align: top; padding: 4px; font-size: 6.5pt; line-height: 1.3;">
+            <strong>ELABORADO, EMITIDO E REVISADO POR:</strong> ${elaborador}<br/>
+            <strong>AVALIADO POR:</strong> ADGF<br/>
+            <strong>APROVADO POR:</strong> ADGF<br/>
+            <strong>FREQUÊNCIA:</strong> POR APLICAÇÃO EM CAMPO
           </td>
-          <td style="width: 60%; vertical-align: top; padding: 4px; font-size: 7.5pt; line-height: 1.4; text-align: left;">
+          <td style="width: 36%; vertical-align: middle; text-align: center; padding: 4px;">
+            <img src="logo.png" style="max-height: 48px; max-width: 100%; object-fit: contain;" alt="Logo Empresa" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"/>
+            <div style="display:none; font-weight:bold; font-size:10pt;">${tenantName}</div>
+          </td>
+          <td style="width: 32%; vertical-align: top; padding: 4px; font-size: 6.5pt; line-height: 1.3; text-align: left;">
             <div><strong>DEPARTAMENTO:</strong> CAMPO</div>
-            <div style="color: #000; font-weight: bold;">NOME DO DOC: ORDEM DE AUTORIZAÇÃO DE APLICAÇÃO DE PRODUTOS FITOSSANITÁRIOS - CAMPO</div>
-            <div><strong>DATA EMISSÃO:</strong> 15/06/2026 &nbsp;&nbsp;&nbsp;&nbsp; <strong>MOD. E APROVAÇÃO:</strong> 01/07/2026</div>
-            <div><strong>PAG:</strong> 01 DE 01 &nbsp;&nbsp;&nbsp;&nbsp; <strong>COD: OC02</strong> &nbsp;&nbsp;&nbsp;&nbsp; <strong>REVISÃO:</strong> ANUAL</div>
+            <div style="font-weight: bold;">NOME DO DOC: ORDEM DE AUTORIZAÇÃO DE APLICAÇÃO DE PRODUTOS FITOSSANITÁRIOS - CAMPO</div>
+            <div><strong>DATA EMISSÃO:</strong> 15/06/2026 &nbsp;&nbsp; <strong>MOD. E APROVAÇÃO E REVISÃO:</strong> 01/07/2026</div>
+            <div><strong>PAG:</strong> 01 DE 01 &nbsp;&nbsp; <strong>COD: OC02</strong> &nbsp;&nbsp; <strong>REVISÃO:</strong> ANUAL &nbsp;&nbsp; <strong>VERSÃO:</strong> 01</div>
           </td>
         </tr>
       </table>
 
-      <!-- IDENTIFICAÇÃO DA PARCELA E ORDEM DE PULVERIZAÇÃO -->
+      <!-- TÍTULO CENTRALIZADO E DATA DA APLICAÇÃO -->
+      <div style="text-align: center; margin: 4px 0 6px 0;">
+        <div style="font-size: 9.5pt; font-weight: bold; text-decoration: underline; letter-spacing: 0.5px;">
+          ORDEM DE AUTORIZAÇÃO DE APLICAÇÃO DE PRODUTOS FITOSSANITÁRIOS - CAMPO
+        </div>
+        <div style="font-size: 9pt; font-weight: bold; margin-top: 2px;">
+          <u>DATA DA APLICAÇÃO: ${formattedDate}</u>
+        </div>
+      </div>
+
+      <!-- IDENTIFICAÇÃO DA PARCELA E Nº DA ORDEM -->
       <table class="parcel-grid">
         <tr>
-          <td style="width: 40%; text-align: center; vertical-align: middle; padding: 12px; background: #fff;">
-            <div style="font-size: 22pt; font-weight: bold; font-style: italic; color: #000; letter-spacing: 1px;">Nº ${opCod}</div>
+          <td style="width: 35%; text-align: center; vertical-align: middle; padding: 8px; background: #fff;">
+            <div style="border: 1px solid #000; padding: 6px; display: inline-block; min-width: 120px;">
+              <span style="font-size: 20pt; font-weight: bold; font-style: italic; color: #000;">Nº ${opCod}</span>
+            </div>
           </td>
-          <td style="width: 60%; padding: 6px; vertical-align: top; line-height: 1.5; font-size: 8pt;">
-            <div><strong>PARCELA:</strong> <span style="font-size: 9.5pt; font-weight: bold; color: #000;">${item.parcela}</span></div>
-            <div><strong>TAMANHO DA ÁREA:</strong> ${areaHa} ha</div>
+          <td style="width: 65%; padding: 4px 8px; vertical-align: top; line-height: 1.4; font-size: 7.5pt;">
+            <div style="display: flex; justify-content: space-between;">
+              <span><strong>PARCELA:</strong> <span style="font-weight: bold; font-size: 8.5pt;">${item.parcela}</span></span>
+              <span><strong>IDADE:</strong> ${idadeDias} dias</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span><strong>TAMANHO DA ÁREA:</strong> ${areaHa} ha</span>
+              <span><strong>TRANSPLANTIO:</strong> ${dataPlantioStr}</span>
+            </div>
             <div><strong>CULTURA:</strong> ${(item.cultura || 'MELÃO').toUpperCase()}</div>
             <div><strong>VARIEDADE:</strong> ${variedadeStr}</div>
             <div><strong>PREVISÃO DE COLHEITA:</strong> ${prevColheitaStr}</div>
@@ -11186,30 +11057,172 @@ function printPastaCampoOrdemPulv(itemStr) {
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px; border: 1px solid #000;">
         <tr>
           <td style="width: 50%; vertical-align: top; border-right: 1px solid #000; padding: 4px;">
-            <div style="font-weight: bold; font-size: 7.5pt; color: #000; margin-bottom: 4px; text-decoration: underline;">USO OBRIGATÓRIO DE EPI:</div>
-            <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 7pt;">
+            <div style="font-weight: bold; font-size: 7pt; color: #000; margin-bottom: 3px; text-decoration: underline; text-align: center;">USO OBRIGATÓRIO DE EPI</div>
+            <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 6.5pt;">
               <tr>
-                <td style="width: 20%; padding: 2px;">
-                  <img src="${_opReportIcons.mask}" style="height: 26px; width: auto; display: block; margin: 0 auto;"/>
-                  <div style="font-size: 6.5pt; font-weight: bold; margin-top: 2px;">Máscara</div>
+                <td style="width: 20%; padding: 1px;">
+                  <img src="${_opReportIcons.mask}" style="height: 22px; width: auto; display: block; margin: 0 auto;"/>
+                  <div style="font-size: 6pt; font-weight: bold; margin-top: 1px;">Máscara</div>
                 </td>
-                <td style="width: 20%; padding: 2px;">
-                  <img src="${_opReportIcons.gloves}" style="height: 26px; width: auto; display: block; margin: 0 auto;"/>
-                  <div style="font-size: 6.5pt; font-weight: bold; margin-top: 2px;">Luvas PVC</div>
+                <td style="width: 20%; padding: 1px;">
+                  <img src="${_opReportIcons.gloves}" style="height: 22px; width: auto; display: block; margin: 0 auto;"/>
+                  <div style="font-size: 6pt; font-weight: bold; margin-top: 1px;">Luvas em PVC</div>
                 </td>
-                <td style="width: 20%; padding: 2px;">
-                  <img src="${_opReportIcons.boots}" style="height: 26px; width: auto; display: block; margin: 0 auto;"/>
-                  <div style="font-size: 6.5pt; font-weight: bold; margin-top: 2px;">Botas PVC</div>
+                <td style="width: 20%; padding: 1px;">
+                  <img src="${_opReportIcons.boots}" style="height: 22px; width: auto; display: block; margin: 0 auto;"/>
+                  <div style="font-size: 6pt; font-weight: bold; margin-top: 1px;">Botas PVC</div>
                 </td>
-                <td style="width: 20%; padding: 2px;">
-                  <img src="${_opReportIcons.goggles}" style="height: 26px; width: auto; display: block; margin: 0 auto;"/>
-                  <div style="font-size: 6.5pt; font-weight: bold; margin-top: 2px;">Óculos</div>
+                <td style="width: 20%; padding: 1px;">
+                  <img src="${_opReportIcons.goggles}" style="height: 22px; width: auto; display: block; margin: 0 auto;"/>
+                  <div style="font-size: 6pt; font-weight: bold; margin-top: 1px;">Óculos</div>
                 </td>
-                <td style="width: 20%; padding: 2px;">
-                  <img src="${_opReportIcons.suit}" style="height: 26px; width: auto; display: block; margin: 0 auto;"/>
-                  <div style="font-size: 6.5pt; font-weight: bold; margin-top: 2px;">Roupa c/ Avental</div>
+                <td style="width: 20%; padding: 1px;">
+                  <img src="${_opReportIcons.suit}" style="height: 22px; width: auto; display: block; margin: 0 auto;"/>
+                  <div style="font-size: 6pt; font-weight: bold; margin-top: 1px;">Traje c/ Avental</div>
                 </td>
               </tr>
+            </table>
+          </td>
+          <td style="width: 50%; vertical-align: top; padding: 4px;">
+            <div style="font-weight: bold; font-size: 7pt; margin-bottom: 3px; text-align: center;">CONDIÇÕES CLIMÁTICAS DURANTE APLICAÇÃO</div>
+            <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 6.5pt;">
+              <tr>
+                <td style="width: 25%; padding: 1px;">
+                  <img src="${_opReportIcons.rain}" style="height: 20px; width: auto; display: block; margin: 0 auto;"/>
+                  <div style="margin-top: 1px;">Chuvendo (${isChovendo ? '<b>X</b>' : '&nbsp;'})</div>
+                </td>
+                <td style="width: 25%; padding: 1px;">
+                  <img src="${_opReportIcons.sun}" style="height: 20px; width: auto; display: block; margin: 0 auto;"/>
+                  <div style="margin-top: 1px;">Ensolarado (${isEnsolarado ? '<b>X</b>' : '&nbsp;'})</div>
+                </td>
+                <td style="width: 25%; padding: 1px;">
+                  <img src="${_opReportIcons.cloud}" style="height: 20px; width: auto; display: block; margin: 0 auto;"/>
+                  <div style="margin-top: 1px;">Nublado (${isNublado ? '<b>X</b>' : '&nbsp;'})</div>
+                </td>
+                <td style="width: 25%; padding: 1px;">
+                  <img src="${_opReportIcons.night}" style="height: 20px; width: auto; display: block; margin: 0 auto;"/>
+                  <div style="margin-top: 1px;">Noite com vento (${isNoite || isVento ? '<b>X</b>' : '&nbsp;'})</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- TABELA PRINCIPAL DE PRODUTOS AUTORIZADOS -->
+      <div style="font-weight: bold; font-size: 7pt; color: #000; text-transform: uppercase; margin-top: 4px; margin-bottom: 2px; text-align: center; background: #e5e7eb; border: 1px solid #000; padding: 2px;">
+        PRODUTOS AUTORIZADOS A SEREM APLICADOS (PREENCHIDO PELO ENGENHEIRO AGRÔNOMO)
+      </div>
+      <table class="def-table">
+        <thead>
+          <tr>
+            <th style="width: 10%;">Nome Comercial Completo de acordo com a Bula</th>
+            <th style="width: 8%;">Ingrediente Ativo</th>
+            <th style="width: 4%;">Concentração</th>
+            <th style="width: 3%;">Und Medida</th>
+            <th style="width: 4%;">Carência (Dias)</th>
+            <th style="width: 10%;">Justificativa da Aplicação (Praga Alvo ou Doença)</th>
+            <th style="width: 5%;">Número permitido de aplicação total no ciclo de acordo com a bula</th>
+            <th style="width: 4%;">Número de aplicações realizadas</th>
+            <th style="width: 5%;">Intervalo de Aplicação de acordo com a Bula (Dias)</th>
+            <th style="width: 4%;">Última Aplicação (Dias)</th>
+            <th style="width: 7%;">Dosagem do Produto de acordo com a Bula</th>
+            <th style="width: 5%;">Quantidade Utilizada</th>
+            <th style="width: 5%;">Dose / área utilizada</th>
+            <th style="width: 4%;">Volume de Calda (Tanque)</th>
+            <th style="width: 4%;">Volume de Calda (Litros / ha)</th>
+            <th style="width: 4%;">Tipo de Aplicação</th>
+            <th style="width: 5%;">Data Limite da Carência</th>
+            <th style="width: 5%;">Reentrada de Pessoas sem uso de EPI</th>
+            <th style="width: 4%;">CLASSIFICAÇÃO TOXICOLÓGICA</th>
+            <th style="width: 4%;">LOCAL DOS EXCEDENTES DA APLICAÇÃO</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${productsRowsHtml}
+        </tbody>
+      </table>
+
+      <!-- SEÇÃO INFERIOR: PARÂMETROS, ADUBOS E ASSINATURAS -->
+      <table style="width: 100%; border-collapse: collapse; margin-top: 4px;">
+        <tr>
+          <!-- PARÂMETROS OPERACIONAIS -->
+          <td style="width: 35%; vertical-align: top; padding-right: 4px;">
+            <table class="ops-grid" style="width: 100%;">
+              <tr><td style="font-weight: bold; background: #e5e7eb; text-align: center;" colspan="2">PARÂMETROS OPERACIONAIS</td></tr>
+              <tr><td><strong>Volume Calda (Lt/ha):</strong></td><td>${item.volume_calda || '500'}</td></tr>
+              <tr><td><strong>Volume Calda (Tanque):</strong></td><td>${item.volume_calda || '500'}</td></tr>
+              <tr><td><strong>Velocidade do Trator:</strong></td><td>${item.velocidade_vento_kmh ? item.velocidade_vento_kmh + ' KM/H' : '5 KM/H'}</td></tr>
+              <tr><td><strong>Nº do Trator:</strong></td><td>${item.trator || '1'}</td></tr>
+              <tr><td><strong>Nº do Pulverizador:</strong></td><td>${item.bicos || '2'}</td></tr>
+              <tr><td><strong>Pressão:</strong></td><td>${item.pressao || '70'}</td></tr>
+              <tr><td><strong>Rotação:</strong></td><td>1600</td></tr>
+              <tr><td colspan="2"><strong>Horário de Aplicação:</strong><br/>Inicial: <strong>${item.horario_inicio || '07:00:00'}</strong> &nbsp; Final: <strong>${item.horario_fim || '08:00:00'}</strong></td></tr>
+            </table>
+          </td>
+
+          <!-- ADUBOS FOLIARES & ASSINATURAS -->
+          <td style="width: 65%; vertical-align: top;">
+            <div style="font-weight: bold; font-size: 7pt; color: #166534; text-transform: uppercase; margin-bottom: 2px;">
+              ADUBOS FOLIARES
+            </div>
+            <table class="foliar-table">
+              <thead>
+                <tr>
+                  <th style="width: 50%;">NOME COMERCIAL</th>
+                  <th style="width: 25%;">UNIDADE KG ou LT</th>
+                  <th style="width: 25%; text-align: center;">Qtdade</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${foliaresRowsHtml}
+              </tbody>
+            </table>
+
+            <!-- ASSINATURAS RESPONSÁVEIS -->
+            <table class="sig-grid" style="margin-top: 6px;">
+              <tr>
+                <td>
+                  <strong>Nome do Manipulador dos Químicos acima:</strong> ${item.manipulador || item.tratorista || 'ROBSON RAFAEL'}
+                  <div class="sig-line">Assinatura do Manipulador</div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Nome e Assinatura do Aplicador dos Químicos acima:</strong> ${item.barrista || item.tratorista || 'FELIPE OLIVEIRA'}
+                  <div class="sig-line">Assinatura do Aplicador</div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Nome e Assinatura do Técnico Responsável:</strong> ${item.eng_agronomo || item.tecnico || 'IVANOSCA MARTINS'}
+                  <div class="sig-line">Assinatura do Técnico Responsável</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- INSTRUÇÕES E REGRAS DE SEGURANÇA (OC02) -->
+      <div class="gold-rules" style="margin-top: 4px;">
+        <ol>
+          <li>A escolha do equipamento é imprescindível para uma boa aplicação. Observar se os mesmos estão aptos para uso;</li>
+          <li>Ao receber a ordem de pulverização, o manipulador deve se dirigir ao depósito de produtos a fim de levar a quantidade necessária à aplicação para o ponto de mistura. Sempre fazendo o uso correto dos EPI's, o manipulador deve realizar o preparo da calda para aplicação, obedecendo as instruções prescritas;</li>
+          <li>Os produtos necessários à mistura devem ser depositados no pulverizador com bastante atenção para não haver derrames;</li>
+          <li>Caso a embalagem do produto esvazie, o mesmo deve passar por tríplice lavagem e esta água deve retornar à mistura no pulverizador. As embalagens que passaram pela tríplice lavagem devem ser furadas e armazenadas em local específico;</li>
+          <li>O aplicador deve ser devidamente treinado para esta atividade, bem como portar devidamente todos os EPI's necessários à aplicação;</li>
+          <li>É terminantemente proibido utilizar roupas comuns durante o preparo da calda ou pulverização, bem como EPI incompleto;</li>
+          <li>Não pulverizar quando estiver chovendo;</li>
+          <li>Caso sobre calda de pulverização, solicitar ajuda do responsável técnico para descarte da mesma;</li>
+          <li>Respeitando às ordens de vestuário de EPI, o aplicador deve se dirigir ao vestuário para retirar seu EPI de acordo com o treinamento. As vestimentas devem ser colocadas em locais adequados para posterior lavagem e o profissional deve tomar banho com água e sabão;</li>
+          <li>Não é permitido utilizar o EPI para outras atividades, tampouco levar o equipamento para ser lavado em casa;</li>
+        </ol>
+        <div class="emerg-msg">QUALQUER SITUAÇÃO DE EMERGÊNCIA, COMUNICAR A SAÚDE, SEGURANÇA E GERÊNCIA DA EMPRESA.</div>
+      </div>
+
+    </div>
+  </body>            </tr>
             </table>
           </td>
           <td style="width: 50%; vertical-align: top; padding: 4px;">
