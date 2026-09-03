@@ -11050,13 +11050,13 @@ function printPastaCampoOrdemPulv(itemStr) {
         <td style="text-align:center;">${numAplicRealizadas}</td>
         <td style="text-align:center;">${intervBula}</td>
         <td style="text-align:center;">—</td>
-        <td>${doseBulaText}</td>
+        <td style="color: #e36c09; font-weight: bold;">${doseBulaText}</td>
         <td style="font-weight: bold; text-align:center;">${qtdTotalUtilizada}</td>
-        <td style="font-weight: bold; text-align:center;">${doseAreaStr}</td>
+        <td style="font-weight: bold; text-align:center; color: #e36c09;">${doseAreaStr}</td>
         <td style="text-align:center;">${volCaldaTanque}</td>
         <td style="text-align:center;">${volCaldaLtHa}</td>
         <td style="text-align:center;">${tipoAplic}</td>
-        <td style="font-weight: bold; color: #dc2626; text-align:center;">${dataCarStr}</td>
+        <td style="font-weight: bold; color: #e36c09; text-align:center;">${dataCarStr}</td>
         <td style="text-align:center;">${reentradaDias}</td>
         <td style="text-align:center;">${toxicClass}</td>
         <td style="text-align:center;">Depósito Excedentes</td>
@@ -11159,7 +11159,9 @@ function printPastaCampoOrdemPulv(itemStr) {
             <strong>Aprovado Por:</strong> ADGF<br/>
             <strong>Frequência:</strong> Por parcela de campo.
           </td>
-          <td style="width: 30%; border: 1px solid #000;"></td>
+          <td style="width: 30%; border: 1px solid #000; text-align: center; vertical-align: middle; padding: 4px;">
+            <img src="logo.png" style="max-height: 45px; max-width: 100%; object-fit: contain;" onerror="this.style.display='none'" />
+          </td>
           <td style="width: 35%; vertical-align: top; padding: 4px; font-size: 6.5pt; line-height: 1.3; text-align: left;">
             <strong>DEPARTAMENTO:</strong> CAMPO<br/>
             <strong style="color: #e36c09;">NOME DO DOC:</strong> ORDEM DE AUTORIZAÇÃO DE APLICAÇÃO DE PRODUTOS FITOSSANITÁRIOS - CAMPO<br/>
@@ -11171,18 +11173,18 @@ function printPastaCampoOrdemPulv(itemStr) {
       </table>
 
       <!-- IDENTIFICAÇÃO DA PARCELA E CICLO -->
-      <table class="parcel-grid">
+      <table class="parcel-grid" style="border: 2px solid #000;">
         <tr>
-          <td style="width: 25%;"><strong>PARCELA:</strong> <span style="font-size: 10.5pt; font-weight: 800; color: #e36c09;">${item.parcela}</span></td>
-          <td style="width: 15%;"><strong>IDADE:</strong> ${idadeDias} dias</td>
-          <td style="width: 20%;"><strong>TAMANHO DA ÁREA:</strong> ${areaHa} ha</td>
-          <td style="width: 20%;"><strong>CULTURA:</strong> ${(item.cultura || 'MELÃO').toUpperCase()}</td>
-          <td style="width: 20%;"><strong>TRANSPLANTIO:</strong> ${dataPlantioStr}</td>
-        </tr>
-        <tr>
-          <td colspan="2"><strong>Nº DA ORDEM:</strong> <span style="font-weight:bold; color:#166534">OP #${opCod}</span></td>
-          <td colspan="2"><strong>VARIEDADE:</strong> ${variedadeStr}</td>
-          <td><strong>PREVISÃO COLHEITA:</strong> ${prevColheitaStr}</td>
+          <td style="width: 50%; vertical-align: middle; text-align: center; font-size: 26pt; font-weight: bold; border-right: 1px solid #000;">
+            <span style="font-style: italic;">Nº</span> ${opCod}
+          </td>
+          <td style="width: 50%; padding: 6px 12px; line-height: 1.6; font-size: 9pt; text-align: right;">
+            <strong>PARCELA:</strong> <span style="font-size: 10.5pt; font-weight: 800; color: #e36c09;">${item.parcela}</span><br/>
+            <strong>TAMANHO DA ÁREA:</strong> ${areaHa} ha<br/>
+            <strong>CULTURA:</strong> ${(item.cultura || 'MELÃO').toUpperCase()}<br/>
+            <strong>VARIEDADE:</strong> ${variedadeStr}<br/>
+            <strong>PREVISÃO DE COLHEITA:</strong> ${prevColheitaStr}
+          </td>
         </tr>
       </table>
 
