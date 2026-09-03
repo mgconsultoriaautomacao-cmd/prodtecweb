@@ -4190,7 +4190,81 @@ let varieties = [];
     if (window.lucide) lucide.createIcons();
   }
 
-  function printPastaCampoMip(itemStr) {
+  
+function getParcelaCompleteInfo(parcelaCode, dataArray) {
+  if (!parcelaCode) return null;
+  const list = dataArray || window._infoParcelas || window.infoParcelasData || [];
+  if (!Array.isArray(list) || list.length === 0) return null;
+  
+  const cleanCode = String(parcelaCode).trim().toUpperCase();
+  
+  const matches = list.filter(x => {
+    if (!x) return false;
+    const p1 = x.parcela2 ? String(x.parcela2).trim().toUpperCase() : '';
+    const p2 = x.parcela ? String(x.parcela).trim().toUpperCase() : '';
+    const p3 = x.code ? String(x.code).trim().toUpperCase() : '';
+    const p4 = x.id ? String(x.id).trim().toUpperCase() : '';
+    const p5 = x.parcel_id ? String(x.parcel_id).trim().toUpperCase() : '';
+    return p1 === cleanCode || p2 === cleanCode || p3 === cleanCode || p4 === cleanCode || p5 === cleanCode;
+  });
+
+  if (matches.length === 0) {
+    const digitMatch = cleanCode.match(/\d+/);
+    if (digitMatch) {
+      const numOnly = digitMatch[0];
+      const flexMatches = list.filter(x => {
+        if (!x) return false;
+        const p1 = x.parcela2 ? String(x.parcela2).trim() : '';
+        const p2 = x.parcela ? String(x.parcela).trim() : '';
+        return p1 === numOnly || p2 === numOnly || (p1.match(/\d+/) && p1.match(/\d+/)[0] === numOnly);
+      });
+      if (flexMatches.length > 0) matches.push(...flexMatches);
+    }
+  }
+
+  if (matches.length === 0) return null;
+
+  const first = matches[0];
+  const varietiesSet = new Set();
+  let totalArea = 0;
+  let plantioDates = [];
+  let prevColheitaDates = [];
+
+  matches.forEach(m => {
+    if (m.variedade) {
+      m.variedade.split(/[,;\/]+/).forEach(v => {
+        const cv = v.trim();
+        if (cv) varietiesSet.add(cv.toUpperCase());
+      });
+    }
+    if (m.area) {
+      const aVal = parseFloat(m.area);
+      if (!isNaN(aVal) && aVal > 0) totalArea += aVal;
+    }
+    const pDt = m.transplante || m.plantio || m.data_plantio1;
+    if (pDt) plantioDates.push(pDt);
+    if (m.previsao_colheita) prevColheitaDates.push(m.previsao_colheita);
+  });
+
+  const varietiesList = Array.from(varietiesSet);
+  const formattedVariedade = varietiesList.length > 0 ? varietiesList.join(', ') : (first.variedade || '—');
+  const formattedArea = totalArea > 0 ? totalArea.toFixed(2) : (first.area ? parseFloat(first.area).toFixed(2) : '0.00');
+
+  return {
+    ...first,
+    matches: matches,
+    variedade: formattedVariedade,
+    variedadesList: varietiesList,
+    area: formattedArea,
+    area_ha: formattedArea,
+    transplante: plantioDates[0] || first.transplante || first.plantio || first.data_plantio1 || null,
+    plantio: plantioDates[0] || first.plantio || first.transplante || first.data_plantio1 || null,
+    previsao_colheita: prevColheitaDates[0] || first.previsao_colheita || null
+  };
+}
+
+
+function printPastaCampoMip(itemStr) {
     const item = typeof itemStr === 'string' ? JSON.parse(decodeURIComponent(itemStr)) : itemStr;
     const formattedDate = item.data_vistoria ? item.data_vistoria.split('-').reverse().join('/') : '—';
     
@@ -4204,7 +4278,7 @@ let varieties = [];
     const acimaLimiar = mediaVal > limiar;
     const statusText = acimaLimiar ? 'RECOMENDA-SE CONTROLE' : 'SOB CONTROLE';
     
-    const ip = (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(x => x.parcela2 === item.parcela || x.parcela === item.parcela);
+    const ip = getParcelaCompleteInfo(item.parcela, infoParcelasData);
     const culturaStr = ip ? (ip.cultura || 'MELÃO').toUpperCase() : 'MELÃO';
     const areaStr = ip && ip.area ? `${ip.area} ha` : '—';
     const dataPlantioStr = ip && ip.plantio ? ip.plantio.split('-').reverse().join('/') : '—';
@@ -4901,7 +4975,7 @@ let varieties = [];
     const opDate = document.getElementById('opDateInput').value || today();
     
     // Validação de Carência vs Previsão de Colheita
-    const ip = pObj ? (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code) : null;
+    const ip = pObj ? getParcelaCompleteInfo(pObj.code, infoParcelasData) : null;
     if (ip && ip.previsao_colheita && carencia > 0) {
       const harvestDateObj = new Date(ip.previsao_colheita + 'T12:00:00');
       const appDateObj = new Date(opDate + 'T12:00:00');
