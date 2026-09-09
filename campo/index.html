@@ -3497,16 +3497,16 @@ let varieties = [];
       <!-- ASSINATURAS -->
       <div class="sig-container">
         <div class="sig-card">
-          <div style="font-size:7.5pt; color:#475569">RESPONSÁVEL TÉCNICO AGRÔNOMO</div>
-          <div style="font-weight:bold; margin-top:4px">Ajax Dantas de Gois Filho</div>
-          <div style="font-size:7.5pt">CREA: 2100995243 | Reg. Caderno de Campo</div>
-          <div class="sig-line">Assinatura Engenheiro Agrônomo</div>
+          <div style="font-size:7.5pt; color:#475569">RESPONSÁVEL TÉCNICO AGRÔNOMO DE CAMPO</div>
+          <div style="font-weight:bold; margin-top:4px">${(window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'Ivanosca Martins / Reinaldo Chotten'}</div>
+          <div style="font-size:7.5pt">Responsável Técnico pelas Pulverizações</div>
+          <div class="sig-line">Assinatura Responsável Técnico de Campo</div>
         </div>
         <div class="sig-card">
-          <div style="font-size:7.5pt; color:#475569">GERÊNCIA / RESPONSÁVEL DE CAMPO</div>
-          <div style="font-weight:bold; margin-top:4px">Valeriano Dantas de Gois</div>
-          <div style="font-size:7.5pt">Fiscalização e Vistoria da Parcela</div>
-          <div class="sig-line">Assinatura Responsável de Campo</div>
+          <div style="font-size:7.5pt; color:#475569">VALIDAÇÃO DA PASTA DE CERTIFICAÇÃO</div>
+          <div style="font-weight:bold; margin-top:4px">Manoelly Moreira</div>
+          <div style="font-size:7.5pt">Engenheira Agrônoma — Certificação</div>
+          <div class="sig-line">Assinatura Resp. Validação da Certificação</div>
         </div>
       </div>
     </body>
@@ -3821,6 +3821,11 @@ let varieties = [];
     const info = (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code);
     $('idiarnArea').value = info ? (info.area || '') : '';
     $('idiarnVariedade').value = info ? (info.variedade || '') : '';
+    if (info && (info.safra_ciclo || info.ano)) {
+      $('idiarnCiclo').value = info.safra_ciclo || info.ano;
+    } else if (!$('idiarnCiclo').value) {
+      $('idiarnCiclo').value = '2026/2027';
+    }
     
     // Auto-generate document name
     autoGenerateIdiarnDoc();
@@ -3834,8 +3839,8 @@ let varieties = [];
     const numEl = $('idiarnNumero');
     const docEl = $('idiarnDocumento');
     const pCode = pSel && pSel.options[pSel.selectedIndex] ? pSel.options[pSel.selectedIndex].text : '';
-    const num = numEl ? numEl.value : '';
-    if (pCode && num && docEl && !docEl.value) {
+    const num = numEl ? numEl.value : '1';
+    if (pCode && docEl && !docEl.value) {
       docEl.value = `IDIARN ${num} - ${pCode} - VISITA 1`;
     }
   }
@@ -3856,12 +3861,13 @@ let varieties = [];
     const opProducts = new Map(); // key: produto_nome, value: {alvo, datas}
     
     try {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       if (isOnline) {
         const { data: ops } = await sb.from('caderno_campo_op')
           .select('id, data_aplicacao, caderno_campo_op_itens(produto_nome, alvo)')
           .eq('tenant_id', tenantId)
-          .eq('parcel_id', parcelId)
-          .gte('data_aplicacao', sevenDaysAgo)
+          .or(`parcel_id.eq.${parcelId},parcela.eq.${parcelCode}`)
+          .gte('data_aplicacao', thirtyDaysAgo)
           .order('data_aplicacao', { ascending: false });
         
         (ops || []).forEach(op => {
@@ -3874,11 +3880,10 @@ let varieties = [];
           });
         });
 
-        if (statusEl) statusEl.textContent = `${ops ? ops.length : 0} O.P's nos últimos 7 dias`;
+        if (statusEl) statusEl.textContent = `${ops ? ops.length : 0} O.P's nos últimos 30 dias`;
       } else {
-        // Fallback to local cache
         const cached = (opRecordsData || []).filter(op => 
-          (op.parcel_id == parcelId || op.parcela === parcelCode) && op.data_aplicacao >= sevenDaysAgo
+          (op.parcel_id == parcelId || op.parcela === parcelCode) && op.data_aplicacao >= thirtyDaysAgo
         );
         cached.forEach(op => {
           (op.caderno_campo_op_itens || []).forEach(item => {
@@ -3898,7 +3903,7 @@ let varieties = [];
     idiarnSelectedProducts = new Set();
 
     if (opProducts.size === 0) {
-      chipsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);font-style:italic">Nenhuma aplicação encontrada nos últimos 7 dias. Use o campo manual abaixo.</div>';
+      chipsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);font-style:italic">Nenhuma aplicação encontrada nos últimos 30 dias. Use o campo manual abaixo.</div>';
     } else {
       opProducts.forEach((info, nome) => {
         idiarnSelectedProducts.add(nome);
@@ -3914,14 +3919,15 @@ let varieties = [];
       });
     }
 
-    // Fetch MIP records last 7 days for this parcel
+    // Fetch MIP records last 30 days for this parcel
     try {
       if (isOnline) {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
         const { data: mips } = await sb.from('caderno_campo_mip')
           .select('praga, media, data_vistoria')
           .eq('tenant_id', tenantId)
-          .eq('parcel_id', parcelId)
-          .gte('data_vistoria', sevenDaysAgo)
+          .or(`parcel_id.eq.${parcelId},parcela.eq.${parcelCode}`)
+          .gte('data_vistoria', thirtyDaysAgo)
           .order('data_vistoria', { ascending: false });
         
         if (mips && mips.length > 0) {
@@ -4037,7 +4043,9 @@ let varieties = [];
         toast('📥 Salvo offline — sincronizará quando online', 'ok');
         showScreen('home');
       } else {
-        const { data: list, error: e1 } = await sb.from('caderno_campo_fertirrigacao').insert([session]).select('*');
+        const dbSession = { ...session };
+        delete dbSession.synced;
+        const { data: list, error: e1 } = await sb.from('caderno_campo_fertirrigacao').insert([dbSession]).select('*');
         if (e1) throw e1;
         
         const fertId = list[0].id;
@@ -4065,7 +4073,7 @@ let varieties = [];
 
   async function saveIdiarnRecord() {
     const numero = parseInt($('idiarnNumero').value) || null;
-    const ciclo = $('idiarnCiclo').value.trim();
+    let ciclo = $('idiarnCiclo').value.trim();
     const pId = $('idiarnParcelSelect').value;
     const area = parseFloat($('idiarnArea').value) || null;
     const variedade = $('idiarnVariedade').value.trim();
@@ -4077,14 +4085,16 @@ let varieties = [];
     // Collect products from chip selection Set
     const produtos = [...idiarnSelectedProducts].join(', ');
     
-    if (!pId || !date || !documento || !ciclo) {
-      toast('Preencha Parcela, Ciclo/Safra, Data e Documento', 'err');
-      return;
+    if (!ciclo) {
+      const yr = new Date().getFullYear();
+      ciclo = `${yr}/${yr+1}`;
+      if ($('idiarnCiclo')) $('idiarnCiclo').value = ciclo;
     }
-    if (!produtos) {
-      toast('Selecione ou adicione pelo menos um produto fitossanitário', 'err');
-      return;
-    }
+    
+    if (!pId) { toast('Selecione uma Parcela', 'err'); return; }
+    if (!date) { toast('Informe a Data da Visita', 'err'); return; }
+    if (!documento) { toast('Informe o Documento IDIARN', 'err'); return; }
+    if (!produtos) { toast('Selecione ou adicione pelo menos um produto fitossanitário', 'err'); return; }
     
     const pObj = parcelas.find(p => p.id == pId);
     const parcelaCode = pObj ? pObj.code : '';
@@ -4118,7 +4128,9 @@ let varieties = [];
         toast('📥 Salvo offline — sincronizará quando online', 'ok');
         showScreen('home');
       } else {
-        const { error } = await sb.from('caderno_campo_idiarn').insert([record]);
+        const dbRecord = { ...record };
+        delete dbRecord.synced;
+        const { error } = await sb.from('caderno_campo_idiarn').insert([dbRecord]);
         if (error) throw error;
         
         toast('✓ Visita IDIARN registrada!', 'ok');
@@ -4431,20 +4443,27 @@ function printPastaCampoMip(itemStr) {
           ${item.observacoes || 'Nenhuma observação registrada na amostragem.'}
         </div>
 
-        <div class="signatures-grid">
+        <div class="signatures-grid" style="grid-template-columns: 1fr 1fr 1fr;">
           <div class="sig-box">
             <div>
               <strong>Monitor de Pragas (Pragueiro)</strong><br/>
-              Responsável pela amostragem de campo
+              Responsável pela amostragem de campo e armadilhas
             </div>
             <div class="sig-line">Assinatura Monitor de Campo</div>
           </div>
           <div class="sig-box">
             <div>
-              <strong>Engenheiro Agrônomo / Resp. Técnico</strong><br/>
+              <strong>Responsável Técnico de Campo</strong><br/>
               Validação Técnica do Manejo Fitossanitário
             </div>
-            <div class="sig-line">Assinatura Responsável Técnico</div>
+            <div class="sig-line">Assinatura Resp. Técnico de Campo</div>
+          </div>
+          <div class="sig-box">
+            <div>
+              <strong>Manoelly Moreira</strong><br/>
+              Engenheira Agrônoma — Certificação
+            </div>
+            <div class="sig-line">Assinatura Validação da Certificação</div>
           </div>
         </div>
       </div>
@@ -4455,6 +4474,641 @@ function printPastaCampoMip(itemStr) {
     printWin.document.write(html);
     printWin.document.close();
   }
+
+function printPastaCampoOrdemPulv(itemStr) {
+  const item = typeof itemStr === 'string' ? JSON.parse(decodeURIComponent(itemStr)) : itemStr;
+  const formattedDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—';
+  
+  const info = getParcelaCompleteInfo(item.parcela || item, infoParcelasData);
+  const variedadeStr = info ? info.variedade : (item.variedade || '—');
+  const areaHa = info ? info.area : parseFloat(item.area_ha || 1.0).toFixed(2);
+  const dataPlantioStr = info && info.plantio ? info.plantio.split('-').reverse().join('/') : '—';
+  const prevColheitaStr = info && info.previsao_colheita ? info.previsao_colheita.split('-').reverse().join('/') : '—';
+  
+  let idadeDias = '—';
+  if (info && (info.transplante || info.plantio) && item.data_aplicacao) {
+    const pDate = new Date((info.transplante || info.plantio) + 'T12:00:00');
+    const aDate = new Date(item.data_aplicacao + 'T12:00:00');
+    const diffTime = Math.abs(aDate - pDate);
+    idadeDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+  
+  const itemsCalda = item.caderno_campo_op_itens || [];
+  const defsOnly = itemsCalda.filter(i => {
+    const t = (i.tipo_produto || '').toUpperCase();
+    const a = (i.alvo || '').toUpperCase();
+    return t === 'DEFENSIVO' || (!t.includes('FOLIAR') && !a.includes('FOLIAR') && !a.includes('ADUBO'));
+  });
+  const foliaresOnly = itemsCalda.filter(i => {
+    const t = (i.tipo_produto || '').toUpperCase();
+    const a = (i.alvo || '').toUpperCase();
+    return t === 'FOLIAR' || t.includes('FOLIAR') || a.includes('FOLIAR') || a.includes('ADUBO');
+  });
+
+  const filledProducts = [...defsOnly];
+  while (filledProducts.length < 3) {
+    filledProducts.push({
+      produto_nome: '', alvo: '', dosagem_real: '', dosagem_corrigida: '', unidade: '', carencia_dias: ''
+    });
+  }
+  
+  const productsRowsHtml = filledProducts.map((p, idx) => {
+    if (!p.produto_nome) {
+      return `
+        <tr style="height: 24px;">
+          <td style="text-align:center;">${idx + 1}</td>
+          <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>
+      `;
+    }
+
+    const doseRealVal = parseFloat(p.dosagem_real) || 0;
+    const areaVal = parseFloat(areaHa) || 1.0;
+    const qtdTotalUtilizada = (doseRealVal * areaVal).toFixed(3);
+    const doseAreaStr = doseRealVal > 0 ? `${doseRealVal}` : '—';
+    const carenciaStr = p.carencia_dias !== '' && p.carencia_dias !== undefined ? `${p.carencia_dias}` : '—';
+    
+    let dataCarStr = '—';
+    if (item.data_aplicacao && p.carencia_dias) {
+      const appDate = new Date(item.data_aplicacao + 'T12:00:00');
+      appDate.setDate(appDate.getDate() + parseInt(p.carencia_dias));
+      dataCarStr = appDate.toLocaleDateString('pt-BR');
+    }
+
+    const volCaldaLtHa = parseFloat(item.volume_calda) || 500;
+    const volCaldaTanque = item.volume_tanque ? parseFloat(item.volume_tanque) : Math.round(volCaldaLtHa * areaVal);
+    const tipoAplic = item.equipamento || 'Barra';
+
+    return `
+      <tr style="background: ${idx % 2 === 1 ? '#f8fafc' : '#ffffff'};">
+        <td style="font-weight: bold; text-align: left; padding: 4px 6px;">${p.produto_nome}</td>
+        <td style="font-size: 6pt;">${p.ingrediente_ativo || '—'}</td>
+        <td style="text-align:center;">—</td>
+        <td style="text-align:center;">${p.unidade || 'L/ha'}</td>
+        <td style="font-weight: bold; text-align:center;">${carenciaStr}</td>
+        <td style="text-align: left; font-size: 6pt;">${p.alvo || '—'}</td>
+        <td style="text-align:center;">3</td>
+        <td style="text-align:center;">1</td>
+        <td style="text-align:center;">7</td>
+        <td style="text-align:center;">—</td>
+        <td style="color: #d97706; font-weight: bold; text-align:left;">${p.dosagem_real} ${p.unidade || 'L/ha'}</td>
+        <td style="font-weight: bold; text-align:center;">${qtdTotalUtilizada.replace('.', ',')}</td>
+        <td style="color: #d97706; font-weight: bold; text-align:center;">${doseAreaStr.replace('.', ',')}</td>
+        <td style="text-align:center;">${volCaldaTanque}</td>
+        <td style="text-align:center;">${volCaldaLtHa}</td>
+        <td style="text-align:center;">${tipoAplic}</td>
+        <td style="color: #d97706; font-weight: bold; text-align:center;">${dataCarStr}</td>
+        <td style="text-align:center;">1 dia</td>
+        <td style="text-align:center;">II</td>
+        <td style="text-align:center;">Depósito Excedentes</td>
+      </tr>
+    `;
+  }).join('');
+
+  let foliaresRowsHtml = '';
+  if (foliaresOnly.length > 0) {
+    foliaresRowsHtml = foliaresOnly.map((f, idx) => {
+      const doseRealVal = parseFloat(f.dosagem_real) || 0;
+      const areaVal = parseFloat(areaHa) || 1.0;
+      const qtdTotal = (doseRealVal * areaVal).toFixed(3);
+      return `
+        <tr style="background: ${idx % 2 === 1 ? '#f8fafc' : '#ffffff'};">
+          <td style="font-weight: bold; color: #166534; text-align: left; padding: 4px 6px;">${f.produto_nome}</td>
+          <td style="text-align:center;">${f.unidade || 'KG ou LT'}</td>
+          <td style="font-weight: bold; text-align: center; color: #d97706;">${qtdTotal.replace('.', ',')}</td>
+        </tr>
+      `;
+    }).join('');
+  } else {
+    foliaresRowsHtml = `
+      <tr>
+        <td style="color: #666; text-align: left;" colspan="3">Nenhum adubo foliar adicionado a esta calda.</td>
+      </tr>
+    `;
+  }
+
+  const opCod = item.id ? String(item.id).substring(0, 6).toUpperCase() : '4';
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'EMPRESA';
+  const elaborador = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'EMANUELA MOREIRA';
+
+  const printWin = window.open('', '_blank', 'width=1400,height=900');
+  if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>OC02 — Ordem de Autorização de Aplicação de Produtos Fitossanitários</title>
+    <style>
+      @page { size: A4 landscape; margin: 4mm 5mm; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 7.5pt; line-height: 1.2; }
+      .sheet { width: 100%; }
+      .hdr-audit-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; border: 2px solid #000; }
+      .hdr-audit-table td { border: 1px solid #000; padding: 4px 6px; font-size: 7.5pt; vertical-align: middle; }
+      .parcel-grid { width: 100%; border-collapse: collapse; margin-bottom: 4px; border: 2px solid #000; font-size: 8pt; }
+      .parcel-grid td { border: 1px solid #000; padding: 4px 6px; vertical-align: middle; }
+      .def-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 6.5pt; }
+      .def-table th, .def-table td { border: 1px solid #000; padding: 3px 3px; vertical-align: middle; text-align: center; }
+      .def-table th { background: #e5e7eb; color: #000; font-weight: bold; font-size: 6.5pt; text-transform: uppercase; }
+      .foliar-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 7.5pt; }
+      .foliar-table th, .foliar-table td { border: 1px solid #000; padding: 3px 6px; vertical-align: middle; }
+      .foliar-table th { background: #f0fdf4; color: #166534; font-weight: bold; text-align: left; }
+      .ops-grid { width: 100%; border-collapse: collapse; margin-bottom: 4px; border: 1px solid #000; font-size: 7.5pt; }
+      .ops-grid td { border: 1px solid #000; padding: 4px 6px; vertical-align: middle; }
+      .sig-grid { width: 100%; border-collapse: collapse; margin-bottom: 4px; border: 1px solid #000; font-size: 7.5pt; }
+      .sig-grid td { border: 1px solid #000; padding: 6px; width: 33.33%; vertical-align: top; text-align: center; }
+      .sig-line { border-top: 1px dashed #000; margin-top: 20px; padding-top: 2px; font-weight: bold; font-size: 7pt; }
+      .gold-rules { border: 1px solid #000; padding: 4px 6px; font-size: 6pt; line-height: 1.25; background: #fff; }
+      .gold-rules ol { margin-left: 14px; }
+      .emerg-msg { font-weight: bold; text-align: center; margin-top: 4px; color: #dc2626; font-size: 7pt; text-transform: uppercase; }
+    </style>
+  </head>
+  <body onload="window.print()">
+    <div class="sheet">
+      <table class="hdr-audit-table">
+        <tr>
+          <td style="width: 32%; vertical-align: top; padding: 4px; font-size: 6.5pt; line-height: 1.3;">
+            <strong>ELABORADO, EMITIDO E REVISADO POR:</strong> ${elaborador}<br/>
+            <strong>AVALIADO POR:</strong> ADGF<br/>
+            <strong>APROVADO POR:</strong> ADGF<br/>
+            <strong>FREQUÊNCIA:</strong> POR APLICAÇÃO EM CAMPO
+          </td>
+          <td style="width: 36%; vertical-align: middle; text-align: center; padding: 4px;">
+            ${((window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64) ? `<img src="${(window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64}" style="max-height:48px; max-width:100%; object-fit:contain;" alt="Logo Empresa" onerror="this.src='logo.png'"/>` : `<img src="logo.png" style="max-height:48px; max-width:100%; object-fit:contain;" alt="Logo Empresa" onerror="this.style.display='none'"/>`}
+            <div style="font-weight:bold; font-size:9pt; margin-top:2px;">${tenantName}</div>
+          </td>
+          <td style="width: 32%; vertical-align: top; padding: 4px; font-size: 6.5pt; line-height: 1.3; text-align: left;">
+            <div><strong>DEPARTAMENTO:</strong> CAMPO</div>
+            <div style="font-weight: bold;">NOME DO DOC: ORDEM DE AUTORIZAÇÃO DE APLICAÇÃO DE PRODUTOS FITOSSANITÁRIOS - CAMPO</div>
+            <div><strong>DATA EMISSÃO:</strong> 15/06/2026 &nbsp;&nbsp; <strong>MOD. E APROVAÇÃO E REVISÃO:</strong> 01/07/2026</div>
+            <div><strong>PAG:</strong> 01 DE 01 &nbsp;&nbsp; <strong>COD: OC02</strong> &nbsp;&nbsp; <strong>REVISÃO:</strong> ANUAL &nbsp;&nbsp; <strong>VERSÃO:</strong> 01</div>
+          </td>
+        </tr>
+      </table>
+
+      <div style="text-align: center; margin: 4px 0 6px 0;">
+        <div style="font-size: 9.5pt; font-weight: bold; text-decoration: underline;">ORDEM DE AUTORIZAÇÃO DE APLICAÇÃO DE PRODUTOS FITOSSANITÁRIOS - CAMPO</div>
+        <div style="font-size: 9pt; font-weight: bold; margin-top: 2px;"><u>DATA DA APLICAÇÃO: ${formattedDate}</u></div>
+      </div>
+
+      <table class="parcel-grid">
+        <tr>
+          <td style="width: 35%; text-align: center; vertical-align: middle; padding: 8px;">
+            <div style="border: 1px solid #000; padding: 6px; display: inline-block; min-width: 120px;">
+              <span style="font-size: 20pt; font-weight: bold; font-style: italic;">Nº ${opCod}</span>
+            </div>
+          </td>
+          <td style="width: 65%; padding: 4px 8px; vertical-align: top; line-height: 1.4; font-size: 7.5pt;">
+            <div style="display: flex; justify-content: space-between;">
+              <span><strong>PARCELA:</strong> <span style="font-weight: bold; font-size: 8.5pt;">${item.parcela}</span></span>
+              <span><strong>IDADE:</strong> ${idadeDias} dias</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span><strong>TAMANHO DA ÁREA:</strong> ${areaHa} ha</span>
+              <span><strong>TRANSPLANTIO:</strong> ${dataPlantioStr}</span>
+            </div>
+            <div><strong>CULTURA:</strong> ${(item.cultura || 'MELÃO').toUpperCase()}</div>
+            <div><strong>VARIEDADE:</strong> ${variedadeStr}</div>
+            <div><strong>PREVISÃO DE COLHEITA:</strong> ${prevColheitaStr}</div>
+          </td>
+        </tr>
+      </table>
+
+      <div style="font-weight: bold; font-size: 7pt; color: #000; text-transform: uppercase; margin-top: 4px; margin-bottom: 2px; text-align: center; background: #e5e7eb; border: 1px solid #000; padding: 2px;">
+        PRODUTOS AUTORIZADOS A SEREM APLICADOS (PREENCHIDO PELO ENGENHEIRO AGRÔNOMO)
+      </div>
+      <table class="def-table">
+        <thead>
+          <tr>
+            <th style="width: 10%;">Nome Comercial Completo</th>
+            <th style="width: 8%;">Ingrediente Ativo</th>
+            <th style="width: 4%;">Concentração</th>
+            <th style="width: 3%;">Und Medida</th>
+            <th style="width: 4%;">Carência (Dias)</th>
+            <th style="width: 10%;">Justificativa (Praga Alvo)</th>
+            <th style="width: 5%;">Número permitido ciclo</th>
+            <th style="width: 4%;">Número aplicações</th>
+            <th style="width: 5%;">Intervalo (Dias)</th>
+            <th style="width: 4%;">Última Aplicação</th>
+            <th style="width: 7%;">Dosagem de Bula</th>
+            <th style="width: 5%;">Quantidade Utilizada</th>
+            <th style="width: 5%;">Dose / área utilizada</th>
+            <th style="width: 4%;">Volume Calda (Tanque)</th>
+            <th style="width: 4%;">Volume Calda (Lt / ha)</th>
+            <th style="width: 4%;">Tipo Aplicação</th>
+            <th style="width: 5%;">Data Limite Carência</th>
+            <th style="width: 5%;">Reentrada sem EPI</th>
+            <th style="width: 4%;">CLASSIFICAÇÃO TOXICOLÓGICA</th>
+            <th style="width: 4%;">LOCAL EXCEDENTES</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${productsRowsHtml}
+        </tbody>
+      </table>
+
+      <table style="width: 100%; border-collapse: collapse; margin-top: 4px;">
+        <tr>
+          <td style="width: 35%; vertical-align: top; padding-right: 4px;">
+            <table class="ops-grid" style="width: 100%;">
+              <tr><td style="font-weight: bold; background: #e5e7eb; text-align: center;" colspan="2">PARÂMETROS OPERACIONAIS</td></tr>
+              <tr><td><strong>Volume Calda (Lt/ha):</strong></td><td>${item.volume_calda || '500'}</td></tr>
+              <tr><td><strong>Volume Calda (Tanque):</strong></td><td>${item.volume_tanque ? item.volume_tanque : Math.round((parseFloat(item.volume_calda) || 500) * (parseFloat(areaHa) || 1.0))}</td></tr>
+              <tr><td><strong>Velocidade do Trator:</strong></td><td>${item.velocidade_vento_kmh ? item.velocidade_vento_kmh + ' KM/H' : '5 KM/H'}</td></tr>
+              <tr><td><strong>Nº do Trator:</strong></td><td>${item.trator || '1'}</td></tr>
+              <tr><td><strong>Nº do Pulverizador:</strong></td><td>${item.bicos || '2'}</td></tr>
+              <tr><td><strong>Pressão:</strong></td><td>${item.pressao || '70'}</td></tr>
+              <tr><td><strong>Rotação:</strong></td><td>1600</td></tr>
+              <tr><td colspan="2"><strong>Horário de Aplicação:</strong><br/>Inicial: <strong>${item.horario_inicio || '07:00:00'}</strong> &nbsp; Final: <strong>${item.horario_fim || '08:00:00'}</strong></td></tr>
+            </table>
+          </td>
+
+          <td style="width: 65%; vertical-align: top;">
+            <div style="font-weight: bold; font-size: 7pt; color: #166534; text-transform: uppercase; margin-bottom: 2px;">ADUBOS FOLIARES</div>
+            <table class="foliar-table">
+              <thead>
+                <tr>
+                  <th style="width: 50%;">NOME COMERCIAL</th>
+                  <th style="width: 25%;">UNIDADE KG ou LT</th>
+                  <th style="width: 25%; text-align: center;">Qtdade</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${foliaresRowsHtml}
+              </tbody>
+            </table>
+
+            <table class="sig-grid" style="margin-top: 6px;">
+              <tr>
+                <td style="width: 50%;">
+                  <strong>Manipulador:</strong> ${item.manipulador || item.tratorista || 'ROBSON RAFAEL'}
+                  <div class="sig-line">Assinatura do Manipulador</div>
+                </td>
+                <td style="width: 50%;">
+                  <strong>Aplicador:</strong> ${item.barrista || item.tratorista || 'FELIPE OLIVEIRA'}
+                  <div class="sig-line">Assinatura do Aplicador</div>
+                </td>
+              </tr>
+              <tr>
+                <td style="width: 50%;">
+                  <strong>Eng. Agrônomo / Resp. Técnico:</strong> ${item.eng_agronomo || item.tecnico || 'IVANOSCA MARTINS'}
+                  <div class="sig-line">Assinatura Responsável Técnico</div>
+                </td>
+                <td style="width: 50%;">
+                  <strong>Validação da Certificação:</strong> Manoelly Moreira (Eng. Agrônoma)
+                  <div class="sig-line">Assinatura Resp. Validação Certificação</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <div class="gold-rules" style="margin-top: 4px;">
+        <ol>
+          <li>A escolha do equipamento é imprescindível para uma boa aplicação. Observar se os mesmos estão aptos para uso;</li>
+          <li>Ao receber a ordem de pulverização, o manipulador deve se dirigir ao depósito de produtos a fim de levar a quantidade necessária à aplicação para o ponto de mistura;</li>
+          <li>Os produtos necessários à mistura devem ser depositados no pulverizador com atenção para não haver derrames;</li>
+          <li>Caso a embalagem do produto esvazie, o mesmo deve passar por tríplice lavagem e esta água deve retornar à mistura no pulverizador;</li>
+          <li>O aplicador deve ser devidamente treinado e portar todos os EPI's necessários;</li>
+          <li>É proibido utilizar roupas comuns durante a pulverização ou EPI incompleto;</li>
+          <li>Não pulverizar quando estiver chovendo;</li>
+          <li>Caso sobre calda de pulverização, solicitar ajuda do responsável técnico;</li>
+          <li>Retirar o EPI no vestuário de acordo com o treinamento e tomar banho com água e sabão;</li>
+          <li>Não utilizar o EPI para outras atividades ou lavar em casa.</li>
+        </ol>
+        <div class="emerg-msg">QUALQUER SITUAÇÃO DE EMERGÊNCIA, COMUNICAR A SAÚDE, SEGURANÇA E GERÊNCIA DA EMPRESA.</div>
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+  
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
+function printPastaCampoAutColheita(itemStr) {
+  const item = typeof itemStr === 'string' ? JSON.parse(decodeURIComponent(itemStr)) : itemStr;
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'DINA DINAMARCA INDUSTRIAL AGRÍCOLA LTDA';
+  const rtNome = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'Ajax Dantas de Gois Filho';
+  const rtCrea = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_crea) || '2100995243';
+
+  const ip = getParcelaCompleteInfo(item.parcela, infoParcelasData);
+  const variedadesStr = ip && ip.variedade ? ip.variedade : (item.variedade || 'JADIAL, GOLDEX, GRAND PRIX, ASTURIA, GOLDMINE');
+  
+  const printWin = window.open('', '_blank', 'width=900,height=1200');
+  if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
+  
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>PC11 — Autorização de Colheita</title>
+    <style>
+      @page { size: A4 portrait; margin: 8mm 10mm; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 8.5pt; line-height: 1.4; }
+      .sheet { width: 100%; }
+      .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+      .hdr-table td { border: 1px solid #000; padding: 4px 6px; font-size: 7.5pt; vertical-align: middle; }
+      .hdr-left { width: 45%; font-weight: bold; }
+      .hdr-right { width: 55%; font-family: 'Times New Roman', serif; font-size: 7pt; }
+      .main-title { font-family: 'Arial', sans-serif; font-size: 11pt; font-weight: bold; text-align: center; padding: 8px 12px; border: 2px solid #000; margin-bottom: 20px; line-height: 1.4; background: #f3f4f6; }
+      .declaration-text { font-size: 10.5pt; line-height: 1.6; text-align: justify; margin-bottom: 24px; }
+      .cuts-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+      .cuts-table td { border: 1px solid #000; padding: 8px 12px; font-size: 10pt; vertical-align: middle; }
+      .obs-box { font-size: 7.5pt; line-height: 1.3; margin-bottom: 30px; border: 1px solid #000; padding: 8px; }
+      .sig-section { text-align: center; margin-top: 40px; }
+      .sig-line-box { width: 320px; margin: 0 auto; border-top: 1px solid #000; padding-top: 6px; }
+    </style>
+  </head>
+  <body onload="window.print()">
+    <div class="sheet">
+      <div style="display:flex; justify-content:space-between; align-items:stretch; margin-bottom:12px; border:1px solid #000;">
+        <div style="width:45%; padding:6px; display:flex; align-items:center; gap:12px; border-right:1px solid #000;">
+          ${((window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64) ? `<img src="${(window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64}" style="max-height:48px; max-width:140px; object-fit:contain;"/>` : `<img src="logo.png" style="max-height:48px; max-width:140px; object-fit:contain;" onerror="this.style.display='none'"/>`}
+          <div>
+            <div style="font-size:10pt; font-weight:bold; color:#1b4332; text-transform:uppercase;">${tenantName.toUpperCase()}</div>
+            <div style="font-size:6.5pt; color:#444; line-height:1.2;">
+              ${window.tenantConfig && window.tenantConfig.endereco ? `${window.tenantConfig.endereco}<br/>` : ''}
+              ${window.tenantConfig && window.tenantConfig.municipio ? `${window.tenantConfig.municipio}/${window.tenantConfig.uf || 'RN'}` : ''}
+            </div>
+          </div>
+        </div>
+        <table class="hdr-table" style="width:55%; margin-bottom:0; border:none; table-layout:fixed;">
+          <tr>
+            <td class="hdr-left" style="border-left:none;">ELABORADO, EMITIDO E REVISADO POR: EMANUELA MOREIRA</td>
+            <td class="hdr-right" style="border-right:none;">DEPARTAMENTO: CAMPO</td>
+          </tr>
+          <tr>
+            <td class="hdr-left" style="border-left:none;">AVALIADO E APROVADO POR: ADGF</td>
+            <td class="hdr-right" style="border-right:none;">NOME DO DOC: AUTORIZAÇÃO PARA COLHEITA DE FRUTOS</td>
+          </tr>
+          <tr>
+            <td class="hdr-left" style="border-left:none; border-bottom:none;">FREQUÊNCIA: POR PARCELA DE CAMPO</td>
+            <td class="hdr-right" style="border-right:none; border-bottom:none; font-size:6.5pt;">EMISSÃO: 15/06/2026 &nbsp;&nbsp; VERSÃO: 01 &nbsp;&nbsp; COD: PC11</td>
+          </tr>
+        </table>
+      </div>
+      
+      <div class="main-title">
+        AUTORIZAÇÃO PARA LIBERAÇÃO DE COLHEITA DE FRUTOS NO CAMPO — PC11
+      </div>
+      
+      <div class="declaration-text">
+        Nós, <strong>${rtNome}</strong>, Engenheiro(a) Agrônomo(a), CREA sob o nº <strong>${rtCrea}</strong>, Técnico(s) Responsável(eis) pela produção da empresa <strong>${tenantName.toUpperCase()}</strong>, autorizamos a colheita da parcela nº <strong>${item.parcela || '—'}</strong>, cultivada com as variedades <strong>${variedadesStr}</strong>.
+      </div>
+      
+      <table class="cuts-table">
+        <tr>
+          <td><strong>( &nbsp; ) PRIMEIRO CORTE / DATA:</strong> _____ / _____ / ________</td>
+          <td><strong>AUTORIZAÇÃO:</strong> _____________________</td>
+        </tr>
+        <tr>
+          <td><strong>( &nbsp; ) SEGUNDO CORTE / DATA:</strong> _____ / _____ / ________</td>
+          <td><strong>AUTORIZAÇÃO:</strong> _____________________</td>
+        </tr>
+        <tr>
+          <td><strong>( &nbsp; ) TERCEIRO CORTE / DATA:</strong> _____ / _____ / ________</td>
+          <td><strong>AUTORIZAÇÃO:</strong> _____________________</td>
+        </tr>
+        <tr>
+          <td><strong>( &nbsp; ) QUARTO CORTE / DATA:</strong> _____ / _____ / ________</td>
+          <td><strong>AUTORIZAÇÃO:</strong> _____________________</td>
+        </tr>
+        <tr>
+          <td><strong>( &nbsp; ) QUINTO CORTE / DATA:</strong> _____ / _____ / ________</td>
+          <td><strong>AUTORIZAÇÃO:</strong> _____________________</td>
+        </tr>
+      </table>
+      
+      <div class="obs-box">
+        <strong>OBSERVAÇÕES:</strong><br/>
+        A liberação da colheita assegura que todos os prazos de carência dos defensivos fitossanitários aplicados nesta parcela foram integralmente cumpridos e que os frutos estão aptos para consumo e exportação.
+      </div>
+      
+      <div class="sig-section" style="display:flex; justify-content:space-between; gap:15px;">
+        <div class="sig-line-box" style="width:48%;">
+          <strong>${rtNome}</strong><br/>
+          Engenheiro Agrônomo | CREA: ${rtCrea}<br/>
+          Responsável Técnico de Campo
+        </div>
+        <div class="sig-line-box" style="width:48%;">
+          <strong>Manoelly Moreira</strong><br/>
+          Engenheira Agrônoma — Certificação<br/>
+          Validação da Pasta de Certificação
+        </div>
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+  
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
+async function printPastaCampoIdiarn(itemStr) {
+  const item = typeof itemStr === 'string' ? JSON.parse(decodeURIComponent(itemStr)) : itemStr;
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'EMPRESA';
+  const rtNome = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS';
+  const certNome = (window.tenantConfig && window.tenantConfig.agronomo_certificacao) || 'Manoelly Moreira';
+
+  const pCode = item.parcela || item.parcela2 || '';
+  const pId = item.parcel_id || item.id || '';
+  
+  let ops = [];
+  let mips = [];
+  try {
+    if (isOnline) {
+      const { data: opData } = await sb.from('caderno_campo_op')
+        .select('*, caderno_campo_op_itens(*)')
+        .eq('tenant_id', tenantId)
+        .or(`parcel_id.eq.${pId},parcela.eq.${pCode}`)
+        .order('data_aplicacao', { ascending: false });
+      ops = opData || [];
+
+      const { data: mipData } = await sb.from('caderno_campo_mip')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .or(`parcel_id.eq.${pId},parcela.eq.${pCode}`)
+        .order('data_vistoria', { ascending: false });
+      mips = mipData || [];
+    } else {
+      ops = (opRecordsData || []).filter(o => o.parcel_id == pId || o.parcela === pCode);
+      mips = (mipRecordsData || []).filter(m => m.parcel_id == pId || m.parcela === pCode);
+    }
+  } catch(e) {
+    console.warn('Erro ao carregar dados para IDIARN:', e);
+  }
+
+  const mapCientifico = {
+    'MOSCA BRANCA': 'Bemisia tabaci',
+    'TRIPES': 'Thrips tabaci / Frankliniella spp.',
+    'PULGÃO': 'Aphis gossypii',
+    'MINADORA': 'Liriomyza spp.',
+    'BROCA': 'Diaphania spp.',
+    'ÁCARO': 'Tetranychus urticae',
+    'LAGARTA': 'Spodoptera spp. / Helicoverpa spp.',
+    'OÍDIO': 'Podosphaera xanthii',
+    'MÍLDIO': 'Pseudoperonospora cubensis',
+    'MOSCA DAS FRUTAS': 'Anastrepha grandis / Ceratitis capitata'
+  };
+
+  const pulverizacoes = [];
+  ops.sort((a,b) => new Date(a.data_aplicacao) - new Date(b.data_aplicacao)).forEach(op => {
+     const dt = op.data_aplicacao ? op.data_aplicacao.split('-').reverse().join('/') : '—';
+     if (op.caderno_campo_op_itens) {
+        op.caderno_campo_op_itens.forEach(it => {
+           let alvo = (it.alvo || '').toUpperCase().trim();
+           let nomeCientifico = mapCientifico[alvo] || '—';
+           pulverizacoes.push({
+             data: dt,
+             produto: it.produto_nome,
+             ingrediente: it.ingrediente_ativo || '—',
+             dosagem: `${it.dosagem_real || ''} ${it.unidade || ''}`.trim(),
+             alvo: alvo,
+             nome_cientifico: nomeCientifico
+           });
+        });
+     }
+  });
+
+  const rowsHtml = pulverizacoes.length > 0 ? pulverizacoes.map(p => `
+    <tr>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">${p.data}</td>
+      <td style="border:1px solid #000; padding:4px 6px">${p.produto}</td>
+      <td style="border:1px solid #000; padding:4px 6px">${p.ingrediente}</td>
+      <td style="border:1px solid #000; padding:4px 6px">${p.alvo}</td>
+      <td style="border:1px solid #000; padding:4px 6px; font-style:italic">${p.nome_cientifico}</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">${p.dosagem}</td>
+    </tr>
+  `).join('') : `<tr><td colspan="6" style="text-align:center; padding:10px; color:#666">Nenhuma pulverização registrada nesta parcela.</td></tr>`;
+
+  const mipsRowsHtml = mips.length > 0 ? mips.map(m => {
+    const dt = m.data_vistoria ? m.data_vistoria.split('-').reverse().join('/') : '—';
+    const pragaFriendly = (m.praga || '').replace(/_/g, ' ').toUpperCase();
+    const nomeCient = mapCientifico[pragaFriendly] || '—';
+    const mediaVal = parseFloat(m.media) || 0;
+    let statusText = mediaVal > 2 ? '⚠️ CONTROLE RECOMENDADO' : '🟢 SOB CONTROLE';
+    return `
+      <tr>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center">${dt}</td>
+        <td style="border:1px solid #000; padding:4px 6px">${pragaFriendly}</td>
+        <td style="border:1px solid #000; padding:4px 6px; font-style:italic">${nomeCient}</td>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center">${mediaVal.toFixed(2)} / ponto</td>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-weight:bold; font-size:7.5pt">${statusText}</td>
+      </tr>
+    `;
+  }).join('') : `<tr><td colspan="5" style="text-align:center; padding:10px; color:#666">Nenhum monitoramento MIP registrado para esta parcela.</td></tr>`;
+
+  const printWin = window.open('', '_blank', 'width=1000,height=1200');
+  if (!printWin) { alert('Por favor, permita popups no navegador.'); return; }
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>IDIARN — ${pCode}</title>
+    <style>
+      @page { size: A4 landscape; margin: 8mm 10mm; }
+      body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; font-size: 8.5pt; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .header-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+      .header-table td { border: 1px solid #000; padding: 4px 6px; font-size: 8pt; }
+      .main-title { font-size: 13pt; font-weight: bold; text-align: center; text-transform: uppercase; margin-bottom: 10px; background: #ea580c; color: white; padding: 6px; border: 2px solid #000; }
+      .sec-title { font-size: 9.5pt; font-weight: bold; margin: 12px 0 4px 0; color: #1e293b; border-bottom: 1.5px solid #000; padding-bottom: 2px; text-transform: uppercase; }
+      .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+      .grid-table th, .grid-table td { border: 1px solid #000; padding: 5px; text-align: left; font-size: 8pt; }
+      .grid-table th { background: #f3f4f6; font-weight: bold; }
+    </style>
+  </head>
+  <body onload="window.print()">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border:1px solid #000; padding:6px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        ${((window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64) ? `<img src="${(window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64}" style="max-height:42px; max-width:130px; object-fit:contain;"/>` : `<img src="logo.png" style="max-height:42px; max-width:130px; object-fit:contain;" onerror="this.style.display='none'"/>`}
+        <div>
+          <div style="font-size:10pt; font-weight:bold; color:#1b4332; text-transform:uppercase;">${tenantName.toUpperCase()}</div>
+          <div style="font-size:7pt; color:#444;">LAUDO DE ACOMPANHAMENTO FITOSSANITÁRIO DA CULTURA</div>
+        </div>
+      </div>
+      <div style="font-size:8pt; text-align:right;">
+        <strong>MODELO OFICIAL IDIARN</strong><br/>
+        DOCUMENTO N°: PC09 / IDIARN
+      </div>
+    </div>
+
+    <div class="main-title">CADERNO DE CAMPO & LAUDO FITOSSANITÁRIO (MODELO IDIARN)</div>
+    
+    <table class="header-table">
+      <tr>
+        <td width="25%"><strong>EMPRESA:</strong><br/>${tenantName}</td>
+        <td width="25%"><strong>FAZENDA:</strong><br/>${item.fazenda || 'SANTA HELENA'}</td>
+        <td width="25%"><strong>PARCELA / CICLO:</strong><br/>${pCode}</td>
+        <td width="25%"><strong>ÁREA TOTAL:</strong><br/>${item.area_ha || item.area || '1.00'} ha</td>
+      </tr>
+      <tr>
+        <td colspan="4"><strong>CULTURA / VARIEDADES:</strong><br/>${item.variedade || 'MELÃO GOLDEX'}</td>
+      </tr>
+    </table>
+
+    <div class="sec-title">1. HISTÓRICO DE PULVERIZAÇÕES E TRATAMENTOS FITOSSANITÁRIOS:</div>
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th width="10%" style="text-align:center">Data</th>
+          <th width="22%">Produto Comercial</th>
+          <th width="22%">Princípio Ativo</th>
+          <th width="16%">Praga / Doença (Alvo)</th>
+          <th width="18%">Nome Científico</th>
+          <th width="12%" style="text-align:center">Dosagem</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+      </tbody>
+    </table>
+
+    <div class="sec-title">2. MONITORAMENTO FITOSSANITÁRIO MIP & COLETA DE ARMADILHAS (PRAGAS DETECTADAS):</div>
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th width="12%" style="text-align:center">Data Vistoria</th>
+          <th width="28%">Praga / Alvo Monitorado</th>
+          <th width="25%">Nome Científico</th>
+          <th width="17%" style="text-align:center">Média por Ponto/Armadilha</th>
+          <th width="18%" style="text-align:center">Status Fitossanitário</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${mipsRowsHtml}
+      </tbody>
+    </table>
+    
+    <div style="margin-top:25px; display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+      <div style="text-align:center; border:1px solid #000; padding:8px; background:#fafafa;">
+        <strong>${rtNome}</strong><br/>
+        <span style="font-size:7.5pt; color:#444">Engenheiro(a) Agrônomo(a) — Responsável Técnico de Campo</span>
+        <div style="border-top:1px dashed #000; width:80%; margin:22px auto 0 auto; padding-top:3px; font-size:7pt; font-weight:bold;">Assinatura Responsável Técnico de Campo</div>
+      </div>
+      <div style="text-align:center; border:1px solid #000; padding:8px; background:#fafafa;">
+        <strong>${certNome}</strong><br/>
+        <span style="font-size:7.5pt; color:#444">Engenheira Agrônoma — Validação da Pasta de Certificação</span>
+        <div style="border-top:1px dashed #000; width:80%; margin:22px auto 0 auto; padding-top:3px; font-size:7pt; font-weight:bold;">Assinatura Resp. pela Validação da Certificação</div>
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+  
+  printWin.document.open();
+  printWin.document.write(html);
+  printWin.document.close();
+}
 
   async function loadOpRecords() {
     try {
@@ -6212,6 +6866,7 @@ async function pushCarrao({ session, workers, carriageIds = [] }) {
       carrao_seq: nextSeq + i,
       carriage_id: carriageIds[i] || session.carriage_id || null
     };
+    delete sObj.synced;
     sessionsToInsert.push(sObj);
   }
 
@@ -6987,7 +7642,9 @@ function fUpdateCalc() {
 }
 
 async function pushFieldService({ session, workers }) {
-  const { data: sessList, error: e1 } = await sb.from('field_services').insert([session]).select('*');
+  const cleanSession = { ...session };
+  delete cleanSession.synced;
+  const { data: sessList, error: e1 } = await sb.from('field_services').insert([cleanSession]).select('*');
   if (e1) throw e1;
   
   const sessId = sessList[0].id;
@@ -7001,7 +7658,8 @@ async function pushFieldService({ session, workers }) {
 
 async function pushFertirrigacao({ session, items }) {
   const hasParcel = (dbParcels || []).some(p => p.id === session.parcel_id);
-  const cleanSession = { ...session, parcel_id: hasParcel ? session.parcel_id : null, synced: true };
+  const cleanSession = { ...session, parcel_id: hasParcel ? session.parcel_id : null };
+  delete cleanSession.synced;
   const { data: list, error: e1 } = await sb.from('caderno_campo_fertirrigacao').insert([cleanSession]).select('*');
   if (e1) throw e1;
   
@@ -7020,7 +7678,8 @@ async function pushFertirrigacao({ session, items }) {
 
 async function pushIdiarn(record) {
   const hasParcel = (dbParcels || []).some(p => p.id === record.parcel_id);
-  const cleanRecord = { ...record, parcel_id: hasParcel ? record.parcel_id : null, synced: true };
+  const cleanRecord = { ...record, parcel_id: hasParcel ? record.parcel_id : null };
+  delete cleanRecord.synced;
   const { data, error } = await sb.from('caderno_campo_idiarn').insert([cleanRecord]).select('*');
   if (error) throw error;
   return data;
@@ -7029,6 +7688,7 @@ async function pushIdiarn(record) {
 async function pushMip(record) {
   const hasParcel = (dbParcels || []).some(p => p.id === record.parcel_id);
   const cleanRecord = { ...record, parcel_id: hasParcel ? record.parcel_id : null };
+  delete cleanRecord.synced;
   const { data, error } = await sb.from('caderno_campo_mip').insert([cleanRecord]).select('*');
   if (error) throw error;
   return data;

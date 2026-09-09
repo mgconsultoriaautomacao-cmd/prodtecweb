@@ -10496,6 +10496,7 @@ async function printPastaCampoIdiarn(id) {
   const info = getParcelaCompleteInfo(item || id, _infoParcelas);
   const variedadesStr = info ? info.variedade : (item.variedade || '—');
   const totalAreaStr = info ? info.area : (item.area || '—');
+  const pCode = item.parcela2 || item.parcela || '';
   
   if (!window._opList) {
     alert('Os dados de pulverização ainda estão carregando. Tente novamente em alguns segundos.');
@@ -10503,10 +10504,19 @@ async function printPastaCampoIdiarn(id) {
     return;
   }
   
-  const ops = window._opList.filter(o => o.parcela === item.parcela2 || o.parcela === item.parcela);
-  if (ops.length === 0) {
-    alert('Nenhuma ordem de pulverização (OP) registrada para esta parcela. Não é possível gerar o IDIARN sem pulverizações.');
-    return;
+  const ops = window._opList.filter(o => o.parcel_id === item.id || o.parcela === pCode || o.parcela === item.parcela);
+  
+  // Buscar monitoramentos de MIP e Armadilhas
+  let mips = [];
+  try {
+    const { data: mipData } = await sb.from('caderno_campo_mip')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .or(`parcel_id.eq.${item.id},parcela.eq.${pCode}`)
+      .order('data_vistoria', { ascending: false });
+    mips = mipData || [];
+  } catch(e) {
+    console.warn('Erro ao carregar MIP para relatório IDIARN:', e);
   }
   
   const printWin = window.open('', '_blank', 'width=1000,height=1200');
@@ -10514,6 +10524,8 @@ async function printPastaCampoIdiarn(id) {
 
   const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa';
   const fazenda = item.fazenda || '—';
+  const rtNome = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS';
+  const certNome = (window.tenantConfig && window.tenantConfig.agronomo_certificacao) || 'Manoelly Moreira';
   
   const mapCientifico = {
     'MOSCA BRANCA': 'Bemisia tabaci',
@@ -10524,7 +10536,8 @@ async function printPastaCampoIdiarn(id) {
     'ÁCARO': 'Tetranychus urticae',
     'LAGARTA': 'Spodoptera spp. / Helicoverpa spp.',
     'OÍDIO': 'Podosphaera xanthii',
-    'MÍLDIO': 'Pseudoperonospora cubensis'
+    'MÍLDIO': 'Pseudoperonospora cubensis',
+    'MOSCA DAS FRUTAS': 'Anastrepha grandis / Ceratitis capitata'
   };
   
   const pulverizacoes = [];
@@ -10547,7 +10560,7 @@ async function printPastaCampoIdiarn(id) {
      }
   });
 
-  const rowsHtml = pulverizacoes.map(p => `
+  const rowsHtml = pulverizacoes.length > 0 ? pulverizacoes.map(p => `
     <tr>
       <td style="border:1px solid #000; padding:4px 6px; text-align:center">${p.data}</td>
       <td style="border:1px solid #000; padding:4px 6px">${p.produto}</td>
@@ -10556,33 +10569,65 @@ async function printPastaCampoIdiarn(id) {
       <td style="border:1px solid #000; padding:4px 6px; font-style:italic">${p.nome_cientifico}</td>
       <td style="border:1px solid #000; padding:4px 6px; text-align:center">${p.dosagem}</td>
     </tr>
-  `).join('');
+  `).join('') : `<tr><td colspan="6" style="text-align:center; padding:10px; color:#666">Nenhuma pulverização registrada nesta parcela.</td></tr>`;
+
+  const mipsRowsHtml = mips.length > 0 ? mips.map(m => {
+    const dt = m.data_vistoria ? m.data_vistoria.split('-').reverse().join('/') : '—';
+    const pragaFriendly = (m.praga || '').replace(/_/g, ' ').toUpperCase();
+    const nomeCient = mapCientifico[pragaFriendly] || '—';
+    const mediaVal = parseFloat(m.media) || 0;
+    let statusText = mediaVal > 2 ? '⚠️ CONTROLE RECOMENDADO' : '🟢 SOB CONTROLE';
+    return `
+      <tr>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center">${dt}</td>
+        <td style="border:1px solid #000; padding:4px 6px">${pragaFriendly}</td>
+        <td style="border:1px solid #000; padding:4px 6px; font-style:italic">${nomeCient}</td>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center">${mediaVal.toFixed(2)} / ponto</td>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-weight:bold; font-size:7.5pt">${statusText}</td>
+      </tr>
+    `;
+  }).join('') : `<tr><td colspan="5" style="text-align:center; padding:10px; color:#666">Nenhum monitoramento MIP registrado para esta parcela.</td></tr>`;
 
   const html = `
   <!DOCTYPE html>
   <html>
   <head>
     <meta charset="utf-8"/>
-    <title>IDIARN — ${item.parcela2 || item.parcela}</title>
+    <title>IDIARN — ${pCode}</title>
     <style>
-      @page { size: A4 landscape; margin: 10mm; }
-      body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; font-size: 9pt; }
-      .header-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-      .header-table td { border: 1px solid #000; padding: 4px 6px; }
-      .main-title { font-size: 14pt; font-weight: bold; text-align: center; text-transform: uppercase; margin-bottom: 15px; background: #ea580c; color: white; padding: 6px; border: 2px solid #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-      .grid-table th, .grid-table td { border: 1px solid #000; padding: 6px; text-align: left; }
-      .grid-table th { background: #f3f4f6; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      @page { size: A4 landscape; margin: 8mm 10mm; }
+      body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; font-size: 8.5pt; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .header-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+      .header-table td { border: 1px solid #000; padding: 4px 6px; font-size: 8pt; }
+      .main-title { font-size: 13pt; font-weight: bold; text-align: center; text-transform: uppercase; margin-bottom: 10px; background: #ea580c; color: white; padding: 6px; border: 2px solid #000; }
+      .sec-title { font-size: 9.5pt; font-weight: bold; margin: 12px 0 4px 0; color: #1e293b; border-bottom: 1.5px solid #000; padding-bottom: 2px; text-transform: uppercase; }
+      .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+      .grid-table th, .grid-table td { border: 1px solid #000; padding: 5px; text-align: left; font-size: 8pt; }
+      .grid-table th { background: #f3f4f6; font-weight: bold; }
     </style>
   </head>
   <body onload="window.print()">
-    <div class="main-title">RELATÓRIO DE PULVERIZAÇÕES (MODELO IDIARN)</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border:1px solid #000; padding:6px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        ${((window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64) ? `<img src="${(window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64}" style="max-height:42px; max-width:130px; object-fit:contain;"/>` : `<img src="logo.png" style="max-height:42px; max-width:130px; object-fit:contain;" onerror="this.style.display='none'"/>`}
+        <div>
+          <div style="font-size:10pt; font-weight:bold; color:#1b4332; text-transform:uppercase;">${tenantName.toUpperCase()}</div>
+          <div style="font-size:7pt; color:#444;">LAUDO DE ACOMPANHAMENTO FITOSSANITÁRIO DA CULTURA</div>
+        </div>
+      </div>
+      <div style="font-size:8pt; text-align:right;">
+        <strong>MODELO OFICIAL IDIARN</strong><br/>
+        DOCUMENTO N°: PC09 / IDIARN
+      </div>
+    </div>
+
+    <div class="main-title">CADERNO DE CAMPO & LAUDO FITOSSANITÁRIO (MODELO IDIARN)</div>
     
     <table class="header-table">
       <tr>
         <td width="25%"><strong>EMPRESA:</strong><br/>${tenantName}</td>
         <td width="25%"><strong>FAZENDA:</strong><br/>${fazenda}</td>
-        <td width="25%"><strong>PARCELA:</strong><br/>${item.parcela2 || item.parcela}</td>
+        <td width="25%"><strong>PARCELA / CICLO:</strong><br/>${pCode}</td>
         <td width="25%"><strong>ÁREA TOTAL:</strong><br/>${totalAreaStr} ha</td>
       </tr>
       <tr>
@@ -10590,25 +10635,49 @@ async function printPastaCampoIdiarn(id) {
       </tr>
     </table>
 
+    <div class="sec-title">1. HISTÓRICO DE PULVERIZAÇÕES E TRATAMENTOS FITOSSANITÁRIOS:</div>
     <table class="grid-table">
       <thead>
         <tr>
           <th width="10%" style="text-align:center">Data</th>
-          <th width="20%">Produto Comercial</th>
-          <th width="20%">Princípio Ativo</th>
-          <th width="15%">Praga / Doença (Alvo)</th>
-          <th width="20%">Nome Científico</th>
-          <th width="15%" style="text-align:center">Dosagem</th>
+          <th width="22%">Produto Comercial</th>
+          <th width="22%">Princípio Ativo</th>
+          <th width="16%">Praga / Doença (Alvo)</th>
+          <th width="18%">Nome Científico</th>
+          <th width="12%" style="text-align:center">Dosagem</th>
         </tr>
       </thead>
       <tbody>
         ${rowsHtml}
       </tbody>
     </table>
+
+    <div class="sec-title">2. MONITORAMENTO FITOSSANITÁRIO MIP & COLETA DE ARMADILHAS (PRAGAS DETECTADAS):</div>
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th width="12%" style="text-align:center">Data Vistoria</th>
+          <th width="28%">Praga / Alvo Monitorado</th>
+          <th width="25%">Nome Científico</th>
+          <th width="17%" style="text-align:center">Média por Ponto/Armadilha</th>
+          <th width="18%" style="text-align:center">Status Fitossanitário</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${mipsRowsHtml}
+      </tbody>
+    </table>
     
-    <div style="margin-top:40px; text-align:center; display:flex; justify-content:space-around;">
-      <div>
-        <div style="border-top:1px solid #000; width:250px; margin:0 auto; padding-top:4px;">Assinatura do Responsável Técnico</div>
+    <div style="margin-top:25px; display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+      <div style="text-align:center; border:1px solid #000; padding:8px; background:#fafafa;">
+        <strong>${rtNome}</strong><br/>
+        <span style="font-size:7.5pt; color:#444">Engenheiro(a) Agrônomo(a) — Responsável Técnico de Campo</span>
+        <div style="border-top:1px dashed #000; width:80%; margin:22px auto 0 auto; padding-top:3px; font-size:7pt; font-weight:bold;">Assinatura Responsável Técnico de Campo</div>
+      </div>
+      <div style="text-align:center; border:1px solid #000; padding:8px; background:#fafafa;">
+        <strong>${certNome}</strong><br/>
+        <span style="font-size:7.5pt; color:#444">Engenheira Agrônoma — Validação da Pasta de Certificação</span>
+        <div style="border-top:1px dashed #000; width:80%; margin:22px auto 0 auto; padding-top:3px; font-size:7pt; font-weight:bold;">Assinatura Resp. pela Validação da Certificação</div>
       </div>
     </div>
   </body>
@@ -10666,7 +10735,7 @@ function printPastaCampoCapa(id) {
     <div class="sheet">
       <div style="display:flex; justify-content:space-between; align-items:stretch; margin-bottom:12px; border:1px solid #000;">
         <div style="width:45%; padding:6px; display:flex; align-items:center; gap:12px; border-right:1px solid #000;">
-          ${window.tenantConfig && window.tenantConfig.logo_url ? `<img src="${window.tenantConfig.logo_url}" style="max-height:48px; max-width:140px; object-fit:contain;"/>` : `<div style="width:40px; height:40px; background:#ddd; display:flex; align-items:center; justify-content:center; border-radius:4px; font-weight:bold; font-size:18px; color:#555;">🌱</div>`}
+          ${((window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64) ? `<img src="${(window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64}" style="max-height:48px; max-width:140px; object-fit:contain;"/>` : `<img src="logo.png" style="max-height:48px; max-width:140px; object-fit:contain;" onerror="this.style.display='none'"/>`}
           <div>
             <div style="font-size:10pt; font-weight:bold; color:#1b4332; text-transform:uppercase;">${(window.tenantConfig && window.tenantConfig.name || 'BOM JESUS AGRÍCOLA').toUpperCase()}</div>
             <div style="font-size:6.5pt; color:#444; line-height:1.2;">
@@ -10750,56 +10819,26 @@ function printPastaCampoCapa(id) {
         </tr>
       </table>
       
-      <div class="section-title">2. RESPONSÁVEIS TÉCNICOS</div>
+      <div class="section-title">2. RESPONSÁVEIS TÉCNICOS & CERTIFICAÇÃO DA PASTA</div>
       <div class="signatures-grid">
-        ${window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome ? `
         <div class="sig-box">
           <div>
-            <strong>${window.tenantConfig.responsavel_tecnico_nome}</strong><br/>
-            Engenheiro Agrônomo | CREA: ${window.tenantConfig.responsavel_tecnico_crea || '—'}<br/>
-            ${window.tenantConfig.endereco || ''}<br/>
-            ${window.tenantConfig.telefone ? 'Tel: ' + window.tenantConfig.telefone : ''} ${window.tenantConfig.email ? ' | Email: ' + window.tenantConfig.email : ''}
+            <strong>${(window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'Ivanosca Martins de Oliveira Cunha / Reinaldo Chotten'}</strong><br/>
+            Engenheiro(a) Agrônomo(a) | Responsável Técnico(a) de Campo<br/>
+            ${window.tenantConfig && window.tenantConfig.endereco ? window.tenantConfig.endereco : 'Mossoró - RN'}<br/>
+            ${window.tenantConfig && window.tenantConfig.telefone ? 'Tel: ' + window.tenantConfig.telefone : ''}
           </div>
-          <div class="sig-line">Assinatura</div>
-        </div>
-        ` : `
-        <div class="sig-box">
-          <div>
-            <strong>Ajax Dantas de Gois Filho</strong><br/>
-            Engenheiro Agrônomo | CREA: 2100995243<br/>
-            Rua João da Escóssia, 1728 - Nova Betânia, Mossoró - RN. CEP: 59.607-330<br/>
-            Tel: (84) 99424 0030 | Email: ajaxdgfilho@uol.com.br
-          </div>
-          <div class="sig-line">Assinatura</div>
+          <div class="sig-line">Assinatura Responsável Técnico de Campo</div>
         </div>
         <div class="sig-box">
           <div>
-            <strong>Valeriano Dantas de Gois</strong><br/>
-            Engenheiro Agrônomo | CREA: 2106090242<br/>
-            Av, Lauro Monte Filho, Abolição 1, Mossoró - RN. CEP: 59619-000<br/>
-            Tel: (84) 99424 0055 | Email: valerianogois@hotmail.com
+            <strong>Manoelly Moreira</strong><br/>
+            Engenheira Agrônoma — Validação e Certificação da Pasta de Campo<br/>
+            Supervisão e Revisão dos Processos de Certificação (GlobalG.A.P. / Tesco / IDIARN)<br/>
+            Mossoró - RN
           </div>
-          <div class="sig-line">Assinatura</div>
+          <div class="sig-line">Assinatura Resp. Validação da Certificação</div>
         </div>
-        <div class="sig-box">
-          <div>
-            <strong>Francisco Canindé dos Santos Neto</strong><br/>
-            Engenheiro Agrônomo | CREA: 2112017578<br/>
-            Rua João da Escóssia, 1728 - Nova Betânia, Mossoró - RN. CEP: 59.607-330<br/>
-            Tel: (84) 99191 8682 | Email: neto@coopyfrutas.com
-          </div>
-          <div class="sig-line">Assinatura</div>
-        </div>
-        <div class="sig-box">
-          <div>
-            <strong>Clara Alana Rocha Santos Gois</strong><br/>
-            Engenheiro Agrônomo | CREA: 2112663046<br/>
-            Av. Dona Izaura Rosado, 1840, Ab. III, Mossoró - RN. CEP: 59612-670<br/>
-            Tel: (84) 99191-8654 | Email: gois_clara@yahoo.com.br
-          </div>
-          <div class="sig-line">Assinatura</div>
-        </div>
-        `}
       </div>
       
       <div class="obs-box">
@@ -11033,8 +11072,8 @@ function printPastaCampoOrdemPulv(itemStr) {
       dataCarStr = appDate.toLocaleDateString('pt-BR');
     }
 
-    const volCaldaLtHa = item.volume_calda || 500;
-    const volCaldaTanque = item.volume_calda || 500;
+    const volCaldaLtHa = parseFloat(item.volume_calda) || 500;
+    const volCaldaTanque = item.volume_tanque ? parseFloat(item.volume_tanque) : Math.round(volCaldaLtHa * areaVal);
     const tipoAplic = item.equipamento || 'Barra';
 
     return `
@@ -11097,6 +11136,8 @@ function printPastaCampoOrdemPulv(itemStr) {
   const opCod = item.id ? String(item.id).substring(0, 6).toUpperCase() : '4';
   const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'EMPRESA';
   const elaborador = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'EMANUELA MOREIRA';
+  const tenantLogo = (window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64 || 'logo.png';
+  const logoHtml = tenantLogo ? `<img src="${tenantLogo}" style="max-height: 48px; max-width: 100%; object-fit: contain;" alt="Logo Empresa" onerror="this.src='logo.png';"/>` : `<div style="font-weight:bold; font-size:10pt;">${tenantName}</div>`;
 
   const printWin = window.open('', '_blank', 'width=1400,height=900');
   if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
@@ -11159,8 +11200,8 @@ function printPastaCampoOrdemPulv(itemStr) {
             <strong>FREQUÊNCIA:</strong> POR APLICAÇÃO EM CAMPO
           </td>
           <td style="width: 36%; vertical-align: middle; text-align: center; padding: 4px;">
-            <img src="logo.png" style="max-height: 48px; max-width: 100%; object-fit: contain;" alt="Logo Empresa" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"/>
-            <div style="display:none; font-weight:bold; font-size:10pt;">${tenantName}</div>
+            ${logoHtml}
+            <div style="font-weight:bold; font-size:9pt; margin-top:2px;">${tenantName}</div>
           </td>
           <td style="width: 32%; vertical-align: top; padding: 4px; font-size: 6.5pt; line-height: 1.3; text-align: left;">
             <div><strong>DEPARTAMENTO:</strong> CAMPO</div>
@@ -11303,7 +11344,7 @@ function printPastaCampoOrdemPulv(itemStr) {
             <table class="ops-grid" style="width: 100%;">
               <tr><td style="font-weight: bold; background: #e5e7eb; text-align: center;" colspan="2">PARÂMETROS OPERACIONAIS</td></tr>
               <tr><td><strong>Volume Calda (Lt/ha):</strong></td><td>${item.volume_calda || '500'}</td></tr>
-              <tr><td><strong>Volume Calda (Tanque):</strong></td><td>${item.volume_calda || '500'}</td></tr>
+              <tr><td><strong>Volume Calda (Tanque):</strong></td><td>${item.volume_tanque ? item.volume_tanque : Math.round((parseFloat(item.volume_calda) || 500) * (parseFloat(areaHa) || 1.0))}</td></tr>
               <tr><td><strong>Velocidade do Trator:</strong></td><td>${item.velocidade_vento_kmh ? item.velocidade_vento_kmh + ' KM/H' : '5 KM/H'}</td></tr>
               <tr><td><strong>Nº do Trator:</strong></td><td>${item.trator || '1'}</td></tr>
               <tr><td><strong>Nº do Pulverizador:</strong></td><td>${item.bicos || '2'}</td></tr>
@@ -11334,21 +11375,23 @@ function printPastaCampoOrdemPulv(itemStr) {
             <!-- ASSINATURAS RESPONSÁVEIS -->
             <table class="sig-grid" style="margin-top: 6px;">
               <tr>
-                <td>
-                  <strong>Nome do Manipulador dos Químicos acima:</strong> ${item.manipulador || item.tratorista || 'ROBSON RAFAEL'}
+                <td style="width: 50%;">
+                  <strong>Manipulador:</strong> ${item.manipulador || item.tratorista || 'ROBSON RAFAEL'}
                   <div class="sig-line">Assinatura do Manipulador</div>
                 </td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Nome e Assinatura do Aplicador dos Químicos acima:</strong> ${item.barrista || item.tratorista || 'FELIPE OLIVEIRA'}
+                <td style="width: 50%;">
+                  <strong>Aplicador:</strong> ${item.barrista || item.tratorista || 'FELIPE OLIVEIRA'}
                   <div class="sig-line">Assinatura do Aplicador</div>
                 </td>
               </tr>
               <tr>
-                <td>
-                  <strong>Nome e Assinatura do Técnico Responsável:</strong> ${item.eng_agronomo || item.tecnico || 'IVANOSCA MARTINS'}
-                  <div class="sig-line">Assinatura do Técnico Responsável</div>
+                <td style="width: 50%;">
+                  <strong>Eng. Agrônomo / Resp. Técnico:</strong> ${item.eng_agronomo || item.tecnico || 'IVANOSCA MARTINS'}
+                  <div class="sig-line">Assinatura Responsável Técnico</div>
+                </td>
+                <td style="width: 50%;">
+                  <strong>Validação da Certificação:</strong> Manoelly Moreira (Eng. Agrônoma)
+                  <div class="sig-line">Assinatura Resp. Validação Certificação</div>
                 </td>
               </tr>
             </table>
@@ -11478,7 +11521,7 @@ function printPastaCampoAutColheita(itemStr) {
       <!-- CABEÇALHO OFICIAL COM LOGO DO TENANT -->
       <div style="display:flex; justify-content:space-between; align-items:stretch; margin-bottom:12px; border:1px solid #000;">
         <div style="width:45%; padding:6px; display:flex; align-items:center; gap:12px; border-right:1px solid #000;">
-          ${window.tenantConfig && window.tenantConfig.logo_url ? `<img src="${window.tenantConfig.logo_url}" style="max-height:48px; max-width:140px; object-fit:contain;"/>` : `<div style="width:40px; height:40px; background:#ddd; display:flex; align-items:center; justify-content:center; border-radius:4px; font-weight:bold; font-size:18px; color:#555;">🌱</div>`}
+          ${((window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64) ? `<img src="${(window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64}" style="max-height:48px; max-width:140px; object-fit:contain;"/>` : `<img src="logo.png" style="max-height:48px; max-width:140px; object-fit:contain;" onerror="this.style.display='none'"/>`}
           <div>
             <div style="font-size:10pt; font-weight:bold; color:#1b4332; text-transform:uppercase;">${(window.tenantConfig && window.tenantConfig.name || 'BOM JESUS AGRÍCOLA').toUpperCase()}</div>
             <div style="font-size:6.5pt; color:#444; line-height:1.2;">
@@ -11551,11 +11594,17 @@ function printPastaCampoAutColheita(itemStr) {
         <p style="margin-top: 10px; font-weight: bold;">Eu responsável por autorizar a colheita estou ciente que entendi e estou cumprindo a legislação em vigor.</p>
       </div>
       
-      <!-- ASSINATURA -->
-      <div class="signature-area">
-        <div class="signature-box">
-          <br/><br/>
-          CARIMBO - ASSINATURA
+      <!-- ASSINATURAS E VALIDAÇÃO -->
+      <div class="signature-area" style="display:flex; justify-content:space-between; gap:20px; margin-top:25px;">
+        <div class="signature-box" style="width:48%; text-align:center;">
+          <strong>${rtNome}</strong><br/>
+          <span style="font-size:7.5pt; font-weight:normal;">Engenheiro Agrônomo — Responsável Técnico</span>
+          <div style="margin-top:15px; border-top:1px solid #000; padding-top:4px; font-size:7.5pt;">Assinatura Responsável Técnico de Campo</div>
+        </div>
+        <div class="signature-box" style="width:48%; text-align:center;">
+          <strong>Manoelly Moreira</strong><br/>
+          <span style="font-size:7.5pt; font-weight:normal;">Engenheira Agrônoma — Validação da Certificação</span>
+          <div style="margin-top:15px; border-top:1px solid #000; padding-top:4px; font-size:7.5pt;">Assinatura Resp. Validação da Certificação</div>
         </div>
       </div>
     </div>
@@ -14041,20 +14090,34 @@ function printPastaCampoMip(itemStr) {
   </head>
   <body onload="window.print()">
     <div class="sheet">
-      <table class="hdr-table">
-        <tr>
-          <td class="hdr-left">ELABORADO, EMITIDO E REVISADO POR: EMANUELA MOREIRA</td>
-          <td class="hdr-right">DEPARTAMENTO: CAMPO</td>
-        </tr>
-        <tr>
-          <td class="hdr-left">AVALIADO POR: ADGF</td>
-          <td class="hdr-right">DOC: FICHA DE MONITORAMENTO E AMOSTRAGEM MIP</td>
-        </tr>
-        <tr>
-          <td class="hdr-left">APROVADO POR: ADGF</td>
-          <td class="hdr-right">EMISSÃO: 15/06/2026 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; VERSÃO: 01 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; COD: PC08</td>
-        </tr>
-      </table>
+      <!-- CABEÇALHO OFICIAL COM LOGO DO TENANT -->
+      <div style="display:flex; justify-content:space-between; align-items:stretch; margin-bottom:8px; border:1px solid #000;">
+        <div style="width:45%; padding:5px; display:flex; align-items:center; gap:10px; border-right:1px solid #000;">
+          ${((window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64) ? `<img src="${(window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64}" style="max-height:45px; max-width:135px; object-fit:contain;"/>` : `<img src="logo.png" style="max-height:45px; max-width:135px; object-fit:contain;" onerror="this.style.display='none'"/>`}
+          <div>
+            <div style="font-size:9.5pt; font-weight:bold; color:#1b4332; text-transform:uppercase;">${(window.tenantConfig && window.tenantConfig.name || 'BOM JESUS AGRÍCOLA').toUpperCase()}</div>
+            <div style="font-size:6pt; color:#444; line-height:1.2;">
+              ${window.tenantConfig && window.tenantConfig.endereco ? `${window.tenantConfig.endereco}<br/>` : ''}
+              ${window.tenantConfig && window.tenantConfig.municipio ? `${window.tenantConfig.municipio}/${window.tenantConfig.uf || 'RN'}` : ''}
+              ${window.tenantConfig && window.tenantConfig.ggn_geral ? ` | GGN: ${window.tenantConfig.ggn_geral}` : ''}
+            </div>
+          </div>
+        </div>
+        <table class="hdr-table" style="width:55%; margin-bottom:0; border:none; table-layout:fixed;">
+          <tr>
+            <td class="hdr-left" style="border-top:none; border-left:none;">ELABORADO, EMITIDO E REVISADO: EMANUELA MOREIRA</td>
+            <td class="hdr-right" style="border-top:none; border-right:none;">DEPARTAMENTO: CAMPO</td>
+          </tr>
+          <tr>
+            <td class="hdr-left" style="border-left:none;">AVALIADO POR: ADGF</td>
+            <td class="hdr-right" style="border-right:none;">DOC: MONITORAMENTO E AMOSTRAGEM MIP</td>
+          </tr>
+          <tr>
+            <td class="hdr-left" style="border-left:none; border-bottom:none;">APROVADO POR: ADGF</td>
+            <td class="hdr-right" style="border-right:none; border-bottom:none; font-size:6pt;">EMISSÃO: 15/06/2026 &nbsp;&nbsp; VERSÃO: 01 &nbsp;&nbsp; COD: PC08</td>
+          </tr>
+        </table>
+      </div>
 
       <div class="main-title">MANEJO INTEGRADO DE PRAGAS — FICHA DE AMOSTRAGEM (MIP)</div>
 
@@ -14095,20 +14158,27 @@ function printPastaCampoMip(itemStr) {
         ${item.observacoes || 'Nenhuma observação registrada na amostragem.'}
       </div>
 
-      <div class="signatures-grid">
+      <div class="signatures-grid" style="grid-template-columns: 1fr 1fr 1fr;">
         <div class="sig-box">
           <div>
             <strong>Monitor de Pragas (Pragueiro)</strong><br/>
-            Responsável pela amostragem de campo
+            Responsável pela amostragem de campo e armadilhas
           </div>
           <div class="sig-line">Assinatura Monitor de Campo</div>
         </div>
         <div class="sig-box">
           <div>
-            <strong>Engenheiro Agrônomo / Resp. Técnico</strong><br/>
+            <strong>Responsável Técnico de Campo</strong><br/>
             Validação Técnica do Manejo Fitossanitário
           </div>
-          <div class="sig-line">Assinatura Responsável Técnico</div>
+          <div class="sig-line">Assinatura Resp. Técnico de Campo</div>
+        </div>
+        <div class="sig-box">
+          <div>
+            <strong>Manoelly Moreira</strong><br/>
+            Engenheira Agrônoma — Certificação
+          </div>
+          <div class="sig-line">Assinatura Validação da Certificação</div>
         </div>
       </div>
     </div>
@@ -17670,10 +17740,10 @@ function renderCcIdiarnTable(list) {
 async function openNewIdiarnModal() {
   newIdiarnSelectedProducts = new Set();
   $('newIdiarnDate').value = today();
-  $('newIdiarnCiclo').value = '2024/2025';
+  $('newIdiarnCiclo').value = '2026/2027';
   $('newIdiarnArea').value = '';
   $('newIdiarnVariedade').value = '';
-  $('newIdiarnFazenda').value = 'SANTA HELENA';
+  $('newIdiarnFazenda').value = (window.tenantConfig && window.tenantConfig.name) || 'SANTA HELENA';
   $('newIdiarnDocumento').value = '';
   $('newIdiarnPdfUrl').value = '';
   $('newIdiarnProdutoManual').value = '';
@@ -17731,27 +17801,42 @@ async function onNewIdiarnParcelChange() {
     return;
   }
   
-  // Auto-preenchimento automático de Hectares (Área), Variedade e Documento IDIARN
+  // Auto-preenchimento automático de Hectares (Área), Variedade, Ciclo/Safra e Documento IDIARN
   $('newIdiarnArea').value = ip.area || '1.00';
   $('newIdiarnVariedade').value = ip.variedade || '';
-  if (ip.idiarn && $('newIdiarnDocumento')) {
+  if (ip.safra_ciclo || ip.ano) {
+    $('newIdiarnCiclo').value = ip.safra_ciclo || ip.ano;
+  } else {
+    const yr = new Date().getFullYear();
+    $('newIdiarnCiclo').value = `${yr}/${yr+1}`;
+  }
+
+  const num = $('newIdiarnNumero')?.value || '1';
+  const parcelCode = ip.parcela2 || ip.parcela || 'PARCELA';
+  if (ip.idiarn) {
     $('newIdiarnDocumento').value = ip.idiarn;
+  } else if (!$('newIdiarnDocumento').value) {
+    $('newIdiarnDocumento').value = `IDIARN ${num} - ${parcelCode} - VISITA 1`;
   }
   
-  // Buscar aplicações nos últimos 7 dias
+  // Buscar aplicações (OPs) e monitoramento MIP (Pragas / Armadilhas) nos últimos 30 dias
   const dateVal = $('newIdiarnDate').value || today();
   const dateObj = new Date(dateVal + 'T12:00:00');
-  dateObj.setDate(dateObj.getDate() - 7);
-  const sevenDaysAgo = dateObj.toISOString().split('T')[0];
-  
-  const parcelCode = ip.parcela2 || ip.parcela;
+  dateObj.setDate(dateObj.getDate() - 30);
+  const thirtyDaysAgo = dateObj.toISOString().split('T')[0];
   
   try {
     const { data: ops } = await sb.from('caderno_campo_op')
       .select('id, data_aplicacao, caderno_campo_op_itens(produto_nome, alvo)')
       .eq('tenant_id', tenantId)
       .or(`parcel_id.eq.${pId},parcela.eq.${parcelCode}`)
-      .gte('data_aplicacao', sevenDaysAgo);
+      .gte('data_aplicacao', thirtyDaysAgo);
+
+    const { data: mips } = await sb.from('caderno_campo_mip')
+      .select('praga, media, data_vistoria, observacoes')
+      .eq('tenant_id', tenantId)
+      .or(`parcel_id.eq.${pId},parcela.eq.${parcelCode}`)
+      .gte('data_vistoria', thirtyDaysAgo);
       
     const opProducts = new Map();
     if (ops && ops.length > 0) {
@@ -17766,11 +17851,17 @@ async function onNewIdiarnParcelChange() {
       });
     }
     
-    if (statusEl) statusEl.textContent = `Aplicações encontradas nos últimos 7 dias:`;
+    if (statusEl) statusEl.textContent = `Aplicações & Monitoramento MIP nos últimos 30 dias:`;
     
-    if (opProducts.size === 0) {
-      chipsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);font-style:italic">Nenhuma aplicação encontrada nos últimos 7 dias. Adicione manualmente abaixo.</div>';
-    } else {
+    chipsEl.innerHTML = '';
+    
+    // Chips de Pulverizações (OPs)
+    if (opProducts.size > 0) {
+      const headerOp = document.createElement('div');
+      headerOp.style.cssText = 'width:100%; font-size:11px; font-weight:700; color:var(--orange); margin-top:4px; margin-bottom:4px;';
+      headerOp.textContent = '🛡️ Pulverizações Aplicadas (OPs):';
+      chipsEl.appendChild(headerOp);
+
       opProducts.forEach((info, nome) => {
         newIdiarnSelectedProducts.add(nome);
         const chip = document.createElement('button');
@@ -17793,8 +17884,53 @@ async function onNewIdiarnParcelChange() {
         chipsEl.appendChild(chip);
       });
     }
+
+    // Chips de Pragas MIP & Armadilhas
+    if (mips && mips.length > 0) {
+      const headerMip = document.createElement('div');
+      headerMip.style.cssText = 'width:100%; font-size:11px; font-weight:700; color:#3b82f6; margin-top:8px; margin-bottom:4px;';
+      headerMip.textContent = '🐛 Pragas Detectadas (MIP) & 🪤 Armadilhas:';
+      chipsEl.appendChild(headerMip);
+
+      const pragasMap = new Map();
+      mips.forEach(m => {
+        const pName = (m.praga || '').replace(/_/g, ' ').toUpperCase();
+        if (!pragasMap.has(pName)) {
+          pragasMap.set(pName, { media: m.media, data: m.data_vistoria });
+        }
+      });
+
+      pragasMap.forEach((val, pragaName) => {
+        const chipText = `${pragaName} (Média: ${parseFloat(val.media).toFixed(2)})`;
+        newIdiarnSelectedProducts.add(chipText);
+        
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'btn on';
+        chip.style.cssText = 'font-size:11px; padding:5px 10px; border-radius:20px; font-weight:700; margin-right:6px; margin-bottom:6px; cursor:pointer; background:rgba(59,130,246,0.15); border:1px solid #3b82f6; color:#3b82f6;';
+        chip.innerHTML = `✓ ${chipText}`;
+        chip.onclick = () => {
+          if (newIdiarnSelectedProducts.has(chipText)) {
+            newIdiarnSelectedProducts.delete(chipText);
+            chip.style.background = 'transparent';
+            chip.style.color = 'var(--muted)';
+            chip.innerHTML = chipText;
+          } else {
+            newIdiarnSelectedProducts.add(chipText);
+            chip.style.background = 'rgba(59,130,246,0.15)';
+            chip.style.color = '#3b82f6';
+            chip.innerHTML = `✓ ${chipText}`;
+          }
+        };
+        chipsEl.appendChild(chip);
+      });
+    }
+
+    if (opProducts.size === 0 && (!mips || mips.length === 0)) {
+      chipsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);font-style:italic">Nenhuma aplicação ou praga MIP encontrada nos últimos 30 dias. Adicione manualmente abaixo.</div>';
+    }
   } catch(e) {
-    console.warn('Erro ao carregar OPs para IDIARN:', e);
+    console.warn('Erro ao carregar OPs e MIPs para IDIARN:', e);
   }
 }
 
@@ -17834,7 +17970,7 @@ function addNewIdiarnManualProduct() {
 
 async function saveNewIdiarnDashboard() {
   const numero = parseInt($('newIdiarnNumero').value) || null;
-  const ciclo = $('newIdiarnCiclo').value.trim();
+  let ciclo = $('newIdiarnCiclo').value.trim();
   const pId = $('newIdiarnParcelSelect').value;
   const area = parseFloat($('newIdiarnArea').value) || null;
   const variedade = $('newIdiarnVariedade').value.trim();
@@ -17845,14 +17981,16 @@ async function saveNewIdiarnDashboard() {
   
   const produtos = [...newIdiarnSelectedProducts].join(', ');
   
-  if (!pId || !date || !documento || !ciclo) {
-    alert('Preencha Parcela, Ciclo/Safra, Data e Documento!');
-    return;
+  if (!ciclo) {
+    const yr = new Date().getFullYear();
+    ciclo = `${yr}/${yr+1}`;
+    if ($('newIdiarnCiclo')) $('newIdiarnCiclo').value = ciclo;
   }
-  if (!produtos) {
-    alert('Selecione ou adicione pelo menos um produto fitossanitário!');
-    return;
-  }
+  
+  if (!pId) { alert('Selecione uma Parcela!'); return; }
+  if (!date) { alert('Informe a Data da Visita!'); return; }
+  if (!documento) { alert('Informe o Documento da Visita IDIARN!'); return; }
+  if (!produtos) { alert('Selecione ou adicione pelo menos um produto fitossanitário!'); return; }
   
   const ip = (window._infoParcelas || _infoParcelas || []).find(x => x.id === pId);
   const parcelaCode = ip ? (ip.parcela2 || ip.parcela) : '';
@@ -17874,7 +18012,12 @@ async function saveNewIdiarnDashboard() {
   };
   
   try {
-    const { error } = await sb.from('caderno_campo_idiarn').insert([record]);
+    const dbRecord = { ...record };
+    delete dbRecord.synced;
+    const hasParcel = (_infoParcelas || []).some(p => p.id === dbRecord.parcel_id);
+    if (!hasParcel) dbRecord.parcel_id = null;
+
+    const { error } = await sb.from('caderno_campo_idiarn').insert([dbRecord]);
     if (error) throw error;
     
     alert('✓ Visita IDIARN registrada com sucesso!');

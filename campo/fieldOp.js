@@ -192,7 +192,9 @@ async function submitFieldOp() {
       toast('📥 Salvo offline — sincronizará quando online', 'ok');
       resetFForm();
     } else {
-      const { data: sessList, error: e1 } = await sb.from('field_services').insert([session]).select('*');
+      const dbSession = { ...session };
+      delete dbSession.synced;
+      const { data: sessList, error: e1 } = await sb.from('field_services').insert([dbSession]).select('*');
       if (e1) throw e1;
       
       const sessId = sessList[0].id;
