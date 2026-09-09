@@ -1526,22 +1526,36 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
         <input id="mipVariedadeInput" type="text" readonly placeholder="Selecionar parcela..." style="font-size:14px; background:rgba(0,0,0,0.1)">
       </div>
       <div class="form-field">
-        <label class="field-label">Praga / Alvo de Amostragem</label>
-        <select id="mipAlvoSelect" onchange="onMipAlvoChange()" style="font-size:14px">
-          <option value="MOSCA_BRANCA_ADULTO">Mosca Branca (Adulto)</option>
-          <option value="MOSCA_BRANCA_NINFA">Mosca Branca (Ninfa)</option>
-          <option value="MINADORA_LAGARTA">Minadora (Lagarta)</option>
-          <option value="TRIPS_ADULTO">Trips (Adulto)</option>
-          <option value="DIAFANIA_LAGARTA">Diafânia (Lagarta)</option>
-          <option value="OÍDIO_PRESENCA">Oídio (Presença/Ausência)</option>
+        <label class="field-label">Praga / Alvo de Amostragem (Selecione a praga para lançar os pontos)</label>
+        <div id="mipPestChipsContainer" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; margin-bottom:8px"></div>
+        <select id="mipAlvoSelect" onchange="onMipAlvoChange()" style="font-size:13px">
+          <option value="MOSCA_BRANCA_ADULTO">🪰 Mosca Branca (Adulto)</option>
+          <option value="MOSCA_BRANCA_NINFA">🐛 Mosca Branca (Ninfa)</option>
+          <option value="MINADORA_LAGARTA">🍃 Minadora (Lagarta)</option>
+          <option value="TRIPS_ADULTO">🦟 Trips (Adulto)</option>
+          <option value="DIAFANIA_LAGARTA">🐛 Diafânia / Lagarta</option>
+          <option value="OÍDIO_PRESENCA">🍄 Oídio (Presença)</option>
+          <option value="MÍLDIO_PRESENCA">🍂 Míldio (Presença)</option>
+          <option value="ÁCARO_TETRANYCHUS">🕷️ Ácaro</option>
+          <option value="PULGÃO_APHIS">🐜 Pulgão</option>
+          <option value="MOSCA_DAS_FRUTAS">🪤 Mosca das Frutas</option>
         </select>
       </div>
+    </div>
+
+    <!-- Resumo Multi-Pragas da Vistoria -->
+    <div id="mipMultiSummaryCard" style="background:rgba(234,88,12,0.08); border:1px solid rgba(234,88,12,0.3); border-radius:10px; padding:10px 14px; margin-bottom:14px; font-size:12px; font-weight:700; color:var(--orange);">
+      <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+        <i data-lucide="layers" style="width:16px;height:16px"></i>
+        <span>Pragas Lançadas nesta Vistoria:</span>
+      </div>
+      <div id="mipMultiSummaryContent" style="font-weight:600; color:var(--text); font-size:11px;">1 praga em amostragem</div>
     </div>
 
     <!-- Área de Lançamento por Pontos -->
     <div class="card" style="margin-bottom:16px; padding:16px">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
-        <div style="font-weight:700; font-size:12px; text-transform:uppercase; color:var(--muted)">Lançamento por Ponto</div>
+        <div style="font-weight:700; font-size:12px; text-transform:uppercase; color:var(--muted)">Pontos (1 a 10) — <span id="mipActivePestNameDisplay" style="color:var(--orange)">Mosca Branca</span></div>
         <div style="font-size:14px; font-weight:800; color:var(--green)">Média: <span id="mipAverageVal">0.00</span></div>
       </div>
       
@@ -1561,7 +1575,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       </div>
     </div>
 
-    <button class="btn btn-primary btn-full" id="btnSaveMip" onclick="saveMipRecord()" style="display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="check" style="width:18px;height:18px"></i> Salvar Ficha MIP</button>
+    <button class="btn btn-primary btn-full" id="btnSaveMip" onclick="saveMipRecord()" style="display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="check" style="width:18px;height:18px"></i> Salvar Vistoria MIP (Todas as Pragas)</button>
 
     <!-- Histórico de Vistorias MIP com Botão de Impressão -->
     <div class="card" style="margin-top:20px; padding:16px">
@@ -5125,20 +5139,39 @@ async function printPastaCampoIdiarn(itemStr) {
 
   function isMatchingPraga(mipPraga, defAlvo) {
     if (!mipPraga || !defAlvo) return false;
-    const clean = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    const clean = s => (s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
     const cMip = clean(mipPraga);
     const cDef = clean(defAlvo);
-    return cMip.includes(cDef) || cDef.includes(cMip);
+    if (cMip && cDef && (cMip.includes(cDef) || cDef.includes(cMip))) return true;
+
+    const tokens = s => (s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().split(/[-/,\;\+]|\bE\b|\bOU\b/).map(t => t.replace(/[^A-Z0-9]/g, '').trim()).filter(t => t.length >= 3);
+    const mipTokens = tokens(mipPraga);
+    const defTokens = tokens(defAlvo);
+
+    for (const tMip of mipTokens) {
+      for (const tDef of defTokens) {
+        if (tMip.includes(tDef) || tDef.includes(tMip)) return true;
+      }
+    }
+    return false;
   }
 
-  /**
-   * Conta quantos dos 10 pontos do MIP têm valor >= 1.
-   * Para pragas de inseto e Oídio, presença em >= 4 pontos justifica aplicação.
-   */
-  function countPositiveMipPoints(mipRecord) {
+  function countPositiveMipPoints(mipRecord, alvo) {
+    if (mipRecord && mipRecord.pragas_json && typeof mipRecord.pragas_json === 'object') {
+      let maxPositives = 0;
+      Object.keys(mipRecord.pragas_json).forEach(k => {
+        const item = mipRecord.pragas_json[k];
+        if (item && isMatchingPraga(item.name || k, alvo)) {
+          const pts = item.pontos || [];
+          const pos = pts.filter(v => parseFloat(v) > 0).length;
+          if (pos > maxPositives) maxPositives = pos;
+        }
+      });
+      if (maxPositives > 0) return maxPositives;
+    }
     let count = 0;
     for (let i = 1; i <= 10; i++) {
-      if ((mipRecord['ponto' + i] || 0) >= 1) count++;
+      if (parseFloat(mipRecord['ponto' + i] || 0) > 0) count++;
     }
     return count;
   }
@@ -5214,7 +5247,7 @@ async function printPastaCampoIdiarn(itemStr) {
     }
     
     // 3. Contar pontos positivos
-    const pontosPositivos = countPositiveMipPoints(latestMip);
+    const pontosPositivos = countPositiveMipPoints(latestMip, alvo);
     if (pontosPositivos < 4) {
       return {
         ok: false,
@@ -5317,44 +5350,125 @@ async function printPastaCampoIdiarn(itemStr) {
     }
   }
 
-  function onMipParcelChange() {
-    const pId = document.getElementById('mipParcelSelect').value;
-    const pObj = parcelas.find(x => x.id == pId);
-    const varInput = document.getElementById('mipVariedadeInput');
-    // Try to cross-reference infoParcelasData for variety/culture
-    const info = pObj ? (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code) : null;
-    if (varInput) {
-      varInput.value = info ? `${info.variedade} (${info.cultura || 'MELÃO'})` : (pObj ? pObj.code : '');
+  const PWA_MIP_PESTS = [
+    { key: 'MOSCA_BRANCA_ADULTO', name: 'Mosca Branca (Adulto)', limiar: 1.0, icon: '🪰' },
+    { key: 'MOSCA_BRANCA_NINFA',  name: 'Mosca Branca (Ninfa)',  limiar: 1.0, icon: '🐛' },
+    { key: 'MINADORA_LAGARTA',    name: 'Minadora (Lagarta)',    limiar: 0.5, icon: '🍃' },
+    { key: 'TRIPS_ADULTO',        name: 'Trips (Adulto)',        limiar: 1.0, icon: '🦟' },
+    { key: 'DIAFANIA_LAGARTA',    name: 'Diafânia / Lagarta',    limiar: 0.2, icon: '🐛' },
+    { key: 'OÍDIO_PRESENCA',      name: 'Oídio (Presença)',      limiar: 0.0, icon: '🍄' },
+    { key: 'MÍLDIO_PRESENCA',     name: 'Míldio (Presença)',     limiar: 0.0, icon: '🍂' },
+    { key: 'ÁCARO_TETRANYCHUS',   name: 'Ácaro',                 limiar: 0.5, icon: '🕷️' },
+    { key: 'PULGÃO_APHIS',        name: 'Pulgão',                limiar: 1.0, icon: '🐜' },
+    { key: 'MOSCA_DAS_FRUTAS',    name: 'Mosca das Frutas',      limiar: 0.1, icon: '🪤' }
+  ];
+
+  let mipActivePestKey = 'MOSCA_BRANCA_ADULTO';
+  let mipSessionPests = {};
+
+  function initMipSessionPests() {
+    mipSessionPests = {};
+    PWA_MIP_PESTS.forEach(p => {
+      mipSessionPests[p.key] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    });
+  }
+  initMipSessionPests();
+
+  function renderMipPestChips() {
+    const container = document.getElementById('mipPestChipsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    let activeCount = 0;
+    const activeNames = [];
+
+    PWA_MIP_PESTS.forEach(p => {
+      const points = mipSessionPests[p.key] || [0,0,0,0,0,0,0,0,0,0];
+      const sum = points.reduce((a,b) => a + b, 0);
+      const avg = sum / 10.0;
+      
+      if (sum > 0) {
+        activeCount++;
+        activeNames.push(`${p.name.split('(')[0].trim()}: ${avg.toFixed(2)}`);
+      }
+
+      const isActive = p.key === mipActivePestKey;
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = `btn ${isActive ? 'btn-primary' : 'btn-sec'}`;
+      chip.style.cssText = `font-size:11px; padding:4px 10px; border-radius:20px; font-weight:700; display:inline-flex; align-items:center; gap:4px; ${isActive ? 'background:var(--orange); border-color:var(--orange); color:white;' : ''}`;
+      
+      const badgeStyle = sum > 0 ? (avg > p.limiar ? 'background:#ef4444; color:white;' : 'background:#f59e0b; color:black;') : 'background:rgba(255,255,255,0.15); color:var(--muted);';
+      chip.innerHTML = `${p.icon} ${p.name.split('(')[0].trim()} <span style="font-size:9.5pt; padding:1px 5px; border-radius:10px; ${badgeStyle}">${avg.toFixed(2)}</span>`;
+      
+      chip.onclick = () => {
+        mipActivePestKey = p.key;
+        const select = document.getElementById('mipAlvoSelect');
+        if (select) select.value = p.key;
+        renderMipPestChips();
+        renderMipPoints();
+      };
+      container.appendChild(chip);
+    });
+
+    const summaryContent = document.getElementById('mipMultiSummaryContent');
+    if (summaryContent) {
+      if (activeCount === 0) {
+        summaryContent.textContent = 'Nenhuma praga registrada ainda. Selecione e insira os pontos acima.';
+      } else {
+        summaryContent.textContent = `${activeCount} praga(s) com ocorrência: ${activeNames.join(' | ')}`;
+      }
     }
   }
 
-  function onMipAlvoChange() {
-    const alvo = document.getElementById('mipAlvoSelect').value;
-    mipValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    mipSelPoint = 0;
-    
+  function onMipParcelChange() {
+    const pId = document.getElementById('mipParcelSelect').value;
+    const pObj = parcelas.find(x => String(x.id) === String(pId)) || (infoParcelasData || []).find(x => String(x.id) === String(pId));
+    const varInput = document.getElementById('mipVariedadeInput');
+    const info = pObj ? (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code) : null;
+    if (varInput) {
+      varInput.value = info ? `${info.variedade} (${info.cultura || 'MELÃO'})` : (pObj ? (pObj.code || pObj.parcela2) : '');
+    }
+    initMipSessionPests();
+    renderMipPestChips();
     renderMipPoints();
+  }
+
+  function onMipAlvoChange() {
+    const select = document.getElementById('mipAlvoSelect');
+    if (select) {
+      mipActivePestKey = select.value;
+      mipSelPoint = 0;
+      renderMipPestChips();
+      renderMipPoints();
+    }
   }
 
   function renderMipPoints() {
     const grid = document.getElementById('mipPointsGrid');
     if (!grid) return;
     grid.innerHTML = '';
+
+    const currentPest = PWA_MIP_PESTS.find(p => p.key === mipActivePestKey) || PWA_MIP_PESTS[0];
+    const pestNameDisplay = document.getElementById('mipActivePestNameDisplay');
+    if (pestNameDisplay) pestNameDisplay.textContent = currentPest.name;
+    
+    const points = mipSessionPests[mipActivePestKey] || [0,0,0,0,0,0,0,0,0,0];
     
     for (let i = 0; i < 10; i++) {
-      const activeClass = i === mipSelPoint ? 'border-color:var(--green); background:var(--green-dim);' : '';
+      const activeClass = i === mipSelPoint ? 'border-color:var(--orange); background:rgba(234,88,12,0.2);' : '';
       grid.insertAdjacentHTML('beforeend', `
         <button class="btn btn-sec" onclick="selectMipPoint(${i})" style="padding:4px; height:48px; font-size:11px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; ${activeClass}">
           <span style="font-size:9px;color:var(--muted)">Pt ${i+1}</span>
-          <span style="font-weight:800;font-size:13px">${mipValues[i]}</span>
+          <span style="font-weight:800;font-size:13px">${points[i]}</span>
         </button>
       `);
     }
     
     document.getElementById('mipSelPointLabel').textContent = mipSelPoint + 1;
-    document.getElementById('mipPointValLabel').textContent = mipValues[mipSelPoint];
+    document.getElementById('mipPointValLabel').textContent = points[mipSelPoint];
     
-    const avg = mipValues.reduce((a, b) => a + b, 0) / 10.0;
+    const avg = points.reduce((a, b) => a + b, 0) / 10.0;
     document.getElementById('mipAverageVal').textContent = avg.toFixed(2);
   }
 
@@ -5364,83 +5478,123 @@ async function printPastaCampoIdiarn(itemStr) {
   }
 
   function adjustMipVal(delta) {
-    const alvo = document.getElementById('mipAlvoSelect').value;
-    let val = mipValues[mipSelPoint] + delta;
+    const points = mipSessionPests[mipActivePestKey] || [0,0,0,0,0,0,0,0,0,0];
+    let val = points[mipSelPoint] + delta;
     if (val < 0) val = 0;
     
-    if (alvo.includes('PRESENCA') && val > 1) {
+    if (mipActivePestKey.includes('PRESENCA') && val > 1) {
       val = 1;
     }
     
-    mipValues[mipSelPoint] = val;
+    points[mipSelPoint] = val;
+    mipSessionPests[mipActivePestKey] = points;
     renderMipPoints();
   }
 
   async function saveMipRecord() {
     const pId = document.getElementById('mipParcelSelect').value;
-    const praga = document.getElementById('mipAlvoSelect').value;
-    
     if (!pId) {
       alert('Por favor, selecione uma parcela!');
       return;
     }
     
-    const pObj = parcelas.find(x => x.id == pId);
+    const pObj = (parcelas || []).find(x => String(x.id) === String(pId)) || (infoParcelasData || []).find(x => String(x.id) === String(pId));
+    const pSel = document.getElementById('mipParcelSelect');
+    const selectedText = pSel && pSel.selectedIndex >= 0 ? pSel.options[pSel.selectedIndex].text : '';
+    const parcelaCode = pObj ? (pObj.code || pObj.parcela2 || pObj.parcela) : (selectedText.split(' ')[0] || 'P1');
     const info = pObj ? (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code) : null;
-    const avg = mipValues.reduce((a, b) => a + b, 0) / 10.0;
-    
-    const record = {
+    const variedadeStr = info ? info.variedade : (pObj ? (pObj.variedade || pObj.code) : '');
+
+    const recordsToSave = [];
+    const pragasSummaryList = [];
+    const pragasJsonObj = {};
+    let maxOverallMedia = 0;
+
+    PWA_MIP_PESTS.forEach(p => {
+      const points = mipSessionPests[p.key] || [0,0,0,0,0,0,0,0,0,0];
+      const sum = points.reduce((a,b) => a + b, 0);
+      const avg = sum / 10.0;
+      
+      pragasJsonObj[p.key] = {
+        name: p.name,
+        limiar: p.limiar,
+        pontos: points,
+        media: parseFloat(avg.toFixed(2)),
+        acima_limiar: avg > p.limiar
+      };
+
+      if (avg > maxOverallMedia) maxOverallMedia = avg;
+
+      if (sum > 0 || p.key === mipActivePestKey) {
+        pragasSummaryList.push(`${p.name} (${avg.toFixed(2)})`);
+        recordsToSave.push({
+          tenant_id: tenantId,
+          parcel_id: pId,
+          parcela: parcelaCode,
+          variedade: variedadeStr,
+          data_vistoria: today(),
+          praga: p.name,
+          ponto1: points[0],
+          ponto2: points[1],
+          ponto3: points[2],
+          ponto4: points[3],
+          ponto5: points[4],
+          ponto6: points[5],
+          ponto7: points[6],
+          ponto8: points[7],
+          ponto9: points[8],
+          ponto10: points[9],
+          media: parseFloat(avg.toFixed(2)),
+          observacoes: 'Registrado via PWA campo (Multi-Praga)'
+        });
+      }
+    });
+
+    const summaryRecord = {
       tenant_id: tenantId,
-      parcel_id: pId,   // UUID from parcels table (correct)
-      parcela: pObj ? pObj.code : '',
-      variedade: info ? info.variedade : (pObj ? pObj.code : ''),
+      parcel_id: pId,
+      parcela: parcelaCode,
+      variedade: variedadeStr,
       data_vistoria: today(),
-      praga: praga,
-      ponto1: mipValues[0],
-      ponto2: mipValues[1],
-      ponto3: mipValues[2],
-      ponto4: mipValues[3],
-      ponto5: mipValues[4],
-      ponto6: mipValues[5],
-      ponto7: mipValues[6],
-      ponto8: mipValues[7],
-      ponto9: mipValues[8],
-      ponto10: mipValues[9],
-      media: avg,
-      observacoes: 'Registrado via PWA campo'
+      praga: `Vistoria MIP (${recordsToSave.length} pragas): ${pragasSummaryList.join(', ')}`,
+      media: parseFloat(maxOverallMedia.toFixed(2)),
+      pragas_json: pragasJsonObj,
+      observacoes: 'Vistoria MIP Completa Multi-Praga'
     };
-    
+
+    const btn = document.getElementById('btnSaveMip');
+    if (btn) { btn.disabled = true; btn.innerHTML = 'Salvando Vistoria...'; }
+
     try {
-      const hasParcel = (dbParcels || []).some(p => p.id === record.parcel_id);
-      const cleanRecord = { ...record, parcel_id: hasParcel ? record.parcel_id : null };
-      const { error } = await sb.from('caderno_campo_mip').insert(cleanRecord);
-      if (error) throw error;
+      const hasParcel = (dbParcels || parcelas || []).some(p => String(p.id) === String(pId));
+      const cleanRecord = { ...summaryRecord, parcel_id: hasParcel ? pId : null };
+      delete cleanRecord.synced;
       
-      toast('✓ Amostragem MIP salva com sucesso!', 'ok');
+      if (!isOnline) {
+        await idbAdd({ type: 'mip', data: cleanRecord });
+        await updateSyncBadge();
+        toast(`📥 Vistoria MIP salva offline (${recordsToSave.length} pragas)`, 'ok');
+      } else {
+        const { error } = await sb.from('caderno_campo_mip').insert([cleanRecord]);
+        if (error) throw error;
+        toast(`✓ Vistoria MIP salva com sucesso! (${recordsToSave.length} pragas)`, 'ok');
+      }
       
-      mipRecordsData.unshift(record);
+      mipRecordsData.unshift(summaryRecord);
       localStorage.setItem('prodtech_mip_records', JSON.stringify(mipRecordsData || []));
       renderMipHistory();
       
-      showScreen('home');
-      mipValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-      mipSelPoint = 0;
+      initMipSessionPests();
+      mipActivePestKey = 'MOSCA_BRANCA_ADULTO';
+      renderMipPestChips();
       renderMipPoints();
+      showScreen('home');
     } catch(err) {
       console.error(err);
-      
-      mipRecordsData.unshift(record);
-      localStorage.setItem('prodtech_mip_records', JSON.stringify(mipRecordsData || []));
-      renderMipHistory();
-      
-      await idbAdd({ type: 'mip', data: record });
-      await updateSyncBadge();
-      
-      toast('📥 Salvo offline — sincronizará quando online', 'ok');
-      showScreen('home');
-      mipValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-      mipSelPoint = 0;
-      renderMipPoints();
+      toast('Erro ao salvar MIP: ' + err.message, 'err');
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check" style="width:18px;height:18px"></i> Salvar Vistoria MIP (Todas as Pragas)'; }
+      if (window.lucide) lucide.createIcons();
     }
   }
 
