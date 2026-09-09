@@ -4337,23 +4337,60 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
 }
 
 function printPastaCampoMip(itemStr) {
-    const item = typeof itemStr === 'string' ? JSON.parse(decodeURIComponent(itemStr)) : itemStr;
-    const formattedDate = item.data_vistoria ? item.data_vistoria.split('-').reverse().join('/') : '—';
-    
-    const pragaFriendly = (item.praga || '').replace(/_/g, ' ').toUpperCase();
-    const mediaVal = parseFloat(item.media) || 0;
+  const item = typeof itemStr === 'string' ? JSON.parse(decodeURIComponent(itemStr)) : itemStr;
+  const formattedDate = item.data_vistoria ? item.data_vistoria.split('-').reverse().join('/') : '—';
+  
+  // Buscar todas as pragas registradas na mesma parcela e data
+  let allPestRecords = (mipRecordsData || []).filter(m => 
+    (m.parcela === item.parcela || (m.parcel_id && m.parcel_id === item.parcel_id)) && 
+    m.data_vistoria === item.data_vistoria
+  );
+  if (allPestRecords.length === 0) {
+    allPestRecords = [item];
+  }
+
+  const ip = getParcelaCompleteInfo(item.parcela, infoParcelasData);
+  const culturaStr = ip ? (ip.cultura || 'MELÃO').toUpperCase() : 'MELÃO';
+  const areaStr = ip && ip.area ? `${ip.area} ha` : '—';
+  const dataPlantioStr = ip && ip.plantio ? ip.plantio.split('-').reverse().join('/') : '—';
+
+  let hasAcimaLimiar = false;
+
+  const ptsRowsHtml = allPestRecords.map(rec => {
+    const pragaFriendly = (rec.praga || '').replace(/_/g, ' ').toUpperCase();
+    const mediaVal = parseFloat(rec.media) || 0;
     
     let limiar = 1.0;
     if (pragaFriendly.includes('LAGARTA')) limiar = 0.2;
     if (pragaFriendly.includes('OÍDIO') || pragaFriendly.includes('MÍLDIO')) limiar = 0.0;
     
-    const acimaLimiar = mediaVal > limiar;
-    const statusText = acimaLimiar ? 'RECOMENDA-SE CONTROLE' : 'SOB CONTROLE';
-    
-    const ip = getParcelaCompleteInfo(item.parcela, infoParcelasData);
-    const culturaStr = ip ? (ip.cultura || 'MELÃO').toUpperCase() : 'MELÃO';
-    const areaStr = ip && ip.area ? `${ip.area} ha` : '—';
-    const dataPlantioStr = ip && ip.plantio ? ip.plantio.split('-').reverse().join('/') : '—';
+    const acima = mediaVal > limiar;
+    if (acima) hasAcimaLimiar = true;
+
+    const statusBadge = acima 
+      ? `<span style="color:#dc2626; font-weight:bold; font-size:7.5pt">⚠️ RECOMENDA CONTROLE</span>`
+      : `<span style="color:#16a34a; font-weight:bold; font-size:7.5pt">🟢 SOB CONTROLE</span>`;
+
+    return `
+      <tr>
+        <td style="text-align:left; font-weight:bold; padding:4px 6px;">${pragaFriendly}</td>
+        <td style="text-align:center">${rec.ponto1 ?? 0}</td>
+        <td style="text-align:center">${rec.ponto2 ?? 0}</td>
+        <td style="text-align:center">${rec.ponto3 ?? 0}</td>
+        <td style="text-align:center">${rec.ponto4 ?? 0}</td>
+        <td style="text-align:center">${rec.ponto5 ?? 0}</td>
+        <td style="text-align:center">${rec.ponto6 ?? 0}</td>
+        <td style="text-align:center">${rec.ponto7 ?? 0}</td>
+        <td style="text-align:center">${rec.ponto8 ?? 0}</td>
+        <td style="text-align:center">${rec.ponto9 ?? 0}</td>
+        <td style="text-align:center">${rec.ponto10 ?? 0}</td>
+        <td style="background:#f3f4f6; text-align:center; font-weight:bold; font-size:9.5pt">${mediaVal.toFixed(2)}</td>
+        <td style="text-align:center">${statusBadge}</td>
+      </tr>
+    `;
+  }).join('');
+
+    const statusText = hasAcimaLimiar ? 'EXCEDENTE DE PRAGAS DETECTADO — RECOMENDA-SE APLICAÇÃO FITOSSANITÁRIA' : 'TODAS AS PRAGAS AVALIADAS SOB CONTROLE (DENTRO DO LIMIAR)';
 
     const printWin = window.open('', '_blank', 'width=900,height=1200');
     if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
@@ -4379,9 +4416,9 @@ function printPastaCampoMip(itemStr) {
         .grid-table th { background: #f9fafb; font-weight: bold; text-align: center; }
         .section-title { font-size: 9pt; font-weight: bold; margin: 12px 0 4px 0; padding-bottom: 2px; border-bottom: 1px solid #000; text-transform: uppercase; }
         .pts-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-        .pts-table th, .pts-table td { border: 1px solid #000; padding: 6px; text-align: center; font-size: 9pt; }
+        .pts-table th, .pts-table td { border: 1px solid #000; padding: 4px; text-align: center; font-size: 8.5pt; }
         .pts-table th { background: #f3f4f6; font-weight: bold; }
-        .status-box { border: 2px solid #000; padding: 8px; text-align: center; font-size: 10pt; font-weight: bold; margin-bottom: 12px; background: ${acimaLimiar ? '#fef2f2' : '#f0fdf4'}; color: ${acimaLimiar ? '#991b1b' : '#166534'}; }
+        .status-box { border: 2px solid #000; padding: 8px; text-align: center; font-size: 9.5pt; font-weight: bold; margin-bottom: 12px; background: ${hasAcimaLimiar ? '#fef2f2' : '#f0fdf4'}; color: ${hasAcimaLimiar ? '#991b1b' : '#166534'}; }
         .signatures-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 25px; }
         .sig-box { border: 1px solid #000; padding: 8px; font-size: 7.5pt; background: #fafafa; display: flex; flex-direction: column; justify-content: space-between; height: 90px; }
         .sig-line { margin-top: 20px; border-top: 1px dashed #000; text-align: center; padding-top: 3px; font-size: 7pt; font-weight: bold; }
@@ -4396,6 +4433,63 @@ function printPastaCampoMip(itemStr) {
             <div>
               <div style="font-size:9.5pt; font-weight:bold; color:#1b4332; text-transform:uppercase;">${(window.tenantConfig && window.tenantConfig.name || 'BOM JESUS AGRÍCOLA').toUpperCase()}</div>
               <div style="font-size:6pt; color:#444; line-height:1.2;">
+                ${window.tenantConfig && window.tenantConfig.endereco ? `${window.tenantConfig.endereco}<br/>` : ''}
+                ${window.tenantConfig && window.tenantConfig.municipio ? `${window.tenantConfig.municipio}/${window.tenantConfig.uf || 'RN'}` : ''}
+                ${window.tenantConfig && window.tenantConfig.ggn_geral ? ` | GGN: ${window.tenantConfig.ggn_geral}` : ''}
+              </div>
+            </div>
+          </div>
+          <table class="hdr-table" style="width:55%; margin-bottom:0; border:none; table-layout:fixed;">
+            <tr>
+              <td class="hdr-left" style="border-top:none; border-left:none;">ELABORADO, EMITIDO E REVISADO: EMANUELA MOREIRA</td>
+              <td class="hdr-right" style="border-top:none; border-right:none;">DEPARTAMENTO: CAMPO</td>
+            </tr>
+            <tr>
+              <td class="hdr-left" style="border-left:none;">AVALIADO POR: ADGF</td>
+              <td class="hdr-right" style="border-right:none;">DOC: MONITORAMENTO E AMOSTRAGEM MIP</td>
+            </tr>
+            <tr>
+              <td class="hdr-left" style="border-left:none; border-bottom:none;">APROVADO POR: ADGF</td>
+              <td class="hdr-right" style="border-right:none; border-bottom:none; font-size:6pt;">EMISSÃO: 15/06/2026 &nbsp;&nbsp; VERSÃO: 01 &nbsp;&nbsp; COD: PC08</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="main-title">MANEJO INTEGRADO DE PRAGAS — FICHA DE AMOSTRAGEM (MIP)</div>
+
+        <table class="grid-table">
+          <tr>
+            <td style="width:25%;"><strong>PARCELA:</strong><br/><span style="font-size:10pt; font-weight:bold">${item.parcela || '—'}</span></td>
+            <td style="width:25%;"><strong>CULTURA:</strong><br/><span style="font-size:10pt; font-weight:bold">${culturaStr}</span></td>
+            <td style="width:25%;"><strong>VARIEDADE:</strong><br/>${item.variedade || '—'}</td>
+            <td style="width:25%;"><strong>DATA VISTORIA:</strong><br/><span style="font-size:10pt; font-weight:bold">${formattedDate}</span></td>
+          </tr>
+          <tr>
+            <td><strong>ÁREA PARCELA:</strong><br/>${areaStr}</td>
+            <td><strong>DATA PLANTIO:</strong><br/>${dataPlantioStr}</td>
+            <td colspan="2"><strong>PRAGAS AVALIADAS NA VISTORIA:</strong><br/><span style="font-size:9pt; font-weight:bold">${allPestRecords.map(r => (r.praga||'').replace(/_/g,' ')).join(', ')}</span></td>
+          </tr>
+        </table>
+
+        <div class="section-title">RESULTADOS DOS 10 PONTOS DE AMOSTRAGEM NO CAMPO POR PRAGA/ALVO</div>
+        <table class="pts-table">
+          <thead>
+            <tr>
+              <th style="text-align:left; width:22%;">PRAGA / ALVO</th>
+              <th>Pt 1</th><th>Pt 2</th><th>Pt 3</th><th>Pt 4</th><th>Pt 5</th>
+              <th>Pt 6</th><th>Pt 7</th><th>Pt 8</th><th>Pt 9</th><th>Pt 10</th>
+              <th style="background:#e5e7eb; font-weight:bold; width:8%;">MÉDIA</th>
+              <th style="width:18%;">STATUS</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${ptsRowsHtml}
+          </tbody>
+        </table>
+
+        <div class="status-box">
+          AVALIAÇÃO TÉCNICA GLOBAL: ${statusText}
+        </div> style="font-size:6pt; color:#444; line-height:1.2;">
                 ${window.tenantConfig && window.tenantConfig.endereco ? `${window.tenantConfig.endereco}<br/>` : ''}
                 ${window.tenantConfig && window.tenantConfig.municipio ? `${window.tenantConfig.municipio}/${window.tenantConfig.uf || 'RN'}` : ''}
                 ${window.tenantConfig && window.tenantConfig.ggn_geral ? ` | GGN: ${window.tenantConfig.ggn_geral}` : ''}
