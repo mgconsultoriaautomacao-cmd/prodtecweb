@@ -2007,9 +2007,71 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
       </div>
     </div>
 
-    <!-- Seção 4: Laudo -->
+    <!-- Seção 4: Coleta de Armadilhas (Mosca-das-Frutas / MFT) -->
     <div class="card" style="padding:16px; margin-bottom:12px;">
-      <div style="font-size:12px; font-weight:700; color:var(--orange); text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:10px">4. Laudo (Opcional)</div>
+      <div style="font-size:12px; font-weight:700; color:var(--orange); text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:10px; display:flex; align-items:center; gap:6px">
+        <i data-lucide="disc" style="width:14px;height:14px"></i> 🪤 Monitoramento de Armadilhas (Mosca-das-Frutas)
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px">
+        <div class="form-field">
+          <label class="field-label">Cód. Armadilha *</label>
+          <input id="idiarnArmadilhaCod" type="text" value="ARM-01" placeholder="Ex: ARM-01" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Data Coleta Atual *</label>
+          <input id="idiarnDataAtual" type="date" onchange="calcPwaIdiarnMad()" style="font-size:13px">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px">
+        <div class="form-field">
+          <label class="field-label">Data Instalação</label>
+          <input id="idiarnDataInstalacao" type="date" style="font-size:13px">
+        </div>
+        <div class="form-field">
+          <label class="field-label">Coleta Anterior</label>
+          <input id="idiarnDataAnterior" type="date" onchange="calcPwaIdiarnMad()" style="font-size:13px">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px; margin-bottom:8px">
+        <div class="form-field">
+          <label class="field-label" style="font-size:10px">A. grandis</label>
+          <input id="idiarnCapturasGrandis" type="number" min="0" value="0" oninput="calcPwaIdiarnMad()" style="font-size:13px;padding:4px">
+        </div>
+        <div class="form-field">
+          <label class="field-label" style="font-size:10px">A. spp</label>
+          <input id="idiarnCapturasSpp" type="number" min="0" value="0" oninput="calcPwaIdiarnMad()" style="font-size:13px;padding:4px">
+        </div>
+        <div class="form-field">
+          <label class="field-label" style="font-size:10px">Fêmeas</label>
+          <input id="idiarnFemeas" type="number" min="0" value="0" style="font-size:13px;padding:4px">
+        </div>
+        <div class="form-field">
+          <label class="field-label" style="font-size:10px">Machos</label>
+          <input id="idiarnMachos" type="number" min="0" value="0" style="font-size:13px;padding:4px">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:4px">
+        <div class="form-field">
+          <label class="field-label">Índice MAD (calculado)</label>
+          <input id="idiarnMadGrandis" type="number" step="0.0001" value="0.0000" style="font-size:12px;font-weight:700" readonly>
+        </div>
+        <div class="form-field">
+          <label class="field-label">Status Fitossanitário</label>
+          <select id="idiarnArmadilhaStatus" style="font-size:12px;font-weight:700">
+            <option value="SOB_CONTROLE">🟢 SOB CONTROLE</option>
+            <option value="RECOMENDA_CONTROLE">🔴 RECOMENDA CONTROLE</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seção 5: Laudo -->
+    <div class="card" style="padding:16px; margin-bottom:12px;">
+      <div style="font-size:12px; font-weight:700; color:var(--orange); text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:10px">5. Laudo (Opcional)</div>
       <div class="form-field">
         <label class="field-label">URL do PDF do Laudo</label>
         <input id="idiarnPdfUrl" type="url" placeholder="https://..." style="font-size:13px">
@@ -3814,6 +3876,31 @@ let varieties = [];
     }
   }
 
+  function calcPwaIdiarnMad() {
+    const dtAnt = $('idiarnDataAnterior')?.value;
+    const dtAtu = $('idiarnDataAtual')?.value || $('idiarnDate')?.value || today();
+    let dias = 7;
+    if (dtAnt && dtAtu) {
+      const diff = Math.round((new Date(dtAtu) - new Date(dtAnt)) / (1000 * 60 * 60 * 24));
+      if (diff > 0) dias = diff;
+    }
+    const g = parseInt($('idiarnCapturasGrandis')?.value) || 0;
+    const s = parseInt($('idiarnCapturasSpp')?.value) || 0;
+    
+    const madG = (g / dias).toFixed(4);
+    const madS = (s / dias).toFixed(4);
+    
+    if ($('idiarnMadGrandis')) $('idiarnMadGrandis').value = madG;
+    
+    if ($('idiarnArmadilhaStatus')) {
+      if (g + s > 0 || parseFloat(madG) > 0.6 || parseFloat(madS) > 0.6) {
+        $('idiarnArmadilhaStatus').value = 'RECOMENDA_CONTROLE';
+      } else {
+        $('idiarnArmadilhaStatus').value = 'SOB_CONTROLE';
+      }
+    }
+  }
+
   async function onIdiarnParcelChange() {
     const pId = $('idiarnParcelSelect').value;
     if (!pId) {
@@ -3844,7 +3931,7 @@ let varieties = [];
     // Auto-generate document name
     autoGenerateIdiarnDoc();
 
-    // Fetch OPs and MIPs from the last 7 days for this parcel
+    // Fetch OPs, MIPs, e Armadilhas para esta parcela
     await loadIdiarnAutoProducts(pId, pObj.code);
   }
 
@@ -3963,6 +4050,28 @@ let varieties = [];
     } catch(e) {
       console.warn('Erro ao buscar MIPs para IDIARN:', e);
       if (mipSec) mipSec.style.display = 'none';
+    }
+
+    // Auto-carregar última Coleta de Armadilha para esta parcela
+    try {
+      if ($('idiarnDataAtual')) $('idiarnDataAtual').value = $('idiarnDate')?.value || today();
+      if (isOnline) {
+        const { data: trapCols } = await sb.from('caderno_campo_coletas_moscas')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .or(`parcel_id.eq.${parcelId},parcela.eq.${parcelCode}`)
+          .order('data_coleta_atual', { ascending: false })
+          .limit(1);
+        if (trapCols && trapCols[0]) {
+          const t = trapCols[0];
+          if ($('idiarnArmadilhaCod')) $('idiarnArmadilhaCod').value = t.armadilha_codigo || 'ARM-01';
+          if ($('idiarnDataInstalacao')) $('idiarnDataInstalacao').value = t.data_instalacao || '';
+          if ($('idiarnDataAnterior')) $('idiarnDataAnterior').value = t.data_coleta_atual || '';
+        }
+      }
+      calcPwaIdiarnMad();
+    } catch(e) {
+      console.warn('Erro ao carregar armadilhas para IDIARN:', e);
     }
   }
 
@@ -4136,8 +4245,29 @@ let varieties = [];
     try {
       const hasParcel = (dbParcels || []).some(p => p.id === record.parcel_id);
       if (!hasParcel) record.parcel_id = null;
+
+      const trapRecord = {
+        tenant_id: tenantId,
+        parcel_id: record.parcel_id,
+        parcela: record.parcela,
+        armadilha_codigo: $('idiarnArmadilhaCod')?.value.trim() || 'ARM-01',
+        data_instalacao: $('idiarnDataInstalacao')?.value || null,
+        data_coleta_anterior: $('idiarnDataAnterior')?.value || null,
+        data_coleta_atual: $('idiarnDataAtual')?.value || record.data_aplicacao,
+        presenca_anastrepha: (parseInt($('idiarnCapturasGrandis')?.value) || 0) + (parseInt($('idiarnCapturasSpp')?.value) || 0) > 0,
+        capturas_grandis: parseInt($('idiarnCapturasGrandis')?.value) || 0,
+        capturas_spp: parseInt($('idiarnCapturasSpp')?.value) || 0,
+        capturas_femeas: parseInt($('idiarnFemeas')?.value) || 0,
+        capturas_machos: parseInt($('idiarnMachos')?.value) || 0,
+        indice_mad_grandis: parseFloat($('idiarnMadGrandis')?.value) || 0,
+        indice_mad_spp: parseFloat($('idiarnMadGrandis')?.value) || 0,
+        status_fitossanitario: $('idiarnArmadilhaStatus')?.value || 'SOB_CONTROLE',
+        responsavel_coleta: window.currentInspector || 'Monitor de Campo'
+      };
+
       if (!isOnline) {
         await idbAdd({ type: 'idiarn', data: { ...record, synced: false } });
+        await idbAdd({ type: 'coletas_moscas', data: { ...trapRecord, synced: false } });
         await updateSyncBadge();
         toast('📥 Salvo offline — sincronizará quando online', 'ok');
         showScreen('home');
@@ -4147,7 +4277,13 @@ let varieties = [];
         const { error } = await sb.from('caderno_campo_idiarn').insert([dbRecord]);
         if (error) throw error;
         
-        toast('✓ Visita IDIARN registrada!', 'ok');
+        try {
+          await sb.from('caderno_campo_coletas_moscas').insert([trapRecord]);
+        } catch(eTrap) {
+          console.warn('Aviso: Armadilha salva apenas localmente:', eTrap);
+        }
+
+        toast('✓ Visita IDIARN registrada com sucesso!', 'ok');
         showScreen('home');
       }
     } catch(e) {
@@ -5114,6 +5250,52 @@ async function printPastaCampoIdiarn(itemStr) {
     `;
   }).join('') : `<tr><td colspan="5" style="text-align:center; padding:10px; color:#666">Nenhum monitoramento MIP registrado para esta parcela.</td></tr>`;
 
+  let coletasArmadilhas = [];
+  try {
+    if (isOnline) {
+      const { data: colData } = await sb.from('caderno_campo_coletas_moscas')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .or(`parcel_id.eq.${pId},parcela.eq.${pCode}`)
+        .order('data_coleta_atual', { ascending: false });
+      coletasArmadilhas = colData || [];
+    }
+  } catch(e) {
+    console.warn('Erro ao carregar coletas de armadilhas para IDIARN:', e);
+  }
+
+  const armadilhasRowsHtml = coletasArmadilhas.length > 0 ? coletasArmadilhas.map(c => {
+    const dtInst = c.data_instalacao ? c.data_instalacao.split('-').reverse().join('/') : '—';
+    const dtAnt = c.data_coleta_anterior ? c.data_coleta_anterior.split('-').reverse().join('/') : '—';
+    const dtAtu = c.data_coleta_atual ? c.data_coleta_atual.split('-').reverse().join('/') : '—';
+    const madG = parseFloat(c.indice_mad_grandis || 0).toFixed(4);
+    const madS = parseFloat(c.indice_mad_spp || 0).toFixed(4);
+    const statusStr = c.status_fitossanitario === 'RECOMENDA_CONTROLE' ? '🔴 RECOMENDA CONTROLE' : '🟢 SOB CONTROLE';
+    return `
+      <tr>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-weight:bold">${c.armadilha_codigo || 'ARM-01'}</td>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center">${dtInst}</td>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center">${dtAnt}</td>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center">${dtAtu}</td>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-weight:bold">${c.capturas_grandis || 0}</td>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-weight:bold">${c.capturas_spp || 0}</td>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center">${madG} / ${madS}</td>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-weight:bold; font-size:7.5pt">${statusStr}</td>
+      </tr>
+    `;
+  }).join('') : `
+    <tr>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-weight:bold">ARM-01</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">—</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">—</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">${new Date().toLocaleDateString('pt-BR')}</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-weight:bold">0</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-weight:bold">0</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">0.0000 / 0.0000</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-weight:bold; font-size:7.5pt">🟢 SOB CONTROLE</td>
+    </tr>
+  `;
+
   const printWin = window.open('', '_blank', 'width=1000,height=1200');
   if (!printWin) { alert('Por favor, permita popups no navegador.'); return; }
 
@@ -5181,7 +5363,7 @@ async function printPastaCampoIdiarn(itemStr) {
       </tbody>
     </table>
 
-    <div class="sec-title">2. MONITORAMENTO FITOSSANITÁRIO MIP & COLETA DE ARMADILHAS (PRAGAS DETECTADAS):</div>
+    <div class="sec-title">2. MONITORAMENTO FITOSSANITÁRIO MIP (PRAGAS DETECTADAS NAS AMOSTRAGENS):</div>
     <table class="grid-table">
       <thead>
         <tr>
@@ -5194,6 +5376,25 @@ async function printPastaCampoIdiarn(itemStr) {
       </thead>
       <tbody>
         ${mipsRowsHtml}
+      </tbody>
+    </table>
+
+    <div class="sec-title">3. COLETA E MONITORAMENTO DE ARMADILHAS (MOSCA-DAS-FRUTAS / MFT):</div>
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th width="12%" style="text-align:center">Cód. Armadilha</th>
+          <th width="13%" style="text-align:center">Instalação</th>
+          <th width="13%" style="text-align:center">Coleta Anterior</th>
+          <th width="13%" style="text-align:center">Coleta Atual</th>
+          <th width="12%" style="text-align:center">A. grandis</th>
+          <th width="12%" style="text-align:center">A. spp</th>
+          <th width="14%" style="text-align:center">Índice MAD (G/S)</th>
+          <th width="14%" style="text-align:center">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${armadilhasRowsHtml}
       </tbody>
     </table>
     
