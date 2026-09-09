@@ -14312,15 +14312,15 @@ async function saveNewMipDashboard() {
   const pId = $('newMipParcelSelect')?.value;
   if (!pId) { alert('Selecione a parcela!'); return; }
 
-  const ip = _infoParcelas.find(x => x.id === pId);
+  const ip = (_infoParcelas || []).find(x => String(x.id) === String(pId));
   const parcelCode = ip ? (ip.parcela2 || ip.parcela) : '';
   const dateVal = $('newMipDate')?.value || today();
   const pragueiroVal = $('newMipPragueiro')?.value?.trim() || '';
-  const tecnicoVal = $('newMipTecnico')?.value?.trim() || '';
+  const tecnicoVal = $('newMipTecnico')?.value?.trim() || (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS';
+  const obsVal = $('newMipObs')?.value?.trim() || '';
+  const hasParcel = (_infoParcelas || []).some(x => String(x.id) === String(pId));
 
-  const pragasData = {};
-  let maxMedia = 0;
-  const excedentes = [];
+  const recordsToSave = [];
 
   MIP_PESTS.forEach(p => {
     let sum = 0;
@@ -14331,43 +14331,60 @@ async function saveNewMipDashboard() {
       sum += val;
     }
     const media = sum / 10;
-    if (media > maxMedia) maxMedia = media;
-    const acima = media > p.limiar;
-    if (acima) {
-      excedentes.push(p.name.split('(')[0].trim());
-    }
 
-    pragasData[p.key] = {
-      name: p.name,
-      limiar: p.limiar,
-      pontos: pontos,
-      media: parseFloat(media.toFixed(2)),
-      acima_limiar: acima
-    };
+    if (sum > 0) {
+      recordsToSave.push({
+        tenant_id: tenantId,
+        parcel_id: hasParcel ? pId : null,
+        parcela: parcelCode,
+        variedade: ip ? (ip.variedade || '') : '',
+        data_vistoria: dateVal,
+        praga: p.name,
+        ponto1: pontos[0],
+        ponto2: pontos[1],
+        ponto3: pontos[2],
+        ponto4: pontos[3],
+        ponto5: pontos[4],
+        ponto6: pontos[5],
+        ponto7: pontos[6],
+        ponto8: pontos[7],
+        ponto9: pontos[8],
+        ponto10: pontos[9],
+        media: parseFloat(media.toFixed(2)),
+        responsavel_mip: pragueiroVal,
+        tecnico: tecnicoVal,
+        observacoes: obsVal
+      });
+    }
   });
 
-  let summaryPraga = 'Vistoria MIP Completa (Sob Controle)';
-  if (excedentes.length > 0) {
-    summaryPraga = `MIP Excedente: ${excedentes.join(', ')}`;
+  if (recordsToSave.length === 0) {
+    recordsToSave.push({
+      tenant_id: tenantId,
+      parcel_id: hasParcel ? pId : null,
+      parcela: parcelCode,
+      variedade: ip ? (ip.variedade || '') : '',
+      data_vistoria: dateVal,
+      praga: 'Vistoria MIP (Sob Controle)',
+      ponto1: 0, ponto2: 0, ponto3: 0, ponto4: 0, ponto5: 0, ponto6: 0, ponto7: 0, ponto8: 0, ponto9: 0, ponto10: 0,
+      media: 0,
+      responsavel_mip: pragueiroVal,
+      tecnico: tecnicoVal,
+      observacoes: obsVal
+    });
   }
 
-  const record = {
-    tenant_id: tenantId,
-    parcela: parcelCode,
-    variedade: ip ? (ip.variedade || '') : '',
-    data_vistoria: dateVal,
-    praga: summaryPraga,
-    media: parseFloat(maxMedia.toFixed(2)),
-    responsavel_mip: pragueiroVal,
-    tecnico: tecnicoVal || (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS',
-    pragas_json: pragasData,
-    observacoes: $('newMipObs')?.value?.trim() || ''
-  };
-
   try {
-    const { error } = await sb.from('caderno_campo_mip').insert(record);
+    const cleanRecords = recordsToSave.map(r => {
+      const item = { ...r };
+      delete item.pragas_json;
+      delete item.synced;
+      return item;
+    });
+
+    const { error } = await sb.from('caderno_campo_mip').insert(cleanRecords);
     if (error) throw error;
-    toast('✓ Vistoria MIP registrada com sucesso! 🐛', 'ok');
+    toast(`✓ Vistoria MIP registrada com sucesso! (${cleanRecords.length} praga(s)) 🐛`, 'ok');
     closeNewMipModal();
     await loadMipTable();
   } catch(e) {

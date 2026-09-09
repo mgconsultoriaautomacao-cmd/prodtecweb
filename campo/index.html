@@ -5504,32 +5504,19 @@ async function printPastaCampoIdiarn(itemStr) {
     const parcelaCode = pObj ? (pObj.code || pObj.parcela2 || pObj.parcela) : (selectedText.split(' ')[0] || 'P1');
     const info = pObj ? (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code) : null;
     const variedadeStr = info ? info.variedade : (pObj ? (pObj.variedade || pObj.code) : '');
+    const hasParcel = (dbParcels || parcelas || []).some(p => String(p.id) === String(pId));
 
     const recordsToSave = [];
-    const pragasSummaryList = [];
-    const pragasJsonObj = {};
-    let maxOverallMedia = 0;
 
     PWA_MIP_PESTS.forEach(p => {
       const points = mipSessionPests[p.key] || [0,0,0,0,0,0,0,0,0,0];
       const sum = points.reduce((a,b) => a + b, 0);
       const avg = sum / 10.0;
-      
-      pragasJsonObj[p.key] = {
-        name: p.name,
-        limiar: p.limiar,
-        pontos: points,
-        media: parseFloat(avg.toFixed(2)),
-        acima_limiar: avg > p.limiar
-      };
-
-      if (avg > maxOverallMedia) maxOverallMedia = avg;
 
       if (sum > 0 || p.key === mipActivePestKey) {
-        pragasSummaryList.push(`${p.name} (${avg.toFixed(2)})`);
         recordsToSave.push({
           tenant_id: tenantId,
-          parcel_id: pId,
+          parcel_id: hasParcel ? pId : null,
           parcela: parcelaCode,
           variedade: variedadeStr,
           data_vistoria: today(),
@@ -5545,42 +5532,40 @@ async function printPastaCampoIdiarn(itemStr) {
           ponto9: points[8],
           ponto10: points[9],
           media: parseFloat(avg.toFixed(2)),
-          observacoes: 'Registrado via PWA campo (Multi-Praga)'
+          observacoes: 'Registrado via PWA campo'
         });
       }
     });
 
-    const summaryRecord = {
-      tenant_id: tenantId,
-      parcel_id: pId,
-      parcela: parcelaCode,
-      variedade: variedadeStr,
-      data_vistoria: today(),
-      praga: `Vistoria MIP (${recordsToSave.length} pragas): ${pragasSummaryList.join(', ')}`,
-      media: parseFloat(maxOverallMedia.toFixed(2)),
-      pragas_json: pragasJsonObj,
-      observacoes: 'Vistoria MIP Completa Multi-Praga'
-    };
+    if (recordsToSave.length === 0) {
+      alert('Informe a amostragem de pelo menos uma praga!');
+      return;
+    }
 
     const btn = document.getElementById('btnSaveMip');
     if (btn) { btn.disabled = true; btn.innerHTML = 'Salvando Vistoria...'; }
 
     try {
-      const hasParcel = (dbParcels || parcelas || []).some(p => String(p.id) === String(pId));
-      const cleanRecord = { ...summaryRecord, parcel_id: hasParcel ? pId : null };
-      delete cleanRecord.synced;
-      
+      const cleanRecords = recordsToSave.map(r => {
+        const item = { ...r };
+        delete item.pragas_json;
+        delete item.synced;
+        return item;
+      });
+
       if (!isOnline) {
-        await idbAdd({ type: 'mip', data: cleanRecord });
+        for (const rec of cleanRecords) {
+          await idbAdd({ type: 'mip', data: rec });
+        }
         await updateSyncBadge();
-        toast(`📥 Vistoria MIP salva offline (${recordsToSave.length} pragas)`, 'ok');
+        toast(`📥 Vistoria MIP salva offline (${cleanRecords.length} praga(s))`, 'ok');
       } else {
-        const { error } = await sb.from('caderno_campo_mip').insert([cleanRecord]);
+        const { error } = await sb.from('caderno_campo_mip').insert(cleanRecords);
         if (error) throw error;
-        toast(`✓ Vistoria MIP salva com sucesso! (${recordsToSave.length} pragas)`, 'ok');
+        toast(`✓ Vistoria MIP salva com sucesso! (${cleanRecords.length} praga(s))`, 'ok');
       }
       
-      mipRecordsData.unshift(summaryRecord);
+      cleanRecords.forEach(rec => mipRecordsData.unshift(rec));
       localStorage.setItem('prodtech_mip_records', JSON.stringify(mipRecordsData || []));
       renderMipHistory();
       
@@ -5591,7 +5576,7 @@ async function printPastaCampoIdiarn(itemStr) {
       showScreen('home');
     } catch(err) {
       console.error(err);
-      toast('Erro ao salvar MIP: ' + err.message, 'err');
+      toast('Erro ao salvar MIP: ' + (err.message || err), 'err');
     } finally {
       if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check" style="width:18px;height:18px"></i> Salvar Vistoria MIP (Todas as Pragas)'; }
       if (window.lucide) lucide.createIcons();
@@ -7840,9 +7825,10 @@ async function pushIdiarn(record) {
 }
 
 async function pushMip(record) {
-  const hasParcel = (dbParcels || []).some(p => p.id === record.parcel_id);
+  const hasParcel = (dbParcels || parcelas || []).some(p => String(p.id) === String(record.parcel_id));
   const cleanRecord = { ...record, parcel_id: hasParcel ? record.parcel_id : null };
   delete cleanRecord.synced;
+  delete cleanRecord.pragas_json;
   const { data, error } = await sb.from('caderno_campo_mip').insert([cleanRecord]).select('*');
   if (error) throw error;
   return data;
