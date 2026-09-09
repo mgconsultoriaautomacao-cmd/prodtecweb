@@ -3132,7 +3132,7 @@
       
       <div style="margin-bottom:12px">
         <label class="flabel">Parcela *</label>
-        <select id="fertParcelaSelect" style="width:100%"></select>
+        <select id="fertParcelaSelect" onchange="calcWebFertTotals()" style="width:100%"></select>
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
         <div>
@@ -3155,12 +3155,24 @@
         </div>
       </div>
 
-      <div style="border-top:1px solid var(--border); padding-top:12px; margin-bottom:16px">
+      <div style="border-top:1px solid var(--border); padding-top:12px; margin-bottom:12px">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
           <strong style="color:#fff; font-size:14px">Nutrientes / Adubos Utilizados</strong>
           <button onclick="addFertProdRow()" class="btn btn-blue" style="font-size:11px; padding:4px 8px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="plus-circle" style="width:12px; height:12px"></i> + Insumo</button>
         </div>
         <div id="fertProdsContainer" style="display:flex; flex-direction:column; gap:8px"></div>
+      </div>
+
+      <!-- RESUMO AUTOMÁTICO DE CÁLCULOS -->
+      <div id="webFertCalcSummary" style="background:rgba(6,182,212,0.08); border:1px solid rgba(6,182,212,0.3); border-radius:10px; padding:12px; margin-bottom:16px">
+        <div style="font-size:12px; font-weight:700; color:var(--cyan); margin-bottom:6px; display:flex; align-items:center; gap:6px">
+          <i data-lucide="calculator" style="width:14px; height:14px"></i> 🧮 Cálculos Automáticos de Fertirrigação
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text); font-weight:700">
+          <span>Área da Parcela: <strong id="webFertCalcArea" style="color:var(--text)">— ha</strong></span>
+          <span>Total Insumos: <strong id="webFertCalcTotalKg" style="color:var(--green)">0.00 kg</strong></span>
+          <span>Dose Média: <strong id="webFertCalcDoseHa" style="color:var(--cyan)">0.00 kg/ha</strong></span>
+        </div>
       </div>
       
       <div style="display:flex; justify-content:flex-end; gap:10px">
@@ -16291,13 +16303,33 @@ async function openNewFertModal() {
     }
     addFertProdRow();
   }
-
+  calcWebFertTotals();
   modal.style.display = 'flex';
 }
 
 function closeNewFertModal() {
   const modal = $('newFertModal');
   if (modal) modal.style.display = 'none';
+}
+
+function calcWebFertTotals() {
+  const pCode = $('fertParcelaSelect')?.value;
+  const pObj = (_infoParcelas || []).find(p => (p.parcela2 || p.parcela) === pCode);
+  const area = pObj ? (parseFloat(pObj.area) || 0) : 0;
+
+  const rows = document.querySelectorAll('.fert-prod-row');
+  let totalKg = 0;
+  rows.forEach(r => {
+    const qtyInput = r.querySelector('.fert-row-qty');
+    const qty = parseFloat(qtyInput?.value) || 0;
+    totalKg += qty;
+  });
+
+  const doseHa = area > 0 ? (totalKg / area).toFixed(2) : totalKg.toFixed(2);
+
+  if ($('webFertCalcArea')) $('webFertCalcArea').textContent = area > 0 ? `${area.toFixed(2)} ha` : '—';
+  if ($('webFertCalcTotalKg')) $('webFertCalcTotalKg').textContent = `${totalKg.toFixed(2)} kg`;
+  if ($('webFertCalcDoseHa')) $('webFertCalcDoseHa').textContent = `${doseHa} kg/ha`;
 }
 
 function addFertProdRow() {
@@ -16314,7 +16346,7 @@ function addFertProdRow() {
         <option value="OUTRO">+ Outro Produto Manual...</option>
       </select>
       <input type="text" class="fert-row-prod-custom" placeholder="Nome do adubo" style="width:100%; font-size:12px; padding:6px; display:none" />
-      <input type="number" step="0.01" class="fert-row-qty" placeholder="Qtd" style="width:100%; font-size:12px; padding:6px" required min="0.01" />
+      <input type="number" step="0.01" class="fert-row-qty" placeholder="Qtd" oninput="calcWebFertTotals()" style="width:100%; font-size:12px; padding:6px" required min="0.01" />
       <select class="fert-row-unit" style="width:100%; font-size:12px; padding:6px">
         <option value="kg">kg</option>
         <option value="L">L</option>
@@ -16333,11 +16365,13 @@ function addFertProdRow() {
       custom.style.display = (sel.value === 'OUTRO') ? 'block' : 'none';
     });
   }
+  calcWebFertTotals();
 }
 
 function removeFertProdRow(btn) {
   const row = btn.closest('.fert-prod-row');
   if (row) row.remove();
+  calcWebFertTotals();
 }
 
 async function saveFert() {
@@ -18225,8 +18259,7 @@ async function saveNewIdiarnDashboard() {
   try {
     const dbRecord = { ...record };
     delete dbRecord.synced;
-    const hasParcel = (_infoParcelas || []).some(p => p.id === dbRecord.parcel_id);
-    if (!hasParcel) dbRecord.parcel_id = null;
+    delete dbRecord.parcel_id;
 
     const { error } = await sb.from('caderno_campo_idiarn').insert([dbRecord]);
     if (error) throw error;
