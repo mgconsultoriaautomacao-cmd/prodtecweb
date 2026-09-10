@@ -1657,7 +1657,7 @@
       } else if (currentSheetName === 'Idiarn') {
         record['IdIdiarn'] = 'OFFLINE_' + Math.random().toString(36).substr(2, 9).toUpperCase();
         if (sb) {
-          sb.from('caderno_campo_idiarn').insert([{
+          const payload = {
             tenant_id: DEFAULT_TENANT,
             numero_idiarn: parseInt(record['N° IDIARN']) || null,
             safra_ciclo: record['Ciclo/Safra'] || '2024/2025',
@@ -1669,7 +1669,17 @@
             fazenda: record['Fazenda'],
             documento: record['Documento'],
             visualizar_url: record['Visualizar'] || null
-          }]).then(({error}) => { if (error) console.warn('Erro salvando IDIARN:', error); });
+          };
+          sb.from('caderno_campo_idiarn').insert([payload]).then(({error}) => {
+            if (error && error.message && error.message.includes('safra_ciclo')) {
+              delete payload.safra_ciclo;
+              sb.from('caderno_campo_idiarn').insert([payload]).then(({error: err2}) => {
+                if (err2) console.warn('Erro salvando IDIARN:', err2);
+              });
+            } else if (error) {
+              console.warn('Erro salvando IDIARN:', error);
+            }
+          });
         }
       } else if (currentSheetName === 'Mip') {
         record['IdMip'] = 'OFFLINE_' + Math.random().toString(36).substr(2, 9).toUpperCase();

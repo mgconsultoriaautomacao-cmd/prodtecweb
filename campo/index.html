@@ -3916,18 +3916,28 @@ let varieties = [];
       return;
     }
     try {
-      const { data } = await sb.from('caderno_campo_idiarn')
+      let { data, error } = await sb.from('caderno_campo_idiarn')
         .select('numero_idiarn')
         .eq('tenant_id', tenantId)
         .eq('safra_ciclo', ciclo)
         .order('numero_idiarn', { ascending: false })
         .limit(1);
       
-      const last = data && data[0] ? data[0].numero_idiarn : 0;
+      if (error && error.message && error.message.includes('safra_ciclo')) {
+        const retry = await sb.from('caderno_campo_idiarn')
+          .select('numero_idiarn')
+          .eq('tenant_id', tenantId)
+          .order('numero_idiarn', { ascending: false })
+          .limit(1);
+        data = retry.data;
+      }
+      
+      const last = data && data[0] ? (parseInt(data[0].numero_idiarn) || 0) : 0;
       const next = (last >= 100) ? 1 : (last + 1);
       if ($('idiarnNumero')) $('idiarnNumero').value = next;
     } catch(e) {
       console.warn('Não foi possível buscar próximo número IDIARN:', e);
+      if ($('idiarnNumero')) $('idiarnNumero').value = 1;
     }
   }
 
@@ -4330,7 +4340,13 @@ let varieties = [];
         const dbRecord = { ...record };
         delete dbRecord.synced;
         delete dbRecord.parcel_id;
-        const { error } = await sb.from('caderno_campo_idiarn').insert([dbRecord]);
+        
+        let { error } = await sb.from('caderno_campo_idiarn').insert([dbRecord]);
+        if (error && error.message && error.message.includes('safra_ciclo')) {
+          delete dbRecord.safra_ciclo;
+          const retry = await sb.from('caderno_campo_idiarn').insert([dbRecord]);
+          error = retry.error;
+        }
         if (error) throw error;
         
         try {
@@ -5394,7 +5410,7 @@ async function printPastaCampoIdiarn(itemStr) {
       <tr>
         <td width="25%"><strong>EMPRESA:</strong><br/>${tenantName}</td>
         <td width="25%"><strong>FAZENDA:</strong><br/>${item.fazenda || 'SANTA HELENA'}</td>
-        <td width="25%"><strong>PARCELA / CICLO:</strong><br/>${pCode}</td>
+        <td width="25%"><strong>PARCELA / CICLO:</strong><br/>${pCode} ${item.safra_ciclo ? '(' + item.safra_ciclo + ')' : ''}</td>
         <td width="25%"><strong>ÁREA TOTAL:</strong><br/>${item.area_ha || item.area || '1.00'} ha</td>
       </tr>
       <tr>
@@ -6043,37 +6059,128 @@ async function printPastaCampoIdiarn(itemStr) {
     document.getElementById('opAddProductModal').style.display = 'none';
   }
 
+  function parseDefensivoDoseDetails(def, volCaldaLha = 500) {
+    if (!def) return { doseNum: 1.0, doseUnit: 'L/ha', isPer100L: false, isLiquid: true, doseLhaEquivalent: 1.0, displayDoseStr: '1.0 L/ha' };
+
+    const unitMedida = (def.unidade_medida || def.unidade || '').toUpperCase().trim();
+    const isLiquid = unitMedida !== 'KG';
+    const criterio = (def.criterio_dosagem || '').toUpperCase().trim(); // 'L' (100L) ou 'H' (ha)
+    
+    const doseTexto = def.dose_texto || '';
+    const doseField = def.dose || def.dosagem_recomendada;
+
+    let doseNum = 0;
+    if (doseTexto) {
+      const matches = doseTexto.match(/\d+([.,]\d+)?/g);
+      if (matches && matches.length > 0) {
+        const numbers = matches.map(m => parseFloat(m.replace(',', '.')));
+        doseNum = Math.max(...numbers);
+      }
+    }
+    if (!doseNum && doseField) {
+      doseNum = parseFloat(String(doseField).replace(',', '.')) || 0;
+    }
+    if (!doseNum) doseNum = 1.0;
+
+    const textLower = doseTexto.toLowerCase();
+    let isPer100L = criterio === 'L' || textLower.includes('/100l') || textLower.includes('100 l') || textLower.includes('100l');
+    let isMl = isLiquid && (textLower.includes('ml') || textLower.includes('mL'));
+    let isGram = !isLiquid && (textLower.includes('g/') || textLower.includes('g /') || textLower.includes('g\\') || textLower.includes('g ') || textLower.includes('gr'));
+
+    let doseUnit = 'L/ha';
+    if (isLiquid) {
+      if (isPer100L) {
+        doseUnit = isMl || doseNum < 50 ? 'mL/100L' : 'L/100L';
+      } else {
+        doseUnit = isMl || (doseNum > 10 && doseNum < 1000) ? 'mL/ha' : 'L/ha';
+      }
+    } else {
+      if (isPer100L) {
+        doseUnit = 'g/100L';
+      } else {
+        doseUnit = isGram || doseNum >= 10 ? 'g/ha' : 'kg/ha';
+      }
+    }
+
+    let doseLhaEquivalent = doseNum;
+    if (isLiquid) {
+      if (doseUnit === 'mL/100L') {
+        doseLhaEquivalent = (doseNum / 1000) * (volCaldaLha / 100);
+      } else if (doseUnit === 'L/100L') {
+        doseLhaEquivalent = doseNum * (volCaldaLha / 100);
+      } else if (doseUnit === 'mL/ha') {
+        doseLhaEquivalent = doseNum / 1000;
+      }
+    } else {
+      if (doseUnit === 'g/100L') {
+        doseLhaEquivalent = (doseNum / 1000) * (volCaldaLha / 100);
+      } else if (doseUnit === 'g/ha') {
+        doseLhaEquivalent = doseNum / 1000;
+      }
+    }
+
+    return {
+      doseNum,
+      doseUnit,
+      isPer100L,
+      isLiquid,
+      doseLhaEquivalent,
+      displayDoseStr: `${doseNum} ${doseUnit}`
+    };
+  }
+
   function calculateOpModalTotals() {
     const id = document.getElementById('opAddDefensivoSelect').value;
     const def = defensivosData.find(d => d.id === id);
-    const unitLabel = def ? (def.unidade_dose || def.unidade || 'L/ha') : 'L/ha';
     
+    const volCaldaLha = parseFloat((document.getElementById('opVolumeInput') || {}).value) || 500;
+    const parsed = parseDefensivoDoseDetails(def, volCaldaLha);
+    
+    const unitLabel = parsed.doseUnit;
     document.querySelectorAll('.opAddUnitLabel').forEach(el => el.textContent = unitLabel);
 
-    const dosagemReal = parseFloat(document.getElementById('opAddDosagemReal').value) || 0;
+    const dosagemRealVal = parseFloat(document.getElementById('opAddDosagemReal').value) || 0;
     
     const pId = (document.getElementById('opParcelSelect') || {}).value;
     const pObj = pId ? parcelas.find(x => x.id == pId) : null;
     const info = pObj ? (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code) : null;
     
     const areaHa = parseFloat(info ? info.area : (document.getElementById('opAreaInput')?.value || 1.0)) || 1.0;
-    const volCaldaLha = parseFloat((document.getElementById('opVolumeInput') || {}).value) || 500;
     
-    const totalParcela = dosagemReal * areaHa;
-    // Quantidade por tanque assumindo calda de volCaldaLha L/ha
-    const totalTanque = volCaldaLha > 0 ? (dosagemReal / volCaldaLha) * 500 : dosagemReal;
+    // Converter dosagem real informada para L/ha (ou kg/ha)
+    let doseLha = dosagemRealVal;
+    if (unitLabel === 'mL/100L') doseLha = (dosagemRealVal / 1000) * (volCaldaLha / 100);
+    else if (unitLabel === 'L/100L') doseLha = dosagemRealVal * (volCaldaLha / 100);
+    else if (unitLabel === 'g/100L') doseLha = (dosagemRealVal / 1000) * (volCaldaLha / 100);
+    else if (unitLabel === 'mL/ha') doseLha = dosagemRealVal / 1000;
+    else if (unitLabel === 'g/ha') doseLha = dosagemRealVal / 1000;
 
-    const unitBase = unitLabel.replace('/ha', '').trim();
-    document.getElementById('opAddTotalParcela').textContent = `${totalParcela.toFixed(3)} ${unitBase}`;
-    document.getElementById('opAddTotalTanque').textContent = `${totalTanque.toFixed(3)} ${unitBase} (p/ 500L de água)`;
+    const totalParcelaL = doseLha * areaHa;
+    const totalTanqueVal = parsed.isPer100L 
+      ? (dosagemRealVal * 5) 
+      : (doseLha / volCaldaLha) * 500;
+
+    let unitBase = parsed.isLiquid ? 'L' : 'kg';
+    let totalParcelaStr = `${totalParcelaL.toFixed(3)} ${unitBase}`;
+    if (parsed.isLiquid && totalParcelaL < 1.0) {
+      totalParcelaStr = `${(totalParcelaL * 1000).toFixed(1)} mL (${totalParcelaL.toFixed(3)} L)`;
+    } else if (!parsed.isLiquid && totalParcelaL < 1.0) {
+      totalParcelaStr = `${(totalParcelaL * 1000).toFixed(1)} g (${totalParcelaL.toFixed(3)} kg)`;
+    }
+
+    let unitTanque = parsed.isPer100L ? (parsed.isLiquid ? 'mL' : 'g') : unitBase;
+    let totalTanqueStr = `${totalTanqueVal.toFixed(1)} ${unitTanque} (p/ 500L de calda)`;
+
+    document.getElementById('opAddTotalParcela').textContent = totalParcelaStr;
+    document.getElementById('opAddTotalTanque').textContent = totalTanqueStr;
 
     // Checar excedente de dosagem limite
     if (def) {
-      const doseLimite = parseFloat(def.dose || def.dosagem_recomendada);
+      const doseLimite = parsed.doseNum;
       const warningBox = document.getElementById('opAddDosagemWarning');
-      if (doseLimite > 0 && dosagemReal > doseLimite) {
+      if (doseLimite > 0 && dosagemRealVal > doseLimite) {
         warningBox.style.display = 'block';
-        document.getElementById('opAddDosagemWarningMsg').textContent = `A dosagem informada (${dosagemReal} ${unitLabel}) excede a dosagem recomendada (${doseLimite} ${unitLabel}).`;
+        document.getElementById('opAddDosagemWarningMsg').textContent = `A dosagem informada (${dosagemRealVal} ${unitLabel}) excede a dosagem máxima recomendada (${doseLimite} ${unitLabel}).`;
         document.getElementById('opAddDosagemLimitVal').textContent = `${doseLimite} ${unitLabel}`;
       } else {
         warningBox.style.display = 'none';
@@ -6085,8 +6192,9 @@ async function printPastaCampoIdiarn(itemStr) {
     const id = document.getElementById('opAddDefensivoSelect').value;
     const def = defensivosData.find(d => d.id === id);
     if (!def) return;
-    const doseLimite = parseFloat(def.dose || def.dosagem_recomendada) || 1.0;
-    document.getElementById('opAddDosagemReal').value = doseLimite;
+    const volCaldaLha = parseFloat((document.getElementById('opVolumeInput') || {}).value) || 500;
+    const parsed = parseDefensivoDoseDetails(def, volCaldaLha);
+    document.getElementById('opAddDosagemReal').value = parsed.doseNum;
     calculateOpModalTotals();
     toast('✓ Dosagem ajustada para o limite legal recomendado!', 'ok');
   }
@@ -6096,10 +6204,11 @@ async function printPastaCampoIdiarn(itemStr) {
     const def = defensivosData.find(d => d.id === id);
     const infoPanel = document.getElementById('opAddDefensivoInfoPanel');
     if(def) {
-      const doseVal = def.dose || def.dosagem_recomendada || 1.0;
-      const unit = def.unidade_dose || def.unidade || 'L/ha';
-      document.getElementById('opAddDosagemLimite').value = `${doseVal} ${unit}`;
-      document.getElementById('opAddDosagemReal').value = doseVal;
+      const volCaldaLha = parseFloat((document.getElementById('opVolumeInput') || {}).value) || 500;
+      const parsed = parseDefensivoDoseDetails(def, volCaldaLha);
+
+      document.getElementById('opAddDosagemLimite').value = `${parsed.doseNum} ${parsed.doseUnit}`;
+      document.getElementById('opAddDosagemReal').value = parsed.doseNum;
       document.getElementById('opAddCarencia').value = def.carencia_dias || 0;
       if (opModalProductType === 'DEFENSIVO') {
         document.getElementById('opAddAlvo').value = def.alvo || '';
@@ -6114,7 +6223,7 @@ async function printPastaCampoIdiarn(itemStr) {
         <div style="font-weight:700;color:var(--text);margin-bottom:4px">Ficha Agronômica: ${def.produto}</div>
         <div><strong>I.A.:</strong> ${def.ingrediente_ativo || '—'} ${def.concentracao_ia ? '('+def.concentracao_ia+')' : ''}</div>
         <div><strong>Tipo:</strong> ${def.tipo || (opModalProductType === 'FOLIAR' ? 'ADUBO FOLIAR' : 'DEFENSIVO')} | <strong>Classe Tox.:</strong> ${def.classe_toxicologica || '—'} (${def.tarja || '—'})</div>
-        <div><strong>Limite Max:</strong> ${doseVal} ${unit} | <strong>Reentrada:</strong> ${def.reentrada_dias || '—'} dias</div>
+        <div><strong>Dose Recomendada:</strong> ${def.dose_texto || (parsed.doseNum + ' ' + parsed.doseUnit)} | <strong>Reentrada:</strong> ${def.reentrada_dias || '—'} dias</div>
         ${def.condicao_tesco ? `<div><strong>Tesco:</strong> ${def.condicao_tesco} (${def.medida_tesco || '—'})</div>` : ''}
         <div style="margin-top:4px;border-top:1px dashed var(--border);padding-top:4px">
           <strong>MRLs:</strong> BR: ${def.mrl_brasil || '—'} | EU: ${def.mrl_eu || '—'} | GB: ${def.mrl_gb || '—'}
@@ -6130,22 +6239,33 @@ async function printPastaCampoIdiarn(itemStr) {
     if(!id) { alert('Selecione o produto'); return; }
     
     const def = defensivosData.find(d => d.id === id);
-    const dosagemReal = parseFloat(document.getElementById('opAddDosagemReal').value) || 0;
-    const dosagemLimite = parseFloat(def.dose || def.dosagem_recomendada) || dosagemReal;
-    const unit = def.unidade_dose || def.unidade || 'L/ha';
+    const volCaldaLha = parseFloat((document.getElementById('opVolumeInput') || {}).value) || 500;
+    const parsed = parseDefensivoDoseDetails(def, volCaldaLha);
+
+    const dosagemRealVal = parseFloat(document.getElementById('opAddDosagemReal').value) || 0;
+    const dosagemLimite = parsed.doseNum || dosagemRealVal;
+    const unit = parsed.doseUnit;
     
-    if (isNaN(dosagemReal) || dosagemReal <= 0) {
+    if (isNaN(dosagemRealVal) || dosagemRealVal <= 0) {
       alert("🚫 DOSAGEM INVÁLIDA — A dosagem informada deve ser maior que zero!");
       return;
     }
     
     // Validação de Dosagem Limite
-    if (dosagemLimite > 0 && dosagemReal > dosagemLimite) {
-      alert(`🚫 DOSAGEM NÃO PERMITIDA — A dosagem real (${dosagemReal} ${unit}) é superior ao limite recomendado (${dosagemLimite} ${unit}). Use o botão de auto-correção para ajustar!`);
+    if (dosagemLimite > 0 && dosagemRealVal > dosagemLimite) {
+      alert(`🚫 DOSAGEM NÃO PERMITIDA — A dosagem real (${dosagemRealVal} ${unit}) é superior ao limite recomendado (${dosagemLimite} ${unit}). Use o botão de auto-correção para ajustar!`);
       return;
     }
+
+    // Calcular dose convertida em L/ha ou kg/ha
+    let doseLha = dosagemRealVal;
+    if (unit === 'mL/100L') doseLha = (dosagemRealVal / 1000) * (volCaldaLha / 100);
+    else if (unit === 'L/100L') doseLha = dosagemRealVal * (volCaldaLha / 100);
+    else if (unit === 'g/100L') doseLha = (dosagemRealVal / 1000) * (volCaldaLha / 100);
+    else if (unit === 'mL/ha') doseLha = dosagemRealVal / 1000;
+    else if (unit === 'g/ha') doseLha = dosagemRealVal / 1000;
     
-    const dosagemCorrigida = dosagemReal;
+    const dosagemCorrigida = doseLha;
     const isFoliar = opModalProductType === 'FOLIAR' || isFoliarProduct(def);
     const alvo = isFoliar ? 'ADUBO FOLIAR' : (document.getElementById('opAddAlvo').value || def.alvo || '');
     const carencia = parseInt(document.getElementById('opAddCarencia').value) || def.carencia_dias || 0;
@@ -6190,7 +6310,7 @@ async function printPastaCampoIdiarn(itemStr) {
       const diffTime = currentAppDate - lastAppDate;
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       if (diffDays >= 0 && diffDays < minInterval) {
-        alert(`🚫 INTERVALO MÍNIMO NÃO RESPEITADO — O produto ${def.produto} já foi aplicado nesta parcela em ${lastApp.data_aplicacao.split('-').reverse().join('/')} (${diffDays} dias atrás). O intervalo mínimo recomendado entre aplicações é de ${minInterval} dias.`);
+        alert(`🚫 INTERVALO MÍNIMO NÃO RESPEITADO — O produto ${def.produto} já foi applied nesta parcela em ${lastApp.data_aplicacao.split('-').reverse().join('/')} (${diffDays} dias atrás). O intervalo mínimo recomendado entre aplicações é de ${minInterval} dias.`);
         return;
       }
     }
@@ -6214,7 +6334,7 @@ async function printPastaCampoIdiarn(itemStr) {
       produto_id: def.id,
       produto_nome: def.produto,
       alvo: alvo,
-      dosagem_real: dosagemReal,
+      dosagem_real: dosagemRealVal,
       dosagem_corrigida: dosagemCorrigida,
       unidade: unit,
       carencia_dias: carencia,
@@ -8170,7 +8290,13 @@ async function pushIdiarn(record) {
   const cleanRecord = { ...record };
   delete cleanRecord.synced;
   delete cleanRecord.parcel_id;
-  const { data, error } = await sb.from('caderno_campo_idiarn').insert([cleanRecord]).select('*');
+  let { data, error } = await sb.from('caderno_campo_idiarn').insert([cleanRecord]).select('*');
+  if (error && error.message && error.message.includes('safra_ciclo')) {
+    delete cleanRecord.safra_ciclo;
+    const retry = await sb.from('caderno_campo_idiarn').insert([cleanRecord]).select('*');
+    data = retry.data;
+    error = retry.error;
+  }
   if (error) throw error;
   return data;
 }
