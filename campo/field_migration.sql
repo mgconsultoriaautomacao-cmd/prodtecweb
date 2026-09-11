@@ -84,3 +84,67 @@ CREATE POLICY "fce_tenant_all" ON field_carrao_employees
 -- Após executar, adicione no web dashboard (Funcionários)
 -- os colhedores de campo com Função = "COLHEDOR"
 -- ================================================================
+
+-- ================================================================
+-- 6. MÓDULO DE FERTIRRIGAÇÃO AVANÇADA
+-- ================================================================
+CREATE TABLE IF NOT EXISTS caderno_campo_fertirrigacao (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id   UUID NOT NULL,
+  parcel_id   BIGINT,
+  parcela     TEXT NOT NULL,
+  data_inicio DATE NOT NULL,
+  data_fim    DATE NOT NULL,
+  receita     TEXT,
+  protocolo   TEXT,   -- MELAO_PADRAO / MELANCIA_PADRAO / ASTURIA / GRAND_PRIX
+  dap         INTEGER,
+  vazao_base  NUMERIC, -- fator B13 / área / vazão
+  operador    TEXT,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Garantir que colunas adicionais existam se a tabela já tiver sido criada antes
+ALTER TABLE caderno_campo_fertirrigacao
+  ADD COLUMN IF NOT EXISTS protocolo   TEXT,
+  ADD COLUMN IF NOT EXISTS dap         INTEGER,
+  ADD COLUMN IF NOT EXISTS vazao_base  NUMERIC;
+
+CREATE TABLE IF NOT EXISTS caderno_campo_fertirrigacao_itens (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  fert_id      UUID NOT NULL REFERENCES caderno_campo_fertirrigacao(id) ON DELETE CASCADE,
+  tenant_id    UUID NOT NULL,
+  produto_nome TEXT NOT NULL,
+  quantidade   NUMERIC NOT NULL,
+  sugerido     NUMERIC,
+  unidade      TEXT DEFAULT 'kg',
+  created_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Garantir que coluna 'sugerido' exista se a tabela já foi criada antes
+ALTER TABLE caderno_campo_fertirrigacao_itens
+  ADD COLUMN IF NOT EXISTS sugerido NUMERIC;
+
+CREATE INDEX IF NOT EXISTS idx_cc_fert_tenant ON caderno_campo_fertirrigacao(tenant_id, data_inicio DESC);
+CREATE INDEX IF NOT EXISTS idx_cc_fert_parcel ON caderno_campo_fertirrigacao(tenant_id, parcela);
+CREATE INDEX IF NOT EXISTS idx_cc_fert_items_fert ON caderno_campo_fertirrigacao_itens(fert_id);
+
+-- RLS
+ALTER TABLE caderno_campo_fertirrigacao ENABLE ROW LEVEL SECURITY;
+ALTER TABLE caderno_campo_fertirrigacao_itens ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "cc_fert_tenant_all" ON caderno_campo_fertirrigacao;
+CREATE POLICY "cc_fert_tenant_all" ON caderno_campo_fertirrigacao
+  FOR ALL USING (
+    tenant_id IN (
+      SELECT tenant_id FROM tenant_users WHERE user_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS "cc_fert_itens_tenant_all" ON caderno_campo_fertirrigacao_itens;
+CREATE POLICY "cc_fert_itens_tenant_all" ON caderno_campo_fertirrigacao_itens
+  FOR ALL USING (
+    tenant_id IN (
+      SELECT tenant_id FROM tenant_users WHERE user_id = auth.uid()
+    )
+  );
+
