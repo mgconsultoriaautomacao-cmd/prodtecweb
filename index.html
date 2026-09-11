@@ -6936,26 +6936,30 @@ async function editFruitPrice(id, name, currentVal) {
 }
 async function loadVarieties(){
   try {
-  const {data, error}=await sb.from('varieties').select('*, fruits(name)').eq('tenant_id',tenantId).eq('active',true).order('name');
-  if(error) throw error;
-  window._varieties = data || [];
-  
-  $('varList').innerHTML = (data||[]).map(v => `
-  <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
-  <div>
-  <span style="font-weight:700;color:var(--blue);margin-right:8px">${v.track_code||'—'}</span>
-  <span>${v.name}</span>
-  <span style="color:var(--muted);font-size:11px;margin-left:8px">${v.fruits?.name ? `(${v.fruits.name})` : '(Sem Fruta)'}</span>
-  </div>
-  <div>
-  <button class="sec" style="padding:3px 8px;margin-right:4px" onclick="setTrackCode('varieties','${v.id}','${v.track_code||''}')">Code</button>
-  <button class="danger" style="padding:3px 8px" onclick="window.del_variety('${v.id}')">×</button>
-  </div>
-  </div>
-  `).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">Nenhuma variedade.</div>';
+    const {data, error}=await sb.from('varieties').select('*, fruits(name)').or(`tenant_id.eq.${tenantId},tenant_id.is.null`).eq('active',true).order('name');
+    if(error) throw error;
+    window._varieties = data || [];
+    try { localStorage.setItem('prodtech_varieties', JSON.stringify(window._varieties)); } catch(e) {}
+    
+    const varListEl = $('varList');
+    if (varListEl) {
+      varListEl.innerHTML = (data||[]).map(v => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
+      <div>
+      <span style="font-weight:700;color:var(--blue);margin-right:8px">${v.track_code||'—'}</span>
+      <span>${v.name}</span>
+      <span style="color:var(--muted);font-size:11px;margin-left:8px">${v.fruits?.name ? `(${v.fruits.name})` : '(Sem Fruta)'}</span>
+      </div>
+      <div>
+      <button class="sec" style="padding:3px 8px;margin-right:4px" onclick="setTrackCode('varieties','${v.id}','${v.track_code||''}')">Code</button>
+      <button class="danger" style="padding:3px 8px" onclick="window.del_variety('${v.id}')">×</button>
+      </div>
+      </div>
+      `).join('') || '<div style="color:var(--muted);font-size:12px;padding:8px">Nenhuma variedade.</div>';
+    }
 
-  const sel = $('linkVariety');
-  if(sel) sel.innerHTML = '<option value="">Selecione...</option>' + (data||[]).map(v=>`<option value="${v.id}">${v.name}</option>`).join('');
+    const sel = $('linkVariety');
+    if(sel) sel.innerHTML = '<option value="">Selecione...</option>' + (data||[]).map(v=>`<option value="${v.id}">${v.name}</option>`).join('');
   } catch(e) { console.error(e); }
 }
 async function loadParcels() {
@@ -12945,44 +12949,82 @@ function filterInfoParcelasTable() {
   renderInfoParcelasTable(filtered);
 }
 
+async function ensureVarietiesLoaded() {
+  if (typeof sb === 'undefined' || !sb || !tenantId) return;
+  try {
+    const { data } = await sb.from('varieties')
+      .select('id, name, active, tenant_id')
+      .or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
+      .eq('active', true)
+      .order('name');
+    if (data && data.length > 0) {
+      window._varieties = data;
+      try { localStorage.setItem('prodtech_varieties', JSON.stringify(data)); } catch(e) {}
+    }
+  } catch(e) {
+    console.warn('Erro ao carregar varieties do Supabase:', e);
+  }
+}
+
 function getRegisteredVarietiesList() {
   const defaultList = [
-  'GOLD MINE', 'GOLDEX', 'GRAND PRIX', 'JADIAL', 'ASTURIA', 'GOLDMINE', 
-  'AMARELO', 'CEBALLOS', 'ROBICON', 'DINAMARCA', 'GAUCHA', 'SANCHO', 
-  'NATAL', 'ACCLAIM', 'MCKINLEY', 'FASCINATION', 'MAGNUM', 'PELE DE SAPO', 
-  'GALIA', 'CANTALOUPE', 'CHARENTAIS', 'MELANCIA PICKET', 'MELANCIA WATERMELON', 
-  'MAMÃO FORMOSA', 'MAMÃO PAPAYA'
+    'GOLD MINE', 'GOLDEX', 'GRAND PRIX', 'JADIAL', 'ASTURIA', 'GOLDMINE', 
+    'AMARELO', 'CEBALLOS', 'ROBICON', 'DINAMARCA', 'GAUCHA', 'SANCHO', 
+    'NATAL', 'ACCLAIM', 'MCKINLEY', 'FASCINATION', 'MAGNUM', 'PELE DE SAPO', 
+    'GALIA', 'CANTALOUPE', 'CHARENTAIS', 'MELANCIA PICKET', 'MELANCIA WATERMELON', 
+    'MAMÃO FORMOSA', 'MAMÃO PAPAYA'
   ];
   
-  const set = new Set(defaultList);
+  const set = new Set(defaultList.map(v => v.trim().toUpperCase()));
+
+  // 1. Variedades cadastradas no localStorage
+  try {
+    const custom = JSON.parse(localStorage.getItem('prodtech_custom_varieties') || '[]');
+    if (Array.isArray(custom)) {
+      custom.forEach(v => {
+        if (typeof v === 'string' && v.trim()) set.add(v.trim().toUpperCase());
+        else if (v && v.name) set.add(v.name.trim().toUpperCase());
+      });
+    }
+    const cachedVars = JSON.parse(localStorage.getItem('prodtech_varieties') || '[]');
+    if (Array.isArray(cachedVars)) {
+      cachedVars.forEach(v => {
+        if (v && v.name) set.add(v.name.trim().toUpperCase());
+      });
+    }
+  } catch(e) {}
   
-  if (window._varieties && Array.isArray(window._varieties)) {
-  window._varieties.forEach(v => {
-  if (v.name) set.add(v.name.trim().toUpperCase());
+  // 2. Variedades da tabela varieties (window._varieties e window.varieties)
+  const vSources = [window._varieties, window.varieties, window._e3dVarieties];
+  vSources.forEach(arr => {
+    if (Array.isArray(arr)) {
+      arr.forEach(v => {
+        if (v && v.name) set.add(v.name.trim().toUpperCase());
+      });
+    }
   });
-  }
   
-  if (window._infoParcelas && Array.isArray(window._infoParcelas)) {
-  window._infoParcelas.forEach(ip => {
-  if (ip.variedade) {
-  ip.variedade.split(',').forEach(v => {
-  const clean = v.trim().toUpperCase();
-  if (clean) set.add(clean);
+  // 3. Variedades de plantios e ciclos de parcelas (webInfoParcelasData, _infoParcelas, infoParcelasData)
+  const pSources = [window.webInfoParcelasData, window._infoParcelas, window.infoParcelasData];
+  pSources.forEach(arr => {
+    if (Array.isArray(arr)) {
+      arr.forEach(ip => {
+        if (!ip) return;
+        for (let i = 1; i <= 10; i++) {
+          const vKey = i === 1 ? 'variedade' : `variedade${i}`;
+          const val = ip[vKey];
+          if (val) {
+            val.split(',').forEach(sub => {
+              const clean = sub.trim().toUpperCase();
+              if (clean) set.add(clean);
+            });
+          }
+        }
+      });
+    }
   });
-  }
-  if (ip.variedade2) set.add(ip.variedade2.trim().toUpperCase());
-  if (ip.variedade3) set.add(ip.variedade3.trim().toUpperCase());
-  if (ip.variedade4) set.add(ip.variedade4.trim().toUpperCase());
-  if (ip.variedade5) set.add(ip.variedade5.trim().toUpperCase());
-  if (ip.variedade6) set.add(ip.variedade6.trim().toUpperCase());
-  if (ip.variedade7) set.add(ip.variedade7.trim().toUpperCase());
-  if (ip.variedade8) set.add(ip.variedade8.trim().toUpperCase());
-  if (ip.variedade9) set.add(ip.variedade9.trim().toUpperCase());
-  if (ip.variedade10) set.add(ip.variedade10.trim().toUpperCase());
-  });
-  }
   
-  return Array.from(set).filter(Boolean).sort();
+  return Array.from(set).filter(Boolean).sort((a, b) => a.localeCompare(b));
 }
 
 function renderVarietySelectOptions(selectedVal = '') {
@@ -12992,35 +13034,79 @@ function renderVarietySelectOptions(selectedVal = '') {
   
   let foundSelected = false;
   list.forEach(v => {
-  const isSel = selUpper === v;
-  if (isSel) foundSelected = true;
-  html += `<option value="${v}" ${isSel ? 'selected' : ''}>${v}</option>`;
+    const isSel = selUpper === v;
+    if (isSel) foundSelected = true;
+    html += `<option value="${v}" ${isSel ? 'selected' : ''}>${v}</option>`;
   });
   
   if (selUpper && !foundSelected) {
-  html += `<option value="${selUpper}" selected>${selUpper}</option>`;
+    html += `<option value="${selUpper}" selected>${selUpper}</option>`;
   }
   
   html += '<option value="__OUTRA__">+ Outra / Cadastrar Nova Variedade...</option>';
   return html;
 }
 
-function handleVarietySelectChange(el) {
+async function handleVarietySelectChange(el) {
   if (el.value === '__OUTRA__') {
-  const nova = prompt('Informe o nome da nova variedade:');
-  if (nova && nova.trim()) {
-  const cleanNova = nova.trim().toUpperCase();
-  let opt = Array.from(el.options).find(o => o.value === cleanNova);
-  if (!opt) {
-  opt = document.createElement('option');
-  opt.value = cleanNova;
-  opt.textContent = cleanNova;
-  el.insertBefore(opt, el.lastElementChild);
-  }
-  el.value = cleanNova;
-  } else {
-  el.value = '';
-  }
+    const nova = prompt('Informe o nome da nova variedade:');
+    if (nova && nova.trim()) {
+      const cleanNova = nova.trim().toUpperCase();
+      
+      // 1. Salvar no localStorage de variedades customizadas
+      try {
+        const custom = JSON.parse(localStorage.getItem('prodtech_custom_varieties') || '[]');
+        if (!custom.includes(cleanNova)) {
+          custom.push(cleanNova);
+          localStorage.setItem('prodtech_custom_varieties', JSON.stringify(custom));
+        }
+      } catch(e) {}
+      
+      // 2. Adicionar ao cache em memória window._varieties
+      if (!window._varieties) window._varieties = [];
+      if (!window._varieties.some(v => (v.name || '').toUpperCase() === cleanNova)) {
+        window._varieties.push({ name: cleanNova, active: true, tenant_id: tenantId });
+      }
+      
+      // 3. Persistir de forma assíncrona no Supabase na tabela varieties
+      if (typeof sb !== 'undefined' && sb && tenantId) {
+        sb.from('varieties').insert([{
+          name: cleanNova,
+          active: true,
+          tenant_id: tenantId
+        }]).then(({ error }) => {
+          if (error && !error.message?.includes('duplicate') && !error.message?.includes('unique')) {
+            console.warn('Aviso ao salvar variedade no Supabase:', error);
+          } else {
+            loadVarieties();
+          }
+        });
+      }
+      
+      // 4. Atualizar TODOS os selects de variedade visíveis na tela para incluírem a nova variedade
+      const allVarietySelects = document.querySelectorAll('select[id^="webPlVar"], select[id="infoP_variedade"], select[id="cVariety"]');
+      allVarietySelects.forEach(sel => {
+        if (sel === el) {
+          let opt = Array.from(sel.options).find(o => o.value === cleanNova);
+          if (!opt) {
+            opt = document.createElement('option');
+            opt.value = cleanNova;
+            opt.textContent = cleanNova;
+            sel.insertBefore(opt, sel.lastElementChild);
+          }
+          sel.value = cleanNova;
+        } else {
+          const currentVal = sel.value;
+          sel.innerHTML = renderVarietySelectOptions(currentVal);
+          sel.value = currentVal;
+        }
+      });
+      
+      el.value = cleanNova;
+      if (typeof toast === 'function') toast(`Variedade "${cleanNova}" cadastrada e salva!`, 'ok');
+    } else {
+      el.value = '';
+    }
   }
 }
 
@@ -13600,6 +13686,7 @@ function calcWebAreaHectares(isManualAreaEdit = false) {
 }
 
 function openWebPlantioModal(editId) {
+  ensureVarietiesLoaded();
   const modal = $('webPlantioModal');
   const title = $('webPlantioModalTitle');
   const editIdInput = $('webPlEditId');
@@ -13896,6 +13983,32 @@ async function saveWebPlantio() {
   }
   }
   if (varsData.length === 0) return alert('Informe pelo menos 1 variedade.');
+
+  // Salvar automaticamente qualquer nova variedade na tabela varieties e no localStorage
+  for (const vd of varsData) {
+    if (vd.nome) {
+      const vUpper = vd.nome.trim().toUpperCase();
+      try {
+        const custom = JSON.parse(localStorage.getItem('prodtech_custom_varieties') || '[]');
+        if (!custom.includes(vUpper)) {
+          custom.push(vUpper);
+          localStorage.setItem('prodtech_custom_varieties', JSON.stringify(custom));
+        }
+        if (typeof sb !== 'undefined' && sb && tenantId) {
+          const already = (window._varieties || []).some(x => (x.name || '').toUpperCase() === vUpper);
+          if (!already) {
+            sb.from('varieties').insert([{
+              name: vUpper,
+              active: true,
+              tenant_id: tenantId
+            }]).then(() => {});
+            if (!window._varieties) window._varieties = [];
+            window._varieties.push({ name: vUpper, active: true, tenant_id: tenantId });
+          }
+        }
+      } catch(e) {}
+    }
+  }
 
   const plantioDate = varsData[0].data_plantio || varsData[0].semeadura;
   if (isSunday(plantioDate)) {
