@@ -3314,7 +3314,7 @@
   </div>
   </div>
 
-  <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px; margin-bottom:14px">
+  <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px; margin-bottom:10px">
   <div>
   <label class="flabel">Data Aplicação *</label>
   <input type="date" id="fertDataInicio" onchange="onWebFertDateChange(true)" required style="width:100%"/>
@@ -3330,6 +3330,21 @@
   <div>
   <label class="flabel">Operador</label>
   <input type="text" id="fertOperador" placeholder="Nome do operador" style="width:100%"/>
+  </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px">
+  <div>
+  <label class="flabel">Método de Aplicação</label>
+  <select id="fertMetodo" style="width:100%">
+    <option value="FERTIRRIGAÇÃO" selected>FERTIRRIGAÇÃO</option>
+    <option value="MECÂNICO">MECÂNICO</option>
+    <option value="MANUAL">MANUAL</option>
+  </select>
+  </div>
+  <div>
+  <label class="flabel">Equipamento Utilizado</label>
+  <input type="text" id="fertEquipamento" value="VENTURE" placeholder="Ex: VENTURE, BOMBA INJETORA" style="width:100%"/>
   </div>
   </div>
 
@@ -3442,6 +3457,20 @@
   </div>
   <input type="number" step="0.01" id="fertWebQty_SUPERSOIL" placeholder="0.00" style="width:100%"/>
   </div>
+  </div>
+
+  <!-- OUTROS FERTILIZANTES DO CATÁLOGO OFICIAL -->
+  <div style="border-top:1px dashed var(--border); padding-top:10px; margin-top:10px; margin-bottom:12px">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+      <span style="font-size:12px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:5px">
+        <i data-lucide="plus-circle" style="width:14px;height:14px;color:var(--green)"></i> Adicionar Outros Fertilizantes (Catálogo Oficial / Customizados)
+      </span>
+      <button type="button" class="btn sec" onclick="addCustomFertRow()" style="font-size:11px; padding:4px 10px; display:inline-flex; align-items:center; gap:4px">
+        <i data-lucide="plus" style="width:12px;height:12px"></i> + Adicionar Adubo
+      </button>
+    </div>
+    <div id="fertCustomRowsContainer" style="display:flex; flex-direction:column; gap:8px"></div>
+    <datalist id="fertCatalogoDatalist"></datalist>
   </div>
 
   <div>
@@ -10738,8 +10767,304 @@ function generateSingleCapaHtml(item) {
   `;
 }
 
-function printPastaCampoSementes(id) {
-  alert('Imprimir Sementes (PC03) em construção...');
+// ── IMPRESSÃO OFICIAL: IDENTIFICAÇÃO DE SEMENTES E ADUB. FUNDAÇÃO (PC03) ──
+async function printPastaCampoSementes(id) {
+  const item = _infoParcelas.find(x => x.id === id);
+  if (!item) { alert('Parcela não encontrada.'); return; }
+
+  const info = getParcelaCompleteInfo(item || id, _infoParcelas);
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'BOM JESUS AGRÍCOLA';
+  const rtNome = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS';
+  const rtCrea = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_crea) || '2100995243';
+  const certNome = (window.tenantConfig && window.tenantConfig.agronomo_certificacao) || 'Emanuela Moreira';
+  const pCode = item.parcela2 || item.parcela || '';
+  const areaHa = item.area ? parseFloat(item.area).toFixed(2) : '3.00';
+
+  const printWin = window.open('', '_blank', 'width=1000,height=1200');
+  if (!printWin) { alert('Permita popups para imprimir.'); return; }
+
+  const variedadesList = (item.variedades || [item.variedade || 'JADEAL']).filter(Boolean);
+  if (variedadesList.length === 0) variedadesList.push('JADEAL');
+
+  const sementesRowsHtml = variedadesList.map(v => `
+    <tr>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">${item.plantio ? item.plantio.split('-').reverse().join('/') : '—'}</td>
+      <td style="border:1px solid #000; padding:4px 6px; font-weight:bold">${v}</td>
+      <td style="border:1px solid #000; padding:4px 6px">${item.cultura || 'Melão'}</td>
+      <td style="border:1px solid #000; padding:4px 6px">${item.fornecedor || 'NUNHEMS / SAKATA / RIJK ZWAAN'}</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">${item.nf || item.nota_fiscal || '—'}</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">${item.lote || '—'}</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">${item.quantidade ? item.quantidade.toLocaleString('pt-BR') : '—'}</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">98%</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">95%</td>
+      <td style="border:1px solid #000; padding:4px 6px">Maxim XL (200mL/100kg)</td>
+    </tr>
+  `).join('');
+
+  const fundacaoRowsHtml = variedadesList.map(v => `
+    <tr>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">${item.plantio ? item.plantio.split('-').reverse().join('/') : '—'}</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">00001</td>
+      <td style="border:1px solid #000; padding:4px 6px; font-weight:bold">${v}</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">Antes do Plantio</td>
+      <td style="border:1px solid #000; padding:4px 6px">ADUBO 06-24-12 + MAP + BIOTURBO</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:right; font-weight:bold">500 kg/ha</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">Adubadeira 2</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">Mecânico</td>
+      <td style="border:1px solid #000; padding:4px 6px; text-align:center">ROBSON RAFAEL</td>
+    </tr>
+  `).join('');
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+  <meta charset="utf-8"/>
+  <title>PC03 — IDENTIFICAÇÃO DE SEMENTE, MUDAS, ADUB. DE FUNDAÇÃO</title>
+  <style>
+  @page { size: A4 portrait; margin: 8mm 10mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 7.5pt; color: #000; line-height: 1.25; }
+  .sheet { width: 100%; }
+  .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  .hdr-table td { border: 1px solid #000; padding: 3px 5px; font-size: 7pt; vertical-align: middle; }
+  .main-title { font-size: 9.5pt; font-weight: bold; text-align: center; padding: 4px; border: 1.5px solid #000; margin-bottom: 6px; background: #f3f4f6; text-transform: uppercase; }
+  .section-header { font-size: 8.5pt; font-weight: bold; background: #e5e7eb; padding: 3px 6px; border: 1px solid #000; margin-top: 6px; margin-bottom: 4px; text-transform: uppercase; }
+  .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 7pt; }
+  .grid-table th, .grid-table td { border: 1px solid #000; padding: 3px 4px; }
+  .grid-table th { background: #f3f4f6; font-weight: bold; text-align: center; }
+  .obs-box { border: 1px solid #000; padding: 4px 6px; font-size: 6.5pt; line-height: 1.2; margin-bottom: 6px; background: #fafafa; }
+  </style>
+  </head>
+  <body onload="window.print()">
+  <div class="sheet">
+    <table class="hdr-table">
+      <tr>
+        <td width="50%" style="font-weight:bold; font-size:7pt;">
+          ELABORADO, EMITIDO e REVISADO POR: EMANUELA MOREIRA<br/>
+          Avaliado por: ADGF &nbsp;|&nbsp; Aprovado Por: ADGF<br/>
+          Frequência: Por parcela de campo.
+        </td>
+        <td width="50%" style="font-size:7pt;">
+          <b>DEPARTAMENTO:</b> CAMPO<br/>
+          <b>NOME DO DOC:</b> IDENTIFICAÇÃO DE SEMENTE, MUDAS, ADUB. DE FUND.<br/>
+          <b>EMISSÃO:</b> 15/06/2026 &nbsp;|&nbsp; <b>MOD E APROVAÇÃO:</b> 01/07/2026 &nbsp;|&nbsp; <b>U. REVISÃO:</b> 01/07/2026<br/>
+          <b>PAG:</b> 01 DE 01 &nbsp;\\&nbsp; <b>COD:</b> PC03 &nbsp;\\&nbsp; <b>REVISÃO:</b> ANUAL &nbsp;\\&nbsp; <b>VERSÃO:</b> 01
+        </td>
+      </tr>
+    </table>
+
+    <div class="main-title">IDENTIFICAÇÃO DE SEMENTES, MUDAS E ADUBAÇÃO DE FUNDAÇÃO</div>
+
+    <table style="width:100%; border-collapse:collapse; margin-bottom:6px; font-size:7.5pt">
+      <tr>
+        <td style="border:1px solid #000; padding:3px 6px; width:25%"><b>PARCELA:</b> ${pCode}</td>
+        <td style="border:1px solid #000; padding:3px 6px; width:25%"><b>ÁREA TOTAL:</b> ${areaHa} ha</td>
+        <td style="border:1px solid #000; padding:3px 6px; width:25%"><b>CULTURA:</b> ${item.cultura || 'MELÃO'}</td>
+        <td style="border:1px solid #000; padding:3px 6px; width:25%"><b>FAZENDA:</b> ${item.fazenda || 'SANTA HELENA'}</td>
+      </tr>
+    </table>
+
+    <div class="section-header">1. IDENTIFICAÇÃO DA SEMENTE E MUDAS</div>
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th>Data Plantio</th>
+          <th>Variedade</th>
+          <th>Cultivar</th>
+          <th>Fornecedor</th>
+          <th>Nº Nota Fiscal</th>
+          <th>Nº Lote</th>
+          <th>Qnt. Sementes</th>
+          <th>Pureza %</th>
+          <th>Germinação %</th>
+          <th>Tratamento da Semente (Defensivo / Dose)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${sementesRowsHtml}
+      </tbody>
+    </table>
+
+    <div class="obs-box">
+      <b>OBS:</b> O CFO - CERTIFICADO FITOSSANITÁRIO DE ORIGEM DA SEMENTE E O DOC. QUE A SEMENTE NÃO É GENETICAMENTE MODIFICADA DEVE SER COBRADO AO FORNECEDOR, SENDO OS MESMOS ARQUIVADOS NA PASTA RESERVADA A ESSE FIM. NESTA MESMA PASTA ENCONTRAM-SE DOCUMENTOS QUE COMPROVAM A RESISTÊNCIA DE PRAGAS E DOENÇAS NAS VARIEDADES. O ENVELOPE OU RÓTULO DA EMBALAGEM DA SEMENTE DEVE SER ANEXADO NA PASTA DE CAMPO.
+    </div>
+
+    <div class="section-header">2. CONTROLE DO USO DE MATÉRIA ORGÂNICA E FERTILIZANTES NA FUNDAÇÃO</div>
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Nº Ordem</th>
+          <th>Variedade</th>
+          <th>Época de Aplicação</th>
+          <th>Nome Comercial do Adubo</th>
+          <th>Quant. / Parcela</th>
+          <th>Equipamento</th>
+          <th>Método</th>
+          <th>Operador Responsável</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${fundacaoRowsHtml}
+      </tbody>
+    </table>
+
+    <div class="obs-box">
+      <b>OBS:</b> TODO PRODUTO APLICADO NAS PARCELAS DE CAMPO DEVE SER REGISTRADO EM PLANILHAS ESPECÍFICAS E ESTAR PRESCRITO POR RESPONSÁVEL TÉCNICO CREDENCIADO.
+    </div>
+
+    <table style="width:100%; border-collapse:collapse; margin-top:15px; font-size:7pt">
+      <tr>
+        <td width="50%" style="border:1px solid #000; padding:6px; text-align:center; vertical-align:bottom; height:50px">
+          <div style="border-top:1px dashed #000; margin-top:25px; padding-top:2px;"><b>Responsável Técnico:</b> ${rtNome} (CREA: ${rtCrea})</div>
+        </td>
+        <td width="50%" style="border:1px solid #000; padding:6px; text-align:center; vertical-align:bottom; height:50px">
+          <div style="border-top:1px dashed #000; margin-top:25px; padding-top:2px;"><b>Agrônomo / Certificações:</b> ${certNome}</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+  </body>
+  </html>
+  `;
+
+  printWin.document.open();
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
+// ── IMPRESSÃO OFICIAL: ORDEM DE ADUBAÇÃO DE FUNDAÇÃO (OC01) ──
+async function printPastaCampoFundacao(id) {
+  const item = _infoParcelas.find(x => x.id === id);
+  if (!item) { alert('Parcela não encontrada.'); return; }
+
+  const info = getParcelaCompleteInfo(item || id, _infoParcelas);
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'BOM JESUS AGRÍCOLA';
+  const rtNome = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS';
+  const rtCrea = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_crea) || '2100995243';
+  const pCode = item.parcela2 || item.parcela || '';
+  const areaHa = item.area ? parseFloat(item.area).toFixed(2) : '3.00';
+  const variedadesStr = (item.variedades || [item.variedade || 'JADEAL']).filter(Boolean).join(', ');
+
+  const printWin = window.open('', '_blank', 'width=1000,height=1200');
+  if (!printWin) { alert('Permita popups para imprimir.'); return; }
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+  <meta charset="utf-8"/>
+  <title>OC01 — ORDEM DE ADUBAÇÃO DE FUNDAÇÃO</title>
+  <style>
+  @page { size: A4 portrait; margin: 8mm 10mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 8pt; color: #000; line-height: 1.3; }
+  .sheet { width: 100%; }
+  .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  .hdr-table td { border: 1px solid #000; padding: 3px 5px; font-size: 7pt; vertical-align: middle; }
+  .main-title { font-size: 10pt; font-weight: bold; text-align: center; padding: 5px; border: 1.5px solid #000; margin-bottom: 6px; background: #f3f4f6; text-transform: uppercase; }
+  .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 7.5pt; }
+  .grid-table th, .grid-table td { border: 1px solid #000; padding: 4px 6px; }
+  .grid-table th { background: #e5e7eb; font-weight: bold; text-align: center; }
+  .epi-box { border: 1.5px solid #000; padding: 6px; background: #fafafa; font-size: 7pt; margin-top: 8px; }
+  </style>
+  </head>
+  <body onload="window.print()">
+  <div class="sheet">
+    <table class="hdr-table">
+      <tr>
+        <td width="50%" style="font-weight:bold; font-size:7pt;">
+          ELABORADO, EMITIDO e REVISADO POR: EMANUELA MOREIRA<br/>
+          Avaliado por: ADGF &nbsp;|&nbsp; Aprovado Por: ADGF<br/>
+          Frequência: Por parcela de campo.
+        </td>
+        <td width="50%" style="font-size:7pt;">
+          <b>DEPARTAMENTO:</b> CAMPO<br/>
+          <b>NOME DO DOC:</b> CONTROLE DE ADUBAÇÃO DE FUNDAÇÃO<br/>
+          <b>EMISSÃO:</b> 15/06/2026 &nbsp;|&nbsp; <b>MOD E APROVAÇÃO:</b> 01/07/2026 &nbsp;|&nbsp; <b>U. REVISÃO:</b> 01/07/2026<br/>
+          <b>PAG:</b> 01 DE 01 &nbsp;\\&nbsp; <b>COD:</b> OC01 &nbsp;\\&nbsp; <b>REVISÃO:</b> ANUAL &nbsp;\\&nbsp; <b>VERSÃO:</b> 01
+        </td>
+      </tr>
+    </table>
+
+    <div class="main-title">ORDEM DE ADUBAÇÃO DE FUNDAÇÃO NA CULTURA<br/><small style="font-size:8pt; font-weight:normal">(PRODUTOS ORGÂNICOS E QUÍMICOS)</small></div>
+
+    <table class="grid-table" style="margin-bottom:8px">
+      <tr>
+        <td width="25%"><b>Nº DA ORDEM:</b> 00001</td>
+        <td width="25%"><b>PARCELA:</b> ${pCode}</td>
+        <td width="25%"><b>ÁREA (ha):</b> ${areaHa} ha</td>
+        <td width="25%"><b>ANO:</b> 2026/2027</td>
+      </tr>
+      <tr>
+        <td colspan="2"><b>EMPRESA:</b> ${tenantName}</td>
+        <td colspan="2"><b>VARIEDADES:</b> ${variedadesStr}</td>
+      </tr>
+      <tr>
+        <td><b>DATA:</b> ${item.plantio ? item.plantio.split('-').reverse().join('/') : '—'}</td>
+        <td><b>MÉTODO:</b> MECÂNICO</td>
+        <td><b>EQUIPAMENTO:</b> ADUBADEIRA</td>
+        <td><b>Nº EQUIPAMENTO:</b> 2</td>
+      </tr>
+    </table>
+
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th rowspan="2" style="width:25%">ÉPOCA DE APLICAÇÃO</th>
+          <th colspan="3">NOMES DOS ADUBOS</th>
+          <th rowspan="2" style="width:25%">OBSERVAÇÕES</th>
+        </tr>
+        <tr>
+          <th>ADUBO 06-24-12<br/><small>Quant (Kg) / ha</small></th>
+          <th>MAP<br/><small>Quant (Kg) / ha</small></th>
+          <th>BIOTURBO<br/><small>Quant (Kg) / ha</small></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="text-align:center; font-weight:bold">ANTES DO PLANTIO</td>
+          <td style="text-align:center; font-weight:bold">500 kg</td>
+          <td style="text-align:center">-</td>
+          <td style="text-align:center">-</td>
+          <td>Aplicação no sulco de plantio</td>
+        </tr>
+        <tr style="background:#f9fafb; font-weight:bold">
+          <td style="text-align:right">TOTAL:</td>
+          <td style="text-align:center">${(500 * parseFloat(areaHa)).toLocaleString('pt-BR')} kg</td>
+          <td style="text-align:center">-</td>
+          <td style="text-align:center">-</td>
+          <td>Dose total na parcela</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="epi-box">
+      <b>TERMO OBRIGATÓRIO DE EPI & SEGURANÇA:</b><br/>
+      FAZER USO DE TODOS OS EPI NECESSÁRIOS À FUNÇÃO (BOTA, ÓCULOS, MÁSCARA, PROTETOR AURICULAR, TOUCA ÁRABE). NÃO APLICAR ADUBOS/FERTILIZANTES EM RESERVA LEGAL, REMANESCENTE DE VEGETAÇÃO NATIVA OU QUEBRA-VENTO, APENAS NAS ÁREAS DISCRIMINADAS.
+    </div>
+
+    <table style="width:100%; border-collapse:collapse; margin-top:20px; font-size:7.5pt">
+      <tr>
+        <td width="50%" style="border:1px solid #000; padding:6px; vertical-align:bottom; height:55px">
+          <b>NOME DO OPERADOR:</b> ROBSON RAFAEL<br/><br/>
+          <div style="border-top:1px dashed #000; padding-top:2px; text-align:center">Assinatura do Operador</div>
+        </td>
+        <td width="50%" style="border:1px solid #000; padding:6px; vertical-align:bottom; height:55px">
+          <b>RESPONSÁVEL TÉCNICO:</b> ${rtNome} (CREA: ${rtCrea})<br/><br/>
+          <div style="border-top:1px dashed #000; padding-top:2px; text-align:center">Assinatura do Responsável Técnico</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+  </body>
+  </html>
+  `;
+
+  printWin.document.open();
+  printWin.document.write(html);
+  printWin.document.close();
 }
 
 async function printPastaCampoTratos(id) {
@@ -17085,6 +17410,58 @@ function applyWebFertSuggestion() {
   }
 }
 
+
+// ── CATÁLOGO E TABELA DE NUTRIENTES OFICIAIS DE FERTIRRIGAÇÃO (EMBRAPA / FAZENDA) ──
+const FERTILIZANTES_CATALOGO_OFICIAL = ["ACTIWAVE", "ADUBO 03-12-06", "ADUBO 06-24-12", "ADUBO 08-30-20", "ADUBO 10-10-10", "AGRO MOS", "AGRUMAX", "AJIFOL", "AJIFOL P-250", "AJIPOWER", "ALPHA X-35", "AMINO-Plus", "AMINOAGRO AD&#8314;", "AMINOAGRO MAGNÉSIO", "AMINOAGRO MOLIBDÊNIO", "AMINOAGRO OVENI", "AMINOBOR Ca", "AMINOMAX CAB", "AMINOMAX M", "AMINOMAX SUPRA", "AMIORGAN", "AQUAPHOLE", "ATON AZ", "AVE-0", "BAC SOL", "BARRIER", "BIO PIROL", "BIOACE", "BIOCONTROL", "BIONUTRI FERRO", "BIONUTRI ZINCO", "BIOTURBO", "BIOZIME TF", "BORAMIN Ca", "CAB MAX", "CAB2", "CHELAL B", "CITROPLANT", "CLORETO DE POTÁSSIO (KCL)", "COBRE - 60 LBE", "CODA BRIX", "CODA MAX", "CODA MIX", "CODAFOL 0.54.0", "CODAHUMUS 20", "CODAMIM HF", "CODAMIM MICRORADICULAR", "CODAPHOS Mg", "CODASAL PLUS", "CODASTING", "COMOL", "COMPLEXO HORTIFRUTI", "COMPOSTO ORGÂNICO", "CONTROL DPM", "COPPER CROP", "CROP SET", "CaTP", "DELFAN PLUS", "DIGEST-AID", "DMOLIDOR 20", "DRAKAR K", "ENERVIG LEG", "ENXOFRE 100", "ENXOFRE LÍQUIDO (HIGH CROP)", "ENXOFRE SUFU-M", "ENXOFRE-100 LBE", "EXTRA HUMUS", "FAINAL K", "FERT MINERAL COMPLEXO 05.30.05", "FERT MINERAL MISTO 15.30.15", "FERTAMIM CAB", "FERTAMIM EXTRA", "FERTAMIM FERRO", "FERTAMIM PLUS", "FERTAMIN CA", "FERTAMIN CAFÉ", "FERTAMIN M", "FERTIACTYL Calibor", "FERTIACTYL GZ", "FERTILEADER ALPHA", "FERTILEADER ELITE", "FETRILON COMBI", "FOSFATO NATURAL REATIVO", "FOSFATO TOTAL COBRE", "FOSFIT TOTAL + Mg", "FOSFIT TOTAL COBRE", "FRUCTOL", "FULAND", "FULVUMIN", "FYLLOTON", "GLIBOR Ca", "GLUTAMIM FLORADA", "GREEN LEAF", "GROWMASTER FERRO", "GROWMASTER MAGNÉSIO", "GROWMASTER MOLIBDÊNIO", "HIDROFERT", "HUMITEC", "IMUNE MIX", "IMUNE-Cálcio", "IMUNE-Magnésio", "IMUNE-Potássio", "IMUNE-Zinco", "INITIATE", "K BOMBAR 55", "K-30", "KAPPA V", "KSC", "KSC Adur", "KSC I", "KSC II", "KSC Mix", "LIQUI-PLEX BONDER", "LIQUI-PLEX Ca+Mg+B", "LIQUI-PLEX FAST", "LIQUI-PLEX FERT", "LIQUI-PLEX FRUIT", "LIQUI-PLEX GRAPE", "LIQUI-PLEX ROOT", "LIQUI-PLEX VEGETABLES", "LOWER 7", "MAGNUM PHOSCAL", "MAGPHOS", "MAP", "MAP 61%", "MAXFLOW Mg", "MAXFRUI", "MEGA HUMUS", "MEGAFOL", "METALOSATE COBRE", "MKP", "MULT NPK 13.02.44", "MULT PROTEK 00.56.37", "MULTICARE", "MULTIMAG", "NATUFRUIT", "NATUIVITAL 25", "NATURAMIM WSP", "NATURAMIM ZN", "NATURQUEL - B", "NATURQUEL - Ca", "NATUSAL", "NATUVITAL", "NEM OUT", "NIPHOKAM 108", "NIPOKAN", "NITRATO DE CÁLCIO", "NITRATO DE MAGNÉSIO", "NITRATO DE POTÁSSIO", "NITROFOSKA A", "NUTRI HUMUS", "NUTRIFOLHA EQUILÍBRIO", "NUTRIFOLHA REDUZINC", "NUTRIMINS FERRO", "NUTRIMINS MAGNÉSIO", "NUTRIMINS ZINCO", "NUTRIPHITE", "ORGA SOL AM-10", "PEKACID", "PERFORMEM", "PIRONIN SUPER WG", "PLANT-PROD 10.52.10", "PLANTAFOL 05.15.45", "PLANTAFOL 10.55.10", "POLY FEED 12.43.12", "PT - 01", "PT - 04", "QUELATEC", "QUIMIFOL SQL SUPER", "QUIMIORGAN K-40", "RADIMAX", "RAYNITRO", "RAYNITRO MD", "RAÍZA", "REDU MAIS", "REMIL XF", "RESTORER", "REXOLIM", "RIZAMINA", "ROT-NIM (BIO SILICA)", "RUTER AA", "S-FLOWABLE", "SOIL PLEX FERT", "SOIL SET", "SPRAY DUNGER", "SPRINT ALGA", "SULFATO DE AMÔNIA", "SULFATO DE MAGNÉSIO", "SULFATO DE POTÁSSIO", "SULFATO DE ZINCO", "SULFORMAX", "SUPRA LINK", "SWEET", "TRADEBOR", "TRINADOR", "TURBO FLOWER", "UBYFOL MS-77", "UBYFOL REDUFOL", "UBYFOL S-CAB", "UBYFOL VERDE", "URFA 44%", "URÉIA", "URÉIA SUPERFOSFATADA", "YANTRA", "ÁCIDO BÓRICO", "ÁCIDO FOSFÓRICO", "ÁCIDO NÍTRICO"];
+const FERTILIZANTES_NUTRIENTES_MAP = {"ÁCIDO BÓRICO": {"B": 17.5}, "ÁCIDO FOSFÓRICO": {"P2O5": 50.0}, "ÁCIDO NÍTRICO": {"N": 12.4}, "ACTIWAVE": {"N": 3.0, "K2O": 7.0, "SO3": 0.32, "Zn": 0.08, "Fe": 0.5}, "ADUBO 03-12-06": {"N": 3.0, "P2O5": 12.0, "K2O": 6.0}, "ADUBO 06-24-12": {"N": 6.0, "P2O5": 24.0, "K2O": 12.0}, "ADUBO 08-30-20": {"N": 8.0, "P2O5": 30.0, "K2O": 20.0}, "ADUBO 10-10-10": {"N": 10.0, "P2O5": 10.0, "K2O": 10.0}, "AGRO MOS": {"SO3": 2.75, "Zn": 2.0, "Cu": 3.0}, "AGRUMAX": {"N": 12.0, "SO3": 10.8, "Zn": 10.0, "Fe": 0.2, "Mn": 10.0, "B": 1.0, "Cu": 0.1}, "AJIFOL": {"N": 10.0, "K2O": 12.2, "Zn": 12.5, "Mn": 12.2, "B": 12.1}, "AJIFOL P-250": {"P2O5": 25.0}, "AJIPOWER": {"N": 4.0, "P2O5": 19.0}, "ALPHA X-35": {"P2O5": 12.4, "K2O": 2.4}, "AMINOAGRO AD&#8314;": {"P2O5": 7.0}, "AMINOAGRO MAGNÉSIO": {"SO3": 5.0}, "AMINOAGRO MOLIBDÊNIO": {"Mo": 15.0}, "AMINOAGRO OVENI": {}, "AMINOBOR Ca": {"B": 8.0, "Mo": 0.2}, "AMINOMAX CAB": {"CaO": 9.0, "MgO": 0.5, "B": 0.2, "Mo": 0.01, "Co": 6.0}, "AMINOMAX M": {"N": 10.0, "P2O5": 3.0, "K2O": 2.0, "MgO": 0.5, "Zn": 0.1, "Mn": 0.02, "B": 0.02, "Co": 6.0}, "AMINOMAX SUPRA": {"N": 5.0, "P2O5": 10.0, "K2O": 6.0, "CaO": 2.0, "Zn": 1.1, "Fe": 0.1, "B": 0.5, "Mo": 0.1, "Cu": 0.2, "Co": 6.0}, "AMINO-Plus": {"N": 11.0, "K2O": 1.0}, "AMIORGAN": {"N": 17.0, "K2O": 7.0, "SO3": 8.0}, "AQUAPHOLE": {"Zn": 2.0}, "ATON AZ": {"N": 10.0, "Zn": 5.0, "Fe": 0.2, "Mn": 2.5, "B": 0.1}, "AVE-0": {"N": 10.6, "P2O5": 16.4}, "BAC SOL": {"N": 5.0}, "BARRIER": {"CaO": 13.0, "Silicio": 10.0}, "BIO PIROL": {"MgO": 0.3, "SO3": 5.5, "Zn": 1.8, "Fe": 0.2, "Mn": 0.5, "B": 0.4, "Cu": 0.3}, "BIOACE": {"B": 0.04}, "BIOCONTROL": {"N": 7.6, "P2O5": 14.7, "K2O": 15.5}, "BIONUTRI FERRO": {"Fe": 8.0}, "BIONUTRI ZINCO": {"Zn": 5.0}, "BIOTURBO": {"N": 3.0, "P2O5": 12.0, "K2O": 6.0}, "BIOZIME TF": {"P2O5": 1.73, "CaO": 5.0, "Zn": 2.1, "Fe": 2.43, "Mn": 0.49, "B": 1.0, "Mo": 0.08}, "BORAMIN Ca": {"B": 0.2}, "CAB MAX": {"CaO": 2.0, "B": 8.0}, "CAB2": {"CaO": 8.0, "B": 2.0}, "CaTP": {"N": 0.3, "P2O5": 30.0}, "CHELAL B": {"B": 8.0}, "CITROPLANT": {"P2O5": 3.0}, "CLORETO DE POTÁSSIO (KCL)": {"K2O": 60.0}, "COBRE - 60 LBE": {"P2O5": 10.5, "Cu": 4.3}, "CODA BRIX": {"P2O5": 18.0}, "CODA MAX": {"N": 3.9, "P2O5": 32.0}, "CODA MIX": {"SO3": 4.6, "Zn": 0.5, "Fe": 4.0, "Mn": 2.0, "B": 0.3, "Cu": 0.12}, "CODAFOL 0.54.0": {"P2O5": 54.0}, "CODAHUMUS 20": {"N": 3.0, "AcHumico": 10.0, "AcFulvico": 10.2}, "CODAMIM HF": {"N": 3.0, "K2O": 9.5, "CaO": 3.5, "B": 0.5}, "CODAMIM MICRORADICULAR": {"SO3": 3.1, "Zn": 1.0, "Fe": 3.0, "Mn": 1.0}, "CODAPHOS Mg": {"P2O5": 40.0, "MgO": 6.0}, "CODASAL PLUS": {"N": 6.6, "CaO": 8.7}, "CODASTING": {"N": 7.2}, "COMOL": {"MgO": 0.1, "Mo": 0.5}, "COMPLEXO HORTIFRUTI": {"N": 3.0, "P2O5": 5.0, "K2O": 10.0, "Zn": 1.0, "Mn": 1.0, "B": 0.5, "Mo": 10.0, "Cu": 0.2}, "COMPOSTO ORGÂNICO": {"N": 17.0, "P2O5": 3.3, "K2O": 2.3}, "CONTROL DPM": {"N": 3.0, "P2O5": 17.0}, "COPPER CROP": {"N": 4.0, "Cu": 10.0}, "CROP SET": {"SO3": 3.62, "Fe": 2.5, "Mn": 3.0, "Cu": 1.0}, "DELFAN PLUS": {"N": 9.0}, "DIGEST-AID": {"Celulase": 6.0, "Amilase": 0.6}, "DMOLIDOR 20": {"N": 5.0, "MgO": 4.0, "B": 0.5}, "DRAKAR K": {"N": 3.0, "K2O": 31.0}, "ENERVIG LEG": {"B": 0.5, "Mo": 10.0, "Co": 0.7}, "ENXOFRE 100": {"P2O5": 11.0, "SO3": 7.1}, "ENXOFRE LÍQUIDO (HIGH CROP)": {"SO3": 68.0}, "ENXOFRE SUFU-M": {"SO3": 80.0, "Mn": 0.1}, "ENXOFRE-100 LBE": {"P2O5": 11.0, "SO3": 2.1}, "EXTRA HUMUS": {"AcHumico": 15.0, "AcFulvico": 2.0}, "FAINAL K": {"N": 3.0, "K2O": 31.0}, "FERT MINERAL COMPLEXO 05.30.05": {"N": 5.0, "P2O5": 30.0, "K2O": 5.0}, "FERT MINERAL MISTO 15.30.15": {"N": 15.0, "P2O5": 30.0, "K2O": 15.0}, "FERTAMIM CAB": {"CaO": 10.0, "SO3": 1.5, "B": 0.05, "Mo": 0.01}, "FERTAMIM EXTRA": {"N": 10.0, "P2O5": 1.0, "K2O": 1.0, "CaO": 1.0, "MgO": 0.5, "SO3": 3.0, "B": 0.5}, "FERTAMIM FERRO": {"Fe": 0.5}, "FERTAMIM PLUS": {"MgO": 2.0, "Zn": 6.0, "B": 0.5}, "FERTAMIN CA": {"CaO": 5.0, "SO3": 2.0, "B": 0.05, "Mo": 0.01}, "FERTAMIN CAFÉ": {"Zn": 6.0, "B": 0.5}, "FERTAMIN M": {"N": 10.0, "P2O5": 1.0, "K2O": 1.0, "MgO": 0.01, "SO3": 0.01, "Zn": 0.1, "Mo": 0.1}, "FERTIACTYL Calibor": {"P2O5": 3.0, "K2O": 12.0, "MgO": 2.8, "Mo": 0.2}, "FERTIACTYL GZ": {"N": 13.0, "K2O": 5.0}, "FERTILEADER ALPHA": {"N": 6.0, "P2O5": 12.0, "B": 4.2}, "FERTILEADER ELITE": {"N": 9.0, "K2O": 6.0, "CaO": 6.0, "B": 0.2}, "FETRILON COMBI": {"MgO": 9.0, "SO3": 3.0, "Zn": 1.5, "Fe": 4.0, "Mn": 4.0, "B": 0.5, "Mo": 0.01, "Cu": 1.5}, "FOSFATO NATURAL REATIVO": {"P2O5": 12.0}, "FOSFATO TOTAL COBRE": {"P2O5": 31.5, "Cu": 13.0}, "FOSFIT TOTAL + Mg": {"P2O5": 35.0, "K2O": 23.0, "MgO": 6.0}, "FOSFIT TOTAL COBRE": {"P2O5": 31.5, "Cu": 13.0}, "FRUCTOL": {"N": 5.0, "P2O5": 8.0, "K2O": 15.0, "MgO": 2.4, "Zn": 0.8, "Fe": 0.8, "Mn": 0.8, "B": 2.0, "Mo": 0.08}, "FULAND": {"K2O": 20.0, "SO3": 1.75, "Cu": 3.5}, "FULVUMIN": {"P2O5": 3.0, "Zn": 1.5}, "FYLLOTON": {"P2O5": 6.0}, "GLIBOR Ca": {"MgO": 8.6, "Mo": 3.0}, "GLUTAMIM FLORADA": {"N": 0.1, "CaO": 8.0, "Mn": 0.1, "B": 0.5}, "GREEN LEAF": {"N": 2.4, "K2O": 20.0, "Zn": 0.1, "Fe": 0.2, "B": 0.1, "Cu": 0.05}, "GROWMASTER FERRO": {"Fe": 6.0, "B": 0.2}, "GROWMASTER MAGNÉSIO": {"N": 6.0, "MgO": 6.0, "Zn": 1.0}, "GROWMASTER MOLIBDÊNIO": {"Mo": 15.0}, "HIDROFERT": {"P2O5": 5.7, "K2O": 34.0, "MgO": 7.15}, "HUMITEC": {"N": 8.0, "K2O": 4.0, "Mo": 15.0}, "IMUNE MIX": {"K2O": 31.0, "CaO": 1.0, "MgO": 2.0, "Zn": 3.0, "Mn": 1.0, "B": 1.0}, "IMUNE-Cálcio": {"P2O5": 15.0, "CaO": 4.2}, "IMUNE-Magnésio": {"P2O5": 44.0, "MgO": 6.5}, "IMUNE-Potássio": {"P2O5": 30.0, "K2O": 20.0}, "IMUNE-Zinco": {"P2O5": 44.0, "Zn": 5.0}, "INITIATE": {"Zn": 12.48}, "K BOMBAR 55": {"P2O5": 5.0, "K2O": 55.0}, "K-30": {"N": 3.0, "K2O": 30.0}, "KAPPA V": {"N": 7.0, "P2O5": 12.0, "K2O": 27.0, "Fe": 0.25, "B": 8.0}, "KSC": {"Zn": 0.1, "Fe": 0.1, "Mn": 0.02, "B": 0.1, "Mo": 0.01, "Cu": 0.05}, "KSC Adur": {"MgO": 9.0, "SO3": 11.0, "Zn": 1.5, "Fe": 2.5, "Mn": 2.0, "B": 0.5, "Mo": 0.2, "Cu": 0.5}, "KSC I": {"N": 14.0, "P2O5": 40.0, "SO3": 3.0, "Zn": 0.1, "B": 0.1}, "KSC II": {"N": 23.0, "P2O5": 5.0, "K2O": 5.0}, "KSC Mix": {"MgO": 9.0, "SO3": 11.0, "Zn": 1.5, "Fe": 2.5, "Mn": 2.0, "B": 0.5, "Mo": 0.2, "Cu": 0.5}, "LIQUI-PLEX FRUIT": {"N": 5.0, "CaO": 1.0, "SO3": 5.34, "Zn": 5.0, "Mn": 0.05, "B": 1.0, "Mo": 0.1, "Co": 6.0}, "LIQUI-PLEX BONDER": {"N": 1.0, "P2O5": 2.0, "K2O": 1.0}, "LIQUI-PLEX Ca+Mg+B": {"CaO": 6.0, "MgO": 2.0, "B": 2.0}, "LIQUI-PLEX FAST": {"N": 3.0, "K2O": 15.0}, "LIQUI-PLEX FERT": {"N": 2.0, "P2O5": 1.5, "K2O": 3.0}, "LIQUI-PLEX GRAPE": {"N": 3.0, "P2O5": 6.0, "K2O": 6.0, "CaO": 1.0, "MgO": 0.5, "Fe": 0.5, "B": 0.5, "Mo": 1.0, "Cu": 0.3}, "LIQUI-PLEX ROOT": {"N": 5.0, "K2O": 5.0, "Cu": 0.5}, "LIQUI-PLEX VEGETABLES": {"Zn": 3.0, "Mn": 8.0, "B": 1.0, "Cu": 0.5}, "LOWER 7": {"N": 15.0, "SO3": 16.0}, "MAGNUM PHOSCAL": {"N": 9.0, "P2O5": 49.0, "CaO": 10.0}, "MAGPHOS": {"P2O5": 55.0, "K2O": 19.0, "MgO": 8.0}, "MAP": {"N": 11.0, "P2O5": 50.0}, "MAP 61%": {"N": 11.0, "P2O5": 61.0}, "MAXFLOW Mg": {"MgO": 13.2}, "MAXFRUI": {"N": 3.0, "P2O5": 7.0, "MgO": 0.05, "Zn": 0.1}, "MEGA HUMUS": {"AcHumico": 10.0, "AcFulvico": 12.0}, "MEGAFOL": {"N": 11.0, "K2O": 1.0}, "METALOSATE COBRE": {"Cu": 4.0}, "MKP": {"P2O5": 52.0, "K2O": 34.0}, "MULT NPK 13.02.44": {"N": 13.0, "P2O5": 2.0, "K2O": 44.0}, "MULT PROTEK 00.56.37": {"P2O5": 56.0, "K2O": 37.0, "Mn": 30.0, "B": 26.0}, "MULTICARE": {"P2O5": 3.0, "K2O": 21.0}, "MULTIMAG": {"MgO": 9.0, "SO3": 11.0}, "NATUFRUIT": {"K2O": 25.0}, "NATUIVITAL 25": {"AcHumico": 5.0, "AcFulvico": 20.0}, "NATURAMIM WSP": {"N": 12.0}, "NATURAMIM ZN": {"Zn": 5.0}, "NATURQUEL - B": {"B": 10.5}, "NATURQUEL - Ca": {"B": 7.0}, "NATUSAL": {"CaO": 9.1, "MgO": 0.6}, "NATUVITAL": {"K2O": 7.0, "AcHumico": 5.0, "AcFulvico": 20.0}, "NEM OUT": {}, "NIPHOKAM 108": {"N": 10.0, "P2O5": 8.0, "K2O": 8.0, "CaO": 1.0, "MgO": 0.5, "SO3": 2.0, "Zn": 1.0, "Fe": 0.1, "Mn": 0.5, "B": 0.5, "Mo": 0.1, "Cu": 0.2}, "NIPOKAN": {"N": 10.0, "P2O5": 8.0, "K2O": 8.0, "CaO": 1.0, "MgO": 0.5}, "NITRATO DE CÁLCIO": {"N": 15.5, "CaO": 10.0, "MgO": 0.5}, "NITRATO DE MAGNÉSIO": {"N": 10.5, "MgO": 9.0}, "NITRATO DE POTÁSSIO": {"N": 13.0, "K2O": 44.0}, "NITROFOSKA A": {"N": 10.0, "P2O5": 4.0, "K2O": 7.0}, "NUTRI HUMUS": {"AcFulvico": 22.0}, "NUTRIFOLHA EQUILÍBRIO": {"N": 5.0, "K2O": 10.0, "Co": 6.0}, "NUTRIFOLHA REDUZINC": {"SO3": 3.0, "Zn": 4.5, "Mn": 0.5}, "NUTRIMINS FERRO": {"Fe": 4.0}, "NUTRIMINS MAGNÉSIO": {"MgO": 7.0}, "NUTRIMINS ZINCO": {"Zn": 7.0}, "NUTRIPHITE": {"P2O5": 28.0, "K2O": 26.0, "Zn": 6.0, "Mn": 2.0, "Mo": 50.0}, "ORGA SOL AM-10": {"N": 3.0}, "PEKACID": {"P2O5": 60.0, "K2O": 20.0}, "PERFORMEM": {"Zn": 4.0, "Mn": 1.0}, "PIRONIN SUPER WG": {"N": 2.0, "Zn": 2.0}, "PLANTAFOL 05.15.45": {"N": 5.0, "P2O5": 15.0, "K2O": 45.0, "B": 0.04}, "PLANTAFOL 10.55.10": {"N": 10.0, "P2O5": 55.0, "K2O": 10.0}, "PLANT-PROD 10.52.10": {"N": 10.0, "P2O5": 52.0, "K2O": 10.0, "Zn": 0.1, "Fe": 0.1, "Mn": 0.1, "B": 0.2, "Mo": 0.02, "Cu": 0.05}, "POLY FEED 12.43.12": {"N": 12.0, "P2O5": 43.0, "K2O": 12.0}, "PT - 01": {"N": 1.6, "P2O5": 16.4, "Zn": 22.0}, "PT - 04": {"N": 1.8, "P2O5": 18.3, "K2O": 0.76, "Zn": 22.0}, "QUELATEC": {"Zn": 0.7, "Fe": 7.5, "Mn": 3.5, "Cu": 0.28}, "QUIMIFOL SQL SUPER": {"MgO": 5.0, "SO3": 10.0, "Zn": 10.0, "Fe": 0.5, "Mn": 3.0, "B": 3.0, "Mo": 1.0, "Cu": 2.0}, "QUIMIORGAN K-40": {"N": 10.0, "K2O": 42.0}, "RADIMAX": {"N": 4.0, "P2O5": 8.0, "K2O": 4.0, "Zn": 0.2}, "RAÍZA": {"N": 12.0}, "RAYNITRO": {"Mo": 6.0, "Co": 0.5}, "RAYNITRO MD": {"CaO": 10.0, "B": 5.0}, "REDU MAIS": {"P2O5": 7.0}, "REMIL XF": {}, "RESTORER": {"N": 5.0, "K2O": 5.0, "Zn": 0.1, "Fe": 0.05, "Mn": 0.01, "B": 0.5, "Cu": 0.01}, "REXOLIM": {"K2O": 12.0, "MgO": 1.2, "SO3": 1.5, "Zn": 4.2, "Fe": 3.4, "Mn": 3.2, "B": 1.5, "Mo": 0.05, "Cu": 0.5}, "RIZAMINA": {"N": 13.0, "P2O5": 8.0, "K2O": 21.0, "MgO": 2.0, "SO3": 5.5, "Zn": 0.1, "Fe": 0.2, "B": 0.03, "Cu": 0.05}, "ROT-NIM (BIO SILICA)": {"N": 1.0, "CaO": 8.0}, "RUTER AA": {"N": 5.0, "P2O5": 5.0, "K2O": 3.0, "Zn": 0.07, "Mn": 0.5, "Mo": 1.0, "Cu": 2.0}, "S-FLOWABLE": {"SO3": 55.0, "Zn": 0.7, "Mn": 0.3}, "SOIL PLEX FERT": {"N": 2.0, "P2O5": 1.5, "K2O": 3.0}, "SOIL SET": {"SO3": 3.75, "Zn": 3.2, "Fe": 1.6, "Mn": 0.8, "Cu": 2.0}, "SPRAY DUNGER": {"P2O5": 5.0, "K2O": 10.0, "CaO": 20.0, "MgO": 1.24, "SO3": 1.5, "Zn": 4.8, "Mn": 0.1}, "SPRINT ALGA": {"P2O5": 5.0}, "SULFATO DE AMÔNIA": {"N": 20.0, "SO3": 22.0}, "SULFATO DE MAGNÉSIO": {"MgO": 9.0, "SO3": 12.0}, "SULFATO DE POTÁSSIO": {"K2O": 50.0}, "SULFATO DE ZINCO": {"SO3": 16.0, "Zn": 20.0}, "SULFORMAX": {"Zn": 50.0}, "SUPRA LINK": {"SO3": 2.1, "Fe": 1.0, "Mn": 3.1}, "SWEET": {"CaO": 10.0, "MgO": 2.0, "SO3": 3.0, "Zn": 0.01, "B": 0.1, "Co": 0.12}, "TRADEBOR": {"B": 10.0}, "TRINADOR": {"SO3": 6.0, "Zn": 10.0, "Mn": 1.0, "B": 3.0, "Mo": 0.5}, "TURBO FLOWER": {"N": 4.8, "P2O5": 11.9, "K2O": 0.2}, "UBYFOL MS-77": {"MgO": 2.0, "Zn": 13.0, "Fe": 1.0, "Mn": 1.0, "B": 4.5, "Mo": 0.1, "Cu": 0.2, "Co": 0.1}, "UBYFOL REDUFOL": {"N": 6.0, "P2O5": 30.0, "Zn": 2.5}, "UBYFOL S-CAB": {"CaO": 20.0, "B": 3.0}, "UBYFOL VERDE": {"N": 15.0, "P2O5": 15.0, "K2O": 20.0, "CaO": 1.5, "MgO": 0.05, "SO3": 3.0, "Zn": 0.2, "Fe": 0.1, "Mn": 0.02, "B": 0.05, "Mo": 0.01, "Cu": 0.05}, "URÉIA": {"N": 45.0}, "URÉIA SUPERFOSFATADA": {"N": 17.0, "P2O5": 44.0}, "URFA 44%": {"N": 17.0, "P2O5": 44.0}, "YANTRA": {"P2O5": 33.6, "K2O": 29.0}};
+
+function populateFertCatalogoDatalist() {
+  const dl = document.getElementById('fertCatalogoDatalist');
+  if (!dl) return;
+  dl.innerHTML = FERTILIZANTES_CATALOGO_OFICIAL.map(f => `<option value="${f}"></option>`).join('');
+}
+
+let _customFertCounter = 0;
+function addCustomFertRow(prodName = '', qtyVal = '', unitVal = 'kg') {
+  _customFertCounter++;
+  const container = document.getElementById('fertCustomRowsContainer');
+  if (!container) return;
+
+  const rowId = `customFertRow_${_customFertCounter}`;
+  const row = document.createElement('div');
+  row.id = rowId;
+  row.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr 1fr 32px; gap:8px; align-items:center; background:rgba(255,255,255,0.03); padding:6px 8px; border-radius:6px; border:1px solid var(--border);';
+  row.innerHTML = `
+    <div>
+      <input type="text" list="fertCatalogoDatalist" class="custom-fert-name" value="${prodName}" placeholder="Nome do Adubo / Fertilizante" style="width:100%; font-size:12px"/>
+    </div>
+    <div>
+      <input type="number" step="0.01" class="custom-fert-qty" value="${qtyVal}" placeholder="Dose / Qtd" style="width:100%; font-size:12px; font-weight:700"/>
+    </div>
+    <div>
+      <select class="custom-fert-unit" style="width:100%; font-size:12px">
+        <option value="kg" ${unitVal === 'kg' ? 'selected' : ''}>kg</option>
+        <option value="L" ${unitVal === 'L' ? 'selected' : ''}>L</option>
+        <option value="g" ${unitVal === 'g' ? 'selected' : ''}>g</option>
+        <option value="mL" ${unitVal === 'mL' ? 'selected' : ''}>mL</option>
+      </select>
+    </div>
+    <div style="text-align:center">
+      <button type="button" onclick="document.getElementById('${rowId}').remove()" class="btn sec" style="padding:4px 6px; color:var(--red); border-color:rgba(239,68,68,0.3)" title="Remover">
+        <i data-lucide="x" style="width:14px;height:14px"></i>
+      </button>
+    </div>
+  `;
+  container.appendChild(row);
+  if (window.lucide) lucide.createIcons();
+}
+
+function clearCustomFertRows() {
+  const container = document.getElementById('fertCustomRowsContainer');
+  if (container) container.innerHTML = '';
+}
+
+
 async function saveFert() {
   const parcela = $('fertParcelaSelect').value;
   const data_inicio = $('fertDataInicio').value;
@@ -17094,40 +17471,63 @@ async function saveFert() {
   const protocolo = $('fertWebProtocolSelect').value;
   const vazao_base = parseFloat($('fertWebHectares').value) || 1.0;
   const dap = calcWebFertDap(parcela, data_inicio);
+  const metodo = $('fertMetodo') ? $('fertMetodo').value : 'FERTIRRIGAÇÃO';
+  const equipamento = $('fertEquipamento') ? $('fertEquipamento').value.trim() : 'VENTURE';
 
   if (!parcela) { alert('Selecione a parcela.'); return; }
   if (!data_inicio || !data_fim) { alert('Informe o período (Início e Fim).'); return; }
 
-  const fertilizers = [
-  { key: 'MAP', name: 'MAP' },
-  { key: 'UREIA', name: 'UREIA' },
-  { key: 'ACID_BOR', name: 'ACIDO BORICO' },
-  { key: 'NIT_CALCIO', name: 'NITRATO DE CALCIO' },
-  { key: 'SULF_MAG', name: 'SULFATO DE MAGNESIO' },
-  { key: 'SULF_POT', name: 'SULFATO DE POTASSIO' },
-  { key: 'CLOR_POT', name: 'CLORETO DE POTASSIO' },
-  { key: 'SUPERSOIL', name: 'SUPERSOIL' }
+  const standardFertilizers = [
+    { key: 'MAP', name: 'MAP' },
+    { key: 'UREIA', name: 'UREIA' },
+    { key: 'ACID_BOR', name: 'ÁCIDO BÓRICO' },
+    { key: 'NIT_CALCIO', name: 'NITRATO DE CÁLCIO' },
+    { key: 'SULF_MAG', name: 'SULFATO DE MAGNÉSIO' },
+    { key: 'SULF_POT', name: 'SULFATO DE POTÁSSIO' },
+    { key: 'CLOR_POT', name: 'CLORETO DE POTÁSSIO' },
+    { key: 'SUPERSOIL', name: 'SUPERSOIL' }
   ];
 
   const itemsToInsert = [];
-  fertilizers.forEach(f => {
-  const el = $('fertWebQty_' + f.key);
-  const qty = el ? parseFloat(el.value) : 0;
-  const sugerido = _currentWebFertSuggestion[f.key] != null ? _currentWebFertSuggestion[f.key] : null;
-  if (qty > 0) {
-  itemsToInsert.push({
-  tenant_id: tenantId,
-  produto_nome: f.name,
-  quantidade: qty,
-  sugerido: sugerido,
-  unidade: 'kg'
+  standardFertilizers.forEach(f => {
+    const el = $('fertWebQty_' + f.key);
+    const qty = el ? parseFloat(el.value) : 0;
+    const sugerido = _currentWebFertSuggestion[f.key] != null ? _currentWebFertSuggestion[f.key] : null;
+    if (qty > 0) {
+      itemsToInsert.push({
+        tenant_id: tenantId,
+        produto_nome: f.name,
+        quantidade: qty,
+        sugerido: sugerido,
+        unidade: 'kg'
+      });
+    }
   });
-  }
+
+  // Read custom rows
+  const customRows = document.querySelectorAll('#fertCustomRowsContainer > div');
+  customRows.forEach(row => {
+    const nameInp = row.querySelector('.custom-fert-name');
+    const qtyInp = row.querySelector('.custom-fert-qty');
+    const unitInp = row.querySelector('.custom-fert-unit');
+    const nameVal = nameInp ? nameInp.value.trim().toUpperCase() : '';
+    const qtyVal = qtyInp ? parseFloat(qtyInp.value) : 0;
+    const unitVal = unitInp ? unitInp.value : 'kg';
+
+    if (nameVal && qtyVal > 0) {
+      itemsToInsert.push({
+        tenant_id: tenantId,
+        produto_nome: nameVal,
+        quantidade: qtyVal,
+        sugerido: null,
+        unidade: unitVal
+      });
+    }
   });
 
   if (itemsToInsert.length === 0) {
-  alert('Informe a quantidade de pelo menos um fertilizante aplicado.');
-  return;
+    alert('Informe a quantidade de pelo menos um fertilizante aplicado.');
+    return;
   }
 
   const selectedP = (_infoParcelas || []).find(p => (p.parcela2 || p.parcela) === parcela);
@@ -17143,7 +17543,9 @@ async function saveFert() {
     protocolo,
     dap: dap != null ? dap : null,
     vazao_base,
-    operador
+    operador,
+    metodo: metodo,
+    equipamento: equipamento
   };
 
   const btn = $('btnSaveFertWeb');
@@ -17155,7 +17557,7 @@ async function saveFert() {
       .select('id')
       .single();
 
-    // Se houver erro de chave estrangeira (FK 23503) em parcel_id, tentar novamente com parcel_id null
+    // FK fallback if needed
     if (headErr && (headErr.code === '23503' || headErr.status === 409) && headerPayload.parcel_id) {
       headerPayload.parcel_id = null;
       const retry = await sb.from('caderno_campo_fertirrigacao')
@@ -17164,6 +17566,18 @@ async function saveFert() {
         .single();
       headData = retry.data;
       headErr = retry.error;
+    }
+
+    // Column fallback if metodo/equipamento don't exist yet in table
+    if (headErr && (headErr.code === '42703' || (headErr.message && headErr.message.includes('column')))) {
+      delete headerPayload.metodo;
+      delete headerPayload.equipamento;
+      const retry2 = await sb.from('caderno_campo_fertirrigacao')
+        .insert([headerPayload])
+        .select('id')
+        .single();
+      headData = retry2.data;
+      headErr = retry2.error;
     }
 
     if (headErr) throw headErr;
@@ -17191,204 +17605,189 @@ async function saveFert() {
   }
 }
 
-async function deleteFertRecord(id) {
-  if (!confirm('Deseja realmente excluir este registro de fertirrigação? Isso excluirá os produtos vinculados.')) return;
-  try {
-  const { error } = await sb.from('caderno_campo_fertirrigacao').delete().eq('id', id).eq('tenant_id', tenantId);
-  if (error) throw error;
-  loadFertTable();
-  } catch (e) {
-  console.error('Erro ao excluir fertirrigação:', e);
-  alert('Erro ao excluir: ' + (e.message || 'Verifique sua conexão.'));
-  }
-}
-
-// ── IMPRESSÃO OFICIAL: FICHA DE FERTIRRIGAÇÃO (PC04) ────────
+// ── IMPRESSÃO OFICIAL: CONTROLE DO USO DE FERTILIZANTES (PC 07 / PC04) ────────
 async function printPastaCampoFertirrigacao(parcelIdOrCode) {
   let item = null;
   if (parcelIdOrCode) {
-  item = (_infoParcelas || []).find(p => p.id === parcelIdOrCode || (p.parcela2 || p.parcela) === parcelIdOrCode);
+    item = (_infoParcelas || []).find(p => p.id === parcelIdOrCode || (p.parcela2 || p.parcela) === parcelIdOrCode);
   }
   if (!item && _infoParcelas && _infoParcelas.length > 0) {
-  item = _infoParcelas[0];
+    item = _infoParcelas[0];
   }
 
   const parcelCode = item ? (item.parcela2 || item.parcela) : '';
   const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'BOM JESUS AGRÍCOLA';
   const rtNome = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS';
   const rtCrea = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_crea) || '2100995243';
-  const certNome = (window.tenantConfig && window.tenantConfig.agronomo_certificacao) || 'Emanuele Moreira';
+  const certNome = (window.tenantConfig && window.tenantConfig.agronomo_certificacao) || 'Emanuela Moreira';
+  const areaHa = item && item.area ? parseFloat(item.area).toFixed(2) : '3.00';
+  const variedadesStr = item ? (item.variedades || [item.variedade || 'JADEAL']).filter(Boolean).join(', ') : 'JADEAL';
 
   let fertData = [];
   let itensData = [];
 
   try {
-  let q = sb.from('caderno_campo_fertirrigacao')
-  .select('*')
-  .eq('tenant_id', tenantId)
-  .order('data_inicio', { ascending: true });
+    let query = sb.from('caderno_campo_fertirrigacao')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('data_inicio', { ascending: true });
+    
+    if (parcelCode) {
+      query = query.eq('parcela', parcelCode);
+    }
 
-  if (item && item.id) {
-  q = q.or(`parcel_id.eq.${item.id},parcela.eq.${parcelCode}`);
-  }
+    const { data: fData, error: fErr } = await query;
+    if (fErr) throw fErr;
+    fertData = fData || [];
 
-  const { data: ferts, error: e1 } = await q;
-  if (!e1 && ferts) {
-  fertData = ferts;
-  if (fertData.length > 0) {
-  const ids = fertData.map(f => f.id);
-  const { data: its, error: e2 } = await sb.from('caderno_campo_fertirrigacao_itens').select('*').in('fert_id', ids);
-  if (!e2 && its) itensData = its;
-  }
-  }
+    if (fertData.length > 0) {
+      const fIds = fertData.map(f => f.id);
+      const { data: iData, error: iErr } = await sb.from('caderno_campo_fertirrigacao_itens')
+        .select('*')
+        .in('fert_id', fIds);
+      if (iErr) throw iErr;
+      itensData = iData || [];
+    }
   } catch (e) {
-  console.warn('Erro ao buscar fertirrigação para impressão:', e);
+    console.error('Erro ao buscar dados para impressão de fertirrigação:', e);
   }
 
-  const printWin = window.open('', '_blank', 'width=1000,height=1200');
-  if (!printWin) { alert('Permita popups para imprimir.'); return; }
+  const uniqueProducts = Array.from(new Set(itensData.map(it => (it.produto_nome || '').trim().toUpperCase()))).filter(Boolean);
+  if (uniqueProducts.length === 0) {
+    uniqueProducts.push('ADUBO 06-24-12', 'MAP', 'NITRATO DE CÁLCIO', 'SULFATO DE MAGNÉSIO');
+  }
 
-  const itemsByFert = {};
-  const nutrientTotals = {};
-  (itensData || []).forEach(it => {
-  if (!itemsByFert[it.fert_id]) itemsByFert[it.fert_id] = [];
-  itemsByFert[it.fert_id].push(it);
-  nutrientTotals[it.produto_nome] = (nutrientTotals[it.produto_nome] || 0) + (Number(it.quantidade) || 0);
+  const itemsByFertId = {};
+  itensData.forEach(it => {
+    if (!itemsByFertId[it.fert_id]) itemsByFertId[it.fert_id] = {};
+    const pName = (it.produto_nome || '').trim().toUpperCase();
+    itemsByFertId[it.fert_id][pName] = (itemsByFertId[it.fert_id][pName] || 0) + (parseFloat(it.quantidade) || 0);
   });
 
-  const rowsHtml = (fertData || []).map(f => {
-  const fmtStart = f.data_inicio ? f.data_inicio.split('-').reverse().join('/') : '—';
-  const items = itemsByFert[f.id] || [];
-  const itemsStr = items.map(it => `<b>${it.produto_nome}:</b> ${parseFloat(it.quantidade).toFixed(2)} ${it.unidade || 'kg'}`).join(' | ') || '—';
-  const totalDose = items.reduce((sum, it) => sum + (Number(it.quantidade) || 0), 0);
+  const productTotals = {};
+  uniqueProducts.forEach(p => { productTotals[p] = 0; });
 
-  return `
-  <tr>
-  <td style="border:1px solid #000; padding:4px 6px; text-align:center">${fmtStart}</td>
-  <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-weight:bold">${f.dap != null ? f.dap : '—'}</td>
-  <td style="border:1px solid #000; padding:4px 6px">${f.protocolo ? f.protocolo.replace('_', ' ') : 'PADRÃO'}</td>
-  <td style="border:1px solid #000; padding:4px 6px; font-size:7.5pt">${f.receita || '—'}</td>
-  <td style="border:1px solid #000; padding:4px 6px; font-size:7.5pt">${itemsStr}</td>
-  <td style="border:1px solid #000; padding:4px 6px; text-align:right; font-weight:bold">${totalDose > 0 ? totalDose.toFixed(2) + ' kg' : '—'}</td>
-  <td style="border:1px solid #000; padding:4px 6px">${f.operador || '—'}</td>
-  <td style="border:1px solid #000; padding:4px 6px; text-align:center"></td>
-  </tr>
-  `;
-  }).join('') || `<tr><td colspan="8" style="text-align:center; padding:20px; border:1px solid #000">Nenhum registro de fertirrigação cadastrado para esta parcela.</td></tr>`;
+  const rowsHtml = fertData.map((f, idx) => {
+    const ordNum = idx + 1;
+    const dtStr = f.data_inicio ? f.data_inicio.split('-').reverse().join('/') : '—';
+    const dapStr = f.dap != null ? f.dap : '—';
+    const pItems = itemsByFertId[f.id] || {};
 
-  const nutrientSummaryHtml = Object.entries(nutrientTotals).map(([pName, qty]) => `
-  <div style="border:1px solid #000; padding:4px 8px; background:#fafafa; font-size:7.5pt">
-  <b>${pName}:</b> ${qty.toFixed(2)} kg
-  </div>
-  `).join('');
+    const colsHtml = uniqueProducts.map(p => {
+      const val = pItems[p];
+      if (val != null && val > 0) {
+        productTotals[p] += val;
+        return `<td style="border:1px solid #000; padding:3px 4px; text-align:center; font-weight:bold">${val.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}</td>`;
+      }
+      return `<td style="border:1px solid #000; padding:3px 4px; text-align:center; color:#999">-</td>`;
+    }).join('');
+
+    return `
+      <tr>
+        <td style="border:1px solid #000; padding:3px 4px; text-align:center">${dtStr}</td>
+        <td style="border:1px solid #000; padding:3px 4px; text-align:center; font-weight:bold">${ordNum}</td>
+        <td style="border:1px solid #000; padding:3px 4px; text-align:center; font-weight:bold">${dapStr}</td>
+        ${colsHtml}
+      </tr>
+    `;
+  }).join('');
+
+  const totalsColsHtml = uniqueProducts.map(p => {
+    const tot = productTotals[p];
+    return `<td style="border:1px solid #000; padding:4px 4px; text-align:center; font-weight:bold">${tot > 0 ? tot.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) : '-'}</td>`;
+  }).join('');
+
+  const printWin = window.open('', '_blank', 'width=1200,height=900');
+  if (!printWin) { alert('Permita popups para imprimir.'); return; }
 
   const html = `
   <!DOCTYPE html>
   <html>
   <head>
   <meta charset="utf-8"/>
-  <title>PC04 — Registro de Fertirrigação & Nutrição Vegetal</title>
+  <title>PC 07 — CONTROLE DO USO DE FERTILIZANTES (FERTIRRIGAÇÃO)</title>
   <style>
-  @page { size: A4 portrait; margin: 8mm 10mm; }
+  @page { size: A4 landscape; margin: 6mm 8mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 8pt; line-height: 1.3; }
+  body { font-family: Arial, sans-serif; font-size: 7pt; color: #000; line-height: 1.2; }
   .sheet { width: 100%; }
-  .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-  .hdr-table td { border: 1px solid #000; padding: 3px 5px; font-size: 7.5pt; vertical-align: middle; }
-  .hdr-left { width: 50%; font-weight: bold; }
-  .hdr-right { width: 50%; font-family: 'Times New Roman', serif; font-size: 7.5pt; }
-  .main-title { font-size: 11pt; font-weight: bold; text-align: center; padding: 6px 0; border: 2px solid #000; margin-bottom: 8px; background: #f3f4f6; text-transform: uppercase; }
-  .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-  .grid-table th, .grid-table td { border: 1px solid #000; padding: 4px 6px; font-size: 7.5pt; }
-  .grid-table th { background: #e5e7eb; font-weight: bold; }
-  .signatures-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-  .sig-box { border: 1px solid #000; padding: 6px; font-size: 7.5pt; background: #fafafa; display: flex; flex-direction: column; justify-content: space-between; min-height: 55px; }
-  .sig-line { margin-top: 25px; border-top: 1px dashed #000; text-align: center; padding-top: 2px; font-size: 7pt; }
+  .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+  .hdr-table td { border: 1px solid #000; padding: 3px 5px; font-size: 6.5pt; vertical-align: middle; }
+  .main-title { font-size: 9.5pt; font-weight: bold; text-align: center; padding: 4px; border: 1.5px solid #000; margin-bottom: 5px; background: #f3f4f6; text-transform: uppercase; }
+  .info-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+  .info-table td { border: 1px solid #000; padding: 3px 5px; font-size: 7pt; }
+  .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 6.5pt; }
+  .grid-table th, .grid-table td { border: 1px solid #000; padding: 3px 3px; }
+  .grid-table th { background: #e5e7eb; font-weight: bold; text-align: center; font-size: 6.5pt; }
+  .obs-box { border: 1px solid #000; padding: 4px 6px; font-size: 6pt; line-height: 1.2; margin-bottom: 6px; background: #fafafa; }
   </style>
   </head>
   <body onload="window.print()">
   <div class="sheet">
-  <!-- CABEÇALHO OFICIAL -->
-  <div style="display:flex; justify-content:space-between; align-items:stretch; margin-bottom:10px; border:1px solid #000;">
-  <div style="width:45%; padding:6px; display:flex; align-items:center; gap:10px; border-right:1px solid #000;">
-  ${((window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64) ? `<img src="${(window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64}" style="max-height:45px; max-width:130px; object-fit:contain;"/>` : `<img src="logo.png" style="max-height:45px; max-width:130px; object-fit:contain;" onerror="this.style.display='none'"/>`}
-  <div>
-  <div style="font-size:9.5pt; font-weight:bold; color:#1b4332; text-transform:uppercase;">${tenantName.toUpperCase()}</div>
-  <div style="font-size:6.5pt; color:#444; line-height:1.2;">
-  ${window.tenantConfig && window.tenantConfig.endereco ? `${window.tenantConfig.endereco}<br/>` : ''}
-  ${window.tenantConfig && window.tenantConfig.municipio ? `${window.tenantConfig.municipio}/${window.tenantConfig.uf || 'RN'}` : ''}
-  </div>
-  </div>
-  </div>
-  <table class="hdr-table" style="width:55%; margin-bottom:0; border:none; table-layout:fixed;">
-  <tr>
-  <td class="hdr-left" style="border-left:none; border-top:none;">Responsável Técnico: ${rtNome}</td>
-  <td class="hdr-right" style="border-right:none; border-top:none;">CREA: ${rtCrea}</td>
-  </tr>
-  <tr>
-  <td class="hdr-left" style="border-left:none;">Certificação: ${certNome}</td>
-  <td class="hdr-right" style="border-right:none;">DOC: REGISTRO DE FERTIRRIGAÇÃO (PC04)</td>
-  </tr>
-  <tr>
-  <td class="hdr-left" style="border-left:none; border-bottom:none;">Fazenda: ${item ? (item.fazenda || 'SANTA HELENA') : 'SANTA HELENA'}</td>
-  <td class="hdr-right" style="border-right:none; border-bottom:none;">Emissão: ${new Date().toLocaleDateString('pt-BR')}</td>
-  </tr>
-  </table>
-  </div>
+    <!-- CABEÇALHO OFICIAL MODELO EXCEL -->
+    <table class="hdr-table">
+      <tr>
+        <td width="50%" style="font-weight:bold; font-size:6.5pt;">
+          ELABORADO, EMITIDO e REVISADO POR: EMANUELA MOREIRA<br/>
+          Avaliado por: ADGF &nbsp;|&nbsp; Aprovado Por: ADGF<br/>
+          Frequência: Por parcela de campo.
+        </td>
+        <td width="50%" style="font-size:6.5pt;">
+          <b>DEPARTAMENTO:</b> CAMPO<br/>
+          <b>NOME DO DOC:</b> CONTROLE DO USO DE FERTILIZANTES NO DESENVOLVIMENTO DA CULTURA<br/>
+          <b>EMISSÃO:</b> 15/06/2026 &nbsp;|&nbsp; <b>MOD E APROVAÇÃO:</b> 01/07/2026 &nbsp;|&nbsp; <b>U. REVISÃO:</b> 01/07/2026<br/>
+          <b>PAG:</b> 01 DE 01 &nbsp;\&nbsp; <b>COD:</b> PC 07 &nbsp;\&nbsp; <b>REVISÃO:</b> ANUAL &nbsp;\&nbsp; <b>VERSÃO:</b> 01
+        </td>
+      </tr>
+    </table>
 
-  <div class="main-title">REGISTRO DE FERTIRRIGAÇÃO E NUTRIÇÃO VEGETAL — PC04</div>
+    <div class="main-title">CONTROLE DO USO DE FERTILIZANTES NO DESENVOLVIMENTO DA CULTURA</div>
 
-  <!-- DADOS DA PARCELA -->
-  <table class="grid-table" style="margin-bottom:8px;">
-  <tr>
-  <td width="20%"><b>PARCELA / UP:</b><br/>${parcelCode || 'TODAS'}</td>
-  <td width="20%"><b>CULTURA:</b><br/>${item ? (item.cultura || 'MELÃO') : 'MELÃO'}</td>
-  <td width="25%"><b>VARIEDADE:</b><br/>${item ? (item.variedade || '—') : '—'}</td>
-  <td width="15%"><b>ÁREA (ha):</b><br/>${item ? (item.area ? item.area + ' ha' : '—') : '—'}</td>
-  <td width="20%"><b>DATA PLANTIO:</b><br/>${item ? (item.plantio || item.data_plantio || '—') : '—'}</td>
-  </tr>
-  </table>
+    <table class="info-table">
+      <tr>
+        <td width="20%"><b>PARCELA:</b> ${parcelCode}</td>
+        <td width="30%"><b>VARIEDADES:</b> ${variedadesStr}</td>
+        <td width="15%"><b>ÁREA TOTAL:</b> ${areaHa} ha</td>
+        <td width="15%"><b>MÉTODO:</b> FERTIRRIGAÇÃO</td>
+        <td width="20%"><b>EQUIPAMENTO:</b> VENTURE</td>
+      </tr>
+    </table>
 
-  <!-- TABELA DE APLICAÇÕES -->
-  <table class="grid-table">
-  <thead>
-  <tr>
-  <th width="10%" style="text-align:center">Data</th>
-  <th width="7%" style="text-align:center">DAP</th>
-  <th width="13%">Protocolo</th>
-  <th width="15%">Receita / Fase</th>
-  <th width="35%">Fertilizantes & Doses Aplicadas</th>
-  <th width="8%" style="text-align:right">Total</th>
-  <th width="8%">Operador</th>
-  <th width="4%" style="text-align:center">Visto</th>
-  </tr>
-  </thead>
-  <tbody>
-  ${rowsHtml}
-  </tbody>
-  </table>
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th rowspan="2" style="width:75px;">PERÍODO DE APLICAÇÃO<br/>(dd/mm/aa)</th>
+          <th rowspan="2" style="width:35px;">Nº DA ORDEM</th>
+          <th rowspan="2" style="width:40px;">FASE (DAP*)</th>
+          <th colspan="${uniqueProducts.length}">N O M E S &nbsp; D O S &nbsp; F E R T I L I Z A N T E S</th>
+        </tr>
+        <tr>
+          ${uniqueProducts.map(p => `<th>${p}<br/><small style="font-weight:normal; font-size:5.5pt">Quant (Kg/L)</small></th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml || `<tr><td colspan="${3 + uniqueProducts.length}" style="text-align:center; padding:15px; color:#888">Nenhum registro de fertirrigação encontrado para esta parcela.</td></tr>`}
+        <tr style="background:#f3f4f6; font-weight:bold;">
+          <td colspan="3" style="text-align:right; padding-right:6px; font-weight:bold">TOTAL GERAL:</td>
+          ${totalsColsHtml}
+        </tr>
+      </tbody>
+    </table>
 
-  <!-- TOTAIS ACUMULADOS POR NUTRIENTE -->
-  ${Object.keys(nutrientTotals).length > 0 ? `
-  <div style="margin-top:6px; margin-bottom:8px">
-  <div style="font-size:7.5pt; font-weight:bold; margin-bottom:4px; text-transform:uppercase">Consumo Acumulado de Fertilizantes na Parcela:</div>
-  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:4px">
-  ${nutrientSummaryHtml}
-  </div>
-  </div>
-  ` : ''}
+    <div class="obs-box">
+      <b>OBS:</b> DAP* (DIAS APÓS O PLANTIO) - É OBRIGATÓRIO O REGISTRO DE TODAS AS APLICAÇÕES DE FERTILIZANTES VIA FERTIRRIGAÇÃO OU ADUBAÇÃO FOLIAR. CADA APLICAÇÃO DEVE CONTER O NOME COMERCIAL, A QUANTIDADE E A IDENTIFICAÇÃO DO OPERADOR RESPONSÁVEL.
+    </div>
 
-  <!-- ASSINATURAS -->
-  <div class="signatures-grid">
-  <div class="sig-box">
-  <div><b>Responsável Técnico Agronômico:</b> ${rtNome} (CREA: ${rtCrea})</div>
-  <div class="sig-line">Assinatura do Responsável Técnico</div>
-  </div>
-  <div class="sig-box">
-  <div><b>Gerente Agrícola / Campo:</b></div>
-  <div class="sig-line">Assinatura do Gerente de Produção</div>
-  </div>
-  </div>
+    <table style="width:100%; border-collapse:collapse; margin-top:12px; font-size:6.5pt">
+      <tr>
+        <td width="50%" style="border:1px solid #000; padding:5px; text-align:center; vertical-align:bottom; height:45px">
+          <div style="border-top:1px dashed #000; margin-top:20px; padding-top:2px;"><b>Responsável Técnico:</b> ${rtNome} (CREA: ${rtCrea})</div>
+        </td>
+        <td width="50%" style="border:1px solid #000; padding:5px; text-align:center; vertical-align:bottom; height:45px">
+          <div style="border-top:1px dashed #000; margin-top:20px; padding-top:2px;"><b>Agrônomo / Certificações:</b> ${certNome}</div>
+        </td>
+      </tr>
+    </table>
   </div>
   </body>
   </html>
@@ -17398,6 +17797,7 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
   printWin.document.write(html);
   printWin.document.close();
 }
+
 
 
 // ── MUDAS E SEMENTES ────────────────────────────────────────
