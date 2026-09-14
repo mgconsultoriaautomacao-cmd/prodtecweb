@@ -2982,6 +2982,88 @@
   </div>
   </div>
 
+  <!-- MODAL: NOVA VISTORIA MIP (AMOSTRAGEM FITOSSANITÁRIA) -->
+  <div id="newMipModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:24px 28px; border-radius:18px; width:940px; max-width:96%; max-height:92vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.6)">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px">
+        <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px"><i data-lucide="bug" style="width:22px; height:22px; color:var(--green)"></i> Manejo Integrado de Pragas — Nova Ficha de Amostragem (MIP)</h3>
+        <button onclick="closeNewMipModal()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); border-radius:50%; width:32px; height:32px; cursor:pointer; display:flex; align-items:center; justify-content:center">✕</button>
+      </div>
+
+      <!-- Identificação do Monitoramento -->
+      <div style="display:grid; grid-template-columns:1.5fr 1fr 1.2fr 1.2fr; gap:12px; margin-bottom:16px">
+        <div>
+          <label class="flabel">Parcela / Ciclo *</label>
+          <select id="newMipParcelSelect" style="width:100%; font-weight:600; padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:6px"></select>
+        </div>
+        <div>
+          <label class="flabel">Data Vistoria *</label>
+          <input type="date" id="newMipDate" required style="width:100%; padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:6px"/>
+        </div>
+        <div>
+          <label class="flabel">Monitor / Pragueiro</label>
+          <input type="text" id="newMipPragueiro" placeholder="Nome do pragueiro" style="width:100%; padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:6px"/>
+        </div>
+        <div>
+          <label class="flabel">Responsável Técnico</label>
+          <input type="text" id="newMipTecnico" placeholder="Nome do agrônomo" style="width:100%; padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:6px"/>
+        </div>
+      </div>
+
+      <!-- Tabela dos 12 Alvos / 10 Pontos de Amostragem -->
+      <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:16px">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+          <span style="font-size:12px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:6px">
+            <i data-lucide="table-properties" style="width:14px; height:14px; color:var(--blue)"></i>
+            Amostragem em 10 Pontos por Parcela (12 Alvos Monitorados)
+          </span>
+          <button type="button" class="btn sec" onclick="clearMipFormInputs()" style="font-size:11px; padding:4px 10px; display:inline-flex; align-items:center; gap:4px">
+            <i data-lucide="rotate-ccw" style="width:12px;height:12px"></i> Zerar Pontos
+          </button>
+        </div>
+        <div style="overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse; font-size:11.5px">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border); background:rgba(0,0,0,0.2)">
+                <th style="text-align:left; padding:8px; min-width:180px">Praga / Alvo Fitossanitário</th>
+                <th style="text-align:center; padding:8px; min-width:70px">Limiar</th>
+                <th style="text-align:center; padding:4px">P1</th>
+                <th style="text-align:center; padding:4px">P2</th>
+                <th style="text-align:center; padding:4px">P3</th>
+                <th style="text-align:center; padding:4px">P4</th>
+                <th style="text-align:center; padding:4px">P5</th>
+                <th style="text-align:center; padding:4px">P6</th>
+                <th style="text-align:center; padding:4px">P7</th>
+                <th style="text-align:center; padding:4px">P8</th>
+                <th style="text-align:center; padding:4px">P9</th>
+                <th style="text-align:center; padding:4px">P10</th>
+                <th style="text-align:center; padding:8px; min-width:60px">Média</th>
+                <th style="text-align:center; padding:8px; min-width:110px">Status</th>
+              </tr>
+            </thead>
+            <tbody id="newMipTableBody">
+              <!-- Renderizado via renderNewMipTableRows() -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Observações -->
+      <div style="margin-bottom:16px">
+        <label class="flabel">Observações da Vistoria / Condições de Campo</label>
+        <textarea id="newMipObs" rows="2" placeholder="Observações de reboleiras, estágio vegetativo, condições climáticas..." style="width:100%; padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:6px; resize:vertical; font-family:inherit; font-size:12px"></textarea>
+      </div>
+
+      <!-- Botões de Ação -->
+      <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--border); padding-top:14px">
+        <button class="btn" onclick="closeNewMipModal()">Cancelar</button>
+        <button class="btn btn-green" onclick="saveNewMipDashboard()" style="padding:8px 20px; font-weight:800; display:inline-flex; align-items:center; gap:6px">
+          <i data-lucide="check-circle-2" style="width:16px;height:16px"></i> Salvar Vistoria MIP
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: NOVA CALAGEM -->
   <div id="newCalagemModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center;">
   <div style="background:var(--modal-bg); color:var(--modal-text); padding:28px; border-radius:18px; width:550px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5)">
@@ -14453,8 +14535,8 @@ function openNewMipModal() {
 
   const parcelSel = $('newMipParcelSelect');
   if (parcelSel) {
-  parcelSel.innerHTML = '<option value="">-- Selecione a Parcela --</option>' +
-  (_infoParcelas || []).map(p => `<option value="${p.id}">${p.parcela2 || p.parcela} (${p.variedade || 'Sem var'})</option>`).join('');
+    parcelSel.innerHTML = '<option value="">-- Selecione a Parcela --</option>' +
+      (_infoParcelas || []).map(p => `<option value="${p.id}">${p.parcela2 || p.parcela} (${p.variedade || 'Sem var'})</option>`).join('');
   }
 
   $('newMipDate').value = today();
@@ -14464,6 +14546,7 @@ function openNewMipModal() {
 
   renderNewMipTableRows();
   modal.style.display = 'flex';
+  if (window.lucide) lucide.createIcons();
 }
 
 function closeNewMipModal() {
@@ -16708,50 +16791,63 @@ async function saveFert() {
   }
 
   const selectedP = (_infoParcelas || []).find(p => (p.parcela2 || p.parcela) === parcela);
+  const parcel_id = (selectedP && selectedP.parcel_id) ? selectedP.parcel_id : null;
 
   const headerPayload = {
-  tenant_id: tenantId,
-  parcel_id: selectedP ? selectedP.id : null,
-  parcela,
-  data_inicio,
-  data_fim,
-  receita,
-  protocolo,
-  dap: dap != null ? dap : null,
-  vazao_base,
-  operador
+    tenant_id: tenantId,
+    parcel_id: parcel_id,
+    parcela,
+    data_inicio,
+    data_fim,
+    receita,
+    protocolo,
+    dap: dap != null ? dap : null,
+    vazao_base,
+    operador
   };
 
   const btn = $('btnSaveFertWeb');
   if (btn) { btn.disabled = true; btn.innerHTML = 'Salvando...'; }
 
   try {
-  const { data: headData, error: headErr } = await sb.from('caderno_campo_fertirrigacao')
-  .insert([headerPayload])
-  .select('id')
-  .single();
+    let { data: headData, error: headErr } = await sb.from('caderno_campo_fertirrigacao')
+      .insert([headerPayload])
+      .select('id')
+      .single();
 
-  if (headErr) throw headErr;
-  if (!headData) throw new Error('Não foi possível gerar ID da fertirrigação.');
+    // Se houver erro de chave estrangeira (FK 23503) em parcel_id, tentar novamente com parcel_id null
+    if (headErr && (headErr.code === '23503' || headErr.status === 409) && headerPayload.parcel_id) {
+      headerPayload.parcel_id = null;
+      const retry = await sb.from('caderno_campo_fertirrigacao')
+        .insert([headerPayload])
+        .select('id')
+        .single();
+      headData = retry.data;
+      headErr = retry.error;
+    }
 
-  const fert_id = headData.id;
-  const finalItems = itemsToInsert.map(it => ({ ...it, fert_id }));
+    if (headErr) throw headErr;
+    if (!headData) throw new Error('Não foi possível gerar ID da fertirrigação.');
 
-  const { error: itemsErr } = await sb.from('caderno_campo_fertirrigacao_itens').insert(finalItems);
-  if (itemsErr) throw itemsErr;
+    const fert_id = headData.id;
+    const finalItems = itemsToInsert.map(it => ({ ...it, fert_id }));
 
-  alert(' Registro de fertirrigação salvo com sucesso!');
-  closeNewFertModal();
-  loadFertTable();
+    const { error: itemsErr } = await sb.from('caderno_campo_fertirrigacao_itens').insert(finalItems);
+    if (itemsErr) throw itemsErr;
+
+    alert('✅ Registro de fertirrigação salvo com sucesso!');
+    closeNewFertModal();
+    loadFertTable();
   } catch (e) {
-  console.error('Erro ao salvar fertirrigação:', e);
-  alert('Erro ao salvar: ' + (e.message || 'Verifique sua conexão.'));
+    console.error('Erro ao salvar fertirrigação:', e);
+    const detail = e.details ? ` (${e.details})` : (e.hint ? ` (${e.hint})` : '');
+    alert('Erro ao salvar: ' + (e.message || 'Verifique sua conexão.') + detail);
   } finally {
-  if (btn) {
-  btn.disabled = false;
-  btn.innerHTML = '<i data-lucide="check" style="width:16px;height:16px"></i> Salvar Fertirrigação';
-  if (window.lucide) lucide.createIcons();
-  }
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="check" style="width:16px;height:16px"></i> Salvar Fertirrigação';
+      if (window.lucide) lucide.createIcons();
+    }
   }
 }
 
