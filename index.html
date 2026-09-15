@@ -15591,9 +15591,11 @@ function printPastaCampoMip(itemStr) {
   if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
 
   const ip = (_infoParcelas || []).find(x => x.parcela2 === item.parcela || x.parcela === item.parcela);
+  const info = typeof getParcelaCompleteInfo === 'function' ? getParcelaCompleteInfo(item.parcela || item, _infoParcelas) : ip;
   const empresaStr = (window.tenantConfig && window.tenantConfig.name || 'PRODTEC AGRO').toUpperCase();
   const fazendaStr = (window.tenantConfig && window.tenantConfig.fazenda_nome || 'Fazenda Principal').toUpperCase();
-  const dapStr = item.dap ? `${item.dap} DAP` : (ip && ip.plantio && item.data_vistoria ? `${Math.floor((new Date(item.data_vistoria) - new Date(ip.plantio))/(1000*60*60*24))} DAP` : '—');
+  const plantioDate = (info && info.plantio) || (ip && ip.plantio);
+  const dapStr = item.dap ? `${item.dap} DAP` : (plantioDate && item.data_vistoria ? `${Math.floor((new Date(item.data_vistoria) - new Date(plantioDate))/(1000*60*60*24))} DAP` : '—');
 
   // 1. Linhas de Pragas (20 Pontos)
   const pragasJson = item.pragas_json || {};
