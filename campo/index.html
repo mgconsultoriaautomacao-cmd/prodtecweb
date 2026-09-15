@@ -4907,33 +4907,39 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
   let targetId = '';
 
   if (typeof parcelInput === 'object') {
-  targetCode = parcelInput.parcela2 || parcelInput.parcela || parcelInput.code || parcelInput.parcel_id || '';
-  targetId = parcelInput.id || parcelInput.parcel_id || '';
+    targetCode = parcelInput.parcela2 || parcelInput.parcela || parcelInput.code || parcelInput.parcel_id || '';
+    targetId = parcelInput.id || parcelInput.parcel_id || '';
   } else {
-  const inputStr = String(parcelInput).trim();
-  const foundById = list.find(x => x && (String(x.id) === inputStr || String(x.parcel_id) === inputStr));
-  if (foundById) {
-  targetCode = foundById.parcela2 || foundById.parcela || foundById.code || '';
-  targetId = foundById.id;
-  } else {
-  targetCode = inputStr;
-  }
+    const inputStr = String(parcelInput).trim();
+    const foundById = list.find(x => x && (String(x.id) === inputStr || String(x.parcel_id) === inputStr));
+    if (foundById) {
+      targetCode = foundById.parcela2 || foundById.parcela || foundById.code || '';
+      targetId = foundById.id;
+    } else {
+      targetCode = inputStr;
+    }
   }
 
   const normTarget = normalizeParcelCode(targetCode);
 
   const matches = list.filter(x => {
-  if (!x) return false;
-  if (targetId && String(x.id) === String(targetId)) return true;
-  const p1 = normalizeParcelCode(x.parcela2);
-  const p2 = normalizeParcelCode(x.parcela);
-  const p3 = normalizeParcelCode(x.code);
-  return (p1 && normTarget && p1 === normTarget) || 
-  (p2 && normTarget && p2 === normTarget) || 
-  (p3 && normTarget && p3 === normTarget);
+    if (!x) return false;
+    if (targetId && String(x.id) === String(targetId)) return true;
+    const p1 = normalizeParcelCode(x.parcela2);
+    const p2 = normalizeParcelCode(x.parcela);
+    const p3 = normalizeParcelCode(x.code);
+    return (p1 && normTarget && p1 === normTarget) || 
+           (p2 && normTarget && p2 === normTarget) || 
+           (p3 && normTarget && p3 === normTarget);
   });
 
-  if (matches.length === 0) return null;
+  if (matches.length === 0) {
+    if (typeof parcelInput === 'object') {
+      matches.push(parcelInput);
+    } else {
+      return null;
+    }
+  }
 
   const first = matches[0];
   const varietiesSet = new Set();
@@ -4942,46 +4948,86 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
   let plantioDates = [];
   let prevColheitaDates = [];
 
-  const varPropKeys = ['variedade', 'variedade1', 'variedade2', 'variedade3', 'variedade4', 'variedade5', 'variedade6', 'variedade7', 'variedade8', 'variedade9', 'variedade10'];
+  const varPropKeys = ['variedade', 'variedade1', 'variedade2', 'variedade3', 'variedade4', 'variedade5', 'variedade6', 'variedade7', 'variedade8', 'variedade9', 'variedade10', 'cultivar', 'cultivares'];
 
   matches.forEach(m => {
-  varPropKeys.forEach((vk, idx) => {
-  const vVal = m[vk];
-  if (vVal) {
-  const areaKey = idx === 0 ? 'area' : (m[`area${idx+1}`] ? `area${idx+1}` : `area${idx}`);
-  const mArea = parseFloat(m[areaKey] || (idx === 0 ? m.area1 || m.area : 0));
-  if (!isNaN(mArea) && mArea > 0) totalArea += mArea;
+    // Area calc per row
+    let rowArea = 0;
+    let hasSubAreas = false;
+    for (let i = 1; i <= 10; i++) {
+      const aVal = parseFloat(m[`area${i}`]);
+      if (!isNaN(aVal) && aVal > 0) {
+        rowArea += aVal;
+        hasSubAreas = true;
+      }
+    }
+    if (!hasSubAreas) {
+      const mainA = parseFloat(m.area || m.area_ha || 0);
+      if (!isNaN(mainA) && mainA > 0) rowArea = mainA;
+    }
+    totalArea += rowArea;
 
-  String(vVal).split(/[,;\/]+/).forEach(v => {
-  const cv = v.trim().toUpperCase();
-  if (cv && !varietiesSet.has(cv)) {
-  varietiesSet.add(cv);
-  varietiesWithArea.push({
-  nome: cv,
-  area: (!isNaN(mArea) && mArea > 0) ? mArea.toFixed(2) : '—'
-  });
-  }
-  });
-  }
-  });
+    // Check array m.variedades if present
+    if (Array.isArray(m.variedades)) {
+      m.variedades.forEach(v => {
+        if (v) {
+          const cv = String(v).trim().toUpperCase();
+          if (cv && !varietiesSet.has(cv)) {
+            varietiesSet.add(cv);
+            varietiesWithArea.push({ nome: cv, area: '—' });
+          }
+        }
+      });
+    }
 
-  const pDt = m.transplante || m.plantio || m.data_plantio1;
-  if (pDt) plantioDates.push(pDt);
-  if (m.previsao_colheita) prevColheitaDates.push(m.previsao_colheita);
+    // Check all variety keys
+    varPropKeys.forEach((vk, idx) => {
+      const vVal = m[vk];
+      if (vVal) {
+        const areaKey = idx === 0 ? 'area' : (m[`area${idx+1}`] ? `area${idx+1}` : `area${idx}`);
+        const mArea = parseFloat(m[areaKey] || (idx === 0 ? m.area1 || m.area : 0));
+
+        String(vVal).split(/[,;/+]+/).forEach(v => {
+          const cv = v.trim().toUpperCase();
+          if (cv && !varietiesSet.has(cv)) {
+            varietiesSet.add(cv);
+            varietiesWithArea.push({
+              nome: cv,
+              area: (!isNaN(mArea) && mArea > 0) ? mArea.toFixed(2) : '—'
+            });
+          }
+        });
+      }
+    });
+
+    const pDt = m.transplante || m.plantio || m.data_plantio1;
+    if (pDt) plantioDates.push(pDt);
+    if (m.previsao_colheita) prevColheitaDates.push(m.previsao_colheita);
   });
 
   if (typeof parcelInput === 'object') {
-  varPropKeys.forEach(vk => {
-  if (parcelInput[vk]) {
-  String(parcelInput[vk]).split(/[,;\/]+/).forEach(v => {
-  const cv = v.trim().toUpperCase();
-  if (cv && !varietiesSet.has(cv)) {
-  varietiesSet.add(cv);
-  varietiesWithArea.push({ nome: cv, area: '—' });
-  }
-  });
-  }
-  });
+    if (Array.isArray(parcelInput.variedades)) {
+      parcelInput.variedades.forEach(v => {
+        if (v) {
+          const cv = String(v).trim().toUpperCase();
+          if (cv && !varietiesSet.has(cv)) {
+            varietiesSet.add(cv);
+            varietiesWithArea.push({ nome: cv, area: '—' });
+          }
+        }
+      });
+    }
+    varPropKeys.forEach(vk => {
+      if (parcelInput[vk]) {
+        String(parcelInput[vk]).split(/[,;/+]+/).forEach(v => {
+          const cv = v.trim().toUpperCase();
+          if (cv && !varietiesSet.has(cv)) {
+            varietiesSet.add(cv);
+            varietiesWithArea.push({ nome: cv, area: '—' });
+          }
+        });
+      }
+    });
   }
 
   const varietiesList = Array.from(varietiesSet);
@@ -4989,22 +5035,22 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
   const formattedArea = totalArea > 0 ? totalArea.toFixed(2) : (first.area ? parseFloat(first.area).toFixed(2) : '1.00');
 
   const variedadesBlockHtml = varietiesWithArea.length > 0
-  ? varietiesWithArea.map(v => `<div style="display:flex; justify-content:space-between; width:180px;"><span style="font-weight:bold; color:#dc2626;">${v.nome}</span><span style="color:#dc2626; font-weight:bold;">${v.area !== '—' ? v.area.replace('.', ',') : ''}</span></div>`).join('')
-  : `<div style="font-weight:bold; color:#dc2626;">${formattedVariedade}</div>`;
+    ? varietiesWithArea.map(v => `<div style="display:flex; justify-content:space-between; width:180px;"><span style="font-weight:bold; color:#dc2626;">${v.nome}</span><span style="color:#dc2626; font-weight:bold;">${v.area !== '—' ? v.area.replace('.', ',') : ''}</span></div>`).join('')
+    : `<div style="font-weight:bold; color:#dc2626;">${formattedVariedade}</div>`;
 
   return {
-  ...first,
-  matches: matches,
-  parcelaNum: normTarget || first.parcela2 || first.parcela || '—',
-  variedade: formattedVariedade,
-  variedadesList: varietiesList,
-  varietiesWithArea: varietiesWithArea,
-  variedadesBlockHtml: variedadesBlockHtml,
-  area: formattedArea,
-  area_ha: formattedArea,
-  transplante: plantioDates[0] || first.transplante || first.plantio || first.data_plantio1 || null,
-  plantio: plantioDates[0] || first.plantio || first.transplante || first.data_plantio1 || null,
-  previsao_colheita: prevColheitaDates[0] || first.previsao_colheita || null
+    ...first,
+    matches: matches,
+    parcelaNum: normTarget || first.parcela2 || first.parcela || '—',
+    variedade: formattedVariedade,
+    variedadesList: varietiesList,
+    varietiesWithArea: varietiesWithArea,
+    variedadesBlockHtml: variedadesBlockHtml,
+    area: formattedArea,
+    area_ha: formattedArea,
+    transplante: plantioDates[0] || first.transplante || first.plantio || first.data_plantio1 || null,
+    plantio: plantioDates[0] || first.plantio || first.transplante || first.data_plantio1 || null,
+    previsao_colheita: prevColheitaDates[0] || first.previsao_colheita || null
   };
 }
 
@@ -5863,7 +5909,18 @@ async function printPastaCampoIdiarn(itemStr) {
   * 3. MIP deve ter >= 4 pontos positivos (dos 10)
   * 4. MIP deve ter no máximo 3 dias ÚTEIS de diferença para a data da O.P
   */
-  function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
+  function isBomJesusTenant() {
+  const cfgName = (window.tenantConfig && window.tenantConfig.name) || '';
+  const elName = (document.getElementById('homeTenant')?.textContent) || '';
+  const currentTenant = (window.currentTenantName || '').toUpperCase();
+  const allText = (cfgName + ' ' + elName + ' ' + currentTenant).toUpperCase();
+  return allText.includes('BOM JESUS') || allText.includes('BOMJESUS') || allText.includes('BJ');
+}
+
+function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
+  if (isBomJesusTenant()) {
+    return { ok: true, blocked: false, message: 'Isento de validação MIP (Fazenda Bom Jesus)', mipInfo: null };
+  }
   const cleanAlvo = (alvo || '').toUpperCase();
   
   // 1. Isenção para fertilizantes e adubos foliares

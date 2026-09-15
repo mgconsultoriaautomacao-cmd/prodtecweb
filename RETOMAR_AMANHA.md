@@ -1,125 +1,53 @@
-# 💾 Salvamento de Sessão — Fertirrigação Avançada
+# 💾 Salvamento de Sessão — ProdTec Campo & Web Admin
 
-**Data:** 10/09/2026 — 07:57  
-**Conversa ID:** `524dfe73-5b42-4a28-bcde-5969845af9ca`  
-**Status:** ✅ Plano aprovado / pronto para execução
-
----
-
-## 🎯 O Que Precisa Ser Feito AGORA
-
-### Contexto Completo
-
-O módulo de fertirrigação **existe** no PWA mas é básico (só campos manuais).  
-A sessão anterior ficou incompleta por reinicializações do computador.
-
-O objetivo é implementar o módulo **completo e inteligente** com:
-1. Seleção de protocolo (variedade)
-2. DAP calculado automaticamente pela data de plantio da parcela
-3. Sugestão automática de doses com base no DAP × vazão base
-4. Aba de histórico de aplicações por parcela
-5. SQL de migração das tabelas no Supabase
+**Data:** 14/09/2026 — 23:00  
+**Conversa ID:** `37bd05d2-5113-4cf7-a868-ea93f03d8acc`  
+**Status:** ✅ Funcionalidades implementadas, testadas e deploy efetuado!
 
 ---
 
-## 📁 Arquivos Chave
+## 🎯 O Que Foi Feito Hoje
+
+1. **Desbloqueio da Pulverização Exclusivo para a Fazenda BOM JESUS:**
+   - Criado helper `isBomJesusTenant()` em `index.html` e `campo/index.html`.
+   - Na Fazenda Bom Jesus, o lançamento e salvamento de O.P de defensivos é 100% liberado sem bloqueio por falta de MIP prévio.
+   - Para os demais produtores/tenants, as travas de auditoria agronômica continuam ativas para garantir a conformidade.
+
+2. **Navegação com Setas e Enter no Grid MIP de 20 Pontos (EMBRAPA):**
+   - Função `handleMipGridKeyDown()` no modal `newMipModal` (`index.html`).
+   - `ArrowUp` e `ArrowDown` navegam verticalmente entre as pragas/doenças no mesmo ponto sem alterar os números.
+   - `ArrowRight` e `Enter` avançam horizontalmente pelos pontos 1 a 20 (com wrap de linha automático).
+   - `ArrowLeft` retrocede entre os pontos.
+   - Auto-select de texto ao focar (`this.select()`) e desativação de scroll acidental (`onwheel="this.blur()"`).
+
+3. **Puxada Completa de 100% das Variedades nos Documentos Oficiais:**
+   - Aprimoramento da função `getParcelaCompleteInfo()` para unificar todas as fontes (`variedade`, `variedade1` a `variedade10`, array `variedades`, `cultivar`, `cultivares`).
+   - Atualização de todas as fichas oficiais:
+     - **PC 01 (Capa da Pasta de Campo):** Exibe todas as variedades e hectares individuais.
+     - **PC 02 (Ordem de Pulverização):** Identifica todas as variedades da área.
+     - **PC 03 (Sementes & Mudas):** Gera uma linha para cada variedade cadastrada.
+     - **OC 01 (Adubação de Fundação):** Exibe todas as variedades em `VARIEDADES:`.
+     - **PC 04 (Tratos Culturais) & PC 06 (Autorização de Colheita):** Exibição consolidada.
+     - **PC 07 (Fertirrigação A4 Paisagem):** Puxa todas as variedades no cabeçalho.
+     - **PC 08 (MIP Embrapa 20 Pontos):** Exibe todas as variedades no laudo.
+     - **PC 09 (Fiscalização IDIARN / Moscas) & Livro Oficial IDIARN:** Variedades completas.
+
+4. **Fertirrigação Inteligente & Protocolos:**
+   - Módulo de fertirrigação inteligente com protocolos EMBRAPA/Campo embarcados, cálculo de DAP por data de plantio e layout oficial A4 paisagem.
+
+---
+
+## 📁 Arquivos Chave Modificados
 
 | Arquivo | Descrição |
 |---|---|
-| `campo/index.html` | PWA de campo — módulo de fertirrigação está nas linhas **1806-4072** |
-| `scratch/fert_data.json` | Dados extraídos das planilhas .xlsm (4 protocolos completos) |
-| `scratch/extract_fert_rules.py` | Script que gerou o fert_data.json |
-| `campo/field_migration.sql` | SQL de migração (precisa adicionar tabelas de fertirrigação) |
+| `index.html` | Web Admin — Desbloqueio Bom Jesus, navegação no grid MIP, extração completa de variedades nos laudos |
+| `campo/index.html` | PWA de Campo — Desbloqueio de O.P para Bom Jesus e suporte a multi-variedades |
+| `RETOMAR_AMANHA.md` | Registro de status da sessão para retomada rápida |
 
 ---
 
-## 📊 Protocolos Disponíveis (do fert_data.json)
+## ▶️ Para Retomar Amanhã
 
-4 protocolos extraídos das planilhas Excel:
-- `MELAO_PADRAO` — DAP 11 a 65 (Melão padrão, ex: Yellow King)
-- `MELANCIA_PADRAO` — DAP 16 a 65
-- `ASTURIA` — DAP 11 a 65 (variedade Astúria)
-- `GRAND_PRIX` — DAP 11 a ~65 (variedade Grand Prix)
-
-Fertilizantes: `MAP`, `UREIA`, `ACIDO BORICO`, `NIT. CALCIO`, `SULF. MAG.`, `SULF. POTASSIO`, `FERT`, `OBSERVAÇÕES`
-
-O fator na planilha é um **multiplicador × B13** onde B13 é a vazão base (L/h).
-
----
-
-## 🛠️ Implementação Planejada
-
-### A) campo/index.html — Reformular Tela de Fertirrigação
-
-**O que muda na seção HTML (linha ~1806-1892):**
-- Adicionar tabs: "📋 Novo Lançamento" | "📅 Histórico"
-- Adicionar campo `<select>` de **Protocolo** (MELAO_PADRAO / MELANCIA_PADRAO / ASTURIA / GRAND_PRIX)
-- Adicionar campo **"Vazão Base (L/h)"** — padrão: `200`
-- Mostrar card com **DAP calculado automaticamente** (data_plantio da parcela)
-- Mostrar card **"Sugestão Automática"** com doses e botão "Aplicar"
-
-**Novas funções JS a criar:**
-```
-FERT_PROTOCOLS = { ... }  // objeto com dados do fert_data.json embarcados
-calcFertDap(parcelaId)     // calcula DAP pela data_plantio da parcela
-suggestFertDoses(protocol, dap, vazaoBase)  // retorna doses calculadas
-applyFertSuggestion()      // preenche inputs com sugestão
-onFertParcelChange()       // ao trocar parcela: recalcula DAP e sugestão
-loadFertHistory(parcelaId) // carrega histórico do Supabase
-```
-
-**Alterar `saveFertRecord()`:**
-- Salvar também: `protocolo`, `dap`, `vazao_base`
-- Salvar `sugerido` (valor sugerido) em cada item além do `quantidade` real
-
-### B) campo/field_migration.sql — Adicionar tabelas
-
-```sql
-CREATE TABLE IF NOT EXISTS caderno_campo_fertirrigacao (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id   UUID NOT NULL,
-  parcel_id   BIGINT,
-  parcela     TEXT NOT NULL,
-  data_inicio DATE NOT NULL,
-  data_fim    DATE NOT NULL,
-  receita     TEXT,
-  protocolo   TEXT,   -- MELAO_PADRAO / MELANCIA_PADRAO / ASTURIA / GRAND_PRIX
-  dap         INTEGER,
-  vazao_base  NUMERIC,
-  operador    TEXT,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS caderno_campo_fertirrigacao_itens (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  fert_id      UUID NOT NULL REFERENCES caderno_campo_fertirrigacao(id) ON DELETE CASCADE,
-  tenant_id    UUID NOT NULL,
-  produto_nome TEXT NOT NULL,
-  quantidade   NUMERIC NOT NULL,
-  sugerido     NUMERIC,
-  unidade      TEXT DEFAULT 'kg',
-  created_at   TIMESTAMPTZ DEFAULT NOW()
-);
--- + RLS policies padrão (tenant_id isolation)
-```
-
----
-
-## ▶️ Para Retomar
-
-1. **Abrir este arquivo** como contexto
-2. **Dizer ao agente:** "vamos retomar a implementação do módulo de fertirrigação — o plano está no RETOMAR_AMANHA.md"
-3. O agente vai implementar tudo direto no `campo/index.html` + atualizar o SQL
-
----
-
-## ✅ Checklist de Execução
-
-- [ ] Embutir `FERT_PROTOCOLS` no JS do campo/index.html
-- [ ] Reformular HTML da tela de fertirrigação (tabs + protocolo + vazão base + DAP + sugestão)
-- [ ] Criar funções: `calcFertDap`, `suggestFertDoses`, `applyFertSuggestion`, `onFertParcelChange`, `loadFertHistory`
-- [ ] Atualizar `loadFertSelects()` para incluir protocolo e vazão base
-- [ ] Atualizar `saveFertRecord()` para salvar protocolo/dap/vazao_base/sugerido
-- [ ] Atualizar `pushFertirrigacao()` para sync offline dos novos campos
-- [ ] Adicionar tabelas SQL ao `campo/field_migration.sql`
-- [ ] Executar SQL no Supabase
+1. Abrir o projeto no workspace.
+2. Conferir com o usuário os próximos itens de campo, packing house ou relatórios que ele queira evoluir.

@@ -10783,7 +10783,9 @@ async function printPastaCampoSementes(id) {
   const printWin = window.open('', '_blank', 'width=1000,height=1200');
   if (!printWin) { alert('Permita popups para imprimir.'); return; }
 
-  const variedadesList = (item.variedades || [item.variedade || 'JADEAL']).filter(Boolean);
+  const variedadesList = (info && info.variedadesList && info.variedadesList.length > 0)
+    ? info.variedadesList
+    : (item.variedades || [item.variedade || 'JADEAL']).filter(Boolean);
   if (variedadesList.length === 0) variedadesList.push('JADEAL');
 
   const sementesRowsHtml = variedadesList.map(v => `
@@ -10945,7 +10947,9 @@ async function printPastaCampoFundacao(id) {
   const rtCrea = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_crea) || '2100995243';
   const pCode = item.parcela2 || item.parcela || '';
   const areaHa = item.area ? parseFloat(item.area).toFixed(2) : '3.00';
-  const variedadesStr = (item.variedades || [item.variedade || 'JADEAL']).filter(Boolean).join(', ');
+  const variedadesStr = (info && info.variedadesList && info.variedadesList.length > 0)
+    ? info.variedadesList.join(', ')
+    : (item.variedades || [item.variedade || 'JADEAL']).filter(Boolean).join(', ');
 
   const printWin = window.open('', '_blank', 'width=1000,height=1200');
   if (!printWin) { alert('Permita popups para imprimir.'); return; }
@@ -11562,33 +11566,39 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
   let targetId = '';
 
   if (typeof parcelInput === 'object') {
-  targetCode = parcelInput.parcela2 || parcelInput.parcela || parcelInput.code || parcelInput.parcel_id || '';
-  targetId = parcelInput.id || parcelInput.parcel_id || '';
+    targetCode = parcelInput.parcela2 || parcelInput.parcela || parcelInput.code || parcelInput.parcel_id || '';
+    targetId = parcelInput.id || parcelInput.parcel_id || '';
   } else {
-  const inputStr = String(parcelInput).trim();
-  const foundById = list.find(x => x && (String(x.id) === inputStr || String(x.parcel_id) === inputStr));
-  if (foundById) {
-  targetCode = foundById.parcela2 || foundById.parcela || foundById.code || '';
-  targetId = foundById.id;
-  } else {
-  targetCode = inputStr;
-  }
+    const inputStr = String(parcelInput).trim();
+    const foundById = list.find(x => x && (String(x.id) === inputStr || String(x.parcel_id) === inputStr));
+    if (foundById) {
+      targetCode = foundById.parcela2 || foundById.parcela || foundById.code || '';
+      targetId = foundById.id;
+    } else {
+      targetCode = inputStr;
+    }
   }
 
   const normTarget = normalizeParcelCode(targetCode);
 
   const matches = list.filter(x => {
-  if (!x) return false;
-  if (targetId && String(x.id) === String(targetId)) return true;
-  const p1 = normalizeParcelCode(x.parcela2);
-  const p2 = normalizeParcelCode(x.parcela);
-  const p3 = normalizeParcelCode(x.code);
-  return (p1 && normTarget && p1 === normTarget) || 
-  (p2 && normTarget && p2 === normTarget) || 
-  (p3 && normTarget && p3 === normTarget);
+    if (!x) return false;
+    if (targetId && String(x.id) === String(targetId)) return true;
+    const p1 = normalizeParcelCode(x.parcela2);
+    const p2 = normalizeParcelCode(x.parcela);
+    const p3 = normalizeParcelCode(x.code);
+    return (p1 && normTarget && p1 === normTarget) || 
+           (p2 && normTarget && p2 === normTarget) || 
+           (p3 && normTarget && p3 === normTarget);
   });
 
-  if (matches.length === 0) return null;
+  if (matches.length === 0) {
+    if (typeof parcelInput === 'object') {
+      matches.push(parcelInput);
+    } else {
+      return null;
+    }
+  }
 
   const first = matches[0];
   const varietiesSet = new Set();
@@ -11597,46 +11607,86 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
   let plantioDates = [];
   let prevColheitaDates = [];
 
-  const varPropKeys = ['variedade', 'variedade1', 'variedade2', 'variedade3', 'variedade4', 'variedade5', 'variedade6', 'variedade7', 'variedade8', 'variedade9', 'variedade10'];
+  const varPropKeys = ['variedade', 'variedade1', 'variedade2', 'variedade3', 'variedade4', 'variedade5', 'variedade6', 'variedade7', 'variedade8', 'variedade9', 'variedade10', 'cultivar', 'cultivares'];
 
   matches.forEach(m => {
-  varPropKeys.forEach((vk, idx) => {
-  const vVal = m[vk];
-  if (vVal) {
-  const areaKey = idx === 0 ? 'area' : (m[`area${idx+1}`] ? `area${idx+1}` : `area${idx}`);
-  const mArea = parseFloat(m[areaKey] || (idx === 0 ? m.area1 || m.area : 0));
-  if (!isNaN(mArea) && mArea > 0) totalArea += mArea;
+    // Area calc per row
+    let rowArea = 0;
+    let hasSubAreas = false;
+    for (let i = 1; i <= 10; i++) {
+      const aVal = parseFloat(m[`area${i}`]);
+      if (!isNaN(aVal) && aVal > 0) {
+        rowArea += aVal;
+        hasSubAreas = true;
+      }
+    }
+    if (!hasSubAreas) {
+      const mainA = parseFloat(m.area || m.area_ha || 0);
+      if (!isNaN(mainA) && mainA > 0) rowArea = mainA;
+    }
+    totalArea += rowArea;
 
-  String(vVal).split(/[,;\/]+/).forEach(v => {
-  const cv = v.trim().toUpperCase();
-  if (cv && !varietiesSet.has(cv)) {
-  varietiesSet.add(cv);
-  varietiesWithArea.push({
-  nome: cv,
-  area: (!isNaN(mArea) && mArea > 0) ? mArea.toFixed(2) : '—'
-  });
-  }
-  });
-  }
-  });
+    // Check array m.variedades if present
+    if (Array.isArray(m.variedades)) {
+      m.variedades.forEach(v => {
+        if (v) {
+          const cv = String(v).trim().toUpperCase();
+          if (cv && !varietiesSet.has(cv)) {
+            varietiesSet.add(cv);
+            varietiesWithArea.push({ nome: cv, area: '—' });
+          }
+        }
+      });
+    }
 
-  const pDt = m.transplante || m.plantio || m.data_plantio1;
-  if (pDt) plantioDates.push(pDt);
-  if (m.previsao_colheita) prevColheitaDates.push(m.previsao_colheita);
+    // Check all variety keys
+    varPropKeys.forEach((vk, idx) => {
+      const vVal = m[vk];
+      if (vVal) {
+        const areaKey = idx === 0 ? 'area' : (m[`area${idx+1}`] ? `area${idx+1}` : `area${idx}`);
+        const mArea = parseFloat(m[areaKey] || (idx === 0 ? m.area1 || m.area : 0));
+
+        String(vVal).split(/[,;/+]+/).forEach(v => {
+          const cv = v.trim().toUpperCase();
+          if (cv && !varietiesSet.has(cv)) {
+            varietiesSet.add(cv);
+            varietiesWithArea.push({
+              nome: cv,
+              area: (!isNaN(mArea) && mArea > 0) ? mArea.toFixed(2) : '—'
+            });
+          }
+        });
+      }
+    });
+
+    const pDt = m.transplante || m.plantio || m.data_plantio1;
+    if (pDt) plantioDates.push(pDt);
+    if (m.previsao_colheita) prevColheitaDates.push(m.previsao_colheita);
   });
 
   if (typeof parcelInput === 'object') {
-  varPropKeys.forEach(vk => {
-  if (parcelInput[vk]) {
-  String(parcelInput[vk]).split(/[,;\/]+/).forEach(v => {
-  const cv = v.trim().toUpperCase();
-  if (cv && !varietiesSet.has(cv)) {
-  varietiesSet.add(cv);
-  varietiesWithArea.push({ nome: cv, area: '—' });
-  }
-  });
-  }
-  });
+    if (Array.isArray(parcelInput.variedades)) {
+      parcelInput.variedades.forEach(v => {
+        if (v) {
+          const cv = String(v).trim().toUpperCase();
+          if (cv && !varietiesSet.has(cv)) {
+            varietiesSet.add(cv);
+            varietiesWithArea.push({ nome: cv, area: '—' });
+          }
+        }
+      });
+    }
+    varPropKeys.forEach(vk => {
+      if (parcelInput[vk]) {
+        String(parcelInput[vk]).split(/[,;/+]+/).forEach(v => {
+          const cv = v.trim().toUpperCase();
+          if (cv && !varietiesSet.has(cv)) {
+            varietiesSet.add(cv);
+            varietiesWithArea.push({ nome: cv, area: '—' });
+          }
+        });
+      }
+    });
   }
 
   const varietiesList = Array.from(varietiesSet);
@@ -11644,22 +11694,22 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
   const formattedArea = totalArea > 0 ? totalArea.toFixed(2) : (first.area ? parseFloat(first.area).toFixed(2) : '1.00');
 
   const variedadesBlockHtml = varietiesWithArea.length > 0
-  ? varietiesWithArea.map(v => `<div style="display:flex; justify-content:space-between; width:180px;"><span style="font-weight:bold; color:#dc2626;">${v.nome}</span><span style="color:#dc2626; font-weight:bold;">${v.area !== '—' ? v.area.replace('.', ',') : ''}</span></div>`).join('')
-  : `<div style="font-weight:bold; color:#dc2626;">${formattedVariedade}</div>`;
+    ? varietiesWithArea.map(v => `<div style="display:flex; justify-content:space-between; width:180px;"><span style="font-weight:bold; color:#dc2626;">${v.nome}</span><span style="color:#dc2626; font-weight:bold;">${v.area !== '—' ? v.area.replace('.', ',') : ''}</span></div>`).join('')
+    : `<div style="font-weight:bold; color:#dc2626;">${formattedVariedade}</div>`;
 
   return {
-  ...first,
-  matches: matches,
-  parcelaNum: normTarget || first.parcela2 || first.parcela || '—',
-  variedade: formattedVariedade,
-  variedadesList: varietiesList,
-  varietiesWithArea: varietiesWithArea,
-  variedadesBlockHtml: variedadesBlockHtml,
-  area: formattedArea,
-  area_ha: formattedArea,
-  transplante: plantioDates[0] || first.transplante || first.plantio || first.data_plantio1 || null,
-  plantio: plantioDates[0] || first.plantio || first.transplante || first.data_plantio1 || null,
-  previsao_colheita: prevColheitaDates[0] || first.previsao_colheita || null
+    ...first,
+    matches: matches,
+    parcelaNum: normTarget || first.parcela2 || first.parcela || '—',
+    variedade: formattedVariedade,
+    variedadesList: varietiesList,
+    varietiesWithArea: varietiesWithArea,
+    variedadesBlockHtml: variedadesBlockHtml,
+    area: formattedArea,
+    area_ha: formattedArea,
+    transplante: plantioDates[0] || first.transplante || first.plantio || first.data_plantio1 || null,
+    plantio: plantioDates[0] || first.plantio || first.transplante || first.data_plantio1 || null,
+    previsao_colheita: prevColheitaDates[0] || first.previsao_colheita || null
   };
 }
 
@@ -14839,6 +14889,7 @@ function printPastaCampoMip(itemStr) {
   
   // Buscar informações da parcela
   const ip = (_infoParcelas || []).find(x => x.parcela2 === item.parcela || x.parcela === item.parcela);
+  const info = getParcelaCompleteInfo(item.parcela || item, _infoParcelas);
   const culturaStr = ip ? (ip.cultura || 'MELÃO').toUpperCase() : 'MELÃO';
   const areaStr = ip && ip.area ? `${ip.area} ha` : '—';
   const dataPlantioStr = ip && ip.plantio ? ip.plantio.split('-').reverse().join('/') : '—';
@@ -15069,6 +15120,51 @@ function closeNewMipModal() {
   if (modal) modal.style.display = 'none';
 }
 
+
+function handleMipGridKeyDown(e, type, key, pointIdx) {
+  const pestKeys = MIP_PRAGAS_EMBRAPA.map(p => p.key);
+  const doencaKeys = MIP_DOENCAS_EMBRAPA.map(d => d.key);
+  const currentKeys = type === 'praga' ? pestKeys : doencaKeys;
+  const currentKeyIndex = currentKeys.indexOf(key);
+
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (currentKeyIndex > 0) {
+      const prevKey = currentKeys[currentKeyIndex - 1];
+      const target = document.getElementById(`mip_${type}_${prevKey}_p${pointIdx}`);
+      if (target) { target.focus(); target.select(); }
+    }
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (currentKeyIndex < currentKeys.length - 1) {
+      const nextKey = currentKeys[currentKeyIndex + 1];
+      const target = document.getElementById(`mip_${type}_${nextKey}_p${pointIdx}`);
+      if (target) { target.focus(); target.select(); }
+    }
+  } else if (e.key === 'ArrowRight' || (e.key === 'Enter' && !e.shiftKey)) {
+    if (e.key === 'Enter') e.preventDefault();
+    if (pointIdx < 20) {
+      const nextPoint = pointIdx + 1;
+      const target = document.getElementById(`mip_${type}_${key}_p${nextPoint}`);
+      if (target) { target.focus(); target.select(); }
+    } else if (currentKeyIndex < currentKeys.length - 1) {
+      const nextKey = currentKeys[currentKeyIndex + 1];
+      const target = document.getElementById(`mip_${type}_${nextKey}_p1`);
+      if (target) { target.focus(); target.select(); }
+    }
+  } else if (e.key === 'ArrowLeft') {
+    if (pointIdx > 1) {
+      const prevPoint = pointIdx - 1;
+      const target = document.getElementById(`mip_${type}_${key}_p${prevPoint}`);
+      if (target) { target.focus(); target.select(); }
+    } else if (currentKeyIndex > 0) {
+      const prevKey = currentKeys[currentKeyIndex - 1];
+      const target = document.getElementById(`mip_${type}_${prevKey}_p20`);
+      if (target) { target.focus(); target.select(); }
+    }
+  }
+}
+
 function renderNewMipTableRows() {
   // 1. Renderizar Tabela de Pragas (20 Pontos)
   const tbodyPragas = $('newMipPragasTableBody');
@@ -15076,7 +15172,7 @@ function renderNewMipTableRows() {
     tbodyPragas.innerHTML = MIP_PRAGAS_EMBRAPA.map(p => {
       let pInputs = '';
       for (let i = 1; i <= 20; i++) {
-        pInputs += `<td style="padding:2px"><input type="number" step="0.5" min="0" id="mip_praga_${p.key}_p${i}" value="0" oninput="calcMipPragaRow('${p.key}')" style="width:34px; text-align:center; padding:3px 1px; font-size:11px; border-radius:4px; border:1px solid var(--border); background:rgba(255,255,255,0.05); color:var(--text)"/></td>`;
+        pInputs += `<td style="padding:2px"><input type="number" step="0.5" min="0" id="mip_praga_${p.key}_p${i}" value="0" oninput="calcMipPragaRow('${p.key}')" onkeydown="handleMipGridKeyDown(event, 'praga', '${p.key}', ${i})" onfocus="this.select()" onwheel="this.blur()" class="mip-point-input" style="width:34px; text-align:center; padding:3px 1px; font-size:11px; border-radius:4px; border:1px solid var(--border); background:rgba(255,255,255,0.05); color:var(--text); -moz-appearance:textfield;"/></td>`;
       }
       return `
       <tr id="mip_praga_row_${p.key}" style="border-bottom:1px solid var(--border); height:32px">
@@ -15098,7 +15194,7 @@ function renderNewMipTableRows() {
     tbodyDoencas.innerHTML = MIP_DOENCAS_EMBRAPA.map(d => {
       let dInputs = '';
       for (let i = 1; i <= 20; i++) {
-        dInputs += `<td style="padding:2px"><input type="number" step="1" min="0" max="1" id="mip_doenca_${d.key}_p${i}" value="0" oninput="calcMipDoencaRow('${d.key}')" style="width:34px; text-align:center; padding:3px 1px; font-size:11px; border-radius:4px; border:1px solid var(--border); background:rgba(255,255,255,0.05); color:var(--text)" title="0 = Ausência, 1 = Presença"/></td>`;
+        dInputs += `<td style="padding:2px"><input type="number" step="1" min="0" max="1" id="mip_doenca_${d.key}_p${i}" value="0" oninput="calcMipDoencaRow('${d.key}')" onkeydown="handleMipGridKeyDown(event, 'doenca', '${d.key}', ${i})" onfocus="this.select()" onwheel="this.blur()" class="mip-point-input" style="width:34px; text-align:center; padding:3px 1px; font-size:11px; border-radius:4px; border:1px solid var(--border); background:rgba(255,255,255,0.05); color:var(--text); -moz-appearance:textfield;" title="0 = Ausência, 1 = Presença"/></td>`;
       }
       return `
       <tr id="mip_doenca_row_${d.key}" style="border-bottom:1px solid var(--border); height:32px">
@@ -15540,7 +15636,7 @@ function printPastaCampoMip(itemStr) {
         <td colspan="2">
           <div style="display:flex; justify-content:space-between;">
             <span><strong>Parcela:</strong> ${item.parcela || '—'}</span>
-            <span><strong>Variedade:</strong> ${item.variedade || (ip && ip.variedade) || '—'}</span>
+            <span><strong>Variedades:</strong> ${info ? info.variedade : (item.variedade || (ip && ip.variedade) || '—')}</span>
             <span><strong>Idade da cultura:</strong> ${dapStr}</span>
             <span><strong>Data:</strong> ${formattedDate}</span>
           </div>
@@ -17621,7 +17717,10 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
   const rtCrea = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_crea) || '2100995243';
   const certNome = (window.tenantConfig && window.tenantConfig.agronomo_certificacao) || 'Emanuela Moreira';
   const areaHa = item && item.area ? parseFloat(item.area).toFixed(2) : '3.00';
-  const variedadesStr = item ? (item.variedades || [item.variedade || 'JADEAL']).filter(Boolean).join(', ') : 'JADEAL';
+  const info = getParcelaCompleteInfo(parcelCode || item, _infoParcelas);
+  const variedadesStr = (info && info.variedadesList && info.variedadesList.length > 0)
+    ? info.variedadesList.join(', ')
+    : (item ? (item.variedades || [item.variedade || 'JADEAL']).filter(Boolean).join(', ') : 'JADEAL');
 
   let fertData = [];
   let itensData = [];
@@ -18526,7 +18625,18 @@ function applyNewOpDosagemCorrection() {
   toast(' Dosagem ajustada para o limite legal!', 'ok');
 }
 
+function isBomJesusTenant() {
+  const cfgName = (window.tenantConfig && window.tenantConfig.name) || '';
+  const elName = (document.getElementById('tenantName')?.textContent) || (document.getElementById('homeTenant')?.textContent) || '';
+  const currentTenant = (window.currentTenantName || '').toUpperCase();
+  const allText = (cfgName + ' ' + elName + ' ' + currentTenant).toUpperCase();
+  return allText.includes('BOM JESUS') || allText.includes('BOMJESUS') || allText.includes('BJ');
+}
+
 function validateMipForOpDashboard(parcelId, parcelCode, alvo, opDate) {
+  if (isBomJesusTenant()) {
+    return { ok: true, blocked: false, message: 'Isento de validação MIP (Fazenda Bom Jesus)' };
+  }
   const cleanAlvo = (alvo || '').toUpperCase();
   
   const isFertilizer = !alvo
@@ -18638,7 +18748,7 @@ function addNewOpItem() {
   }
   
   // Validação 1: Justificativa de MIP para Defensivos Químicos vs Isenção para Foliares
-  if (!isCustom) {
+  if (!isCustom && !isBomJesusTenant()) {
   const parcelCode = ip ? (ip.parcela2 || ip.parcela) : '';
   const mipValidation = validateMipForOpDashboard(pId, parcelCode, targetAlvo, opDateStr);
   if (mipValidation.blocked) {
@@ -18733,7 +18843,7 @@ function addNewOpItem() {
   }
   
   // Validação 6: Justificativa de MIP
-  if (!isCustom) {
+  if (!isCustom && !isBomJesusTenant()) {
   const isFertilizer = !targetAlvo || cleanAlvo.includes('ADUBO') || cleanAlvo.includes('FOLIARE') || cleanAlvo.includes('NUTRIENTE') || cleanAlvo.includes('FISIOLOGICO') || cleanAlvo === 'N/A';
   if (!isFertilizer) {
   const parcelName = ip ? (ip.parcela2 || ip.parcela) : '';
