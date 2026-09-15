@@ -14083,21 +14083,36 @@ function showCcTab(tab) {
 
 async function loadMipTable() {
   try {
-  const { data: mipData, error: mipError } = await sb.from('caderno_campo_mip')
-  .select('*')
-  .eq('tenant_id', tenantId)
-  .order('data_vistoria', { ascending: false });
-  if (!mipError && mipData) {
-  renderCcMipTable(mipData);
-  _mipRecords = mipData;
-  } else {
-  renderCcMipTable([]);
-  _mipRecords = [];
-  }
+    const { data: mipData, error: mipError } = await sb.from('caderno_campo_mip')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('data_vistoria', { ascending: false });
+    if (!mipError && mipData) {
+      const unpacked = mipData.map(item => {
+        if (item.observacoes && typeof item.observacoes === 'string' && item.observacoes.startsWith('{')) {
+          try {
+            const parsed = JSON.parse(item.observacoes);
+            if (parsed.pragas_json) item.pragas_json = parsed.pragas_json;
+            if (parsed.doencas_json) item.doencas_json = parsed.doencas_json;
+            if (parsed.ervas_daninhas_pct !== undefined) item.ervas_daninhas_pct = parsed.ervas_daninhas_pct;
+            if (parsed.nematoide_obs) item.nematoide_obs = parsed.nematoide_obs;
+            if (parsed.dap) item.dap = parsed.dap;
+            if (parsed.tecnico) item.tecnico = parsed.tecnico;
+            if (parsed.observacoes !== undefined) item.obs_texto = parsed.observacoes;
+          } catch(e) {}
+        }
+        return item;
+      });
+      renderCcMipTable(unpacked);
+      _mipRecords = unpacked;
+    } else {
+      renderCcMipTable([]);
+      _mipRecords = [];
+    }
   } catch(e) {
-  console.error('Erro ao carregar MIP:', e);
-  renderCcMipTable([]);
-  _mipRecords = [];
+    console.error('Erro ao carregar MIP:', e);
+    renderCcMipTable([]);
+    _mipRecords = [];
   }
 }
 
@@ -15363,8 +15378,9 @@ async function saveNewMipDashboard() {
   const pragasData = {};
   let maxMedia = 0;
   const excedentes = [];
+  let firstPestPoints = [0,0,0,0,0,0,0,0,0,0];
 
-  MIP_PRAGAS_EMBRAPA.forEach(p => {
+  MIP_PRAGAS_EMBRAPA.forEach((p, pIdx) => {
     let sum = 0;
     let atacados = 0;
     const pontos = [];
@@ -15375,7 +15391,12 @@ async function saveNewMipDashboard() {
       if (val > 0) atacados++;
     }
     const media = sum / 20.0;
-    if (media > maxMedia) maxMedia = media;
+    if (media > maxMedia) {
+      maxMedia = media;
+      firstPestPoints = pontos.slice(0, 10);
+    } else if (pIdx === 0 && maxMedia === 0) {
+      firstPestPoints = pontos.slice(0, 10);
+    }
 
     let acima = false;
     if (p.limiarTipo === 'media') acima = media >= p.limiar;
@@ -15428,39 +15449,73 @@ async function saveNewMipDashboard() {
   const ervasPct = parseFloat($('newMipErvasPct')?.value) || 0;
   if (ervasPct >= 30) excedentes.push(`Ervas Daninhas (${ervasPct}%)`);
   const nematoideObs = $('newMipNematoideObs')?.value?.trim() || '';
+  const dapVal = $('newMipDap')?.value ? parseInt($('newMipDap').value) || null : null;
+  const userObs = $('newMipObs')?.value?.trim() || '';
 
   let summaryPraga = 'Vistoria MIP Completa (Sob Controle)';
   if (excedentes.length > 0) {
     summaryPraga = `MIP Excedente: ${excedentes.join(', ')}`;
   }
 
-  const record = {
-    tenant_id: tenantId,
-    parcel_id: ip ? ip.parcel_id || null : null,
-    parcela: parcelCode,
-    variedade: ip ? (ip.variedade || '') : '',
-    data_vistoria: dateVal,
-    dap: $('newMipDap')?.value ? parseInt($('newMipDap').value) || null : null,
-    praga: summaryPraga,
-    media: parseFloat(maxMedia.toFixed(2)),
-    responsavel_mip: pragueiroVal,
-    tecnico: tecnicoVal,
+  const packedJson = JSON.stringify({
     pragas_json: pragasData,
     doencas_json: doencasData,
     ervas_daninhas_pct: ervasPct,
     nematoide_obs: nematoideObs,
-    observacoes: $('newMipObs')?.value?.trim() || ''
+    dap: dapVal,
+    tecnico: tecnicoVal,
+    observacoes: userObs
+  });
+
+  const record = {
+    tenant_id: tenantId,
+    parcel_id: (ip && ip.parcel_id) ? ip.parcel_id : null,
+    parcela: parcelCode,
+    variedade: ip ? (ip.variedade || '') : '',
+    data_vistoria: dateVal,
+    praga: summaryPraga,
+    media: parseFloat(maxMedia.toFixed(2)),
+    responsavel: pragueiroVal,
+    ponto1: firstPestPoints[0] || 0,
+    ponto2: firstPestPoints[1] || 0,
+    ponto3: firstPestPoints[2] || 0,
+    ponto4: firstPestPoints[3] || 0,
+    ponto5: firstPestPoints[4] || 0,
+    ponto6: firstPestPoints[5] || 0,
+    ponto7: firstPestPoints[6] || 0,
+    ponto8: firstPestPoints[7] || 0,
+    ponto9: firstPestPoints[8] || 0,
+    ponto10: firstPestPoints[9] || 0,
+    observacoes: packedJson
   };
 
+  const btn = $('btnSaveMipWeb');
+  if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+
   try {
-    const { error } = await sb.from('caderno_campo_mip').insert(record);
+    let { error } = await sb.from('caderno_campo_mip').insert([record]);
+    
+    // Fallback if parcel_id causes FK error (23503 / 22P02 / 409 / 400)
+    if (error && record.parcel_id) {
+      record.parcel_id = null;
+      const retry = await sb.from('caderno_campo_mip').insert([record]);
+      error = retry.error;
+    }
+
     if (error) throw error;
     toast('✅ Vistoria MIP (Modelo EMBRAPA 20 Pontos) registrada com sucesso!', 'ok');
     closeNewMipModal();
     await loadMipTable();
   } catch(e) {
     console.error(e);
-    alert('Erro ao salvar vistoria MIP: ' + (e.message || 'Verifique sua conexão.'));
+    const detail = e.details ? ` (${e.details})` : (e.hint ? ` (${e.hint})` : '');
+    alert('Erro ao salvar vistoria MIP: ' + (e.message || 'Verifique sua conexão.') + detail);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="check" style="width:16px;height:16px"></i> Salvar Ficha MIP';
+      if (window.lucide) lucide.createIcons();
+    }
   }
 }
 
