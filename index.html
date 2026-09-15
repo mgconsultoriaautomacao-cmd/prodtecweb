@@ -16165,110 +16165,130 @@ function handleDefensivosFile(event) {
   if (!file) return;
 
   const fileName = file.name.toLowerCase();
+  const reader = new FileReader();
+
   if (fileName.endsWith('.xlsx') || fileName.endsWith('.xlsm') || fileName.endsWith('.xls')) {
-  const reader = new FileReader();
-  reader.onload = function(e) {
-  try {
-  const data = new Uint8Array(e.target.result);
-  const workbook = XLSX.read(data, { type: 'array' });
-  parseDefensivosWorkbook(workbook);
-  } catch(err) {
-  console.error("Erro lendo arquivo Excel:", err);
-  alert("Erro ao ler arquivo Excel: " + err.message);
-  }
-  };
-  reader.readAsArrayBuffer(file);
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        parseDefensivosWorkbook(workbook);
+      } catch(err) {
+        console.error("Erro lendo arquivo Excel:", err);
+        alert("Erro ao ler arquivo Excel: " + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
   } else {
-  const reader = new FileReader();
-  reader.onload = function(e) {
-  const text = e.target.result;
-  parseDefensivosCSVText(text);
-  };
-  reader.readAsText(file, 'UTF-8');
+    reader.onload = function(e) {
+      try {
+        const text = e.target.result;
+        const workbook = XLSX.read(text, { type: 'string' });
+        parseDefensivosWorkbook(workbook);
+      } catch(err) {
+        console.error("Erro lendo arquivo CSV:", err);
+        alert("Erro ao ler arquivo CSV: " + err.message);
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
   }
 }
 
+let _import2DRows = [];
+let _importCSVHeaders = [];
+
 function parseDefensivosWorkbook(workbook) {
-  let combinedLines = [];
+  let combinedHeaders = [];
+  let combinedRows = [];
+
   const targetSheetNames = ['MELÃO', 'MELAO', 'MELANCIA', 'DEFENSIVOS'];
-  
   let sheetsToProcess = workbook.SheetNames.filter(s => targetSheetNames.includes(s.toUpperCase()));
   if (sheetsToProcess.length === 0) {
   sheetsToProcess = [workbook.SheetNames[0]];
   }
 
   sheetsToProcess.forEach(sheetName => {
-  const sheet = workbook.Sheets[sheetName];
-  if (!sheet) return;
-  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-  if (!rows || rows.length === 0) return;
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) return;
 
-  let headerIdx = -1;
-  for (let r = 0; r < Math.min(15, rows.length); r++) {
-  const rowStr = (rows[r] || []).join(' ').toUpperCase();
-  if (rowStr.includes('NOME COMERCIAL') || rowStr.includes('INGREDIENTE ATIVO') || rowStr.includes('PRODUTO')) {
-  headerIdx = r;
-  break;
-  }
-  }
+    const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    if (!rawRows || rawRows.length === 0) return;
 
-  if (headerIdx === -1) headerIdx = 0;
+    let headerIdx = -1;
+    for (let r = 0; r < Math.min(15, rawRows.length); r++) {
+      const rowStr = (rawRows[r] || []).map(c => String(c !== undefined && c !== null ? c : '')).join(' ').toUpperCase();
+      if (rowStr.includes('NOME COMERCIAL') || rowStr.includes('INGREDIENTE ATIVO') || rowStr.includes('PRODUTO')) {
+        headerIdx = r;
+        break;
+      }
+    }
+    if (headerIdx === -1) headerIdx = 0;
 
-  let defaultCultura = 'TODAS';
-  if (sheetName.toUpperCase().includes('MELANCIA')) defaultCultura = 'MELANCIA';
-  else if (sheetName.toUpperCase().includes('MELÃO') || sheetName.toUpperCase().includes('MELAO')) defaultCultura = 'MELÃO';
+    let defaultCultura = 'MELÃO';
+    if (sheetName.toUpperCase().includes('MELANCIA')) defaultCultura = 'MELANCIA';
 
-  const headerRow = rows[headerIdx].map(c => String(c !== undefined && c !== null ? c : '').trim());
-  if (!headerRow.some(h => h.toUpperCase().includes('CULTURA'))) {
-  headerRow.push('CULTURA');
-  }
+    const rawHeaders = (rawRows[headerIdx] || []).map(h => 
+      String(h !== undefined && h !== null ? h : '')
+        .replace(/[\r\n]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toUpperCase()
+    );
 
-  if (combinedLines.length === 0) {
-  combinedLines.push(headerRow.join(';'));
-  }
+    let culturaColIdx = rawHeaders.findIndex(h => h.includes('CULTURA'));
+    if (culturaColIdx < 0) {
+      rawHeaders.push('CULTURA');
+      culturaColIdx = rawHeaders.length - 1;
+    }
 
-  for (let r = headerIdx + 1; r < rows.length; r++) {
-  const row = rows[r];
-  if (!row || row.length === 0) continue;
-  const rowVals = row.map(c => String(c !== undefined && c !== null ? c : '').trim());
-  if (!rowVals[0] && !rowVals[1]) continue;
+    if (combinedHeaders.length === 0) {
+      combinedHeaders = rawHeaders;
+    }
 
-  if (rowVals.length < headerRow.length) {
-  rowVals.push(defaultCultura);
-  }
-  combinedLines.push(rowVals.join(';'));
-  }
+    for (let r = headerIdx + 1; r < rawRows.length; r++) {
+      const rawRow = rawRows[r];
+      if (!rawRow || rawRow.length === 0) continue;
+
+      const rowVals = rawRow.map(c => 
+        String(c !== undefined && c !== null ? c : '')
+          .replace(/[\r\n]+/g, ' / ')
+          .replace(/\s+/g, ' ')
+          .trim()
+      );
+
+      const pCheck = rowVals[0] || '';
+      const iCheck = rowVals[1] || '';
+      if (!pCheck && !iCheck) continue;
+
+      if (culturaColIdx >= 0 && (rowVals.length <= culturaColIdx || !rowVals[culturaColIdx])) {
+        rowVals[culturaColIdx] = defaultCultura;
+      }
+
+      combinedRows.push(rowVals);
+    }
   });
 
-  if (combinedLines.length <= 1) {
-  alert('Nenhum defensivo válido encontrado na planilha.');
-  return;
+  if (combinedRows.length === 0) {
+    alert('Nenhum defensivo válido encontrado na planilha.');
+    return;
   }
 
-  parseDefensivosCSVText(combinedLines.join('\n'));
+  setupDefensivosMappingGrid(combinedHeaders, combinedRows);
 }
 
-let _importCSVLines = [];
-let _importCSVSeparator = ',';
-let _importCSVHeaders = [];
-
 function parseDefensivosCSVText(text) {
-  const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
-  if (lines.length <= 1) {
-  alert('Arquivo CSV vazio ou sem dados.');
-  return;
+  try {
+    const workbook = XLSX.read(text, { type: 'string' });
+    parseDefensivosWorkbook(workbook);
+  } catch(e) {
+    alert('Erro ao interpretar arquivo CSV/Excel: ' + e.message);
   }
+}
 
-  _importCSVLines = lines;
-  _importCSVSeparator = lines[0].includes(';') ? ';' : ',';
-  _importCSVHeaders = lines[0].split(_importCSVSeparator).map(h => h.trim().toUpperCase().replace(/["']/g, ''));
+function setupDefensivosMappingGrid(headers, rows) {
+  _importCSVHeaders = headers;
+  _import2DRows = rows;
 
-  const headers = _importCSVHeaders;
-  const getColIdx = (nameArr) => {
-  return headers.findIndex(h => nameArr.some(n => h.includes(n)));
-  };
-
-  // Detecção precisa: tenta match exato antes de parcial para evitar colisões
   const getColIdxExact = (exactTerms) => {
   return headers.findIndex(h => exactTerms.some(n => h === n));
   };
@@ -16276,7 +16296,6 @@ function parseDefensivosCSVText(text) {
   return headers.findIndex((h, idx) => !excludeIdxs.includes(idx) && nameArr.some(n => h.includes(n)));
   };
 
-  // Mapear em sequência de prioridade, reservando índices já usados
   const usedIdxs = [];
   const reserveIdx = (idx) => { if (idx >= 0 && !usedIdxs.includes(idx)) usedIdxs.push(idx); return idx; };
   const pickCol = (exactTerms, partialTerms) => {
@@ -16286,32 +16305,31 @@ function parseDefensivosCSVText(text) {
   };
 
   const initialMapping = {
-  produto: pickCol(['NOME COMERCIAL', 'PRODUTO'], ['COMERCIAL', 'PRODUTO']),
-  ingrediente: pickCol(['INGREDIENTE ATIVO', 'PRINCÍPIO ATIVO', 'PRINCIPIO ATIVO'], ['INGREDIENTE', 'PRINCIPIO', 'ING. ATIVO']),
-  tipo: pickCol(['TIPO'], ['TIPO']),
-  classe_tox: pickCol(['CLASSE TOXICOLÓGICA', 'CLASSE TOXICOLOGICA', 'TOXICOLÓGICA'], ['TOXICOLOG', 'CLASSE TOX']),
-  tarja: pickCol(['TARJA'], ['TARJA']),
-  classe_amb: pickCol(['CLASSE AMBIENTAL'], ['AMBIENTAL']),
-  concentracao: pickCol(['CONCENTRAÇÃO I.A.', 'CONCENTRACAO IA', 'CONCENTRAÇÃO'], ['CONCENTRA']),
-  alvo: pickCol(['ALVO / PRAGA', 'PRAGA / DOENÇA', 'ALVO/PRAGA', 'PRAGA/DOENÇA', 'ALVO', 'PRAGA'], ['ALVO', 'PRAGA', 'DOENCA', 'CONTROLE']),
-  dose_texto: pickCol(['DOSE DO PRODUTO', 'DOSE RECOMENDADA', 'DOSE TEXTO'], ['DOSE DO', 'DOSE']),
-  unidade: pickCol(['UNIDADE DE MEDIDA', 'UNIDADE DOSE'], ['UNIDADE']),
-  criterio: pickCol(['CRITÉRIO H/L', 'CRITERIO H/L', 'H/L'], ['CRITÉRIO', 'CRITERIO', 'H/L']),
-  vol_calda: pickCol(['VOLUME CALDA', 'VOL. CALDA'], ['VOLUME', 'CALDA']),
-  num_aplic: pickCol(['Nº APLICAÇÕES', 'NUMERO DE APLICAÇÕES', 'NUM APLIC'], ['APLICAÇÕES', 'APLICACOES']),
-  intervalo: pickCol(['INTERVALO ENTRE APLIC', 'INTERVALO (DIAS)', 'INTERVALO'], ['INTERVALO']),
-  carencia: pickCol(['CARÊNCIA (DIAS)', 'PERÍODO DE CARÊNCIA', 'CARÊNCIA'], ['CARÊNCIA', 'CARENCIA']),
-  reentrada: pickCol(['REENTRADA (DIAS)', 'INTERVALO DE REENTRADA'], ['REENTRADA']),
-  mrl_eu: pickCol(['MRL (EU)', 'MRL EU', 'MRL (CODEX)', 'CODEX'], ['MRL (EU', 'MRL EU', 'CODEX']),
-  mrl_gb: pickCol(['MRL (GB)', 'MRL GB'], ['MRL (GB', 'MRL GB']),
-  mrl_brasil: pickCol(['MRL (BRASIL)', 'MRL BRASIL'], ['MRL (BRASIL', 'MRL BRASIL', 'MRL (Brasil']),
-  condicao_tesco: pickCol(['CONDIÇÃO TESCO', 'TESCO'], ['TESCO', 'CONDIÇÃO']),
-  medida_tesco: pickCol(['MEDIDA TESCO', 'USO TESCO', 'CONDIÇÃO DE USO'], ['CONDIÇÃO DE', 'USO TESCO']),
-  mapa: pickCol(['REGISTRO MAPA', 'N° MAPA', 'MAPA'], ['MAPA', 'REGISTRO']),
-  cultura: pickCol(['CULTURA'], ['CULTURA'])
+    produto:        pickCol(['NOME COMERCIAL', 'PRODUTO', 'PRODUTO COMERCIAL'], ['COMERCIAL', 'PRODUTO']),
+    ingrediente:    pickCol(['INGREDIENTE ATIVO', 'PRINCÍPIO ATIVO', 'PRINCIPIO ATIVO', 'I.A.', 'IA'], ['INGREDIENTE', 'PRINCIPIO', 'ING. ATIVO']),
+    condicao_tesco: pickCol(['TESCO', 'CONDIÇÃO TESCO', 'CONDICAO TESCO'], ['TESCO']),
+    medida_tesco:   pickCol(['CONDIÇÃO DE USO TESCO', 'CONDIÇÃO DE USO', 'MEDIDA TESCO', 'USO TESCO'], ['CONDIÇÃO DE', 'MEDIDA TESCO', 'USO TESCO']),
+    alvo:           pickCol(['CONTROLE / ALVO', 'CONTROLE/ALVO', 'ALVO / PRAGA', 'PRAGA / DOENÇA', 'ALVO/PRAGA', 'PRAGA/DOENÇA', 'ALVO', 'PRAGA', 'CONTROLE'], ['CONTROLE', 'ALVO', 'PRAGA', 'DOENCA']),
+    tipo:           pickCol(['TIPO', 'CATEGORIA'], ['TIPO', 'CATEGORIA']),
+    classe_tox:     pickCol(['CLASSE TOXICOLÓGICA', 'CLASSE TOXICOLOGICA', 'TOXICOLÓGICA', 'TOXICOLOGICA'], ['TOXICOLOG', 'CLASSE TOX']),
+    tarja:          pickCol(['TARJA'], ['TARJA']),
+    classe_amb:     pickCol(['CLASSE AMBIENTAL', 'CLASSIFICAÇÃO AMBIENTAL'], ['AMBIENTAL']),
+    concentracao:   pickCol(['CONCENTRAÇÃO DO I. A', 'CONCENTRAÇÃO DO I.A.', 'CONCENTRAÇÃO I.A.', 'CONCENTRACAO IA', 'CONCENTRAÇÃO'], ['CONCENTRA']),
+    dose_texto:     pickCol(['DOSE DO PRODUTO COMERCIAL', 'DOSE DO PRODUTO', 'DOSE RECOMENDADA', 'DOSE TEXTO', 'DOSE'], ['DOSE DO', 'DOSE']),
+    unidade:        pickCol(['UNIDADE DE MEDIDA', 'UNIDADE DOSE', 'UNIDADE'], ['UNIDADE']),
+    criterio:       pickCol(['CRITÉRIO H/L', 'CRITERIO H/L', 'H/L', 'CRITÉRIO', 'CRITERIO'], ['CRITÉRIO', 'CRITERIO', 'H/L']),
+    vol_calda:      pickCol(['VOLUME MÁXIMO CALDA (L /HA)', 'VOLUME MÁXIMO CALDA', 'VOLUME MÁXIMO (L /HA)', 'VOLUME MÁXIMO', 'VOLUME CALDA', 'VOL. CALDA'], ['VOLUME', 'CALDA']),
+    num_aplic:      pickCol(['Nº APLICAÇÕES', 'NUMERO DE APLICAÇÕES', 'Nº DE APLICAÇÕES', 'NUM APLIC'], ['APLICAÇÕES', 'APLICACOES', 'APLIC']),
+    intervalo:      pickCol(['INTERVALO ENTRE APLICAÇÕES (DIAS)', 'INTERVALO ENTRE APLICAÇÕES', 'INTERVALO ENTRE APLIC', 'INTERVALO (DIAS)', 'INTERVALO'], ['INTERVALO']),
+    carencia:       pickCol(['CARÊNCIA (DAYS)', 'CARÊNCIA (DIAS)', 'CARENCIA (DIAS)', 'PERÍODO DE CARÊNCIA', 'CARÊNCIA', 'CARENCIA'], ['CARÊNCIA', 'CARENCIA']),
+    reentrada:      pickCol(['REENTRADA NA ÁREA (DAY)', 'REENTRADA NA ÁREA', 'REENTRADA (DIAS)', 'INTERVALO DE REENTRADA', 'REENTRADA'], ['REENTRADA']),
+    mrl_eu:         pickCol(['MRL (EU / CODEX MRL MG/ KG)', 'MRL (EU)', 'MRL EU', 'MRL (CODEX)', 'CODEX'], ['MRL (EU', 'MRL EU', 'CODEX']),
+    mrl_gb:         pickCol(['MRL (GB MG/ KG)', 'MRL (GB)', 'MRL GB'], ['MRL (GB', 'MRL GB']),
+    mrl_brasil:     pickCol(['MRL (BRASIL MG/ KG)', 'MRL (BRASIL)', 'MRL BRASIL'], ['MRL (BRASIL', 'MRL BRASIL']),
+    mapa:           pickCol(['REGISTRO MAPA', 'REGISTRO NO MAPA', 'N° MAPA', 'MAPA'], ['MAPA', 'REGISTRO']),
+    cultura:        pickCol(['CULTURA'], ['CULTURA'])
   };
 
-  // Render Mapping Select Grid
   const mappingGrid = $('importDefMappingGrid');
   if (mappingGrid) {
   const fields = [
@@ -16362,60 +16380,80 @@ function parseDefensivosCSVText(text) {
 }
 
 function rebuildImportDefensivosPreview() {
-  if (!_importCSVLines || _importCSVLines.length <= 1) return;
+  if (!_import2DRows || _import2DRows.length === 0) return;
 
   const getSelIdx = (key) => parseInt($(`mapCol_${key}`)?.value ?? -1);
-  const getVal = (cols, key, fallbackIdx) => {
-  const idx = getSelIdx(key);
-  return idx >= 0 && cols[idx] ? cols[idx].trim() : (fallbackIdx >= 0 && cols[fallbackIdx] ? cols[fallbackIdx].trim() : '');
+  const getVal = (cols, key) => {
+    const idx = getSelIdx(key);
+    return idx >= 0 && cols[idx] ? String(cols[idx]).trim() : '';
   };
 
   pendingImportDefensivos = [];
 
-  for (let i = 1; i < _importCSVLines.length; i++) {
-  const cols = _importCSVLines[i].split(_importCSVSeparator).map(c => c.trim().replace(/["']/g, ''));
-  if (cols.length < 1) continue;
+  for (let i = 0; i < _import2DRows.length; i++) {
+    const cols = _import2DRows[i];
+    if (!cols || cols.length === 0) continue;
 
-  const produto = getVal(cols, 'produto', 0).toUpperCase();
-  const ingrediente = getVal(cols, 'ingrediente', 1).toUpperCase();
-  if (!produto || !ingrediente) continue;
+    const produto = getVal(cols, 'produto').toUpperCase();
+    const ingrediente = getVal(cols, 'ingrediente').toUpperCase();
+    if (!produto || !ingrediente) continue;
 
-  const carenciaRaw = getVal(cols, 'carencia', -1);
-  const carencia = carenciaRaw === 'ND' ? 0 : (parseInt(carenciaRaw) || 0);
-  const intervaloRaw = getVal(cols, 'intervalo', -1);
-  const intervalo = parseInt(intervaloRaw.replace(/[^0-9]/g, '')) || 7;
-  const reentradaRaw = getVal(cols, 'reentrada', -1);
-  const reentrada = reentradaRaw ? (parseInt(reentradaRaw.replace(/[^0-9]/g, '')) || null) : null;
-  const numAplicRaw = getVal(cols, 'num_aplic', -1);
-  const numAplic = numAplicRaw ? (parseInt(numAplicRaw.replace(/[^0-9]/g, '')) || null) : null;
-  const cultura = getVal(cols, 'cultura', -1).toUpperCase() || 'MELÃO';
+    const carenciaRaw = getVal(cols, 'carencia');
+    let carencia = 0;
+    if (carenciaRaw && !['ND', 'ISENTO', 'ISENTA', 'SI', 'SEM RESTRIÇÃO'].includes(carenciaRaw.toUpperCase())) {
+      const m = carenciaRaw.match(/\d+/);
+      if (m) carencia = parseInt(m[0], 10);
+    }
 
-  pendingImportDefensivos.push({
-  tenant_id: tenantId,
-  produto,
-  ingrediente_ativo: ingrediente,
-  tipo: getVal(cols, 'tipo', -1).toUpperCase() || null,
-  classe_toxicologica: getVal(cols, 'classe_tox', -1) || null,
-  tarja: getVal(cols, 'tarja', -1).toUpperCase() || null,
-  classe_ambiental: getVal(cols, 'classe_amb', -1) || null,
-  concentracao_ia: getVal(cols, 'concentracao', -1) || null,
-  alvo: getVal(cols, 'alvo', -1).toUpperCase() || null,
-  dose_texto: getVal(cols, 'dose_texto', -1) || null,
-  unidade_dose: getVal(cols, 'unidade', -1) || 'LT',
-  criterio_dosagem: getVal(cols, 'criterio', -1) || null,
-  volume_maximo_calda: getVal(cols, 'vol_calda', -1) || null,
-  num_aplicacoes_ciclo: numAplic,
-  intervalo_dias: intervalo,
-  carencia_dias: carencia,
-  reentrada_dias: reentrada,
-  mrl_eu: getVal(cols, 'mrl_eu', -1) || null,
-  mrl_gb: getVal(cols, 'mrl_gb', -1) || null,
-  mrl_brasil: getVal(cols, 'mrl_brasil', -1) || null,
-  condicao_tesco: getVal(cols, 'condicao_tesco', -1) || null,
-  medida_tesco: getVal(cols, 'medida_tesco', -1) || null,
-  registro_mapa: getVal(cols, 'mapa', -1) || null,
-  cultura: cultura || 'MELÃO'
-  });
+    const intervaloRaw = getVal(cols, 'intervalo');
+    let intervalo = 7;
+    if (intervaloRaw) {
+      const m = intervaloRaw.match(/\d+/);
+      if (m) intervalo = parseInt(m[0], 10);
+    }
+
+    const reentradaRaw = getVal(cols, 'reentrada');
+    let reentrada = null;
+    if (reentradaRaw) {
+      const m = reentradaRaw.match(/\d+/);
+      if (m) reentrada = parseInt(m[0], 10);
+    }
+
+    const numAplicRaw = getVal(cols, 'num_aplic');
+    let numAplic = null;
+    if (numAplicRaw) {
+      const m = numAplicRaw.match(/\d+/);
+      if (m) numAplic = parseInt(m[0], 10);
+    }
+
+    const cultura = getVal(cols, 'cultura').toUpperCase() || 'MELÃO';
+
+    pendingImportDefensivos.push({
+      tenant_id: tenantId,
+      produto,
+      ingrediente_ativo: ingrediente,
+      tipo: getVal(cols, 'tipo').toUpperCase() || null,
+      classe_toxicologica: getVal(cols, 'classe_tox') || null,
+      tarja: getVal(cols, 'tarja').toUpperCase() || null,
+      classe_ambiental: getVal(cols, 'classe_amb') || null,
+      concentracao_ia: getVal(cols, 'concentracao') || null,
+      alvo: getVal(cols, 'alvo').toUpperCase() || null,
+      dose_texto: getVal(cols, 'dose_texto') || null,
+      unidade_dose: getVal(cols, 'unidade') || 'LT',
+      criterio_dosagem: getVal(cols, 'criterio') || null,
+      volume_maximo_calda: getVal(cols, 'vol_calda') || null,
+      num_aplicacoes_ciclo: numAplic,
+      intervalo_dias: intervalo,
+      carencia_dias: carencia,
+      reentrada_dias: reentrada,
+      mrl_eu: getVal(cols, 'mrl_eu') || null,
+      mrl_gb: getVal(cols, 'mrl_gb') || null,
+      mrl_brasil: getVal(cols, 'mrl_brasil') || null,
+      condicao_tesco: getVal(cols, 'condicao_tesco') || null,
+      medida_tesco: getVal(cols, 'medida_tesco') || null,
+      registro_mapa: getVal(cols, 'mapa') || null,
+      cultura: cultura || 'MELÃO'
+    });
   }
 
   const tbody = $('importDefPreviewTable');
