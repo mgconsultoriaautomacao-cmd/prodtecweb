@@ -18208,11 +18208,11 @@ async function saveNewPosRecord() {
   const defSelVal = $('posProdutoSelect').value;
   let produto_nome = '';
   if (defSelVal === 'OUTRO') {
-  produto_nome = ($('posProdutoNomeCustom')?.value || '').toUpperCase().trim();
+    produto_nome = ($('posProdutoNomeCustom')?.value || '').toUpperCase().trim();
   } else {
-  const sel = $('posProdutoSelect');
-  const opt = sel.options[sel.selectedIndex];
-  produto_nome = opt ? (opt.dataset.prod || opt.text.split('(')[0].trim()).toUpperCase() : '';
+    const sel = $('posProdutoSelect');
+    const opt = sel.options[sel.selectedIndex];
+    produto_nome = opt ? (opt.dataset.prod || opt.text.split('(')[0].trim()).toUpperCase() : '';
   }
 
   const ingrediente_ativo = $('posIngredienteAtivo').value.toUpperCase().trim();
@@ -18224,45 +18224,45 @@ async function saveNewPosRecord() {
   const justificativa = $('posJustificativa').value.toUpperCase().trim();
 
   if (!parcela || !data_aplicacao || !produto_nome) {
-  alert('Preencha os campos obrigatórios: Parcela, Data e Produto Fungicida.');
-  return;
+    alert('Preencha os campos obrigatórios: Parcela, Data e Produto Fungicida.');
+    return;
   }
 
   try {
-  const payload = {
-  tenant_id: tenantId,
-  parcela,
-  data_aplicacao,
-  produto_nome,
-  ingrediente_ativo,
-  dosagem_produto,
-  volume_agua,
-  quantidade_carrocoes,
-  carencia_dias,
-  operador,
-  justificativa
-  };
+    const payload = {
+      tenant_id: tenantId,
+      parcela,
+      data_aplicacao,
+      produto_nome,
+      ingrediente_ativo,
+      dosagem_produto,
+      volume_agua,
+      quantidade_carrocoes,
+      carencia_dias,
+      operador,
+      justificativa
+    };
 
-  const { error } = await sb.from('caderno_campo_pos_colheita').insert(payload);
-  if (error) throw error;
+    const { error } = await sb.from('caderno_campo_pos_colheita').insert(payload);
+    if (error) throw error;
 
-  toast(' Tratamento de Talo pós-colheita salvo com sucesso! ', 'ok');
-  closeNewPosModal();
-  await loadPosColheitaTable();
+    toast(' Tratamento de Talo pós-colheita salvo com sucesso! ', 'ok');
+    closeNewPosModal();
+    await loadPosColheitaTable();
   } catch (e) {
-  alert('Erro ao salvar tratamento pós-colheita: ' + (e.message || 'Verifique a conexão.'));
+    alert('Erro ao salvar tratamento pós-colheita: ' + (e.message || 'Verifique a conexão.'));
   }
 }
 
 async function deletePosRecord(id) {
   if (!confirm('Deseja excluir este tratamento de talo pós-colheita?')) return;
   try {
-  const { error } = await sb.from('caderno_campo_pos_colheita').delete().eq('id', id).eq('tenant_id', tenantId);
-  if (error) throw error;
-  toast(' Registro excluído!', 'ok');
-  await loadPosColheitaTable();
+    const { error } = await sb.from('caderno_campo_pos_colheita').delete().eq('id', id).eq('tenant_id', tenantId);
+    if (error) throw error;
+    toast(' Registro excluído!', 'ok');
+    await loadPosColheitaTable();
   } catch(e) {
-  alert('Erro ao excluir: ' + e.message);
+    alert('Erro ao excluir: ' + e.message);
   }
 }
 
@@ -18330,13 +18330,13 @@ function printPosColheitaReport(itemStr) {
 async function deleteOpRecord(id) {
   if (!confirm('Deseja realmente excluir esta Ordem de Pulverização?')) return;
   try {
-  const { error } = await sb.from('caderno_campo_op').delete().eq('id', id);
-  if (error) throw error;
-  toast(' Ordem de Pulverização excluída!', 'ok');
-  loadCadernoCampo();
+    const { error } = await sb.from('caderno_campo_op').delete().eq('id', id);
+    if (error) throw error;
+    toast(' Ordem de Pulverização excluída!', 'ok');
+    loadCadernoCampo();
   } catch(e) {
-  console.error(e);
-  alert('Erro ao excluir O.P.');
+    console.error(e);
+    alert('Erro ao excluir O.P.');
   }
 }
 
@@ -18345,51 +18345,46 @@ async function deleteOpRecord(id) {
 // ═══════════════════════════════════════════════════════
 
 /**
-  * Extrai { min, max, unit } de strings como:
-  * "12,5 a 25 mL/100L", "0,3 - 0,4 L/ha", "200 - 300 g/há"
-  * Sempre retorna o menor valor como min.
-  */
+ * Extrai { min, max, unit } de strings como:
+ * "12,5 a 25 mL/100L", "0,3 - 0,4 L/ha", "200 - 300 g/há"
+ * Sempre retorna o menor valor como min.
+ */
 function parseDoseTexto(texto) {
   if (!texto) return null;
-  // Normalizar separadores decimais e remover quebras de linha / texto extra
   const linha = texto.replace(/\n[\s\S]*/g, '').trim()
-  .replace(/,/g, '.') // vírgula → ponto
-  .replace(/há/g, 'ha')
-  .replace(/\\/g, '/');
+    .replace(/,/g, '.') // vírgula → ponto
+    .replace(/há/g, 'ha')
+    .replace(/\\/g, '/');
 
-  // Captura dois números (range) ex: "12.5 a 25" ou "0.3 - 0.4"
   const rangeMatch = linha.match(/(\d+\.?\d*)\s*(?:a|-)\s*(\d+\.?\d*)/);
   if (rangeMatch) {
-  const v1 = parseFloat(rangeMatch[1]);
-  const v2 = parseFloat(rangeMatch[2]);
-  // Extrair unidade: tudo após os dois números
-  const unitMatch = linha.match(/(\d+\.?\d*)\s*(?:a|-)\s*(\d+\.?\d*)\s*([A-Za-z\/\.]+)/);
-  const unit = unitMatch ? unitMatch[3].trim() : '';
-  return { min: Math.min(v1, v2), max: Math.max(v1, v2), unit };
+    const v1 = parseFloat(rangeMatch[1]);
+    const v2 = parseFloat(rangeMatch[2]);
+    const unitMatch = linha.match(/(\d+\.?\d*)\s*(?:a|-)\s*(\d+\.?\d*)\s*([A-Za-z\/\.]+)/);
+    const unit = unitMatch ? unitMatch[3].trim() : '';
+    return { min: Math.min(v1, v2), max: Math.max(v1, v2), unit };
   }
 
-  // Valor único ex: "25 mL/100L"
   const singleMatch = linha.match(/(\d+\.?\d*)\s*([A-Za-z\/\.]+)/);
   if (singleMatch) {
-  const v = parseFloat(singleMatch[1]);
-  return { min: v, max: v, unit: singleMatch[2].trim() };
+    const v = parseFloat(singleMatch[1]);
+    return { min: v, max: v, unit: singleMatch[2].trim() };
   }
   return null;
 }
 
 /**
-  * Conta quantas OPs já aplicaram um dado produto (por nome)
-  * nesta parcela DENTRO do ciclo atual (plantio → previsao_colheita).
-  */
+ * Conta quantas OPs já aplicaram um dado produto (por nome)
+ * nesta parcela DENTRO do ciclo atual (plantio → previsao_colheita).
+ */
 function countOpAplicacoesCiclo(parcelCode, produtoNome, cicloPlantio, cicloColheita) {
   return (_opList || []).filter(op => {
-  if (op.parcela !== parcelCode) return false;
-  // Filtrar pelo ciclo atual
-  if (cicloPlantio && op.data_aplicacao < cicloPlantio) return false;
-  if (cicloColheita && op.data_aplicacao > cicloColheita) return false;
-  return (op.caderno_campo_op_itens || []).some(
-  i => (i.produto_nome || '').toUpperCase() === produtoNome.toUpperCase()
-  );
+    if (op.parcela !== parcelCode) return false;
+    if (cicloPlantio && op.data_aplicacao < cicloPlantio) return false;
+    if (cicloColheita && op.data_aplicacao > cicloColheita) return false;
+    return (op.caderno_campo_op_itens || []).some(
+      i => (i.produto_nome || '').toUpperCase() === produtoNome.toUpperCase()
+    );
   }).length;
 }
 
@@ -18400,7 +18395,6 @@ function openNewOpModal() {
   $('newOpDate').value = today();
   
   const allEmps = (_employees || []).filter(e => e.active !== false);
-  //  Filtra exclusivamente funcionários com a função TRATORISTA
   const tratoristas = allEmps.filter(e => e.role && e.role.toUpperCase().includes('TRATORISTA'));
   const finalTratoristas = tratoristas.length > 0 ? tratoristas : allEmps;
   
@@ -18429,8 +18423,7 @@ function openNewOpModal() {
   $('newOpArea').value = "";
   
   populateNewOpDefensivesSelect();
-  _newOpTabMode = 'DEFENSIVO'; // Reset tab to defensivo on open
-  // Reset panels
+  _newOpTabMode = 'DEFENSIVO';
   if ($('newOpFichaPanel')) $('newOpFichaPanel').style.display = 'none';
   if ($('newOpTotaisPanel')) $('newOpTotaisPanel').style.display = 'none';
   if ($('newOpDosagemWarning')) $('newOpDosagemWarning').style.display = 'none';
@@ -18446,26 +18439,52 @@ function onNewOpParcelChange() {
   const pId = $('newOpParcelSelect').value;
   const ip = getParcelaCompleteInfo(pId, _infoParcelas);
   if (ip) {
-  $('newOpCultura').value = `${ip.cultura || 'MELÃO'} (${ip.variedade || 'Padrão'})`;
-  $('newOpArea').value = ip.area || '1.00';
+    $('newOpCultura').value = `${ip.cultura || 'MELÃO'} (${ip.variedade || 'Padrão'})`;
+    $('newOpArea').value = ip.area || '1.00';
   } else {
-  $('newOpCultura').value = '';
-  $('newOpArea').value = '';
+    $('newOpCultura').value = '';
+    $('newOpArea').value = '';
   }
   populateNewOpDefensivesSelect();
-  calculateNewOpTotals(); // Recalcular ao mudar parcela (area pode mudar)
+  calculateNewOpTotals();
 }
 
 function populateNewOpDefensivesSelect() {
-  // Ensure defensivos data is populated
-  if ((!_defensivos || _defensivos.length === 0) && webDefensivosData && webDefensivosData.length > 0) {
-  _defensivos = webDefensivosData;
+  if ((!_defensivos || _defensivos.length === 0) && typeof webDefensivosData !== 'undefined' && webDefensivosData && webDefensivosData.length > 0) {
+    _defensivos = webDefensivosData;
   }
-  // Delegate to the tab switcher so filtering is always consistent
   switchNewOpTab(_newOpTabMode || 'DEFENSIVO');
 }
 
 let _newOpTabMode = 'DEFENSIVO'; // 'DEFENSIVO' ou 'FOLIAR'
+
+function getOpDefensivoOrFert(id) {
+  if (!id || id === 'OUTRO') return null;
+  if (id.startsWith('FERT_')) {
+    const fName = id.replace('FERT_', '');
+    const nutr = (typeof FERTILIZANTES_NUTRIENTES_MAP !== 'undefined' && FERTILIZANTES_NUTRIENTES_MAP[fName]) || {};
+    const nutrEntries = Object.entries(nutr);
+    const nutrStr = nutrEntries.length > 0 ? nutrEntries.map(([k, v]) => `${k}: ${v}%`).join(', ') : 'Nutrição Foliar';
+    return {
+      id: id,
+      produto: fName,
+      ingrediente_ativo: nutrStr,
+      tipo: 'ADUBO FOLIAR',
+      alvo: 'ADUBAÇÃO FOLIAR',
+      dose: 1.0,
+      dosagem_recomendada: 1.0,
+      dose_texto: '1.0 L/ha',
+      unidade_dose: 'L/ha',
+      unidade: 'L/ha',
+      carencia_dias: 0,
+      intervalo_dias: 0,
+      num_aplicacoes_ciclo: 0,
+      classe_toxicologica: 'ISENTO',
+      tarja: 'VERDE'
+    };
+  }
+  return (_defensivos || []).find(d => d.id === id) || null;
+}
 
 function switchNewOpTab(mode) {
   _newOpTabMode = mode;
@@ -18475,52 +18494,88 @@ function switchNewOpTab(mode) {
   const label = $('newOpDefensivoLabel');
   
   if (mode === 'FOLIAR') {
-  tabDef.style.background = 'var(--card2)';
-  tabDef.style.color = 'var(--muted)';
-  tabDef.style.border = '1px solid var(--border)';
-  tabFol.style.background = 'var(--green)';
-  tabFol.style.color = '#fff';
-  tabFol.style.border = 'none';
-  if (alvoGroup) alvoGroup.style.display = 'none';
-  if (label) label.textContent = 'Adubo Foliar / Nutriente';
-  $('newOpAlvo').value = 'ADUBO FOLIAR';
+    if (tabDef) {
+      tabDef.style.background = 'var(--card2)';
+      tabDef.style.color = 'var(--muted)';
+      tabDef.style.border = '1px solid var(--border)';
+    }
+    if (tabFol) {
+      tabFol.style.background = 'var(--green)';
+      tabFol.style.color = '#fff';
+      tabFol.style.border = 'none';
+    }
+    if (alvoGroup) alvoGroup.style.display = 'none';
+    if (label) label.textContent = 'Adubo Foliar / Nutriente';
+    if ($('newOpAlvo')) $('newOpAlvo').value = 'ADUBO FOLIAR';
   } else {
-  tabDef.style.background = 'var(--blue)';
-  tabDef.style.color = '#fff';
-  tabDef.style.border = 'none';
-  tabFol.style.background = 'var(--card2)';
-  tabFol.style.color = 'var(--muted)';
-  tabFol.style.border = '1px solid var(--border)';
-  if (alvoGroup) alvoGroup.style.display = '';
-  if (label) label.textContent = 'Defensivo';
-  $('newOpAlvo').value = '';
+    if (tabDef) {
+      tabDef.style.background = 'var(--blue)';
+      tabDef.style.color = '#fff';
+      tabDef.style.border = 'none';
+    }
+    if (tabFol) {
+      tabFol.style.background = 'var(--card2)';
+      tabFol.style.color = 'var(--muted)';
+      tabFol.style.border = '1px solid var(--border)';
+    }
+    if (alvoGroup) alvoGroup.style.display = '';
+    if (label) label.textContent = 'Defensivo';
+    if ($('newOpAlvo')) $('newOpAlvo').value = '';
   }
 
   // Re-popular o select com produtos do tipo correto
   const select = $('newOpDefensivoSelect');
+  if (!select) return;
   select.innerHTML = '';
   const norm = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
   const isFol = d => {
-  const t = norm(d.tipo); const p = norm(d.produto); const ia = norm(d.ingrediente_ativo); const al = norm(d.alvo);
-  return t.includes('FOLIAR') || t.includes('FERTILIZ') || t.includes('NUTRI') || p.includes('FOLIAR') || p.includes('ADUBO') || p.includes('NUTRI') || ia.includes('FOLIAR') || ia.includes('FERTILIZ') || al.includes('FOLIAR') || al.includes('NUTRI');
+    const t = norm(d.tipo); const p = norm(d.produto); const ia = norm(d.ingrediente_ativo); const al = norm(d.alvo);
+    return t.includes('FOLIAR') || t.includes('FERTILIZ') || t.includes('NUTRI') || p.includes('FOLIAR') || p.includes('ADUBO') || p.includes('NUTRI') || ia.includes('FOLIAR') || ia.includes('FERTILIZ') || al.includes('FOLIAR') || al.includes('NUTRI');
   };
-  const lista = (_defensivos || []).filter(d => mode === 'FOLIAR' ? isFol(d) : !isFol(d));
-  select.insertAdjacentHTML('beforeend', `<option value="">Selecione ${mode === 'FOLIAR' ? 'um adubo foliar' : 'um defensivo'}...</option>`);
-  lista.forEach(d => {
-  const doseVal = d.dose || d.dosagem_recomendada;
-  const doseStr = doseVal ? ` | Dose: ${doseVal} ${d.unidade_dose || 'L/ha'}` : '';
-  const alvoStr = d.alvo ? ` | Alvo: ${d.alvo}` : '';
-  const carStr = d.carencia_dias !== undefined ? ` | Carência: ${d.carencia_dias}d` : '';
-  select.insertAdjacentHTML('beforeend', `<option value="${d.id}">${d.produto} (${d.ingrediente_ativo || 'Nutrição'})${doseStr}${alvoStr}${carStr}</option>`);
-  });
+
+  if (mode === 'FOLIAR') {
+    const folFromDef = (_defensivos || []).filter(isFol);
+    const usedNames = new Set(folFromDef.map(d => norm(d.produto)));
+    const catList = typeof FERTILIZANTES_CATALOGO_OFICIAL !== 'undefined' ? FERTILIZANTES_CATALOGO_OFICIAL : [];
+    
+    select.insertAdjacentHTML('beforeend', `<option value="">Selecione um adubo foliar (${catList.length + folFromDef.length} disponíveis)...</option>`);
+    
+    // Foliar da tabela defensivos (se houver)
+    folFromDef.forEach(d => {
+      const doseVal = d.dose || d.dosagem_recomendada;
+      const doseStr = doseVal ? ` | Dose: ${doseVal} ${d.unidade_dose || 'L/ha'}` : '';
+      select.insertAdjacentHTML('beforeend', `<option value="${d.id}">🌱 ${d.produto} (${d.ingrediente_ativo || 'Nutrição'})${doseStr}</option>`);
+    });
+
+    // Catálogo oficial de 263 adubos foliares
+    catList.forEach(fName => {
+      const fNorm = norm(fName);
+      if (!usedNames.has(fNorm)) {
+        const nutr = (typeof FERTILIZANTES_NUTRIENTES_MAP !== 'undefined' && FERTILIZANTES_NUTRIENTES_MAP[fName]) || {};
+        const entries = Object.entries(nutr);
+        const nutrSummary = entries.slice(0, 3).map(([k, v]) => `${k}:${v}%`).join(' ') || 'Foliar';
+        select.insertAdjacentHTML('beforeend', `<option value="FERT_${fName}">🌿 ${fName} (${nutrSummary})</option>`);
+      }
+    });
+  } else {
+    const lista = (_defensivos || []).filter(d => !isFol(d));
+    select.insertAdjacentHTML('beforeend', `<option value="">Selecione um defensivo (${lista.length} opções)...</option>`);
+    lista.forEach(d => {
+      const doseVal = d.dose || d.dosagem_recomendada;
+      const doseStr = doseVal ? ` | Dose: ${doseVal} ${d.unidade_dose || 'L/ha'}` : '';
+      const alvoStr = d.alvo ? ` | Alvo: ${d.alvo}` : '';
+      const carStr = d.carencia_dias !== undefined ? ` | Carência: ${d.carencia_dias}d` : '';
+      select.insertAdjacentHTML('beforeend', `<option value="${d.id}">${d.produto} (${d.ingrediente_ativo || 'Químico'})${doseStr}${alvoStr}${carStr}</option>`);
+    });
+  }
   select.insertAdjacentHTML('beforeend', `<option value="OUTRO">+ Digitar Outro...</option>`);
 
   // Reset panel
-  $('newOpFichaPanel').style.display = 'none';
-  $('newOpTotaisPanel').style.display = 'none';
-  $('newOpDosagemWarning').style.display = 'none';
-  $('newOpDosagemReal').value = '1.00';
-  $('newOpDefensivoCustomContainer').style.display = 'none';
+  if ($('newOpFichaPanel')) $('newOpFichaPanel').style.display = 'none';
+  if ($('newOpTotaisPanel')) $('newOpTotaisPanel').style.display = 'none';
+  if ($('newOpDosagemWarning')) $('newOpDosagemWarning').style.display = 'none';
+  if ($('newOpDosagemReal')) $('newOpDosagemReal').value = '1.00';
+  if ($('newOpDefensivoCustomContainer')) $('newOpDefensivoCustomContainer').style.display = 'none';
 }
 
 function onNewOpDosagemUnitSelectChange() {
@@ -18544,7 +18599,7 @@ function onNewOpDefensivoChange() {
   } else {
     if (customContainer) customContainer.style.display = 'none';
     const id = select.value;
-    const def = (_defensivos || []).find(d => d.id === id);
+    const def = getOpDefensivoOrFert(id);
     if (def) {
       // ── Calcular dosagem mínima automática ──────────────────────────
       const pId = $('newOpParcelSelect').value;
@@ -18641,9 +18696,9 @@ function onNewOpDefensivoChange() {
         fichaPanel.innerHTML = `
         <div style="font-weight:700; color:var(--text); margin-bottom:6px; font-size:13px">📄 Ficha Agronômica: ${def.produto}</div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px 16px">
-          <div><strong>I.A.:</strong> ${def.ingrediente_ativo || '—'} ${def.concentracao_ia ? '('+def.concentracao_ia+')' : ''}</div>
+          <div><strong>I.A. / Nutrientes:</strong> ${def.ingrediente_ativo || '—'} ${def.concentracao_ia ? '('+def.concentracao_ia+')' : ''}</div>
           <div><strong>Tipo:</strong> ${def.tipo || (_newOpTabMode === 'FOLIAR' ? 'ADUBO FOLIAR' : 'DEFENSIVO')}</div>
-          <div><strong>Dose (bula):</strong> <span style="color:var(--green); font-weight:700">${def.dose_texto || (dosePreenchida + ' ' + unit)}</span></div>
+          <div><strong>Dose (recomendada):</strong> <span style="color:var(--green); font-weight:700">${def.dose_texto || (dosePreenchida + ' ' + unit)}</span></div>
           <div><strong>Carência:</strong> ${def.carencia_dias || 0} dias</div>
           <div><strong>Classe Tox.:</strong> ${def.classe_toxicologica || '—'} (${def.tarja || '—'})</div>
           <div><strong>Reentrada:</strong> ${def.reentrada_dias || '—'} dias</div>
@@ -18669,7 +18724,7 @@ function onNewOpDefensivoChange() {
 
 function calculateNewOpTotals() {
   const id = $('newOpDefensivoSelect').value;
-  const def = id && id !== 'OUTRO' ? (_defensivos || []).find(d => d.id === id) : null;
+  const def = getOpDefensivoOrFert(id);
   const parsed = def ? parseDoseTexto(def.dose_texto) : null;
   
   const unitSel = $('newOpDosagemUnitSelect');
@@ -18732,7 +18787,7 @@ function calculateNewOpTotals() {
 
 function applyNewOpDosagemCorrection() {
   const id = $('newOpDefensivoSelect').value;
-  const def = id && id !== 'OUTRO' ? (_defensivos || []).find(d => d.id === id) : null;
+  const def = getOpDefensivoOrFert(id);
   if (!def) return;
   const doseLimite = parseFloat(def.dose || def.dosagem_recomendada) || 1.0;
   $('newOpDosagemReal').value = doseLimite;
@@ -18842,8 +18897,8 @@ function addNewOpItem() {
   intervalo_dias: 0
   };
   } else {
-  def = _defensivos.find(d => d.id === id);
-  if (!def) return;
+    def = getOpDefensivoOrFert(id);
+    if (!def) return;
   dosagemReal = parseFloat($('newOpDosagemReal').value) || 0;
   
   const parsedDose = parseDoseTexto(def.dose_texto);
