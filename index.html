@@ -2485,9 +2485,13 @@
   <div style="font-weight:700; color:#fff; margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px; margin-top:16px">3. Calda de Defensivos &amp; Foliares</div>
   
   <!-- Abas: Defensivo vs Foliar -->
-  <div style="display:flex; gap:6px; margin-bottom:12px">
-  <button id="newOpTabDefensivo" onclick="switchNewOpTab('DEFENSIVO')" style="background:var(--blue); color:#fff; border:none; padding:7px 16px; border-radius:8px; font-weight:700; cursor:pointer; font-size:13px"> Defensivo</button>
-  <button id="newOpTabFoliar" onclick="switchNewOpTab('FOLIAR')" style="background:var(--card2); color:var(--muted); border:1px solid var(--border); padding:7px 16px; border-radius:8px; font-weight:700; cursor:pointer; font-size:13px"> Adubo Foliar</button>
+  <div style="display:flex; gap:8px; margin-bottom:12px">
+    <button type="button" id="newOpTabDefensivo" onclick="switchNewOpTab('DEFENSIVO')" style="background:var(--blue); color:#fff; border:none; padding:8px 18px; border-radius:8px; font-weight:700; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px">
+      <i data-lucide="shield" style="width:15px; height:15px"></i> Defensivo
+    </button>
+    <button type="button" id="newOpTabFoliar" onclick="switchNewOpTab('FOLIAR')" style="background:var(--card2); color:var(--muted); border:1px solid var(--border); padding:8px 18px; border-radius:8px; font-weight:700; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px">
+      <i data-lucide="sprout" style="width:15px; height:15px"></i> Adubo Foliar
+    </button>
   </div>
 
   <div style="display:grid; grid-template-columns: 2fr 1fr 1.3fr 1.2fr 1fr; gap:10px; margin-bottom:8px; align-items:end">
@@ -18505,8 +18509,8 @@ function switchNewOpTab(mode) {
       tabFol.style.border = 'none';
     }
     if (alvoGroup) alvoGroup.style.display = 'none';
-    if (label) label.textContent = 'Adubo Foliar / Nutriente';
-    if ($('newOpAlvo')) $('newOpAlvo').value = 'ADUBO FOLIAR';
+    if (label) label.textContent = 'Adubo Foliar / Nutriente *';
+    if ($('newOpAlvo')) $('newOpAlvo').value = 'ADUBAÇÃO FOLIAR';
   } else {
     if (tabDef) {
       tabDef.style.background = 'var(--blue)';
@@ -18519,7 +18523,7 @@ function switchNewOpTab(mode) {
       tabFol.style.border = '1px solid var(--border)';
     }
     if (alvoGroup) alvoGroup.style.display = '';
-    if (label) label.textContent = 'Defensivo';
+    if (label) label.textContent = 'Defensivo / Produto *';
     if ($('newOpAlvo')) $('newOpAlvo').value = '';
   }
 
@@ -18544,17 +18548,17 @@ function switchNewOpTab(mode) {
     folFromDef.forEach(d => {
       const doseVal = d.dose || d.dosagem_recomendada;
       const doseStr = doseVal ? ` | Dose: ${doseVal} ${d.unidade_dose || 'L/ha'}` : '';
-      select.insertAdjacentHTML('beforeend', `<option value="${d.id}">🌱 ${d.produto} (${d.ingrediente_ativo || 'Nutrição'})${doseStr}</option>`);
+      select.insertAdjacentHTML('beforeend', `<option value="${d.id}">${d.produto} (${d.ingrediente_ativo || 'Nutrição'})${doseStr}</option>`);
     });
 
-    // Catálogo oficial de 263 adubos foliares
+    // Catálogo oficial de adubos foliares
     catList.forEach(fName => {
       const fNorm = norm(fName);
       if (!usedNames.has(fNorm)) {
         const nutr = (typeof FERTILIZANTES_NUTRIENTES_MAP !== 'undefined' && FERTILIZANTES_NUTRIENTES_MAP[fName]) || {};
         const entries = Object.entries(nutr);
         const nutrSummary = entries.slice(0, 3).map(([k, v]) => `${k}:${v}%`).join(' ') || 'Foliar';
-        select.insertAdjacentHTML('beforeend', `<option value="FERT_${fName}">🌿 ${fName} (${nutrSummary})</option>`);
+        select.insertAdjacentHTML('beforeend', `<option value="FERT_${fName}">${fName} (${nutrSummary})</option>`);
       }
     });
   } else {
@@ -18576,6 +18580,7 @@ function switchNewOpTab(mode) {
   if ($('newOpDosagemWarning')) $('newOpDosagemWarning').style.display = 'none';
   if ($('newOpDosagemReal')) $('newOpDosagemReal').value = '1.00';
   if ($('newOpDefensivoCustomContainer')) $('newOpDefensivoCustomContainer').style.display = 'none';
+  if (window.lucide) lucide.createIcons();
 }
 
 function onNewOpDosagemUnitSelectChange() {
@@ -18593,7 +18598,7 @@ function onNewOpDefensivoChange() {
     if (fichaPanel) fichaPanel.style.display = 'none';
     $('newOpDefensivoCustom').focus();
     $('newOpDosagemReal').value = '1.00';
-    if (_newOpTabMode === 'FOLIAR') $('newOpAlvo').value = 'ADUBO FOLIAR';
+    if (_newOpTabMode === 'FOLIAR') $('newOpAlvo').value = 'ADUBAÇÃO FOLIAR';
     $('newOpTotaisPanel').style.display = 'none';
     $('newOpDosagemWarning').style.display = 'none';
   } else {
@@ -18601,7 +18606,8 @@ function onNewOpDefensivoChange() {
     const id = select.value;
     const def = getOpDefensivoOrFert(id);
     if (def) {
-      // ── Calcular dosagem mínima automática ──────────────────────────
+      const isFoliarMode = _newOpTabMode === 'FOLIAR' || (def.id && String(def.id).startsWith('FERT_')) || (def.tipo && def.tipo.includes('FOLIAR'));
+      // ── Calcular dosagem automática ──────────────────────────
       const pId = $('newOpParcelSelect').value;
       const ip = pId ? (_infoParcelas || []).find(x => x.id === pId) : null;
       const areaHa = parseFloat(ip?.area || $('newOpArea')?.value || 1.0) || 1.0;
@@ -18656,60 +18662,78 @@ function onNewOpDefensivoChange() {
       $('newOpDosagemReal').value = dosePreenchida;
       $('newOpDosagemUnit').textContent = activeUnit;
       if (_newOpTabMode === 'DEFENSIVO') $('newOpAlvo').value = def.alvo || '';
-      else $('newOpAlvo').value = 'ADUBO FOLIAR';
+      else $('newOpAlvo').value = 'ADUBAÇÃO FOLIAR';
 
-      // ── Contador de aplicações no ciclo ─────────────────────────────
-      const parcelCode = ip ? (ip.parcela2 || ip.parcela) : '';
-      const maxAplic = parseInt(def.num_aplicacoes_ciclo) || 0;
-      const jaAplicadas = parcelCode
-        ? countOpAplicacoesCiclo(parcelCode, def.produto, ip?.plantio, ip?.previsao_colheita)
-        : 0;
+      // ── Contador de aplicações no ciclo (apenas para defensivos químicos) ──
       let contadorHtml = '';
-      if (maxAplic > 0) {
-        const restantes = maxAplic - jaAplicadas;
-        const corContador = jaAplicadas >= maxAplic ? 'var(--red)'
-          : jaAplicadas === maxAplic - 1 ? 'var(--yellow)' : 'var(--green)';
-        contadorHtml = `
-        <div style="grid-column:1/-1; background:rgba(0,0,0,0.1); border-radius:6px; padding:5px 8px; margin-top:4px; display:flex; align-items:center; gap:8px">
-          <span style="font-size:12px">🌱 Aplicações no ciclo:</span>
-          <strong style="color:${corContador}; font-size:14px">${jaAplicadas} / ${maxAplic}</strong>
-          ${jaAplicadas >= maxAplic
-            ? '<span style="color:var(--red); font-size:11px; font-weight:700">⚠️ LIMITE ATINGIDO</span>'
-            : restantes === 1
-            ? '<span style="color:var(--yellow); font-size:11px; font-weight:700">⚠️ Última aplicação permitida</span>'
-            : `<span style="color:var(--muted); font-size:11px">${restantes} restante(s)</span>`}
-        </div>`;
+      if (!isFoliarMode) {
+        const parcelCode = ip ? (ip.parcela2 || ip.parcela) : '';
+        const maxAplic = parseInt(def.num_aplicacoes_ciclo) || 0;
+        const jaAplicadas = parcelCode
+          ? countOpAplicacoesCiclo(parcelCode, def.produto, ip?.plantio, ip?.previsao_colheita)
+          : 0;
+        if (maxAplic > 0) {
+          const restantes = maxAplic - jaAplicadas;
+          const corContador = jaAplicadas >= maxAplic ? 'var(--red)'
+            : jaAplicadas === maxAplic - 1 ? 'var(--yellow)' : 'var(--green)';
+          contadorHtml = `
+          <div style="grid-column:1/-1; background:rgba(0,0,0,0.1); border-radius:6px; padding:5px 8px; margin-top:4px; display:flex; align-items:center; gap:8px">
+            <span style="font-size:12px">Aplicações no ciclo:</span>
+            <strong style="color:${corContador}; font-size:14px">${jaAplicadas} / ${maxAplic}</strong>
+            ${jaAplicadas >= maxAplic
+              ? '<span style="color:var(--red); font-size:11px; font-weight:700">LIMITE ATINGIDO</span>'
+              : restantes === 1
+              ? '<span style="color:var(--yellow); font-size:11px; font-weight:700">Última aplicação permitida</span>'
+              : `<span style="color:var(--muted); font-size:11px">${restantes} restante(s)</span>`}
+          </div>`;
+        }
       }
 
       // ── Bloco de cálculo automático ──────────────────────────────────
       const calcHtml = parsed ? `
       <div style="grid-column:1/-1; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:6px; padding:6px 10px; margin-top:4px">
-        <div style="font-size:11px; font-weight:700; color:var(--green); margin-bottom:3px">🧪 Cálculo Automático (${isCriterioLitro ? 'por 100L de calda' : 'por hectare'})</div>
-        <div style="font-size:12px">Bula: <strong>${doseMin}${doseMin !== doseMax ? ' a ' + doseMax : ''} ${unit}</strong></div>
-        <div style="font-size:12px">⚡ Mínimo calculado: <strong style="color:var(--green)">${calcMinStr}</strong></div>
+        <div style="font-size:11px; font-weight:700; color:var(--green); margin-bottom:3px">Cálculo Automático (${isCriterioLitro ? 'por 100L de calda' : 'por hectare'})</div>
+        <div style="font-size:12px">Recomendação: <strong>${doseMin}${doseMin !== doseMax ? ' a ' + doseMax : ''} ${unit}</strong></div>
+        <div style="font-size:12px">Mínimo calculado: <strong style="color:var(--green)">${calcMinStr}</strong></div>
         ${doseMin !== doseMax ? `<div style="font-size:11px; color:var(--muted)">Máx. calculado: ${calcMaxStr}</div>` : ''}
       </div>` : '';
 
       // ── Mostrar ficha agronômica ─────────────────────────────────────
       if (fichaPanel) {
         fichaPanel.style.display = 'block';
-        fichaPanel.innerHTML = `
-        <div style="font-weight:700; color:var(--text); margin-bottom:6px; font-size:13px">📄 Ficha Agronômica: ${def.produto}</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px 16px">
-          <div><strong>I.A. / Nutrientes:</strong> ${def.ingrediente_ativo || '—'} ${def.concentracao_ia ? '('+def.concentracao_ia+')' : ''}</div>
-          <div><strong>Tipo:</strong> ${def.tipo || (_newOpTabMode === 'FOLIAR' ? 'ADUBO FOLIAR' : 'DEFENSIVO')}</div>
-          <div><strong>Dose (recomendada):</strong> <span style="color:var(--green); font-weight:700">${def.dose_texto || (dosePreenchida + ' ' + unit)}</span></div>
-          <div><strong>Carência:</strong> ${def.carencia_dias || 0} dias</div>
-          <div><strong>Classe Tox.:</strong> ${def.classe_toxicologica || '—'} (${def.tarja || '—'})</div>
-          <div><strong>Reentrada:</strong> ${def.reentrada_dias || '—'} dias</div>
-          <div><strong>Critério:</strong> ${isCriterioLitro ? 'Por 100L de calda' : 'Por hectare (ha)'}</div>
-          <div><strong>Intervalo mín.:</strong> ${def.intervalo_dias || '—'} dias</div>
-          ${def.mrl_brasil || def.mrl_eu ? `<div style="grid-column:1/-1"><strong>MRLs:</strong> BR: ${def.mrl_brasil || '—'} | EU: ${def.mrl_eu || '—'} | GB: ${def.mrl_gb || '—'}</div>` : ''}
-          ${def.condicao_tesco ? `<div style="grid-column:1/-1"><strong>Tesco:</strong> ${def.condicao_tesco} (${def.medida_tesco || '—'})</div>` : ''}
-          ${calcHtml}
-          ${contadorHtml}
-        </div>
-        `;
+        if (isFoliarMode) {
+          fichaPanel.innerHTML = `
+          <div style="font-weight:700; color:var(--text); margin-bottom:6px; font-size:13px">Ficha Agronômica: ${def.produto}</div>
+          <div style="display:grid; grid-template-columns:1fr; gap:6px 16px">
+            <div><strong>Nutrientes / Garantias:</strong> <span style="color:var(--green); font-weight:600">${def.ingrediente_ativo || 'Nutrição Foliar'}</span></div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px 16px">
+              <div><strong>Tipo:</strong> ADUBO FOLIAR / NUTRIÇÃO</div>
+              <div><strong>Dose sugerida:</strong> <span style="color:var(--green); font-weight:700">${dosePreenchida} ${unit}</span></div>
+              <div><strong>Carência:</strong> Isento (0 dias)</div>
+              <div><strong>Restrição de ciclo:</strong> Livre aplicação (Sem trava)</div>
+            </div>
+            ${calcHtml}
+          </div>
+          `;
+        } else {
+          fichaPanel.innerHTML = `
+          <div style="font-weight:700; color:var(--text); margin-bottom:6px; font-size:13px">Ficha Agronômica: ${def.produto}</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px 16px">
+            <div><strong>I.A.:</strong> ${def.ingrediente_ativo || '—'} ${def.concentracao_ia ? '('+def.concentracao_ia+')' : ''}</div>
+            <div><strong>Tipo:</strong> ${def.tipo || 'DEFENSIVO'}</div>
+            <div><strong>Dose (bula):</strong> <span style="color:var(--green); font-weight:700">${def.dose_texto || (dosePreenchida + ' ' + unit)}</span></div>
+            <div><strong>Carência:</strong> ${def.carencia_dias || 0} dias</div>
+            <div><strong>Classe Tox.:</strong> ${def.classe_toxicologica || '—'} (${def.tarja || '—'})</div>
+            <div><strong>Reentrada:</strong> ${def.reentrada_dias || '—'} dias</div>
+            <div><strong>Critério:</strong> ${isCriterioLitro ? 'Por 100L de calda' : 'Por hectare (ha)'}</div>
+            <div><strong>Intervalo mín.:</strong> ${def.intervalo_dias || '—'} dias</div>
+            ${def.mrl_brasil || def.mrl_eu ? `<div style="grid-column:1/-1"><strong>MRLs:</strong> BR: ${def.mrl_brasil || '—'} | EU: ${def.mrl_eu || '—'} | GB: ${def.mrl_gb || '—'}</div>` : ''}
+            ${def.condicao_tesco ? `<div style="grid-column:1/-1"><strong>Tesco:</strong> ${def.condicao_tesco} (${def.medida_tesco || '—'})</div>` : ''}
+            ${calcHtml}
+            ${contadorHtml}
+          </div>
+          `;
+        }
       }
       calculateNewOpTotals();
     } else {
@@ -18726,6 +18750,7 @@ function calculateNewOpTotals() {
   const id = $('newOpDefensivoSelect').value;
   const def = getOpDefensivoOrFert(id);
   const parsed = def ? parseDoseTexto(def.dose_texto) : null;
+  const isFoliarMode = _newOpTabMode === 'FOLIAR' || (def && def.id && String(def.id).startsWith('FERT_')) || (def && def.tipo && def.tipo.includes('FOLIAR'));
   
   const unitSel = $('newOpDosagemUnitSelect');
   const unit = unitSel ? unitSel.value : (def ? (def.unidade_dose || def.unidade || 'L/ha') : 'L/ha');
@@ -18756,9 +18781,9 @@ function calculateNewOpTotals() {
     totaisEl.style.display = 'none';
   }
 
-  // ── Verificar discrepância de ordem de grandeza (ex: bula é mL e digitou L) ──
+  // Verificar dosagem apenas para defensivos químicos
   const warningEl = $('newOpDosagemWarning');
-  if (def && parsed && warningEl) {
+  if (!isFoliarMode && def && parsed && warningEl) {
     const bulaUnit = (parsed.unit || '').toUpperCase();
     const selectedUnit = unit.toUpperCase();
 
@@ -18768,20 +18793,21 @@ function calculateNewOpTotals() {
     if (bulaIsMili && selectedIsLitro && dosagemReal >= 1.0) {
       warningEl.style.display = 'block';
       $('newOpDosagemWarningMsg').innerHTML = `
-        <span style="color:#ef4444; font-weight:bold">⚠️ ATENÇÃO À UNIDADE DE MEDIDA:</span> A bula deste produto está em <strong>MILILITROS/GRAMAS (${parsed.min} a ${parsed.max} ${parsed.unit})</strong>, mas a unidade selecionada está em <strong>${unit}</strong>! Digitar ${dosagemReal} Litros/kg aplicaria 1.000x a dose recomendada.
+        <span style="color:#ef4444; font-weight:bold">ATENÇÃO À UNIDADE DE MEDIDA:</span> A bula deste produto está em <strong>MILILITROS/GRAMAS (${parsed.min} a ${parsed.max} ${parsed.unit})</strong>, mas a unidade selecionada está em <strong>${unit}</strong>! Digitar ${dosagemReal} Litros/kg aplicaria 1.000x a dose recomendada.
       `;
       return;
     }
 
-    // Verificar excedente numérico dentro da mesma unidade
     const doseMax = parsed.max;
     if (doseMax > 0 && dosagemReal > doseMax) {
       warningEl.style.display = 'block';
       $('newOpDosagemWarningMsg').textContent =
-        ` A dosagem (${dosagemReal} ${unit}) excede o MÁXIMO da bula (${doseMax} ${unit}). Ajuste para o mínimo (${parsed.min} ${unit}).`;
+        `A dosagem (${dosagemReal} ${unit}) excede o MÁXIMO da bula (${doseMax} ${unit}). Ajuste para o mínimo (${parsed.min} ${unit}).`;
     } else {
       warningEl.style.display = 'none';
     }
+  } else if (warningEl) {
+    warningEl.style.display = 'none';
   }
 }
 
@@ -18792,7 +18818,7 @@ function applyNewOpDosagemCorrection() {
   const doseLimite = parseFloat(def.dose || def.dosagem_recomendada) || 1.0;
   $('newOpDosagemReal').value = doseLimite;
   calculateNewOpTotals();
-  toast(' Dosagem ajustada para o limite legal!', 'ok');
+  toast('Dosagem ajustada para o limite recomendado!', 'ok');
 }
 
 function isBomJesusTenant() {
@@ -18818,37 +18844,36 @@ function validateMipForOpDashboard(parcelId, parcelCode, alvo, opDate) {
   || cleanAlvo === '';
   
   if (isFertilizer) {
-  return { ok: true, blocked: false, message: 'Fertilizante/adubo — isento de justificativa MIP' };
+    return { ok: true, blocked: false, message: 'Fertilizante/adubo — isento de justificativa MIP' };
   }
   
   const mips = _mipRecords || [];
   const relevantMips = mips.filter(m => {
-  const matchesParcel = (m.parcel_id && m.parcel_id == parcelId) || (m.parcela && m.parcela === parcelCode);
-  if (!matchesParcel) return false;
+    const matchesParcel = (m.parcel_id && m.parcel_id == parcelId) || (m.parcela && m.parcela === parcelCode);
+    if (!matchesParcel) return false;
 
-  if (m.pragas_json && typeof m.pragas_json === 'object') {
-  const keys = Object.keys(m.pragas_json);
-  return keys.some(k => {
-  const item = m.pragas_json[k];
-  if (!item || parseFloat(item.media) <= 0) return false;
-  return isMatchingPraga(item.name || k, alvo);
-  });
-  }
-  
-  // Checa se a praga teve incidência/média > 0 (descarta zero)
-  const media = parseFloat(m.media || m.quantidade || m.indice || 0);
-  const presenca = media > 0 || m.presenca === true || m.status === 'INFESTADO';
-  if (!presenca) return false;
+    if (m.pragas_json && typeof m.pragas_json === 'object') {
+      const keys = Object.keys(m.pragas_json);
+      return keys.some(k => {
+        const item = m.pragas_json[k];
+        if (!item || parseFloat(item.media) <= 0) return false;
+        return isMatchingPraga(item.name || k, alvo);
+      });
+    }
+    
+    const media = parseFloat(m.media || m.quantidade || m.indice || 0);
+    const presenca = media > 0 || m.presenca === true || m.status === 'INFESTADO';
+    if (!presenca) return false;
 
-  return isMatchingPraga(m.praga, alvo);
+    return isMatchingPraga(m.praga, alvo);
   });
   
   if (relevantMips.length === 0) {
-  return {
-  ok: false,
-  blocked: true,
-  message: ` NÃO CONFORMIDADE DE AUDITORIA (MIP):\n\nA praga/alvo "${alvo}" NÃO possui amostragem recente com infestação (média > 0) no MIP da parcela ${parcelCode}.\n\nPara fins de certificação, defensivos químicos só podem ser recomendados mediante registro prévio de infestação na Ficha de Amostragem MIP.`
-  };
+    return {
+      ok: false,
+      blocked: true,
+      message: `NÃO CONFORMIDADE DE AUDITORIA (MIP):\n\nA praga/alvo "${alvo}" NÃO possui amostragem recente com infestação (média > 0) no MIP da parcela ${parcelCode}.\n\nPara fins de certificação, defensivos químicos só podem ser recomendados mediante registro prévio de infestação na Ficha de Amostragem MIP.`
+    };
   }
   
   return { ok: true, blocked: false, message: 'Conforme MIP' };
@@ -18859,7 +18884,7 @@ function addNewOpItem() {
   if (!pId) { alert('Selecione o ciclo de parcela primeiro!'); return; }
   
   const id = $('newOpDefensivoSelect').value;
-  if (!id) { alert('Selecione o defensivo'); return; }
+  if (!id) { alert('Selecione o produto a ser aplicado!'); return; }
   
   let def = null;
   let dosagemReal = parseFloat($('newOpDosagemReal').value) || 0;
@@ -18868,187 +18893,205 @@ function addNewOpItem() {
   let inputAlvo = '';
   let opDateStr = $('newOpDate')?.value || today();
   let ip = _infoParcelas.find(x => x.id === pId);
-  const areaHa = parseFloat(ip?.area || $('newOpArea')?.value || 1.0) || 1.0; //  área real da parcela
+  const areaHa = parseFloat(ip?.area || $('newOpArea')?.value || 1.0) || 1.0;
   let targetAlvo = '';
   let cleanAlvo = '';
   let isCustom = false;
 
   if (id === 'OUTRO') {
-  isCustom = true;
-  const customName = ($('newOpDefensivoCustom')?.value || '').trim().toUpperCase();
-  const customIng = ($('newOpIngredienteCustom')?.value || '').trim().toUpperCase();
-  const customCarencia = parseInt($('newOpCarenciaCustom')?.value) || 0;
-  const customUnidade = $('newOpUnidadeCustom')?.value || 'L/ha';
-  
-  if (!customName) { alert('Por favor, informe o nome do produto customizado.'); return; }
-  
-  inputAlvo = ($('newOpAlvo')?.value || 'ADUBAÇÃO FOLIAR').trim().toUpperCase();
-  targetAlvo = inputAlvo;
-  cleanAlvo = targetAlvo.toUpperCase();
+    isCustom = true;
+    const customName = ($('newOpDefensivoCustom')?.value || '').trim().toUpperCase();
+    const customIng = ($('newOpIngredienteCustom')?.value || '').trim().toUpperCase();
+    const customCarencia = parseInt($('newOpCarenciaCustom')?.value) || 0;
+    const customUnidade = $('newOpUnidadeCustom')?.value || 'L/ha';
+    
+    if (!customName) { alert('Por favor, informe o nome do produto customizado.'); return; }
+    
+    inputAlvo = ($('newOpAlvo')?.value || (_newOpTabMode === 'FOLIAR' ? 'ADUBAÇÃO FOLIAR' : '')).trim().toUpperCase();
+    targetAlvo = inputAlvo || (_newOpTabMode === 'FOLIAR' ? 'ADUBAÇÃO FOLIAR' : 'OUTRO');
+    cleanAlvo = targetAlvo.toUpperCase();
 
-  def = {
-  id: null,
-  produto: customName,
-  ingrediente_ativo: customIng,
-  carencia_dias: customCarencia,
-  unidade_dose: customUnidade,
-  dose: dosagemReal,
-  alvo: targetAlvo,
-  intervalo_dias: 0
-  };
+    def = {
+      id: null,
+      produto: customName,
+      ingrediente_ativo: customIng,
+      carencia_dias: customCarencia,
+      unidade_dose: customUnidade,
+      dose: dosagemReal,
+      alvo: targetAlvo,
+      tipo: _newOpTabMode === 'FOLIAR' ? 'ADUBO FOLIAR' : 'OUTRO',
+      intervalo_dias: 0
+    };
   } else {
     def = getOpDefensivoOrFert(id);
     if (!def) return;
-  dosagemReal = parseFloat($('newOpDosagemReal').value) || 0;
-  
-  const parsedDose = parseDoseTexto(def.dose_texto);
-  const maxFromTexto = parsedDose ? parsedDose.max : 0;
-  const doseRef = parseFloat(def.dose || def.dosagem_recomendada) || 0;
-  dosagemLimite = maxFromTexto > 0 ? maxFromTexto : (doseRef > 0 ? doseRef : dosagemReal);
-  dosagemCorrigida = (dosagemLimite > 0 && dosagemReal > dosagemLimite) ? dosagemLimite : dosagemReal;
-  inputAlvo = ($('newOpAlvo')?.value || def.alvo || '').trim().toUpperCase();
-  targetAlvo = inputAlvo || def.alvo || '';
-  cleanAlvo = targetAlvo.toUpperCase();
+    dosagemReal = parseFloat($('newOpDosagemReal').value) || 0;
+    
+    const parsedDose = parseDoseTexto(def.dose_texto);
+    const maxFromTexto = parsedDose ? parsedDose.max : 0;
+    const doseRef = parseFloat(def.dose || def.dosagem_recomendada) || 0;
+    dosagemLimite = maxFromTexto > 0 ? maxFromTexto : (doseRef > 0 ? doseRef : dosagemReal);
+    dosagemCorrigida = (dosagemLimite > 0 && dosagemReal > dosagemLimite) ? dosagemLimite : dosagemReal;
+    inputAlvo = ($('newOpAlvo')?.value || def.alvo || '').trim().toUpperCase();
+    targetAlvo = inputAlvo || def.alvo || (_newOpTabMode === 'FOLIAR' ? 'ADUBAÇÃO FOLIAR' : '');
+    cleanAlvo = targetAlvo.toUpperCase();
   }
 
-  //  Validação 0: Dosagem Positiva Obrigatória
+  // Identificar se é Adubo Foliar / Nutrição (100% LIVRE DE TRAVAS)
+  const isFoliarItem = _newOpTabMode === 'FOLIAR' 
+    || (def.id && String(def.id).startsWith('FERT_')) 
+    || (def.tipo && (def.tipo.toUpperCase().includes('FOLIAR') || def.tipo.toUpperCase().includes('FERTILIZ') || def.tipo.toUpperCase().includes('ADUBO') || def.tipo.toUpperCase().includes('NUTRI')))
+    || cleanAlvo.includes('ADUBO') || cleanAlvo.includes('FOLIAR') || cleanAlvo.includes('NUTRI') || cleanAlvo.includes('FISIOLOGICO');
+
+  // Validação 0: Dosagem Positiva Obrigatória
   if (isNaN(dosagemReal) || dosagemReal <= 0) {
-  alert(" DOSAGEM INVÁLIDA — A dosagem informada deve ser maior que zero!");
-  return;
-  }
-  
-  // Validação 1: Justificativa de MIP para Defensivos Químicos vs Isenção para Foliares
-  if (!isCustom && !isBomJesusTenant()) {
-  const parcelCode = ip ? (ip.parcela2 || ip.parcela) : '';
-  const mipValidation = validateMipForOpDashboard(pId, parcelCode, targetAlvo, opDateStr);
-  if (mipValidation.blocked) {
-  alert(mipValidation.message);
-  return;
-  }
+    alert("DOSAGEM INVÁLIDA — A dosagem informada deve ser maior que zero!");
+    return;
   }
 
-  // Validação 1b: Duplicados por Praga/Alvo na mesma calda
-  if (targetAlvo) {
-  const alreadyHasAlvo = _newOpItems.some(item => item.alvo.trim().toUpperCase() === targetAlvo.trim().toUpperCase());
-  if (alreadyHasAlvo) {
-  alert(` Trava de Auditoria: Você não pode aplicar dois defensivos para a mesma praga/alvo (${targetAlvo}) na mesma calda!`);
-  return;
-  }
-  }
-  
-  //  Validação 2: Dosagem Total por Parcela (100% fiel à regra agronômica)
-  // Regra: dose_maxima/ha × área_ha = volume absoluto máximo permitido
-  if (!isCustom && dosagemLimite > 0 && dosagemReal > dosagemLimite) {
-  const unit = def.unidade_dose || 'L/ha';
-  const unitBase = unit.replace('/ha', '').trim();
-  const totalPermitido = (dosagemLimite * areaHa).toFixed(3);
-  const totalInformado = (dosagemReal * areaHa).toFixed(3);
-  alert(` DOSAGEM NÃO PERMITIDA — ERRO DE AUDITORIA DE APLICAÇÃO\n\nDosagem informada (${dosagemReal} ${unit}) excede o limite máximo permitido pela bula (${dosagemLimite} ${unit}).\n\nVolume total para a parcela de ${areaHa} ha:\n• Informado: ${totalInformado} ${unitBase}\n• Limite Máximo Permitido: ${totalPermitido} ${unitBase}\n\nA aplicação deste produto foi BLOQUEADA! Ajuste a dosagem para o limite recomendado.`);
-  return;
-  }
+  // SE FOR DEFENSIVO QUÍMICO (AGROTÓXICO), APLICAR AS TRAVAS DE SEGURANÇA AGRONÔMICA:
+  if (!isFoliarItem) {
+    // 1. Justificativa de MIP para Defensivos Químicos
+    if (!isCustom && !isBomJesusTenant()) {
+      const parcelCode = ip ? (ip.parcela2 || ip.parcela) : '';
+      const mipValidation = validateMipForOpDashboard(pId, parcelCode, targetAlvo, opDateStr);
+      if (mipValidation.blocked) {
+        alert(mipValidation.message);
+        return;
+      }
+    }
 
-  // Validação 3: Prazo de Carência vs Previsão de Colheita
-  if (!isCustom && ip && ip.previsao_colheita && def.carencia_dias > 0 && opDateStr) {
-  const appDt = new Date(opDateStr + 'T12:00:00');
-  appDt.setDate(appDt.getDate() + parseInt(def.carencia_dias));
-  const liberacaoIso = appDt.toISOString().split('T')[0];
-  
-  if (liberacaoIso > ip.previsao_colheita) {
-  const liberacaoBr = appDt.toLocaleDateString('pt-BR');
-  const prevColhBr = ip.previsao_colheita.split('-').reverse().join('/');
-  alert(` CARÊNCIA INVÁLIDA — A carência para ${def.produto} é de ${def.carencia_dias} dias, mas a colheita está prevista para ${prevColhBr}. A colheita ficaria bloqueada até ${liberacaoBr}, gerando inconformidade de auditoria!`);
-  return;
-  }
-  }
+    // 2. Trava de Duplicados por Praga/Alvo na mesma calda (apenas para defensivos químicos da mesma praga)
+    if (targetAlvo) {
+      const alreadyHasAlvo = _newOpItems.some(item => {
+        const itemCleanAlvo = (item.alvo || '').trim().toUpperCase();
+        const itemIsFol = item.is_foliar || itemCleanAlvo.includes('ADUBO') || itemCleanAlvo.includes('FOLIAR') || itemCleanAlvo.includes('NUTRI');
+        return !itemIsFol && itemCleanAlvo === targetAlvo.trim().toUpperCase();
+      });
+      if (alreadyHasAlvo) {
+        alert(`Trava de Auditoria: Você não pode aplicar dois defensivos químicos para a mesma praga/alvo (${targetAlvo}) na mesma calda!`);
+        return;
+      }
+    }
+    
+    // 3. Dosagem Total por Parcela (limite máximo da bula)
+    if (!isCustom && dosagemLimite > 0 && dosagemReal > dosagemLimite) {
+      const unit = $('newOpDosagemUnitSelect')?.value || def.unidade_dose || 'L/ha';
+      const unitBase = unit.replace('/ha', '').replace('/100L', '').trim();
+      const totalPermitido = (dosagemLimite * areaHa).toFixed(3);
+      const totalInformado = (dosagemReal * areaHa).toFixed(3);
+      alert(`DOSAGEM NÃO PERMITIDA — ERRO DE AUDITORIA DE APLICAÇÃO\n\nDosagem informada (${dosagemReal} ${unit}) excede o limite máximo permitido pela bula (${dosagemLimite} ${unit}).\n\nVolume total para a parcela de ${areaHa} ha:\n• Informado: ${totalInformado} ${unitBase}\n• Limite Máximo Permitido: ${totalPermitido} ${unitBase}\n\nA aplicação deste produto foi BLOQUEADA! Ajuste a dosagem para o limite recomendado.`);
+      return;
+    }
 
-  // Validação 4: Intervalo Mínimo de Reaplicação
-  if (!isCustom && opDateStr && _opList && _opList.length > 0) {
-  const parcelCode = ip ? (ip.parcela2 || ip.parcela) : '';
-  const minIntervalDays = parseInt(def.intervalo_dias) || 7;
-  const currentAppDt = new Date(opDateStr + 'T12:00:00');
-  
-  const pastApp = _opList.find(op => {
-  if (op.parcela !== parcelCode) return false;
-  const opDt = new Date(op.data_aplicacao + 'T12:00:00');
-  const diffDays = Math.round((currentAppDt - opDt) / (1000 * 60 * 60 * 24));
-  if (diffDays >= 0 && diffDays < minIntervalDays) {
-  const items = op.caderno_campo_op_itens || [];
-  return items.some(i => (i.produto_nome || '').toUpperCase() === def.produto.toUpperCase() || (def.ingrediente_ativo && (i.ingrediente_ativo || '').toUpperCase() === def.ingrediente_ativo.toUpperCase()));
-  }
-  return false;
-  });
+    // 4. Prazo de Carência vs Previsão de Colheita
+    if (!isCustom && ip && ip.previsao_colheita && def.carencia_dias > 0 && opDateStr) {
+      const appDt = new Date(opDateStr + 'T12:00:00');
+      appDt.setDate(appDt.getDate() + parseInt(def.carencia_dias));
+      const liberacaoIso = appDt.toISOString().split('T')[0];
+      
+      if (liberacaoIso > ip.previsao_colheita) {
+        const liberacaoBr = appDt.toLocaleDateString('pt-BR');
+        const prevColhBr = ip.previsao_colheita.split('-').reverse().join('/');
+        alert(`CARÊNCIA INVÁLIDA — A carência para ${def.produto} é de ${def.carencia_dias} dias, mas a colheita está prevista para ${prevColhBr}. A colheita ficaria bloqueada até ${liberacaoBr}, gerando inconformidade de auditoria!`);
+        return;
+      }
+    }
 
-  if (pastApp) {
-  const pastDtBr = pastApp.data_aplicacao ? pastApp.data_aplicacao.split('-').reverse().join('/') : 'recentemente';
-  alert(` INTERVALO MÍNIMO NÃO RESPEITADO — O defensivo ${def.produto} já foi aplicado nesta parcela em ${pastDtBr}. O intervalo recomendado entre aplicações é de ${minIntervalDays} dias.`);
-  return;
-  }
-  }
+    // 5. Intervalo Mínimo de Reaplicação
+    if (!isCustom && opDateStr && _opList && _opList.length > 0) {
+      const parcelCode = ip ? (ip.parcela2 || ip.parcela) : '';
+      const minIntervalDays = parseInt(def.intervalo_dias) || 7;
+      const currentAppDt = new Date(opDateStr + 'T12:00:00');
+      
+      const pastApp = _opList.find(op => {
+        if (op.parcela !== parcelCode) return false;
+        const opDt = new Date(op.data_aplicacao + 'T12:00:00');
+        const diffDays = Math.round((currentAppDt - opDt) / (1000 * 60 * 60 * 24));
+        if (diffDays >= 0 && diffDays < minIntervalDays) {
+          const items = op.caderno_campo_op_itens || [];
+          return items.some(i => (i.produto_nome || '').toUpperCase() === def.produto.toUpperCase() || (def.ingrediente_ativo && (i.ingrediente_ativo || '').toUpperCase() === def.ingrediente_ativo.toUpperCase()));
+        }
+        return false;
+      });
 
-  // Validação 5-A: Número Máximo de Aplicações por Ciclo
-  if (!isCustom) {
-  const parcelCode = ip ? (ip.parcela2 || ip.parcela) : '';
-  const maxAplic = parseInt(def.num_aplicacoes_ciclo) || 0;
-  if (maxAplic > 0 && parcelCode) {
-  const jaAplicadas = countOpAplicacoesCiclo(
-  parcelCode, def.produto, ip?.plantio, ip?.previsao_colheita
-  );
-  if (jaAplicadas >= maxAplic) {
-  const prevColhBr = ip?.previsao_colheita
-  ? ip.previsao_colheita.split('-').reverse().join('/')
-  : 'fim do ciclo';
-  alert(` LIMITE DE APLICAÇÕES ATINGIDO\n\nO defensivo "${def.produto}" permite no máximo ${maxAplic} aplicação(ões) por ciclo de cultivo.\n\nJá foram realizadas ${jaAplicadas} aplicação(ões) nesta parcela no ciclo atual (até ${prevColhBr}).\n\nNão é possível adicionar mais aplicações deste produto neste ciclo.`);
-  return;
-  }
-  // Aviso de última aplicação
-  if (jaAplicadas === maxAplic - 1) {
-  toast(` Atenção: Esta será a ÚLTIMA aplicação permitida de "${def.produto}" neste ciclo (máx. ${maxAplic}x).`, 'warning');
-  }
-  }
-  }
+      if (pastApp) {
+        const pastDtBr = pastApp.data_aplicacao ? pastApp.data_aplicacao.split('-').reverse().join('/') : 'recentemente';
+        alert(`INTERVALO MÍNIMO NÃO RESPEITADO — O defensivo ${def.produto} já foi aplicado nesta parcela em ${pastDtBr}. O intervalo recomendado entre aplicações é de ${minIntervalDays} dias.`);
+        return;
+      }
+    }
 
-  // Validação 5: Alvo / Praga Compatível
-  if (!isCustom && def.alvo && cleanAlvo && !def.alvo.toUpperCase().includes(cleanAlvo) && !cleanAlvo.includes(def.alvo.toUpperCase())) {
-  toast(`Aviso de Auditoria: Produto ${def.produto} cadastrado para [${def.alvo}], alvo informado [${targetAlvo}]`, 'warning');
+    // 6. Número Máximo de Aplicações por Ciclo
+    if (!isCustom) {
+      const parcelCode = ip ? (ip.parcela2 || ip.parcela) : '';
+      const maxAplic = parseInt(def.num_aplicacoes_ciclo) || 0;
+      if (maxAplic > 0 && parcelCode) {
+        const jaAplicadas = countOpAplicacoesCiclo(
+          parcelCode, def.produto, ip?.plantio, ip?.previsao_colheita
+        );
+        if (jaAplicadas >= maxAplic) {
+          const prevColhBr = ip?.previsao_colheita
+            ? ip.previsao_colheita.split('-').reverse().join('/')
+            : 'fim do ciclo';
+          alert(`LIMITE DE APLICAÇÕES ATINGIDO\n\nO defensivo "${def.produto}" permite no máximo ${maxAplic} aplicação(ões) por ciclo de cultivo.\n\nJá foram realizadas ${jaAplicadas} aplicação(ões) nesta parcela no ciclo atual (até ${prevColhBr}).\n\nNão é possível adicionar mais aplicações deste produto neste ciclo.`);
+          return;
+        }
+        if (jaAplicadas === maxAplic - 1) {
+          toast(`Atenção: Esta será a ÚLTIMA aplicação permitida de "${def.produto}" neste ciclo (máx. ${maxAplic}x).`, 'warning');
+        }
+      }
+    }
+
+    // 7. Alvo / Praga Compatível
+    if (!isCustom && def.alvo && cleanAlvo && !def.alvo.toUpperCase().includes(cleanAlvo) && !cleanAlvo.includes(def.alvo.toUpperCase())) {
+      toast(`Aviso de Auditoria: Produto ${def.produto} cadastrado para [${def.alvo}], alvo informado [${targetAlvo}]`, 'warning');
+    }
+    
+    // 8. Justificativa de MIP
+    if (!isCustom && !isBomJesusTenant()) {
+      const parcelName = ip ? (ip.parcela2 || ip.parcela) : '';
+      const relevantMips = (_mipRecords || []).filter(m => {
+        const matchesParcel = m.parcela === parcelName;
+        const matchesPraga = isMatchingPraga(m.praga, targetAlvo);
+        return matchesParcel && matchesPraga;
+      });
+      
+      relevantMips.sort((a, b) => new Date(b.data_vistoria) - new Date(a.data_vistoria));
+      const latestMip = relevantMips[0];
+      
+      if (!latestMip || parseFloat(latestMip.media) <= 0) {
+        const resp = confirm(`Alerta de Auditoria (MIP): O defensivo ${def.produto} para a praga "${targetAlvo}" não foi recomendado no MIP recente da parcela ${parcelName}.\n\nDeseja continuar e incluir este produto?`);
+        if (!resp) return;
+      }
+    }
   }
   
-  // Validação 6: Justificativa de MIP
-  if (!isCustom && !isBomJesusTenant()) {
-  const isFertilizer = !targetAlvo || cleanAlvo.includes('ADUBO') || cleanAlvo.includes('FOLIARE') || cleanAlvo.includes('NUTRIENTE') || cleanAlvo.includes('FISIOLOGICO') || cleanAlvo === 'N/A';
-  if (!isFertilizer) {
-  const parcelName = ip ? (ip.parcela2 || ip.parcela) : '';
-  const relevantMips = (_mipRecords || []).filter(m => {
-  const matchesParcel = m.parcela === parcelName;
-  const matchesPraga = isMatchingPraga(m.praga, targetAlvo);
-  return matchesParcel && matchesPraga;
-  });
-  
-  relevantMips.sort((a, b) => new Date(b.data_vistoria) - new Date(a.data_vistoria));
-  const latestMip = relevantMips[0];
-  
-  if (!latestMip || parseFloat(latestMip.media) <= 0) {
-  const resp = confirm(` Alerta de Auditoria (MIP): O defensivo ${def.produto} para a praga "${targetAlvo}" não foi recomendado no MIP recente da parcela ${parcelName}.\n\nDeseja continuar e incluir este produto?`);
-  if (!resp) return;
+  // Calcular volume total por parcela
+  const unitSelected = $('newOpDosagemUnitSelect')?.value || def.unidade_dose || def.unidade || 'L/ha';
+  const isCriterioLitro = unitSelected.includes('100L');
+  const volCalda = parseFloat($('newOpVolumeCalda')?.value) || 200;
+  let dosagemTotalParcela = 0;
+  if (isCriterioLitro) {
+    dosagemTotalParcela = parseFloat(((volCalda / 100) * dosagemReal).toFixed(4));
+  } else {
+    dosagemTotalParcela = parseFloat((dosagemReal * areaHa).toFixed(4));
   }
-  }
-  }
-  
-  //  Calcular volume total por parcela
-  const dosagemTotalParcela = parseFloat((dosagemReal * areaHa).toFixed(4));
-  const unitFinal = def.unidade_dose || def.unidade || 'L/ha';
+  const unitFinal = unitSelected;
   
   _newOpItems.push({
-  produto_id: def.id,
-  produto_nome: def.produto,
-  ingrediente_ativo: def.ingrediente_ativo || '',
-  alvo: targetAlvo,
-  dosagem_real: dosagemReal,
-  dosagem_corrigida: dosagemCorrigida,
-  dosagem_total_parcela: dosagemTotalParcela,
-  area_ha: areaHa,
-  unidade: unitFinal,
-  unidade_base: unitFinal.replace('/ha', '').trim(),
-  carencia_dias: def.carencia_dias || 0
+    produto_id: def.id,
+    produto_nome: def.produto,
+    ingrediente_ativo: def.ingrediente_ativo || '',
+    alvo: isFoliarItem ? (targetAlvo || 'ADUBAÇÃO FOLIAR') : targetAlvo,
+    is_foliar: isFoliarItem,
+    dosagem_real: dosagemReal,
+    dosagem_corrigida: dosagemCorrigida,
+    dosagem_total_parcela: dosagemTotalParcela,
+    area_ha: areaHa,
+    unidade: unitFinal,
+    unidade_base: unitFinal.replace('/100L', '').replace('/100l', '').replace('/ha', '').trim(),
+    carencia_dias: isFoliarItem ? 0 : (def.carencia_dias || 0)
   });
   
   renderNewOpItems();
@@ -19065,29 +19108,39 @@ function renderNewOpItems() {
   container.innerHTML = '';
   
   if (_newOpItems.length === 0) {
-  container.innerHTML = '<div style="font-size:12px; color:var(--muted); text-align:center; padding:10px;">Nenhum produto adicionado.</div>';
-  return;
+    container.innerHTML = '<div style="font-size:12px; color:var(--muted); text-align:center; padding:10px;">Nenhum produto adicionado na calda.</div>';
+    return;
   }
   
   _newOpItems.forEach((item, idx) => {
-  const totalStr = item.dosagem_total_parcela != null
-  ? `<span style="color:var(--blue); font-weight:700">&rarr; Total: ${item.dosagem_total_parcela} ${item.unidade_base || ''} (${item.area_ha} ha)</span> &bull; `
-  : '';
-  container.insertAdjacentHTML('beforeend', `
-  <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding:8px 0; font-size:13px;">
-  <div>
-  <strong style="color:var(--text); font-size:14px">${item.produto_nome}</strong> ${item.ingrediente_ativo ? `<span style="font-size:11px; color:var(--muted)">(${item.ingrediente_ativo})</span>` : ''}
-  <div style="font-size:11px; color:var(--muted2); margin-top:2px">
-  <span style="color:var(--green); font-weight:700">Dose: ${item.dosagem_real} ${item.unidade}</span> &bull;
-  ${totalStr}
-  <span style="color:var(--yellow); font-weight:700">Alvo: ${item.alvo || 'N/A'}</span> &bull;
-  <span>Car&ecirc;ncia: ${item.carencia_dias} dias</span>
-  </div>
-  </div>
-  <button onclick="removeNewOpItem(${idx})" style="background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.3); padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:700;">Remover</button>
-  </div>
-  `);
+    const isFoliar = item.is_foliar || (item.alvo && item.alvo.toUpperCase().includes('FOLIAR'));
+    const totalStr = item.dosagem_total_parcela != null
+      ? `<span style="color:var(--blue); font-weight:700">&rarr; Total: ${item.dosagem_total_parcela} ${item.unidade_base || ''}</span> &bull; `
+      : '';
+    const badgeType = isFoliar 
+      ? `<span style="background:rgba(20,168,50,0.15); color:var(--green); border:1px solid rgba(20,168,50,0.3); padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700; margin-left:6px">FOLIAR</span>`
+      : `<span style="background:rgba(46,204,113,0.15); color:var(--blue); border:1px solid rgba(46,204,113,0.3); padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700; margin-left:6px">DEFENSIVO</span>`;
+
+    container.insertAdjacentHTML('beforeend', `
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding:8px 0; font-size:13px;">
+        <div>
+          <div style="display:flex; align-items:center">
+            <strong style="color:var(--text); font-size:14px">${item.produto_nome}</strong>
+            ${badgeType}
+            ${item.ingrediente_ativo ? `<span style="font-size:11px; color:var(--muted); margin-left:6px">(${item.ingrediente_ativo})</span>` : ''}
+          </div>
+          <div style="font-size:11px; color:var(--muted2); margin-top:2px">
+            <span style="color:var(--green); font-weight:700">Dose: ${item.dosagem_real} ${item.unidade}</span> &bull;
+            ${totalStr}
+            <span style="color:var(--yellow); font-weight:700">Alvo: ${item.alvo || (isFoliar ? 'ADUBAÇÃO FOLIAR' : 'N/A')}</span> &bull;
+            <span>Carência: ${item.carencia_dias || 0} dias</span>
+          </div>
+        </div>
+        <button onclick="removeNewOpItem(${idx})" style="background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.3); padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:700;">Remover</button>
+      </div>
+    `);
   });
+  if (window.lucide) lucide.createIcons();
 }
 
 function timeToMinutes(tStr) {
