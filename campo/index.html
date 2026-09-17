@@ -6699,42 +6699,61 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
   observacoes: document.getElementById('opObsInput').value
   };
   
+  const isUUID = str => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+  if (!isUUID(recordOP.parcel_id)) recordOP.parcel_id = null;
+
+  const btn = document.getElementById('btnSaveOp');
+  const origHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width:18px;height:18px"></i> Salvando...';
+  }
+
   try {
-  const hasParcel = (dbParcels || []).some(p => p.id === recordOP.parcel_id);
-  if (!hasParcel) recordOP.parcel_id = null;
-  const { data: opData, error: opErr } = await sb.from('caderno_campo_op').insert(recordOP).select('id').single();
-  if (opErr) throw opErr;
-  
-  const itemsToInsert = opItems.map(i => ({
-  tenant_id: tenantId,
-  op_id: opData.id,
-  produto_id: i.produto_id,
-  produto_nome: i.produto_nome,
-  alvo: i.alvo,
-  dosagem_real: i.dosagem_real,
-  dosagem_corrigida: i.dosagem_corrigida,
-  unidade: i.unidade,
-  carencia_dias: i.carencia_dias
-  }));
-  
-  const { error: itemsErr } = await sb.from('caderno_campo_op_itens').insert(itemsToInsert);
-  if (itemsErr) throw itemsErr;
-  
-  toast(' Ordem de Aplicação salva com sucesso!', 'ok');
-  
-  recordOP.id = opData.id;
-  recordOP.caderno_campo_op_itens = itemsToInsert;
-  opRecordsData.unshift(recordOP);
-  localStorage.setItem('prodtech_op_records', JSON.stringify(opRecordsData || []));
-  
-  opItems = [];
-  renderOpItems();
-  showScreen('home');
+    const hasParcel = (dbParcels || []).some(p => p.id === recordOP.parcel_id);
+    if (!hasParcel) recordOP.parcel_id = null;
+    const { data: opData, error: opErr } = await sb.from('caderno_campo_op').insert(recordOP).select('id').single();
+    if (opErr) throw opErr;
+    
+    const itemsToInsert = opItems.map(i => ({
+      tenant_id: tenantId,
+      op_id: opData.id,
+      produto_id: (i.produto_id && isUUID(i.produto_id)) ? i.produto_id : null,
+      produto_nome: i.produto_nome || '',
+      alvo: i.alvo || '',
+      dosagem_real: parseFloat(i.dosagem_real) || 0,
+      dosagem_corrigida: parseFloat(i.dosagem_corrigida) || parseFloat(i.dosagem_real) || 0,
+      unidade: i.unidade || 'L/ha',
+      carencia_dias: parseInt(i.carencia_dias) || 0
+    }));
+    
+    const { error: itemsErr } = await sb.from('caderno_campo_op_itens').insert(itemsToInsert);
+    if (itemsErr) {
+      console.error('Erro ao inserir itens da OP:', itemsErr);
+      await sb.from('caderno_campo_op').delete().eq('id', opData.id);
+      throw itemsErr;
+    }
+    
+    toast(' Ordem de Aplicação salva com sucesso!', 'ok');
+    
+    recordOP.id = opData.id;
+    recordOP.caderno_campo_op_itens = itemsToInsert;
+    opRecordsData.unshift(recordOP);
+    localStorage.setItem('prodtech_op_records', JSON.stringify(opRecordsData || []));
+    
+    opItems = [];
+    renderOpItems();
+    showScreen('home');
   } catch(err) {
-  console.error(err);
-  toast(' Erro ao salvar Ordem de Aplicação!', 'error');
+    console.error('Falha ao salvar OP:', err);
+    toast(' Erro ao salvar Ordem de Aplicação: ' + (err?.message || ''), 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
+    }
   }
-  }
+}
 
 // ═══════════════════════════════════════════
 // ──── MÓDULO QUALIDADE ────

@@ -2586,7 +2586,7 @@
 
   <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px">
   <button class="sec" onclick="closeNewOpModal()">Cancelar</button>
-  <button onclick="saveNewOpDashboard()" style="background:var(--blue); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:700; cursor:pointer">Salvar e Registrar</button>
+  <button id="btnSaveNewOp" onclick="saveNewOpDashboard()" style="background:var(--blue); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:700; cursor:pointer">Salvar e Registrar</button>
   </div>
   </div>
   </div>
@@ -18334,6 +18334,8 @@ function printPosColheitaReport(itemStr) {
 async function deleteOpRecord(id) {
   if (!confirm('Deseja realmente excluir esta Ordem de Pulverização?')) return;
   try {
+    await sb.from('caderno_campo_op_itens').delete().eq('op_id', id);
+    await sb.from('estoque_defensivos_saidas').delete().eq('referencia_id', id);
     const { error } = await sb.from('caderno_campo_op').delete().eq('id', id);
     if (error) throw error;
     toast(' Ordem de Pulverização excluída!', 'ok');
@@ -19166,14 +19168,14 @@ async function saveNewOpDashboard() {
   const chosenDate = $('newOpDate').value || today();
 
   if (isSunday(chosenDate)) {
-  alert(' Trava de Auditoria: Não é permitido registrar Ordem de Pulverização (O.P) em domingos!');
-  return;
+    alert(' Trava de Auditoria: Não é permitido registrar Ordem de Pulverização (O.P) em domingos!');
+    return;
   }
 
   const holidayName = getHolidayName(chosenDate);
   if (holidayName) {
-  alert(` Trava de Auditoria: Não é permitido registrar Ordem de Pulverização (O.P) em feriados (${holidayName})!`);
-  return;
+    alert(` Trava de Auditoria: Não é permitido registrar Ordem de Pulverização (O.P) em feriados (${holidayName})!`);
+    return;
   }
 
   const startVal = $('newOpHoraInicio').value;
@@ -19185,127 +19187,146 @@ async function saveNewOpDashboard() {
   
   // Validação 1: Tratorista e Barrista
   if (tratoristaVal && barristaVal && tratoristaVal.toLowerCase() === barristaVal.toLowerCase()) {
-  alert("O Tratorista e o Barrista não podem ser a mesma pessoa!");
-  return;
+    alert("O Tratorista e o Barrista não podem ser a mesma pessoa!");
+    return;
   }
   
   // Validação 2: Conflito de horários
   if (startVal && endVal) {
-  if (timeToMinutes(startVal) >= timeToMinutes(endVal)) {
-  alert("O horário de início deve ser anterior ao horário de término!");
-  return;
+    if (timeToMinutes(startVal) >= timeToMinutes(endVal)) {
+      alert("O horário de início deve ser anterior ao horário de término!");
+      return;
+    }
+    
+    const conflicts = (_opList || []).filter(op => {
+      const isSameDay = op.data_aplicacao === chosenDate;
+      const hasOverlap = overlaps(startVal, endVal, op.horario_inicio, op.horario_fim);
+      return isSameDay && hasOverlap;
+    });
+    
+    for (const op of conflicts) {
+      const opEmps = [op.tratorista, op.barrista, op.manipulador].filter(Boolean).map(e => e.trim().toLowerCase());
+      
+      if (tratoristaVal && opEmps.includes(tratoristaVal.toLowerCase())) {
+        alert(` CONFLITO DE HORÁRIO — O colaborador ${tratoristaVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
+        return;
+      }
+      if (barristaVal && opEmps.includes(barristaVal.toLowerCase())) {
+        alert(` CONFLITO DE HORÁRIO — O colaborador ${barristaVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
+        return;
+      }
+      if (manipuladorVal && opEmps.includes(manipuladorVal.toLowerCase())) {
+        alert(` CONFLITO DE HORÁRIO — O colaborador ${manipuladorVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
+        return;
+      }
+      if (tratorVal && op.trator && op.trator.trim().toLowerCase() === tratorVal.toLowerCase()) {
+        alert(` CONFLITO DE HORÁRIO — O trator ${tratorVal} já está sendo utilizado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
+        return;
+      }
+    }
   }
-  
-  const conflicts = (_opList || []).filter(op => {
-  const isSameDay = op.data_aplicacao === chosenDate;
-  const hasOverlap = overlaps(startVal, endVal, op.horario_inicio, op.horario_fim);
-  return isSameDay && hasOverlap;
-  });
-  
-  for (const op of conflicts) {
-  const opEmps = [op.tratorista, op.barrista, op.manipulador].filter(Boolean).map(e => e.trim().toLowerCase());
-  
-  if (tratoristaVal && opEmps.includes(tratoristaVal.toLowerCase())) {
-  alert(` CONFLITO DE HORÁRIO — O colaborador ${tratoristaVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
-  return;
-  }
-  if (barristaVal && opEmps.includes(barristaVal.toLowerCase())) {
-  alert(` CONFLITO DE HORÁRIO — O colaborador ${barristaVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
-  return;
-  }
-  if (manipuladorVal && opEmps.includes(manipuladorVal.toLowerCase())) {
-  alert(` CONFLITO DE HORÁRIO — O colaborador ${manipuladorVal} já está alocado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
-  return;
-  }
-  if (tratorVal && op.trator && op.trator.trim().toLowerCase() === tratorVal.toLowerCase()) {
-  alert(` CONFLITO DE HORÁRIO — O trator ${tratorVal} já está sendo utilizado na O.P da parcela ${op.parcela} das ${op.horario_inicio} às ${op.horario_fim} nesta data.`);
-  return;
-  }
-  }
-  }
+
+  const isUUID = str => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
   
   const recordOP = {
-  tenant_id: tenantId,
-  parcel_id: ip.parcel_id || null,
-  parcela: ip.parcela2 || ip.parcela,
-  variedade: ip.variedade,
-  data_aplicacao: chosenDate,
-  cultura: ip.cultura || 'MELÃO',
-  area_ha: parseFloat(ip.area) || 1.0,
-  trator: tratorVal,
-  tratorista: tratoristaVal,
-  barrista: barristaVal,
-  manipulador: ($('newOpManipulador')?.value || '').trim() || null,
-  equipamento: $('newOpEquipamento').value,
-  pressao: $('newOpPressao').value,
-  bicos: $('newOpBicos').value,
-  volume_calda: $('newOpVolumeCalda').value,
-  temperatura_c: parseFloat($('newOpTemp').value) || null,
-  umidade_rel_pct: parseFloat($('newOpUmid').value) || null,
-  velocidade_vento_kmh: parseFloat($('newOpVento').value) || null,
-  horario_inicio: startVal,
-  horario_fim: endVal,
-  tecnico: $('newOpTecnico').value,
-  eng_agronomo: $('newOpAgronomo').value,
-  observacoes: $('newOpObs').value
+    tenant_id: tenantId,
+    parcel_id: (ip && ip.parcel_id && isUUID(ip.parcel_id)) ? ip.parcel_id : null,
+    parcela: ip ? (ip.parcela2 || ip.parcela) : '',
+    variedade: (ip && ip.variedade) || 'AMARELO',
+    data_aplicacao: chosenDate,
+    cultura: (ip && ip.cultura) || 'MELÃO',
+    area_ha: parseFloat(ip?.area) || 1.0,
+    trator: tratorVal,
+    tratorista: tratoristaVal,
+    barrista: barristaVal,
+    manipulador: manipuladorVal || null,
+    equipamento: $('newOpEquipamento').value,
+    pressao: $('newOpPressao').value,
+    bicos: $('newOpBicos').value,
+    volume_calda: $('newOpVolumeCalda').value,
+    temperatura_c: parseFloat($('newOpTemp').value) || null,
+    umidade_rel_pct: parseFloat($('newOpUmid').value) || null,
+    velocidade_vento_kmh: parseFloat($('newOpVento').value) || null,
+    horario_inicio: startVal,
+    horario_fim: endVal,
+    tecnico: $('newOpTecnico').value,
+    eng_agronomo: $('newOpAgronomo').value,
+    observacoes: $('newOpObs').value
   };
+
+  const btn = $('btnSaveNewOp');
+  const origHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width:14px;height:14px"></i> Salvando...';
+  }
   
   try {
-  const { data: opData, error: opErr } = await sb.from('caderno_campo_op').insert(recordOP).select('id').single();
-  if (opErr) throw opErr;
-  
-  const itemsToInsert = _newOpItems.map(i => ({
-  tenant_id: tenantId,
-  op_id: opData.id,
-  produto_id: i.produto_id,
-  produto_nome: i.produto_nome,
-  alvo: i.alvo,
-  dosagem_real: i.dosagem_real,
-  dosagem_corrigida: i.dosagem_corrigida,
-  unidade: i.unidade,
-  carencia_dias: i.carencia_dias
-  }));
-  
-  const { error: itemsErr } = await sb.from('caderno_campo_op_itens').insert(itemsToInsert);
-  if (itemsErr) throw itemsErr;
-  
-  //  Dar baixa automática de defensivos/foliares no Controle de Estoque
-  try {
-  const areaHa = parseFloat(recordOP.area_ha) || 1.0;
-  const volCalda = parseFloat(recordOP.volume_calda) || 0;
-  const stockExits = itemsToInsert.map(i => {
-  const doseVal = parseFloat(i.dosagem_real) || parseFloat(i.dosagem_corrigida) || 0;
-  let totalQtd = doseVal;
-  if (volCalda > 0 && String(i.unidade || '').toLowerCase().includes('100l')) {
-  totalQtd = (doseVal * volCalda) / 100;
-  } else if (areaHa > 0 && (String(i.unidade || '').toLowerCase().includes('ha') || String(i.unidade || '').toLowerCase().includes('l/ha') || String(i.unidade || '').toLowerCase().includes('kg/ha'))) {
-  totalQtd = doseVal * areaHa;
-  }
-  return {
-  tenant_id: tenantId,
-  produto_nome: i.produto_nome,
-  quantidade_saida: totalQtd || doseVal,
-  unidade_medida: String(i.unidade || '').toLowerCase().includes('kg') ? 'KG' : 'L',
-  motivo_saida: 'PULVERIZACAO',
-  referencia_id: opData.id,
-  parcela: recordOP.parcela,
-  data_saida: recordOP.data_aplicacao || today(),
-  observacao: `Baixa automática O.P. Parcela ${recordOP.parcela}`
-  };
-  });
-  if (stockExits.length > 0) {
-  await sb.from('estoque_defensivos_saidas').insert(stockExits);
-  }
-  } catch(errStk) {
-  console.warn('Erro ao registrar baixa automática de estoque:', errStk);
-  }
-  
-  toast(' Ordem de Pulverização registrada com baixa de estoque!', 'ok');
-  closeNewOpModal();
-  loadCadernoCampo();
+    const { data: opData, error: opErr } = await sb.from('caderno_campo_op').insert(recordOP).select('id').single();
+    if (opErr) throw opErr;
+    
+    const itemsToInsert = _newOpItems.map(i => ({
+      tenant_id: tenantId,
+      op_id: opData.id,
+      produto_id: (i.produto_id && isUUID(i.produto_id)) ? i.produto_id : null,
+      produto_nome: i.produto_nome || '',
+      alvo: i.alvo || '',
+      dosagem_real: parseFloat(i.dosagem_real) || 0,
+      dosagem_corrigida: parseFloat(i.dosagem_corrigida) || parseFloat(i.dosagem_real) || 0,
+      unidade: i.unidade || 'L/ha',
+      carencia_dias: parseInt(i.carencia_dias) || 0
+    }));
+    
+    const { error: itemsErr } = await sb.from('caderno_campo_op_itens').insert(itemsToInsert);
+    if (itemsErr) {
+      console.error('Erro ao inserir itens da calda:', itemsErr);
+      // Rollback da OP pai para não deixar registros vazios/repetidos órfãos
+      await sb.from('caderno_campo_op').delete().eq('id', opData.id);
+      throw itemsErr;
+    }
+    
+    // Dar baixa automática de defensivos/foliares no Controle de Estoque
+    try {
+      const areaHa = parseFloat(recordOP.area_ha) || 1.0;
+      const volCalda = parseFloat(recordOP.volume_calda) || 0;
+      const stockExits = itemsToInsert.map(i => {
+        const doseVal = parseFloat(i.dosagem_real) || parseFloat(i.dosagem_corrigida) || 0;
+        let totalQtd = doseVal;
+        if (volCalda > 0 && String(i.unidade || '').toLowerCase().includes('100l')) {
+          totalQtd = (doseVal * volCalda) / 100;
+        } else if (areaHa > 0 && (String(i.unidade || '').toLowerCase().includes('ha') || String(i.unidade || '').toLowerCase().includes('l/ha') || String(i.unidade || '').toLowerCase().includes('kg/ha'))) {
+          totalQtd = doseVal * areaHa;
+        }
+        return {
+          tenant_id: tenantId,
+          produto_nome: i.produto_nome,
+          quantidade_saida: totalQtd || doseVal,
+          unidade_medida: String(i.unidade || '').toLowerCase().includes('kg') ? 'KG' : 'L',
+          motivo_saida: 'PULVERIZACAO',
+          referencia_id: opData.id,
+          parcela: recordOP.parcela,
+          data_saida: recordOP.data_aplicacao || today(),
+          observacao: `Baixa automática O.P. Parcela ${recordOP.parcela}`
+        };
+      });
+      if (stockExits.length > 0) {
+        await sb.from('estoque_defensivos_saidas').insert(stockExits);
+      }
+    } catch(errStk) {
+      console.warn('Erro ao registrar baixa automática de estoque:', errStk);
+    }
+    
+    toast(' Ordem de Pulverização registrada com sucesso!', 'ok');
+    closeNewOpModal();
+    loadCadernoCampo();
   } catch(e) {
-  console.error(e);
-  alert('Erro ao registrar O.P no banco de dados.');
+    console.error('Falha ao registrar OP:', e);
+    alert('Erro ao registrar O.P no banco de dados:\n' + (e?.message || e?.details || 'Erro desconhecido. Verifique os dados e tente novamente.'));
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
+    }
   }
 }
 
