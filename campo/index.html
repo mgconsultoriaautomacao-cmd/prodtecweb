@@ -4893,9 +4893,12 @@ let varieties = [];
 
 function normalizeParcelCode(val) {
   if (!val) return '';
-  const s = String(val).trim().toUpperCase();
-  const digits = s.match(/\d+/);
-  return digits ? digits[0] : s;
+  let s = String(val).trim().toUpperCase();
+  // Remover palavras de prefixo como PARCELA, TALHÃO, TALHAO, P-, T-
+  s = s.replace(/^(PARCELA|TALH[AÃ]O|TALHAO|P|T)\s*[\-_:]*\s*/i, '');
+  // Remover espaços em branco e traços, preservando números e letras completas (ex: 38D, 38P, 34A)
+  s = s.replace(/[\s\-_]/g, '');
+  return s;
 }
 
 function getParcelaCompleteInfo(parcelInput, dataArray) {
@@ -4926,11 +4929,15 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
     if (!x) return false;
     if (targetId && String(x.id) === String(targetId)) return true;
     const p1 = normalizeParcelCode(x.parcela2);
-    const p2 = normalizeParcelCode(x.parcela);
+    const p2 = normalizeParcelCode((x.parcela || '') + (x.letra ? x.letra : ''));
+    const p2_raw = normalizeParcelCode(x.parcela);
     const p3 = normalizeParcelCode(x.code);
+    const p_id = normalizeParcelCode(x.id);
     return (p1 && normTarget && p1 === normTarget) || 
            (p2 && normTarget && p2 === normTarget) || 
-           (p3 && normTarget && p3 === normTarget);
+           (p3 && normTarget && p3 === normTarget) ||
+           (p_id && normTarget && p_id === normTarget) ||
+           (!x.letra && p2_raw && normTarget && p2_raw === normTarget);
   });
 
   if (matches.length === 0) {

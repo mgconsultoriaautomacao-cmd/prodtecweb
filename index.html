@@ -1902,14 +1902,14 @@
   <div style="overflow-x:auto">
   <table style="width:100%; border-collapse:collapse">
   <thead>
-  <tr style="border-bottom:1px solid var(--border)">
+  <tr style="border-bottom:1px solid var(--border); background:rgba(255,255,255,0.02)">
+  <th style="text-align:left; padding:10px; font-weight:700">Nº O.P</th>
   <th style="text-align:left; padding:10px">Data</th>
   <th style="text-align:left; padding:10px">Parcela</th>
   <th style="text-align:left; padding:10px">Cultura / Variedade</th>
-  <th style="text-align:left; padding:10px">Defensivo / Princípio</th>
   <th style="text-align:center; padding:10px">Carência (Dias)</th>
   <th style="text-align:center; padding:10px">Horário</th>
-  <th style="text-align:center; padding:10px">Laudos</th>
+  <th style="text-align:center; padding:10px">Ações / Laudos</th>
   </tr>
   </thead>
   <tbody id="ccOpTableBody">
@@ -11556,9 +11556,12 @@ const _opReportIcons = {
 
 function normalizeParcelCode(val) {
   if (!val) return '';
-  const s = String(val).trim().toUpperCase();
-  const digits = s.match(/\d+/);
-  return digits ? digits[0] : s;
+  let s = String(val).trim().toUpperCase();
+  // Remover palavras de prefixo como PARCELA, TALHÃO, TALHAO, P-, T-
+  s = s.replace(/^(PARCELA|TALH[AÃ]O|TALHAO|P|T)\s*[\-_:]*\s*/i, '');
+  // Remover espaços em branco e traços, preservando números e letras completas (ex: 38D, 38P, 34A)
+  s = s.replace(/[\s\-_]/g, '');
+  return s;
 }
 
 function getParcelaCompleteInfo(parcelInput, dataArray) {
@@ -11589,11 +11592,15 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
     if (!x) return false;
     if (targetId && String(x.id) === String(targetId)) return true;
     const p1 = normalizeParcelCode(x.parcela2);
-    const p2 = normalizeParcelCode(x.parcela);
+    const p2 = normalizeParcelCode((x.parcela || '') + (x.letra ? x.letra : ''));
+    const p2_raw = normalizeParcelCode(x.parcela);
     const p3 = normalizeParcelCode(x.code);
+    const p_id = normalizeParcelCode(x.id);
     return (p1 && normTarget && p1 === normTarget) || 
            (p2 && normTarget && p2 === normTarget) || 
-           (p3 && normTarget && p3 === normTarget);
+           (p3 && normTarget && p3 === normTarget) ||
+           (p_id && normTarget && p_id === normTarget) ||
+           (!x.letra && p2_raw && normTarget && p2_raw === normTarget);
   });
 
   if (matches.length === 0) {
@@ -11864,7 +11871,7 @@ function printPastaCampoOrdemPulv(itemStr) {
   const isNoite = obsUpper.includes('NOITE');
   const isVento = obsUpper.includes('VENTO');
 
-  const opCod = item.id ? String(item.id).substring(0, 6).toUpperCase() : '4';
+  const opCod = item.op_cod || (item.numero_op ? ('OP ' + item.numero_op) : (item.id ? String(item.id).substring(0, 6).toUpperCase() : '1'));
   const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'EMPRESA';
   const elaborador = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'EMANUELA MOREIRA';
   const tenantLogo = (window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64 || 'logo.png';
@@ -14122,21 +14129,38 @@ async function loadMipTable() {
 
 async function loadOpTable() {
   try {
-  const { data: opData, error: opError } = await sb.from('caderno_campo_op')
-  .select('*, caderno_campo_op_itens(*)')
-  .eq('tenant_id', tenantId)
-  .order('data_aplicacao', { ascending: false });
-  if (!opError && opData) {
-  renderCcOpTable(opData);
-  window._opList = opData;
-  } else {
-  renderCcOpTable([]);
-  window._opList = [];
-  }
+    const { data: opData, error: opError } = await sb.from('caderno_campo_op')
+      .select('*, caderno_campo_op_itens(*)')
+      .eq('tenant_id', tenantId)
+      .order('data_aplicacao', { ascending: true })
+      .order('created_at', { ascending: true });
+    
+    if (!opError && opData) {
+      // Atribuir número sequencial cronológico fixo (OP 1, OP 2, OP 3...)
+      const numberedList = opData.map((item, idx) => {
+        const num = idx + 1;
+        item.numero_op = num;
+        item.op_cod = 'OP ' + num;
+        return item;
+      });
+      window._opList = numberedList;
+      
+      // Exibir mais recentes no topo com numeração sequencial preservada
+      const displayList = [...numberedList].sort((a, b) => {
+        const da = a.data_aplicacao || '';
+        const db = b.data_aplicacao || '';
+        if (db !== da) return db.localeCompare(da);
+        return (b.numero_op || 0) - (a.numero_op || 0);
+      });
+      renderCcOpTable(displayList);
+    } else {
+      renderCcOpTable([]);
+      window._opList = [];
+    }
   } catch(e) {
-  console.error('Erro ao carregar OP:', e);
-  renderCcOpTable([]);
-  window._opList = [];
+    console.error('Erro ao carregar OP:', e);
+    renderCcOpTable([]);
+    window._opList = [];
   }
 }
 
@@ -15776,70 +15800,83 @@ function renderCcOpTable(list) {
   const tbody = $('ccOpTableBody');
   if (!tbody) return;
   if (!list || list.length === 0) {
-  tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Nenhuma ordem de pulverização registrada.</td></tr>`;
-  return;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px; color:var(--muted)">Nenhuma ordem de pulverização registrada.</td></tr>`;
+    return;
   }
+  
   tbody.innerHTML = list.map(item => {
-  const formattedDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—';
-  const horarioStr = (item.horario_inicio || item.horario_fim) ? `${item.horario_inicio || ''} - ${item.horario_fim || ''}` : '—';
-  
-  // Processar os itens da calda
-  const itemsCalda = item.caderno_campo_op_itens || [];
-  let defensivosHtml = '';
-  let maxCarencia = 0;
-  
-  if (itemsCalda.length > 0) {
-  defensivosHtml = itemsCalda.map(i => {
-  if (i.carencia_dias > maxCarencia) maxCarencia = i.carencia_dias;
-  const corrigidaBadge = i.dosagem_real > i.dosagem_corrigida ? `<br/><small style="color:var(--orange)">Correção de Auditoria: ${i.dosagem_corrigida} ${i.unidade}</small>` : '';
-  return `<div><strong>${i.produto_nome}</strong> (${i.dosagem_real} ${i.unidade})<br/><small style="color:var(--muted)">Alvo: ${i.alvo || '—'} | Carência: ${i.carencia_dias} dias</small>${corrigidaBadge}</div>`;
-  }).join('<hr style="margin:4px 0; border-color:var(--border)"/>');
-  } else {
-  defensivosHtml = `<span style="color:var(--muted)">Sem produtos listados</span>`;
-  }
-  
-  let dataLiberacaoStr = '—';
-  let statusCarencia = 'Liberado';
-  let statusCarenciaColor = 'rgba(16, 185, 129, 0.1); color: var(--green)';
-  
-  if (item.data_aplicacao) {
-  const appDate = new Date(item.data_aplicacao + 'T12:00:00');
-  appDate.setDate(appDate.getDate() + maxCarencia);
-  dataLiberacaoStr = appDate.toLocaleDateString('pt-BR');
-  
-  const todayDate = new Date();
-  todayDate.setHours(0,0,0,0);
-  const appDateZero = new Date(appDate);
-  appDateZero.setHours(0,0,0,0);
-  
-  if (todayDate < appDateZero) {
-  statusCarencia = `Bloqueado até ${dataLiberacaoStr}`;
-  statusCarenciaColor = 'rgba(245, 158, 11, 0.1); color: var(--yellow)';
-  }
-  }
-  
-  const itemStr = encodeURIComponent(JSON.stringify(item));
-  
-  return `
-  <tr style="border-bottom:1px solid var(--border); font-size:13px">
-  <td style="padding:12px 10px">${formattedDate}</td>
-  <td style="padding:12px 10px; font-weight:600">${item.parcela}</td>
-  <td style="padding:12px 10px">${item.cultura} / ${item.variedade}</td>
-  <td style="padding:12px 10px">
-  ${defensivosHtml}
-  </td>
-  <td style="padding:12px 10px; text-align:center">
-  <strong>${maxCarencia} dias</strong><br/>
-  <span style="font-size:10px; padding:2px 6px; border-radius:4px; background:${statusCarenciaColor}">${statusCarencia}</span>
-  </td>
-  <td style="padding:12px 10px; text-align:center">${horarioStr}</td>
-  <td style="padding:12px 10px; text-align:center; white-space:nowrap">
-  <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoOrdemPulv('${itemStr}')"><i data-lucide="printer" style="width:12px; height:12px"></i> O.P (OC02)</button>
-  <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoAutColheita('${itemStr}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Laudo (PC11)</button>
-  <button class="danger" style="font-size:11px; padding:4px 8px" onclick="deleteOpRecord('${item.id}')">×</button>
-  </td>
-  </tr>
-  `;
+    const formattedDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—';
+    const horarioStr = (item.horario_inicio || item.horario_fim) ? `${item.horario_inicio || ''} - ${item.horario_fim || ''}` : '—';
+    const opCodBadge = item.op_cod || (item.numero_op ? `OP ${item.numero_op}` : 'OP —');
+    
+    // Processar os itens da calda para calcular carência máxima
+    const itemsCalda = item.caderno_campo_op_itens || [];
+    let maxCarencia = 0;
+    itemsCalda.forEach(i => {
+      const c = parseInt(i.carencia_dias) || 0;
+      if (c > maxCarencia) maxCarencia = c;
+    });
+    
+    let dataLiberacaoStr = '—';
+    let statusCarencia = 'Liberado';
+    let statusCarenciaColor = 'background:rgba(16, 185, 129, 0.15); color: var(--green); border:1px solid rgba(16, 185, 129, 0.3);';
+    
+    if (item.data_aplicacao && maxCarencia > 0) {
+      const appDate = new Date(item.data_aplicacao + 'T12:00:00');
+      appDate.setDate(appDate.getDate() + maxCarencia);
+      dataLiberacaoStr = appDate.toLocaleDateString('pt-BR');
+      
+      const todayDate = new Date();
+      todayDate.setHours(0,0,0,0);
+      const appDateZero = new Date(appDate);
+      appDateZero.setHours(0,0,0,0);
+      
+      if (todayDate < appDateZero) {
+        statusCarencia = `Carência até ${dataLiberacaoStr}`;
+        statusCarenciaColor = 'background:rgba(245, 158, 11, 0.15); color: var(--yellow); border:1px solid rgba(245, 158, 11, 0.3);';
+      }
+    }
+    
+    const isMelancia = (item.cultura || '').toUpperCase().includes('MELANCIA');
+    const culturaColor = isMelancia
+      ? 'background:rgba(239, 68, 68, 0.15); color:#f87171; border:1px solid rgba(239, 68, 68, 0.3);' 
+      : 'background:rgba(234, 179, 8, 0.15); color:#facc15; border:1px solid rgba(234, 179, 8, 0.3);';
+      
+    const itemStr = encodeURIComponent(JSON.stringify(item));
+    const qtdProdutos = itemsCalda.length;
+    
+    return `
+    <tr style="border-bottom:1px solid var(--border); font-size:13px; transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+      <td style="padding:10px; font-weight:700">
+        <span class="badge" style="background:rgba(59,130,246,0.15); color:var(--blue); border:1px solid rgba(59,130,246,0.3); font-size:11px; padding:3px 8px; border-radius:6px; font-weight:700">${opCodBadge}</span>
+      </td>
+      <td style="padding:10px; white-space:nowrap; font-weight:500">${formattedDate}</td>
+      <td style="padding:10px; font-weight:700; color:#fff; font-size:13px">${item.parcela || '—'}</td>
+      <td style="padding:10px">
+        <span class="badge" style="${culturaColor} font-size:10px; padding:2px 8px; border-radius:4px; font-weight:700">${item.cultura || 'MELÃO'}</span>
+        ${item.variedade ? `<div style="font-size:11px; color:var(--muted); margin-top:2px">${item.variedade}</div>` : ''}
+      </td>
+      <td style="padding:10px; text-align:center; white-space:nowrap">
+        <strong style="font-size:12px">${maxCarencia} dias</strong><br/>
+        <span class="badge" style="font-size:10px; padding:2px 6px; border-radius:4px; ${statusCarenciaColor}">${statusCarencia}</span>
+      </td>
+      <td style="padding:10px; text-align:center; font-size:12px; color:var(--text); white-space:nowrap">${horarioStr}</td>
+      <td style="padding:10px; text-align:center; white-space:nowrap">
+        <button class="btn sec" style="font-size:11px; padding:4px 9px; margin-right:4px; display:inline-flex; align-items:center; gap:4px; border-color:var(--border)" onclick="openOpDetailModal('${itemStr}')" title="Ver Detalhes da Calda e Aplicação">
+          <i data-lucide="eye" style="width:13px; height:13px; color:var(--blue)"></i> Detalhes (${qtdProdutos})
+        </button>
+        <button class="btn on" style="font-size:11px; padding:4px 9px; margin-right:4px; display:inline-flex; align-items:center; gap:4px; background:var(--blue)" onclick="printPastaCampoOrdemPulv('${itemStr}')" title="Imprimir Ordem de Pulverização (OC02)">
+          <i data-lucide="printer" style="width:13px; height:13px"></i> O.P
+        </button>
+        <button class="btn sec" style="font-size:11px; padding:4px 9px; margin-right:4px; display:inline-flex; align-items:center; gap:4px" onclick="printPastaCampoAutColheita('${itemStr}')" title="Imprimir Autorização de Colheita (PC11)">
+          <i data-lucide="file-check" style="width:13px; height:13px; color:var(--green)"></i> Laudo
+        </button>
+        <button class="danger" style="font-size:11px; padding:4px 8px; border-radius:6px" onclick="deleteOpRecord('${item.id}')" title="Excluir O.P">
+          <i data-lucide="trash-2" style="width:12px; height:12px"></i>
+        </button>
+      </td>
+    </tr>
+    `;
   }).join('');
   
   setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
@@ -18424,6 +18461,24 @@ function openNewOpModal() {
   $('newOpTecnico').value = "Ivanosca Martins de Oliveira Cunha";
   $('newOpAgronomo').value = "Reinaldo Chotten";
   $('newOpObs').value = "";
+  
+  // Popular select de parcelas com código completo e cultura
+  const opSel = $('newOpParcelSelect');
+  if (opSel) {
+    const list = (_infoParcelas && _infoParcelas.length > 0) ? _infoParcelas : (window.infoParcelasData || []);
+    const sorted = [...list].sort((a, b) => {
+      const pa = a.parcela2 || a.parcela || '';
+      const pb = b.parcela2 || b.parcela || '';
+      return pa.localeCompare(pb, undefined, { numeric: true, sensitivity: 'base' });
+    });
+    opSel.innerHTML = '<option value="">— Selecione a Parcela —</option>' + sorted.map(ip => {
+      const code = ip.parcela2 || ip.parcela || ip.id;
+      const cult = ip.cultura ? ' — ' + ip.cultura.toUpperCase() : '';
+      const varStr = ip.variedade ? ' (' + ip.variedade + ')' : '';
+      return `<option value="${ip.id || code}">${code}${cult}${varStr}</option>`;
+    }).join('');
+  }
+  
   $('newOpParcelSelect').value = "";
   $('newOpCultura').value = "";
   $('newOpArea').value = "";
@@ -18564,15 +18619,60 @@ function switchNewOpTab(mode) {
       }
     });
   } else {
-    const lista = (_defensivos || []).filter(d => !isFol(d));
-    select.insertAdjacentHTML('beforeend', `<option value="">Selecione um defensivo (${lista.length} opções)...</option>`);
-    lista.forEach(d => {
-      const doseVal = d.dose || d.dosagem_recomendada;
-      const doseStr = doseVal ? ` | Dose: ${doseVal} ${d.unidade_dose || 'L/ha'}` : '';
-      const alvoStr = d.alvo ? ` | Alvo: ${d.alvo}` : '';
-      const carStr = d.carencia_dias !== undefined ? ` | Carência: ${d.carencia_dias}d` : '';
-      select.insertAdjacentHTML('beforeend', `<option value="${d.id}">${d.produto} (${d.ingrediente_ativo || 'Químico'})${doseStr}${alvoStr}${carStr}</option>`);
-    });
+    let lista = (_defensivos || []).filter(d => !isFol(d));
+    
+    // Obter cultura da parcela selecionada
+    const pId = $('newOpParcelSelect')?.value;
+    const ip = pId ? getParcelaCompleteInfo(pId, _infoParcelas) : null;
+    const targetCultura = (ip?.cultura || '').trim().toUpperCase();
+    
+    if (targetCultura) {
+      const isTargetCult = d => {
+        const c = (d.cultura || '').toUpperCase();
+        if (!c || c === 'TODAS' || c === 'AMBAS' || c === 'GERAL') return true;
+        if (targetCultura.includes('MELANCIA') && c.includes('MELANCIA')) return true;
+        if ((targetCultura.includes('MELAO') || targetCultura.includes('MELÃO')) && (c.includes('MELAO') || c.includes('MELÃO'))) return true;
+        return c.includes(targetCultura);
+      };
+      
+      const autorizados = lista.filter(isTargetCult);
+      const outros = lista.filter(d => !isTargetCult(d));
+      
+      select.insertAdjacentHTML('beforeend', `<option value="">Selecione um defensivo (${autorizados.length} autorizados para ${targetCultura})...</option>`);
+      
+      if (autorizados.length > 0) {
+        select.insertAdjacentHTML('beforeend', `<optgroup label="✅ DEFENSIVOS AUTORIZADOS: ${targetCultura}">`);
+        autorizados.forEach(d => {
+          const doseVal = d.dose || d.dosagem_recomendada;
+          const doseStr = doseVal ? ` | Dose: ${doseVal} ${d.unidade_dose || 'L/ha'}` : '';
+          const alvoStr = d.alvo ? ` | Alvo: ${d.alvo}` : '';
+          const carStr = d.carencia_dias !== undefined ? ` | Carência: ${d.carencia_dias}d` : '';
+          select.insertAdjacentHTML('beforeend', `<option value="${d.id}">✅ ${d.produto} (${d.ingrediente_ativo || 'Químico'})${doseStr}${alvoStr}${carStr}</option>`);
+        });
+        select.insertAdjacentHTML('beforeend', `</optgroup>`);
+      }
+      
+      if (outros.length > 0) {
+        select.insertAdjacentHTML('beforeend', `<optgroup label="⚠️ OUTRAS CULTURAS (Atenção Fiscal/Bula)">`);
+        outros.forEach(d => {
+          const doseVal = d.dose || d.dosagem_recomendada;
+          const doseStr = doseVal ? ` | Dose: ${doseVal} ${d.unidade_dose || 'L/ha'}` : '';
+          const cStr = d.cultura ? ` [${d.cultura}]` : '';
+          select.insertAdjacentHTML('beforeend', `<option value="${d.id}">⚠️ ${d.produto}${cStr} (${d.ingrediente_ativo || 'Químico'})${doseStr}</option>`);
+        });
+        select.insertAdjacentHTML('beforeend', `</optgroup>`);
+      }
+    } else {
+      select.insertAdjacentHTML('beforeend', `<option value="">Selecione um defensivo (${lista.length} opções)...</option>`);
+      lista.forEach(d => {
+        const doseVal = d.dose || d.dosagem_recomendada;
+        const doseStr = doseVal ? ` | Dose: ${doseVal} ${d.unidade_dose || 'L/ha'}` : '';
+        const alvoStr = d.alvo ? ` | Alvo: ${d.alvo}` : '';
+        const carStr = d.carencia_dias !== undefined ? ` | Carência: ${d.carencia_dias}d` : '';
+        const cultStr = d.cultura ? ` [${d.cultura}]` : '';
+        select.insertAdjacentHTML('beforeend', `<option value="${d.id}">${d.produto}${cultStr} (${d.ingrediente_ativo || 'Químico'})${doseStr}${alvoStr}${carStr}</option>`);
+      });
+    }
   }
   select.insertAdjacentHTML('beforeend', `<option value="OUTRO">+ Digitar Outro...</option>`);
 
@@ -20638,6 +20738,192 @@ ${'<' + 'script>window.onload = function() { window.print(); };</' + 'script>'}
   printWin.document.write(html);
   printWin.document.close();
 }
+
+// ═══════════════════════════════════════════
+// MODAL DE DETALHES DA ORDEM DE PULVERIZAÇÃO (O.P)
+// ═══════════════════════════════════════════
+
+let _currentOpDetailItem = null;
+
+function openOpDetailModal(itemStr) {
+  const item = typeof itemStr === 'string' ? JSON.parse(decodeURIComponent(itemStr)) : itemStr;
+  _currentOpDetailItem = item;
+  
+  const modal = $('opDetailModal');
+  if (!modal) return;
+  
+  const opNum = item.op_cod || (item.numero_op ? ('OP ' + item.numero_op) : 'OP');
+  $('opDetailBadge').textContent = opNum;
+  $('opDetailTitle').textContent = 'Ordem de Pulverização — Parcela ' + (item.parcela || '—');
+  
+  const formattedDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—';
+  const horarioStr = (item.horario_inicio || item.horario_fim) ? ((item.horario_inicio || '') + ' às ' + (item.horario_fim || '')) : '—';
+  
+  const itemsCalda = item.caderno_campo_op_itens || [];
+  let maxCarencia = 0;
+  itemsCalda.forEach(i => {
+    const c = parseInt(i.carencia_dias) || 0;
+    if (c > maxCarencia) maxCarencia = c;
+  });
+  
+  let dataLiberacaoStr = '—';
+  let statusCarencia = 'Liberado';
+  let statusCarenciaColor = 'background:rgba(16, 185, 129, 0.15); color: var(--green); border:1px solid rgba(16, 185, 129, 0.3);';
+  
+  if (item.data_aplicacao && maxCarencia > 0) {
+    const appDate = new Date(item.data_aplicacao + 'T12:00:00');
+    appDate.setDate(appDate.getDate() + maxCarencia);
+    dataLiberacaoStr = appDate.toLocaleDateString('pt-BR');
+    
+    const todayDate = new Date();
+    todayDate.setHours(0,0,0,0);
+    const appDateZero = new Date(appDate);
+    appDateZero.setHours(0,0,0,0);
+    
+    if (todayDate < appDateZero) {
+      statusCarencia = 'Bloqueado até ' + dataLiberacaoStr;
+      statusCarenciaColor = 'background:rgba(245, 158, 11, 0.15); color: var(--yellow); border:1px solid rgba(245, 158, 11, 0.3);';
+    }
+  }
+  
+  const isMelancia = (item.cultura || '').toUpperCase().includes('MELANCIA');
+  const culturaBadge = isMelancia
+    ? '<span class="badge" style="background:rgba(239, 68, 68, 0.15); color:#f87171; border:1px solid rgba(239, 68, 68, 0.3); font-weight:700">MELANCIA</span>'
+    : '<span class="badge" style="background:rgba(234, 179, 8, 0.15); color:#facc15; border:1px solid rgba(234, 179, 8, 0.3); font-weight:700">MELÃO</span>';
+  
+  // Tabela de itens da calda
+  let caldaTableHtml = '';
+  if (itemsCalda.length > 0) {
+    const areaHa = parseFloat(item.area_ha || 1.0) || 1.0;
+    const volCalda = parseFloat(item.volume_calda) || 0;
+    
+    caldaTableHtml = `
+    <div style="margin-top:16px">
+      <div style="font-weight:700; color:#fff; font-size:13px; margin-bottom:8px; display:flex; align-items:center; gap:6px">
+        <i data-lucide="shield" style="width:15px; height:15px; color:var(--blue)"></i> Produtos Aplicados na Calda (${itemsCalda.length})
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%; border-collapse:collapse; font-size:12px">
+          <thead>
+            <tr style="background:rgba(255,255,255,0.04); border-bottom:1px solid var(--border)">
+              <th style="text-align:left; padding:8px">Produto / Princípio</th>
+              <th style="text-align:left; padding:8px">Alvo / Função</th>
+              <th style="text-align:center; padding:8px">Dosagem</th>
+              <th style="text-align:center; padding:8px">Total Estimado</th>
+              <th style="text-align:center; padding:8px">Carência</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsCalda.map(i => {
+              const doseVal = parseFloat(i.dosagem_real) || parseFloat(i.dosagem_corrigida) || 0;
+              let totalGasto = '—';
+              if (volCalda > 0 && String(i.unidade || '').toLowerCase().includes('100l')) {
+                totalGasto = ((doseVal * volCalda) / 100).toFixed(2) + ' ' + (i.unidade || '').replace('/100L','');
+              } else if (areaHa > 0) {
+                totalGasto = (doseVal * areaHa).toFixed(3) + ' ' + (i.unidade || '').replace('/ha','');
+              }
+              const isFoliar = (i.alvo || '').toUpperCase().includes('FOLIAR') || (i.produto_nome || '').toUpperCase().includes('FOLIAR');
+              return `
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                <td style="padding:8px">
+                  <strong style="color:${isFoliar ? 'var(--green)' : '#fff'}">${i.produto_nome}</strong>
+                  ${isFoliar ? '<span class="badge" style="background:rgba(16,185,129,0.15); color:var(--green); font-size:9px; margin-left:4px">FOLIAR</span>' : ''}
+                </td>
+                <td style="padding:8px; color:var(--muted)">${i.alvo || '—'}</td>
+                <td style="padding:8px; text-align:center; font-weight:600">${doseVal} ${i.unidade || 'L/ha'}</td>
+                <td style="padding:8px; text-align:center; color:var(--yellow); font-weight:600">${totalGasto}</td>
+                <td style="padding:8px; text-align:center">
+                  <strong>${i.carencia_dias || 0} dias</strong>
+                </td>
+              </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    `;
+  } else {
+    caldaTableHtml = '<div style="padding:12px; color:var(--muted); font-size:12px; font-style:italic">Nenhum produto cadastrado na calda desta O.P.</div>';
+  }
+  
+  $('opDetailBody').innerHTML = `
+    <!-- Grid de Informações Gerais -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:10px; padding:14px; font-size:12px">
+      <div>
+        <span style="color:var(--muted)">Data Aplicação:</span><br/>
+        <strong style="font-size:13px; color:#fff">${formattedDate}</strong>
+      </div>
+      <div>
+        <span style="color:var(--muted)">Parcela / Área:</span><br/>
+        <strong style="font-size:13px; color:#fff">${item.parcela || '—'}</strong> (${item.area_ha || '1.00'} ha)
+      </div>
+      <div>
+        <span style="color:var(--muted)">Cultura / Variedade:</span><br/>
+        ${culturaBadge} <span style="color:var(--text); font-weight:600; margin-left:4px">${item.variedade || 'Padrão'}</span>
+      </div>
+      <div>
+        <span style="color:var(--muted)">Horário de Execução:</span><br/>
+        <strong style="color:var(--text)">${horarioStr}</strong>
+      </div>
+      <div>
+        <span style="color:var(--muted)">Tratorista:</span><br/>
+        <strong>${item.tratorista || '—'}</strong>
+      </div>
+      <div>
+        <span style="color:var(--muted)">Barrista / Manipulador:</span><br/>
+        <strong>${item.barrista || '—'}${item.manipulador ? ' / ' + item.manipulador : ''}</strong>
+      </div>
+      <div>
+        <span style="color:var(--muted)">Trator / Equipamento:</span><br/>
+        <strong>${item.trator || 'Trator 2'}</strong> (${item.equipamento || 'Turbo Jacto'})
+      </div>
+      <div>
+        <span style="color:var(--muted)">Volume de Calda / Pressão:</span><br/>
+        <strong>${item.volume_calda || '200'} L/ha</strong> | ${item.pressao || '70 PSI'}
+      </div>
+      <div>
+        <span style="color:var(--muted)">Condições Climáticas:</span><br/>
+        Temp: <strong>${item.temperatura_c ? item.temperatura_c + '°C' : '—'}</strong> | Umid: <strong>${item.umidade_rel_pct ? item.umidade_rel_pct + '%' : '—'}</strong> | Vento: <strong>${item.velocidade_vento_kmh ? item.velocidade_vento_kmh + ' km/h' : '—'}</strong>
+      </div>
+      <div>
+        <span style="color:var(--muted)">Status de Carência:</span><br/>
+        <span class="badge" style="font-size:11px; padding:2px 8px; border-radius:4px; ${statusCarenciaColor}">${statusCarencia}</span> (${maxCarencia} dias)
+      </div>
+      <div style="grid-column:1/-1">
+        <span style="color:var(--muted)">Responsáveis Técnicos:</span><br/>
+        Técnico: <strong>${item.tecnico || '—'}</strong> | Eng. Agrônomo: <strong>${item.eng_agronomo || '—'}</strong>
+      </div>
+      ${item.observacoes ? `
+      <div style="grid-column:1/-1; background:rgba(0,0,0,0.2); padding:8px 10px; border-radius:6px; margin-top:4px">
+        <span style="color:var(--muted)">Observações:</span>
+        <div style="color:var(--text); margin-top:2px">${item.observacoes}</div>
+      </div>
+      ` : ''}
+    </div>
+    
+    ${caldaTableHtml}
+  `;
+  
+  const encodedItem = encodeURIComponent(JSON.stringify(item));
+  $('opDetailPrintActions').innerHTML = `
+    <button class="btn on" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:6px; background:var(--blue)" onclick="printPastaCampoOrdemPulv('${encodedItem}')">
+      <i data-lucide="printer" style="width:14px; height:14px"></i> Imprimir O.P (OC02)
+    </button>
+    <button class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:6px" onclick="printPastaCampoAutColheita('${encodedItem}')">
+      <i data-lucide="file-check" style="width:14px; height:14px; color:var(--green)"></i> Imprimir Laudo de Colheita (PC11)
+    </button>
+  `;
+  
+  modal.style.display = 'flex';
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeOpDetailModal() {
+  const modal = $('opDetailModal');
+  if (modal) modal.style.display = 'none';
+}
+
 </script><!-- DRAWER DE DESEMPENHO DO COLABORADOR -->
 <div id="empDrawer" class="drawer">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:32px">
@@ -20823,6 +21109,32 @@ ${'<' + 'script>window.onload = function() { window.print(); };</' + 'script>'}
   <button class="btn btn-primary" style="flex:2" onclick="saveInfoParcela()">Salvar Alterações</button>
   </div>
   </div>
+<!-- MODAL: DETALHES DA ORDEM DE PULVERIZAÇÃO (O.P) -->
+<div id="opDetailModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); z-index:9999; justify-content:center; align-items:center;">
+  <div style="background:var(--card); color:var(--text); padding:24px; border-radius:14px; width:780px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 12px 35px rgba(0,0,0,0.4)">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:16px">
+      <div style="display:flex; align-items:center; gap:10px">
+        <span id="opDetailBadge" class="badge" style="background:rgba(59,130,246,0.2); color:var(--blue); font-size:14px; padding:4px 10px; border-radius:6px; font-weight:700">OP —</span>
+        <h3 style="margin:0; color:#fff; font-size:16px" id="opDetailTitle">Detalhes da Ordem de Pulverização</h3>
+      </div>
+      <button onclick="closeOpDetailModal()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); border-radius:50%; width:32px; height:32px; cursor:pointer; font-size:16px; display:inline-flex; align-items:center; justify-content:center">✕</button>
+    </div>
+    
+    <!-- Conteúdo do Detalhe -->
+    <div id="opDetailBody">
+      <!-- Renderizado dinamicamente por openOpDetailModal -->
+    </div>
+    
+    <!-- Rodapé com Ações -->
+    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:16px; margin-top:20px">
+      <div style="display:flex; gap:8px" id="opDetailPrintActions">
+        <!-- Botões de impressão -->
+      </div>
+      <button class="btn sec" onclick="closeOpDetailModal()" style="padding:8px 16px">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <!-- BARCODE SCANNER MODAL FOR WEB EMPLOYEES -->
 <div id="empScannerModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:10000; flex-direction:column; align-items:center; justify-content:center; padding:20px">
   <div style="width:100%; max-width:400px; border:2px solid var(--blue); border-radius:16px; overflow:hidden; background:#000; position:relative">
