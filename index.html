@@ -1975,12 +1975,11 @@
   <!-- Filtro de Defensivos & Adubos -->
   <div class="fbar" style="margin-bottom:16px; padding:12px; gap:12px">
   <div class="f" style="flex:2"><div class="flabel">Buscar Produto, Princípio Ativo ou Nutriente</div><input id="defSearch" oninput="filterDefensivosTable()" placeholder="Ex: Abamectina, Nutrifoliar, Boro, Ortus, Cálcio..." /></div>
-  <div class="f" style="flex:1"><div class="flabel">Categoria / Tipo</div>
+  <div class="f" style="flex:1"><div class="flabel">Estoque / Grupo</div>
   <select id="defCategoriaFilter" onchange="filterDefensivosTable()">
-  <option value="">Todas as Categorias</option>
-  <option value="DEFENSIVO">Defensivos Químicos (Fungicidas, Inseticidas, etc.)</option>
-  <option value="FOLIAR">Adubos Foliares &amp; Nutrição</option>
-  <option value="FERTILIZANTE">Fertilizantes / Fertirrigação</option>
+  <option value="">Todos os Produtos</option>
+  <option value="DEFENSIVO">DEFENSIVOS</option>
+  <option value="FOLIAR">FOLIARES</option>
   </select>
   </div>
   <div class="f" style="flex:1"><div class="flabel">Cultura</div>
@@ -1998,67 +1997,85 @@
   <thead>
   <tr style="border-bottom:1px solid var(--border)">
   <th style="text-align:left; padding:10px">Produto (Nome Comercial)</th>
-  <th style="text-align:left; padding:10px">Ingrediente Ativo</th>
-  <th style="text-align:center; padding:10px">Reg. MAPA</th>
-  <th style="text-align:left; padding:10px">Alvo / Praga</th>
+  <th style="text-align:left; padding:10px">Ingrediente Ativo / Nutrientes</th>
+  <th style="text-align:center; padding:10px">Grupo</th>
+  <th style="text-align:left; padding:10px">Alvo / Finalidade</th>
   <th style="text-align:center; padding:10px">Dose</th>
   <th style="text-align:center; padding:10px">Carência (Dias)</th>
-  <th style="text-align:center; padding:10px">Intervalo Aplicação</th>
+  <th style="text-align:center; padding:10px">Intervalo</th>
   <th style="text-align:center; padding:10px">Cultura</th>
   <th style="text-align:center; padding:10px">Ações</th>
   </tr>
   </thead>
   <tbody id="ccDefensivosTableBody">
-  <tr><td colspan="9" style="text-align:center; padding:20px; color:var(--muted)">Carregando cadastro de defensivos...</td></tr>
+  <tr><td colspan="9" style="text-align:center; padding:20px; color:var(--muted)">Carregando cadastro de defensivos e foliares...</td></tr>
   </tbody>
   </table>
   </div>
   </div>
   </div>
 
-  <!-- SEÇÃO 2: CONTROLE FÍSICO DE ESTOQUE & LEITOR DE XML -->
+  <!-- SEÇÃO 2: CONTROLE DE ESTOQUE (DEFENSIVOS & FOLIARES SEPARADOS) -->
   <div id="defSubTabEstoque" style="display:none">
-  <!-- KPIs de Estoque -->
+  <!-- Seletor de Estoque: DEFENSIVOS vs FOLIARES -->
+  <div style="display:flex; gap:12px; margin-bottom:20px; background:rgba(0,0,0,0.25); padding:6px; border-radius:12px; border:1px solid var(--border)">
+    <button id="btnEstoqueGroupDefensivos" class="btn on" onclick="switchEstoqueGroup('DEFENSIVOS')" style="flex:1; padding:10px 16px; font-weight:800; font-size:13px; display:inline-flex; align-items:center; justify-content:center; gap:8px; background:var(--blue); color:#fff; border:none; border-radius:8px">
+      <i data-lucide="shield" style="width:16px; height:16px"></i> 1. ESTOQUE DE DEFENSIVOS
+    </button>
+    <button id="btnEstoqueGroupFoliares" class="btn sec" onclick="switchEstoqueGroup('FOLIARES')" style="flex:1; padding:10px 16px; font-weight:800; font-size:13px; display:inline-flex; align-items:center; justify-content:center; gap:8px; background:transparent; color:var(--muted); border:1px solid var(--border); border-radius:8px">
+      <i data-lucide="sprout" style="width:16px; height:16px"></i> 2. ESTOQUE DE FOLIARES
+    </button>
+  </div>
+
+  <!-- KPIs do Estoque Ativo -->
   <div class="kgrid" style="margin-bottom:20px">
   <div class="kcard blue">
-  <div class="klabel">Itens no Cadastro</div>
+  <div class="klabel" id="estKpiLabelItens">Itens em Estoque (Defensivos)</div>
   <div id="estKpiTotalItens" class="kval blue">0</div>
-  <div class="ksub">defensivos e foliares</div>
+  <div class="ksub" id="estKpiSubItens">produtos cadastrados</div>
   </div>
   <div class="kcard green">
   <div class="klabel">Total de Entradas (NFe/Manual)</div>
   <div id="estKpiEntradas" class="kval green">0</div>
-  <div class="ksub">registros de estoque</div>
+  <div class="ksub">entradas registradas</div>
   </div>
   <div class="kcard orange">
-  <div class="klabel">Baixas Automáticas (OP/Fert)</div>
+  <div class="klabel">Baixas Registradas</div>
   <div id="estKpiSaidas" class="kval orange">0</div>
-  <div class="ksub">saídas vinculadas às ordens</div>
+  <div class="ksub">saídas por pulverização/manual</div>
+  </div>
+  <div class="kcard cyan">
+  <div class="klabel">Saldo Total em Estoque</div>
+  <div id="estKpiSaldoTotal" class="kval cyan">0.00</div>
+  <div class="ksub">quantidade total disponível</div>
   </div>
   </div>
 
   <div class="card" style="margin-bottom:24px">
   <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
-  <div style="display:flex; align-items:center; gap:8px"><i data-lucide="package-check" class="btn-i" style="color:var(--green)"></i> Saldos e Movimentações de Estoque (Adubos &amp; Defensivos)</div>
+  <div style="display:flex; align-items:center; gap:8px">
+    <i id="estSectionIcon" data-lucide="shield" class="btn-i" style="color:var(--yellow)"></i> 
+    <span id="estSectionTitle">Saldos e Movimentações — Estoque de DEFENSIVOS</span>
+  </div>
   <div style="display:flex; gap:8px; flex-wrap:wrap">
-  <button onclick="downloadStockInventoryTemplateCSV()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px" title="Baixar Modelo de Planilha de Inventário Inicial de Estoque"><i data-lucide="download" style="width:14px;height:14px"></i> Modelo Inventário</button>
-  <button onclick="openImportStockModal()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--blue); border-color:rgba(59,130,246,0.3)" title="Importar planilha de saldo/inventário de estoque"><i data-lucide="upload" style="width:14px;height:14px"></i> Importar Inventário (CSV/Excel)</button>
+  <button onclick="downloadStockInventoryTemplateCSV()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px" title="Baixar Modelo de Planilha de Inventário Inicial"><i data-lucide="download" style="width:14px;height:14px"></i> Modelo Inventário</button>
+  <button onclick="openImportStockModal()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--blue); border-color:rgba(59,130,246,0.3)" title="Importar planilha de saldo/inventário"><i data-lucide="upload" style="width:14px;height:14px"></i> Importar Inventário</button>
   <button onclick="openXmlNfeModal()" class="btn on" style="font-size:12px; padding:6px 14px; background:linear-gradient(135deg,#0ea5e9,#0284c7); border:none; color:#fff; font-weight:bold; display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-code" style="width:16px;height:16px"></i> Importar XML de NFe</button>
-  <button onclick="openManualStockModal()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:6px; background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3); color:var(--green)"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> + Nova Entrada</button>
-  <button onclick="openManualStockExitModal()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--orange); border-color:rgba(245,158,11,0.3)"><i data-lucide="minus-circle" style="width:14px;height:14px"></i> - Baixa Manual</button>
+  <button id="btnNovaEntradaEstoque" onclick="openManualStockModal()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:6px; background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3); color:var(--green)"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> + Nova Entrada</button>
+  <button id="btnNovaBaixaEstoque" onclick="openManualStockExitModal()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--orange); border-color:rgba(245,158,11,0.3)"><i data-lucide="minus-circle" style="width:14px;height:14px"></i> - Baixa Manual</button>
   </div>
   </div>
-  <p style="color:var(--muted); font-size:12px; margin-bottom:16px">Controle completo de saldos de adubos foliares, fertilizantes e defensivos. As saídas são abatidas automaticamente pelas Ordens de Pulverização (O.P) e Fertirrigação, com suporte a entradas e baixas manuais.</p>
+  <p id="estSectionDesc" style="color:var(--muted); font-size:12px; margin-bottom:16px">Controle independente do estoque de defensivos fitossanitários. As saídas são abatidas automaticamente pelas pulverizações (O.P) que utilizam defensivos.</p>
 
   <!-- Barra de Filtros de Estoque -->
   <div class="fbar" style="margin-bottom:16px; padding:10px 12px; gap:12px">
-  <div class="f" style="flex:2"><div class="flabel">Buscar Produto no Estoque</div><input id="estSearch" oninput="filterEstoqueTable()" placeholder="Ex: Nutrifoliar, Ureia, Sulfato, Score, Ortus..." /></div>
-  <div class="f" style="flex:1"><div class="flabel">Tipo de Insumo</div>
+  <div class="f" style="flex:2"><div class="flabel" id="estSearchLabel">Buscar Produto no Estoque de Defensivos</div><input id="estSearch" oninput="filterEstoqueTable()" placeholder="Ex: Abamectina, Score, Ortus, Priori, Ampligo..." /></div>
+  <div class="f" style="flex:1"><div class="flabel">Status do Saldo</div>
   <select id="estTipoFilter" onchange="filterEstoqueTable()">
-  <option value="">Todos os Insumos</option>
-  <option value="ADUBO">Apenas Adubos &amp; Fertilizantes</option>
-  <option value="DEFENSIVO">Apenas Defensivos Químicos</option>
-  <option value="BAIXO">Apenas Saldo Baixo / Crítico</option>
+  <option value="">Todos os Saldos</option>
+  <option value="DISPONIVEL">Apenas com Saldo Disponível</option>
+  <option value="BAIXO">Apenas Saldo Baixo (&lt; 10)</option>
+  <option value="ZERADO">Apenas Zerado / Crítico (&le; 0)</option>
   </select>
   </div>
   </div>
@@ -2067,10 +2084,10 @@
   <table style="width:100%; border-collapse:collapse">
   <thead>
   <tr style="border-bottom:1px solid var(--border); font-size:12px; color:var(--muted)">
-  <th style="text-align:left; padding:10px">Produto</th>
-  <th style="text-align:left; padding:10px">Tipo / Categoria</th>
+  <th style="text-align:left; padding:10px">Produto (Nome Comercial)</th>
+  <th style="text-align:left; padding:10px">Estoque / Grupo</th>
   <th style="text-align:center; padding:10px">Qtd Entradas</th>
-  <th style="text-align:center; padding:10px">Qtd Saídas (Aplicações)</th>
+  <th style="text-align:center; padding:10px">Qtd Saídas</th>
   <th style="text-align:center; padding:10px">Saldo Atual</th>
   <th style="text-align:center; padding:10px">Unidade</th>
   <th style="text-align:center; padding:10px">Status do Saldo</th>
@@ -2705,17 +2722,17 @@
   <div id="defensivoModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center;">
   <div style="background:var(--modal-bg); color:var(--modal-text); padding:28px; border-radius:18px; width:900px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5)">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px">
-  <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px" id="defensivoModalTitle"><i data-lucide="shield" style="width:22px; height:22px; color:var(--yellow)"></i> Novo Defensivo / Adubo</h3>
+  <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px" id="defensivoModalTitle"><i data-lucide="shield" style="width:22px; height:22px; color:var(--yellow)"></i> Cadastro de Produto (Defensivo / Foliar)</h3>
   <button onclick="closeDefensivoModal()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); border-radius:50%; width:32px; height:32px; cursor:pointer; font-size:16px; display:inline-flex; align-items:center; justify-content:center">✕</button>
   </div>
   
-  <!-- Alternador de Categoria: Defensivo vs Adubo Foliar -->
+  <!-- Alternador de Grupo: DEFENSIVO vs FOLIAR -->
   <div style="display:flex; gap:10px; margin-bottom:16px; background:rgba(0,0,0,0.2); padding:6px; border-radius:10px; border:1px solid var(--border)">
     <button type="button" id="defCatBtnDefensivo" onclick="switchDefCategoryMode('DEFENSIVO')" style="flex:1; padding:8px 12px; border-radius:8px; font-weight:700; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; background:var(--blue); color:#fff; border:none">
-      <i data-lucide="shield" style="width:14px; height:14px"></i> Defensivo Fitossanitário (Químico)
+      <i data-lucide="shield" style="width:14px; height:14px"></i> 1. DEFENSIVO
     </button>
-    <button type="button" id="defCatBtnAdubo" onclick="switchDefCategoryMode('ADUBO')" style="flex:1; padding:8px 12px; border-radius:8px; font-weight:700; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; background:transparent; color:var(--muted); border:1px solid var(--border)">
-      <i data-lucide="sprout" style="width:14px; height:14px"></i> Adubo Foliar / Fertilizante / Nutrição
+    <button type="button" id="defCatBtnAdubo" onclick="switchDefCategoryMode('FOLIAR')" style="flex:1; padding:8px 12px; border-radius:8px; font-weight:700; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; background:transparent; color:var(--muted); border:1px solid var(--border)">
+      <i data-lucide="sprout" style="width:14px; height:14px"></i> 2. FOLIAR
     </button>
   </div>
   
@@ -2726,22 +2743,14 @@
   <div style="font-size:11px; font-weight:800; color:var(--blue); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid var(--border)">1. Identificação do Produto</div>
   <div style="display:grid; grid-template-columns:1.5fr 1fr 1fr; gap:12px; margin-bottom:12px">
   <div><label class="flabel">Produto (Nome Comercial) *</label><input type="text" id="defProduto" placeholder="Ex: ORTUS 50 SC" required style="text-transform:uppercase"/></div>
-  <div><label class="flabel">Ingrediente Ativo *</label><input type="text" id="defIngredienteAtivo" placeholder="Ex: FENPIROXIMATO" required style="text-transform:uppercase"/></div>
-  <div><label class="flabel">Concentração IA</label><input type="text" id="defConcentracaoIA" placeholder="Ex: 250 g/L"/></div>
+  <div><label class="flabel" id="defIaLabel">Ingrediente Ativo *</label><input type="text" id="defIngredienteAtivo" placeholder="Ex: FENPIROXIMATO" required style="text-transform:uppercase"/></div>
+  <div><label class="flabel">Concentração IA / Nutriente</label><input type="text" id="defConcentracaoIA" placeholder="Ex: 250 g/L"/></div>
   </div>
   <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:12px">
-  <div><label class="flabel">Tipo</label>
-  <select id="defTipo">
-  <option value="">— Selecionar —</option>
-  <option value="FUNGICIDA">Fungicida</option>
-  <option value="INSETICIDA">Inseticida</option>
-  <option value="ACARICIDA">Acaricida</option>
-  <option value="HERBICIDA">Herbicida</option>
-  <option value="BACTERICIDA">Bactericida</option>
-  <option value="INSETIC / ACARIC">Inseticida/Acaricida</option>
-  <option value="FUNGICIDA/BACTERICIDA">Fungicida/Bactericida</option>
-  <option value="INSETICIDA BIOLOGICO">Inseticida Biológico</option>
-  <option value="OUTRO">Outro</option>
+  <div><label class="flabel">Grupo / Estoque *</label>
+  <select id="defTipo" onchange="switchDefCategoryMode(this.value)">
+  <option value="DEFENSIVO">DEFENSIVO</option>
+  <option value="FOLIAR">FOLIAR</option>
   </select>
   </div>
   <div><label class="flabel">Classe Toxicológica</label>
@@ -20363,69 +20372,97 @@ async function confirmXmlNfeImport() {
   }
 }
 
-async function openManualStockModal() {
-  $('stkProdNome').value = '';
-  $('stkQtd').value = '';
-  $('stkLote').value = '';
-  $('stkValidade').value = '';
-  $('stkNfe').value = '';
-  $('stkDataEntrada').value = today();
-  
-  // Popular lista de produtos
-  const dList = $('stkProdList');
-  if (dList && window._defensivos) {
-  dList.innerHTML = window._defensivos.map(d => `<option value="${d.produto}">`).join('');
-  }
-
-  // Popular lista de fornecedores
-  const fSel = $('stkFornecedorSelect');
-  if (fSel) {
-  fSel.innerHTML = '<option value="">— Selecione Fornecedor (Opcional) —</option>';
-  (window._parceiros || []).filter(p => p.tipo !== 'CLIENTE').forEach(p => {
-  fSel.insertAdjacentHTML('beforeend', `<option value="${p.nome_razaosocial}">${p.nome_razaosocial}</option>`);
-  });
-  }
-
-  $('manualStockModal').style.display = 'flex';
-}
-
 function closeManualStockModal() {
   $('manualStockModal').style.display = 'none';
 }
 
-async function saveManualStockEntry() {
-  const prod = $('stkProdNome').value.trim().toUpperCase();
-  const qtd = parseFloat($('stkQtd').value) || 0;
-  const un = $('stkUnidade').value;
-  const lote = $('stkLote').value.trim();
-  const val = $('stkValidade').value;
-  const forn = $('stkFornecedorSelect').value;
-  const nfe = $('stkNfe').value.trim();
-  const dataEnt = $('stkDataEntrada').value || today();
+let _currentEstoqueGroup = 'DEFENSIVOS'; // 'DEFENSIVOS' ou 'FOLIARES'
 
-  if (!prod) { alert('Informe o nome do produto!'); return; }
-  if (qtd <= 0) { alert('Informe uma quantidade válida!'); return; }
-
-  try {
-  const { error } = await sb.from('estoque_defensivos_entradas').insert([{
-  tenant_id: tenantId,
-  produto_nome: prod,
-  quantidade_entrada: qtd,
-  unidade_medida: un,
-  lote: lote || null,
-  validade: val || null,
-  fornecedor_nome: forn || null,
-  numero_nfe: nfe || null,
-  data_entrada: dataEnt,
-  observacao: 'Entrada manual de estoque'
-  }]);
-  if (error) throw error;
-  toast(' Entrada de estoque salva!', 'ok');
-  closeManualStockModal();
-  loadEstoqueSaldos();
-  } catch(e) {
-  alert('Erro ao salvar entrada de estoque: ' + e.message);
+function getProductGroup(itemOrName) {
+  if (!itemOrName) return 'DEFENSIVOS';
+  if (typeof itemOrName === 'object') {
+    const t = (itemOrName.tipo || '').toUpperCase();
+    if (t === 'FOLIAR' || t.includes('FOLIAR') || t.includes('ADUBO') || t.includes('NUTRI') || t.includes('FERTILIZ') || itemOrName.is_fertilizer) {
+      return 'FOLIARES';
+    }
+    if (t === 'DEFENSIVO' || t.includes('DEFENSIV') || t.includes('INSETIC') || t.includes('FUNGIC') || t.includes('ACARIC') || t.includes('HERBIC') || t.includes('BACTER')) {
+      return 'DEFENSIVOS';
+    }
+    itemOrName = itemOrName.produto || '';
   }
+  const norm = String(itemOrName).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+  const found = (window._defensivos || []).find(d => String(d.produto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === norm);
+  if (found) {
+    const ft = (found.tipo || '').toUpperCase();
+    if (ft === 'FOLIAR' || ft.includes('FOLIAR') || ft.includes('ADUBO') || ft.includes('NUTRI') || ft.includes('FERTILIZ') || found.is_fertilizer) {
+      return 'FOLIARES';
+    }
+    return 'DEFENSIVOS';
+  }
+  if (norm.includes('FOLIAR') || norm.includes('ADUBO') || norm.includes('NUTRI') || norm.includes('FERTILIZ') || norm.includes('SULFATO') || norm.includes('CALCINIT') || norm.includes('UREIA') || norm.includes('BORO') || norm.includes('POTASSIO') || norm.includes('ZINCO') || norm.includes('MAGNESIO') || norm.includes('CALCIO') || norm.includes('MAP') || norm.includes('KTS') || norm.includes('AMINO')) {
+    return 'FOLIARES';
+  }
+  return 'DEFENSIVOS';
+}
+
+function switchEstoqueGroup(group) {
+  _currentEstoqueGroup = group;
+  const btnDef = $('btnEstoqueGroupDefensivos');
+  const btnFol = $('btnEstoqueGroupFoliares');
+  const icon = $('estSectionIcon');
+  const title = $('estSectionTitle');
+  const desc = $('estSectionDesc');
+  const searchLabel = $('estSearchLabel');
+  const searchInput = $('estSearch');
+
+  if (group === 'FOLIARES') {
+    if (btnDef) {
+      btnDef.className = 'btn sec';
+      btnDef.style.background = 'transparent';
+      btnDef.style.color = 'var(--muted)';
+      btnDef.style.border = '1px solid var(--border)';
+    }
+    if (btnFol) {
+      btnFol.className = 'btn on';
+      btnFol.style.background = 'var(--green)';
+      btnFol.style.color = '#fff';
+      btnFol.style.border = 'none';
+    }
+    if (icon) {
+      icon.setAttribute('data-lucide', 'sprout');
+      icon.style.color = 'var(--green)';
+    }
+    if (title) title.textContent = 'Saldos e Movimentações — Estoque de FOLIARES';
+    if (desc) desc.textContent = 'Controle independente do estoque de adubos foliares e nutrição foliar. As saídas são abatidas automaticamente pelas pulverizações (O.P) que utilizam foliares.';
+    if (searchLabel) searchLabel.textContent = 'Buscar Produto no Estoque de Foliares';
+    if (searchInput) searchInput.placeholder = 'Ex: Nutrifoliar, Boro, Sulfato, Cálcio, Aminoácidos...';
+    if ($('estKpiLabelItens')) $('estKpiLabelItens').textContent = 'Itens em Estoque (Foliares)';
+  } else {
+    if (btnDef) {
+      btnDef.className = 'btn on';
+      btnDef.style.background = 'var(--blue)';
+      btnDef.style.color = '#fff';
+      btnDef.style.border = 'none';
+    }
+    if (btnFol) {
+      btnFol.className = 'btn sec';
+      btnFol.style.background = 'transparent';
+      btnFol.style.color = 'var(--muted)';
+      btnFol.style.border = '1px solid var(--border)';
+    }
+    if (icon) {
+      icon.setAttribute('data-lucide', 'shield');
+      icon.style.color = 'var(--yellow)';
+    }
+    if (title) title.textContent = 'Saldos e Movimentações — Estoque de DEFENSIVOS';
+    if (desc) desc.textContent = 'Controle independente do estoque de defensivos fitossanitários. As saídas são abatidas automaticamente pelas pulverizações (O.P) que utilizam defensivos.';
+    if (searchLabel) searchLabel.textContent = 'Buscar Produto no Estoque de Defensivos';
+    if (searchInput) searchInput.placeholder = 'Ex: Abamectina, Score, Ortus, Priori, Ampligo...';
+    if ($('estKpiLabelItens')) $('estKpiLabelItens').textContent = 'Itens em Estoque (Defensivos)';
+  }
+  
+  if (window.lucide) lucide.createIcons();
+  filterEstoqueTable();
 }
 
 async function loadEstoqueSaldos() {
@@ -20438,18 +20475,15 @@ async function loadEstoqueSaldos() {
     const entradas = eRes.data || [];
     const saidas = sRes.data || [];
 
-    if ($('estKpiEntradas')) $('estKpiEntradas').textContent = entradas.length;
-    if ($('estKpiSaidas')) $('estKpiSaidas').textContent = saidas.length;
-    if ($('estKpiTotalItens')) $('estKpiTotalItens').textContent = (window._defensivos || []).length;
-
     const balances = new Map();
     
-    // 1. Incluir todos os itens cadastrados no cadastro técnico para ficarem visíveis no estoque
+    // 1. Incluir todos os itens cadastrados no cadastro técnico para ficarem visíveis no estoque correspondente
     (window._defensivos || []).forEach(d => {
       if (d && d.produto) {
         const name = d.produto.trim().toUpperCase();
         if (!balances.has(name)) {
-          balances.set(name, { produto: name, entradas: 0, saidas: 0, unidade: d.unidade_dose || 'L' });
+          const group = getProductGroup(d);
+          balances.set(name, { produto: name, group: group, ingrediente: d.ingrediente_ativo || '', entradas: 0, saidas: 0, unidade: d.unidade_dose || 'L' });
         }
       }
     });
@@ -20458,7 +20492,10 @@ async function loadEstoqueSaldos() {
     entradas.forEach(e => {
       const name = (e.produto_nome || '').trim().toUpperCase();
       if (!name) return;
-      if (!balances.has(name)) balances.set(name, { produto: name, entradas: 0, saidas: 0, unidade: e.unidade_medida || 'L' });
+      if (!balances.has(name)) {
+        const group = getProductGroup(name);
+        balances.set(name, { produto: name, group: group, ingrediente: '', entradas: 0, saidas: 0, unidade: e.unidade_medida || 'L' });
+      }
       balances.get(name).entradas += parseFloat(e.quantidade_entrada) || 0;
       if (e.unidade_medida) balances.get(name).unidade = e.unidade_medida;
     });
@@ -20467,7 +20504,10 @@ async function loadEstoqueSaldos() {
     saidas.forEach(s => {
       const name = (s.produto_nome || '').trim().toUpperCase();
       if (!name) return;
-      if (!balances.has(name)) balances.set(name, { produto: name, entradas: 0, saidas: 0, unidade: s.unidade_medida || 'L' });
+      if (!balances.has(name)) {
+        const group = getProductGroup(name);
+        balances.set(name, { produto: name, group: group, ingrediente: '', entradas: 0, saidas: 0, unidade: s.unidade_medida || 'L' });
+      }
       balances.get(name).saidas += parseFloat(s.quantidade_saida) || 0;
     });
 
@@ -21121,14 +21161,17 @@ function downloadStockInventoryTemplateCSV() {
 }
 
 function switchDefCategoryMode(mode) {
-  $('defCategoryMode').value = mode;
+  const isFoliar = (mode === 'FOLIAR' || mode === 'ADUBO');
+  const finalMode = isFoliar ? 'FOLIAR' : 'DEFENSIVO';
+  if ($('defCategoryMode')) $('defCategoryMode').value = finalMode;
+  if ($('defTipo')) $('defTipo').value = finalMode;
   const btnDef = $('defCatBtnDefensivo');
   const btnAdb = $('defCatBtnAdubo');
   const title = $('defensivoModalTitle');
   const iaLabel = $('defIngredienteAtivo')?.parentElement?.querySelector('.flabel');
   const alvoLabel = $('defAlvo')?.parentElement?.querySelector('.flabel');
   
-  if (mode === 'ADUBO') {
+  if (isFoliar) {
     if (btnDef) {
       btnDef.style.background = 'transparent';
       btnDef.style.color = 'var(--muted)';
@@ -21139,12 +21182,11 @@ function switchDefCategoryMode(mode) {
       btnAdb.style.color = '#fff';
       btnAdb.style.border = 'none';
     }
-    if (title) title.innerHTML = '<i data-lucide="sprout" style="width:22px; height:22px; color:var(--green)"></i> Novo Adubo Foliar / Fertilizante';
+    if (title) title.innerHTML = '<i data-lucide="sprout" style="width:22px; height:22px; color:var(--green)"></i> Novo Foliar / Nutrição Foliar';
     if (iaLabel) iaLabel.textContent = 'Garantias Nutricionais / Nutrientes *';
     if ($('defIngredienteAtivo')) $('defIngredienteAtivo').placeholder = 'Ex: K2O: 30%, Boro: 10%, N-P-K...';
     if (alvoLabel) alvoLabel.textContent = 'Finalidade / Fase Nutricional';
     if ($('defAlvo')) $('defAlvo').placeholder = 'Ex: Floração, Enchimento de frutos, Enraizamento...';
-    if ($('defTipo') && !$('defTipo').value) $('defTipo').value = 'ADUBO FOLIAR';
     if ($('defCarencia') && (!$('defCarencia').value || $('defCarencia').value === '')) $('defCarencia').value = '0';
     if ($('defTarja') && !$('defTarja').value) $('defTarja').value = 'VERDE';
     if ($('defClasseToxicologica') && !$('defClasseToxicologica').value) $('defClasseToxicologica').value = 'V';
@@ -21211,6 +21253,45 @@ async function openManualStockModal(prefillProdName) {
   if (prefillProdName && $('stkQtd')) $('stkQtd').focus();
 }
 
+async function saveManualStockEntry() {
+  const prod = $('stkProdNome').value.trim().toUpperCase();
+  const qtd = parseFloat($('stkQtd').value) || 0;
+  const un = $('stkUnidade').value;
+  const lote = $('stkLote').value.trim();
+  const val = $('stkValidade').value;
+  const forn = $('stkFornecedorSelect').value;
+  const nfe = $('stkNfe').value.trim();
+  const dataEnt = $('stkDataEntrada').value || today();
+
+  if (!prod) { alert('Informe o nome do produto!'); return; }
+  if (qtd <= 0) { alert('Informe uma quantidade válida!'); return; }
+
+  const group = typeof getProductGroup === 'function' ? getProductGroup(prod) : 'DEFENSIVOS';
+  const tipoProduto = group === 'FOLIARES' ? 'FOLIAR' : 'DEFENSIVO';
+
+  try {
+    const { error } = await sb.from('estoque_defensivos_entradas').insert([{
+      tenant_id: tenantId,
+      produto_nome: prod,
+      tipo_produto: tipoProduto,
+      quantidade_entrada: qtd,
+      unidade_medida: un,
+      lote: lote || null,
+      validade: val || null,
+      fornecedor_nome: forn || null,
+      numero_nfe: nfe || null,
+      data_entrada: dataEnt,
+      observacao: `Entrada manual no estoque (${group})`
+    }]);
+    if (error) throw error;
+    toast(` Entrada de ${group === 'FOLIARES' ? 'Foliar' : 'Defensivo'} salva com sucesso!`, 'ok');
+    closeManualStockModal();
+    loadEstoqueSaldos();
+  } catch(e) {
+    alert('Erro ao salvar entrada de estoque: ' + e.message);
+  }
+}
+
 function openManualStockExitModal(prefillProdName) {
   $('stkExitProdNome').value = prefillProdName || '';
   $('stkExitQtd').value = '';
@@ -21252,19 +21333,25 @@ async function saveManualStockExit() {
   if (!prod) { alert('Informe o nome do produto!'); return; }
   if (qtd <= 0) { alert('Informe uma quantidade de saída válida!'); return; }
 
+  const group = typeof getProductGroup === 'function' ? getProductGroup(prod) : 'DEFENSIVOS';
+  let finalMotivo = motivo;
+  if (motivo === 'PULVERIZACAO') {
+    finalMotivo = group === 'FOLIARES' ? 'PULVERIZACAO_FOLIAR' : 'PULVERIZACAO_DEFENSIVO';
+  }
+
   try {
     const { error } = await sb.from('estoque_defensivos_saidas').insert([{
       tenant_id: tenantId,
       produto_nome: prod,
       quantidade_saida: qtd,
       unidade_medida: un,
-      motivo_saida: motivo,
+      motivo_saida: finalMotivo,
       parcela: parcela || null,
       data_saida: dataSaida,
-      observacao: obs || 'Baixa manual de estoque'
+      observacao: obs || `Baixa manual no estoque (${group})`
     }]);
     if (error) throw error;
-    toast('Baixa de estoque registrada com sucesso!', 'ok');
+    toast(`Baixa de ${group === 'FOLIARES' ? 'Foliar' : 'Defensivo'} registrada com sucesso!`, 'ok');
     closeManualStockExitModal();
     loadEstoqueSaldos();
   } catch(e) {
@@ -21493,24 +21580,36 @@ async function confirmImportStock() {
 }
 
 // ── Filtros da Tabela de Saldos de Estoque ─────────────────────────────
-let _rawEstoqueBalances = [];
-
 function filterEstoqueTable() {
   const search = ($('estSearch')?.value || '').trim().toUpperCase();
   const tipoFilter = $('estTipoFilter')?.value || '';
-  
-  const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
-  const isAdb = name => {
-    const n = norm(name);
-    return n.includes('FOLIAR') || n.includes('ADUBO') || n.includes('NUTRI') || n.includes('FERTILIZ') || n.includes('SULFATO') || n.includes('CALCINIT') || n.includes('UREIA') || n.includes('BORO') || n.includes('POTASSIO') || n.includes('ZINCO') || n.includes('MAGNESIO') || n.includes('CALCIO') || n.includes('MAP') || n.includes('KTS') || n.includes('AMINO');
-  };
+  const currentGroup = _currentEstoqueGroup || 'DEFENSIVOS';
 
-  const filtered = _rawEstoqueBalances.filter(item => {
-    const matchSearch = !search || norm(item.produto).includes(norm(search));
+  const groupItems = _rawEstoqueBalances.filter(item => item.group === currentGroup);
+
+  // Calcular KPIs para o estoque ativo selecionado
+  const totalItens = groupItems.length;
+  const totalEntradas = groupItems.reduce((acc, it) => acc + (it.entradas || 0), 0);
+  const totalSaidas = groupItems.reduce((acc, it) => acc + (it.saidas || 0), 0);
+  const saldoTotal = totalEntradas - totalSaidas;
+
+  if ($('estKpiTotalItens')) $('estKpiTotalItens').textContent = totalItens;
+  if ($('estKpiEntradas')) $('estKpiEntradas').textContent = totalEntradas.toFixed(2);
+  if ($('estKpiSaidas')) $('estKpiSaidas').textContent = totalSaidas.toFixed(2);
+  if ($('estKpiSaldoTotal')) {
+    $('estKpiSaldoTotal').textContent = saldoTotal.toFixed(2);
+    $('estKpiSaldoTotal').className = 'kval ' + (saldoTotal <= 0 ? 'orange' : 'green');
+  }
+
+  const norm = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+
+  const filtered = groupItems.filter(item => {
+    const matchSearch = !search || norm(item.produto).includes(norm(search)) || norm(item.ingrediente).includes(norm(search));
+    const saldo = item.entradas - item.saidas;
     let matchTipo = true;
-    if (tipoFilter === 'ADUBO') matchTipo = isAdb(item.produto);
-    else if (tipoFilter === 'DEFENSIVO') matchTipo = !isAdb(item.produto);
-    else if (tipoFilter === 'BAIXO') matchTipo = (item.entradas - item.saidas) < 10;
+    if (tipoFilter === 'DISPONIVEL') matchTipo = saldo > 0;
+    else if (tipoFilter === 'BAIXO') matchTipo = saldo > 0 && saldo < 10;
+    else if (tipoFilter === 'ZERADO') matchTipo = saldo <= 0;
     
     return matchSearch && matchTipo;
   });
@@ -21522,16 +21621,12 @@ function renderEstoqueSaldosTable(list) {
   const tbody = $('estoqueSaldosTableBody');
   if (!tbody) return;
 
+  const currentGroup = _currentEstoqueGroup || 'DEFENSIVOS';
+
   if (list.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--muted)">Nenhum registro encontrado com os filtros aplicados.</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--muted)">Nenhum produto encontrado no <strong>Estoque de ${currentGroup}</strong> com os filtros aplicados.</td></tr>`;
     return;
   }
-
-  const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
-  const isAdb = name => {
-    const n = norm(name);
-    return n.includes('FOLIAR') || n.includes('ADUBO') || n.includes('NUTRI') || n.includes('FERTILIZ') || n.includes('SULFATO') || n.includes('CALCINIT') || n.includes('UREIA') || n.includes('BORO') || n.includes('POTASSIO') || n.includes('ZINCO') || n.includes('MAGNESIO') || n.includes('CALCIO') || n.includes('MAP') || n.includes('KTS') || n.includes('AMINO');
-  };
 
   tbody.innerHTML = list.map(item => {
     const saldo = item.entradas - item.saidas;
@@ -21541,25 +21636,25 @@ function renderEstoqueSaldosTable(list) {
       ? '<span class="pill" style="background:rgba(245,158,11,0.15);color:var(--yellow);font-weight:bold">⚠ Estoque Baixo</span>'
       : '<span class="pill" style="background:rgba(16,185,129,0.15);color:var(--green);font-weight:bold"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;margin-right:4px"></span> Disponível</span>';
     
-    const isAdubo = isAdb(item.produto);
-    const catBadge = isAdubo
-      ? '<span class="badge" style="background:rgba(16,185,129,0.15); color:var(--green); font-size:10px; font-weight:700">ADUBO / FOLIAR</span>'
-      : '<span class="badge" style="background:rgba(59,130,246,0.15); color:var(--blue); font-size:10px; font-weight:700">DEFENSIVO</span>';
+    const isFoliar = item.group === 'FOLIARES';
+    const catBadge = isFoliar
+      ? '<span class="badge" style="background:rgba(16,185,129,0.15); color:var(--green); font-size:10px; font-weight:800; border:1px solid rgba(16,185,129,0.3)">🌿 FOLIAR</span>'
+      : '<span class="badge" style="background:rgba(59,130,246,0.15); color:var(--blue); font-size:10px; font-weight:800; border:1px solid rgba(59,130,246,0.3)">🛡️ DEFENSIVO</span>';
     
     const safeProd = item.produto.replace(/'/g, "\\'");
 
     return `
     <tr style="border-bottom:1px solid var(--border); font-size:13px; transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
-      <td style="padding:10px; font-weight:700; color:#fff">${item.produto}</td>
-      <td style="padding:10px">${catBadge}</td>
-      <td style="padding:10px; text-align:center; color:var(--green); font-weight:700">+ ${item.entradas.toFixed(2)}</td>
-      <td style="padding:10px; text-align:center; color:var(--orange); font-weight:700">- ${item.saidas.toFixed(2)}</td>
-      <td style="padding:10px; text-align:center; font-weight:900; font-size:14px; color:${saldo<=0?'var(--red)':'#fff'}">${saldo.toFixed(2)}</td>
-      <td style="padding:10px; text-align:center; color:var(--muted)">${item.unidade}</td>
-      <td style="padding:10px; text-align:center">${statusPill}</td>
-      <td style="padding:10px; text-align:center; white-space:nowrap">
-        <button class="btn sec" style="font-size:11px; padding:3px 8px; margin-right:4px; color:var(--green); border-color:rgba(16,185,129,0.3)" onclick="openManualStockModal('${safeProd}')" title="Dar nova entrada deste produto">+ Entrada</button>
-        <button class="btn sec" style="font-size:11px; padding:3px 8px; color:var(--orange); border-color:rgba(245,158,11,0.3)" onclick="openManualStockExitModal('${safeProd}')" title="Dar baixa/saída deste produto">- Baixa</button>
+      <td style="padding:12px 10px; font-weight:800; color:#fff">${item.produto}</td>
+      <td style="padding:12px 10px">${catBadge}</td>
+      <td style="padding:12px 10px; text-align:center; color:var(--green); font-weight:700">+ ${item.entradas.toFixed(2)}</td>
+      <td style="padding:12px 10px; text-align:center; color:var(--orange); font-weight:700">- ${item.saidas.toFixed(2)}</td>
+      <td style="padding:12px 10px; text-align:center; font-weight:900; font-size:14px; color:${saldo<=0?'var(--red)':'#fff'}">${saldo.toFixed(2)}</td>
+      <td style="padding:12px 10px; text-align:center; color:var(--muted)">${item.unidade}</td>
+      <td style="padding:12px 10px; text-align:center">${statusPill}</td>
+      <td style="padding:12px 10px; text-align:center; white-space:nowrap">
+        <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:4px; color:var(--green); border-color:rgba(16,185,129,0.3)" onclick="openManualStockModal('${safeProd}', '${item.group}')" title="Dar nova entrada deste produto">+ Entrada</button>
+        <button class="btn sec" style="font-size:11px; padding:4px 8px; color:var(--orange); border-color:rgba(245,158,11,0.3)" onclick="openManualStockExitModal('${safeProd}', '${item.group}')" title="Dar baixa deste produto">- Baixa</button>
       </td>
     </tr>
     `;

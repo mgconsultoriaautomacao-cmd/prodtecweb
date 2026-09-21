@@ -6577,6 +6577,25 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
 
   container.innerHTML = html;
   if(window.lucide) lucide.createIcons();
+}
+
+function getProductGroup(itemOrName) {
+    if (!itemOrName) return 'DEFENSIVOS';
+    if (typeof itemOrName === 'object') {
+      const t = (itemOrName.tipo || '').toUpperCase();
+      if (t === 'FOLIAR' || t.includes('FOLIAR') || t.includes('ADUBO') || t.includes('NUTRI') || t.includes('FERTILIZ') || itemOrName.is_fertilizer) {
+        return 'FOLIARES';
+      }
+      if (t === 'DEFENSIVO' || t.includes('DEFENSIV') || t.includes('INSETIC') || t.includes('FUNGIC') || t.includes('ACARIC') || t.includes('HERBIC') || t.includes('BACTER')) {
+        return 'DEFENSIVOS';
+      }
+      itemOrName = itemOrName.produto || '';
+    }
+    const norm = String(itemOrName).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    if (norm.includes('FOLIAR') || norm.includes('ADUBO') || norm.includes('NUTRI') || norm.includes('FERTILIZ') || norm.includes('SULFATO') || norm.includes('CALCINIT') || norm.includes('UREIA') || norm.includes('BORO') || norm.includes('POTASSIO') || norm.includes('ZINCO') || norm.includes('MAGNESIO') || norm.includes('CALCIO') || norm.includes('MAP') || norm.includes('KTS') || norm.includes('AMINO')) {
+      return 'FOLIARES';
+    }
+    return 'DEFENSIVOS';
   }
 
   async function saveOpRecord() {
@@ -6837,6 +6856,32 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
       console.error('Erro ao inserir itens da OP:', itemsErr);
       await sb.from('caderno_campo_op').delete().eq('id', opData.id);
       throw itemsErr;
+    }
+
+    // Dar baixa automática no Controle de Estoque (separando DEFENSIVOS e FOLIARES)
+    try {
+      const areaVal = parseFloat(recordOP.area_ha) || 1;
+      const stockExits = opItems.map(i => {
+        const doseVal = parseFloat(i.dosagem_real) || 0;
+        const totalQtd = areaVal ? (doseVal * areaVal) : doseVal;
+        const isFoliar = getProductGroup(i.produto_nome) === 'FOLIARES';
+        return {
+          tenant_id: tenantId,
+          produto_nome: i.produto_nome || '',
+          quantidade_saida: totalQtd || doseVal,
+          unidade_medida: String(i.unidade || '').toLowerCase().includes('kg') ? 'KG' : 'L',
+          motivo_saida: isFoliar ? 'PULVERIZACAO_FOLIAR' : 'PULVERIZACAO_DEFENSIVO',
+          referencia_id: opData.id,
+          parcela: recordOP.parcela,
+          data_saida: recordOP.data_aplicacao || (typeof today === 'function' ? today() : new Date().toISOString().split('T')[0]),
+          observacao: `Baixa automática O.P Campo (${isFoliar ? 'Foliar' : 'Defensivo'}) Parcela ${recordOP.parcela}`
+        };
+      });
+      if (stockExits.length > 0) {
+        await sb.from('estoque_defensivos_saidas').insert(stockExits);
+      }
+    } catch(errStk) {
+      console.warn('Erro ao registrar baixa automática de estoque no App Campo:', errStk);
     }
     
     toast(' Ordem de Aplicação salva com sucesso!', 'ok');
