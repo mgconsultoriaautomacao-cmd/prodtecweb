@@ -143,6 +143,100 @@ function fUpdateCalc() {
   return { totalCost, perEmp, hours };
 }
 
+function normalizePersonName(str) {
+  if (!str) return '';
+  return String(str).trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function timeToMinutes(tStr) {
+  if (!tStr) return 0;
+  const parts = String(tStr).trim().split(':');
+  return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+}
+
+function overlaps(startA, endA, startB, endB) {
+  if (!startA || !endA || !startB || !endB) return false;
+  const minStartA = timeToMinutes(startA);
+  const minEndA = timeToMinutes(endA);
+  const minStartB = timeToMinutes(startB);
+  const minEndB = timeToMinutes(endB);
+  if (minStartA >= minEndA || minStartB >= minEndB) return false;
+  return Math.max(minStartA, minStartB) < Math.min(minEndA, minEndB);
+}
+
+async function checkPersonActivityConflict(personName, roleLabel, date, startVal, endVal, excludeOpId = null) {
+  if (!personName || !date || !startVal || !endVal) return null;
+  const normName = normalizePersonName(personName);
+  if (!normName) return null;
+
+  // 1. Verificar O.Ps de Pulverização (caderno_campo_op)
+  let opListToCheck = typeof opRecordsData !== 'undefined' ? opRecordsData : [];
+  if (!opListToCheck || opListToCheck.length === 0) {
+    try {
+      if (typeof isOnline !== 'undefined' && isOnline && typeof sb !== 'undefined') {
+        const { data: opData } = await sb.from('caderno_campo_op')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .eq('data_aplicacao', date);
+        opListToCheck = opData || [];
+      } else {
+        opListToCheck = JSON.parse(localStorage.getItem('prodtech_op_records') || '[]');
+      }
+    } catch(e) {
+      opListToCheck = [];
+    }
+  }
+
+  for (const op of (opListToCheck || [])) {
+    if (excludeOpId && op.id === excludeOpId) continue;
+    if (op.data_aplicacao !== date) continue;
+
+    const opEmps = [
+      { name: op.tratorista, role: 'Tratorista' },
+      { name: op.barrista, role: 'Barrista' },
+      { name: op.manipulador, role: 'Manipulador' }
+    ].filter(e => e.name && normalizePersonName(e.name) === normName);
+
+    if (opEmps.length > 0) {
+      if (overlaps(startVal, endVal, op.horario_inicio, op.horario_fim)) {
+        const hInicio = (op.horario_inicio || '').substring(0, 5);
+        const hFim = (op.horario_fim || '').substring(0, 5);
+        const pCode = op.parcela || '—';
+        const dateBr = date.split('-').reverse().join('/');
+        return `❌ CONFLITO DE HORÁRIO — O ${roleLabel || 'colaborador'} ${personName} já está alocado na Pulverização (O.P) da Parcela ${pCode} das ${hInicio} às ${hFim} no dia ${dateBr}.`;
+      }
+    }
+  }
+
+  // 2. Verificar Serviços de Campo / Gradagem / Tratos (field_services)
+  if (typeof isOnline !== 'undefined' && isOnline && typeof sb !== 'undefined') {
+    try {
+      const { data: fServices } = await sb.from('field_services')
+        .select('*, field_service_employees(*), parcels(code)')
+        .eq('tenant_id', tenantId)
+        .eq('date', date);
+
+      for (const fs of (fServices || [])) {
+        const fsWorkers = (fs.field_service_employees || []).map(w => normalizePersonName(w.employee_name));
+        if (fsWorkers.includes(normName)) {
+          if (overlaps(startVal, endVal, fs.start_time, fs.end_time)) {
+            const hInicio = (fs.start_time || '').substring(0, 5);
+            const hFim = (fs.end_time || '').substring(0, 5);
+            const pCode = fs.parcels?.code || fs.parcel_id || '—';
+            const opName = fs.operation ? `${fs.sector || 'Campo'} - ${fs.operation}` : 'Serviço de Campo';
+            const dateBr = date.split('-').reverse().join('/');
+            return `❌ CONFLITO DE HORÁRIO — O ${roleLabel || 'colaborador'} ${personName} já está alocado na atividade "${opName}" (Parcela: ${pCode}) das ${hInicio} às ${hFim} no dia ${dateBr}.`;
+          }
+        }
+      }
+    } catch(e) {
+      console.warn('Erro ao verificar disponibilidade em field_services:', e);
+    }
+  }
+
+  return null;
+}
+
 async function submitFieldOp() {
   const date = $('fDate').value;
   const tStart = $('fTimeStart').value;
@@ -155,6 +249,20 @@ async function submitFieldOp() {
   if (!sector || !operation) { toast('Selecione Setor e Operação', 'err'); return; }
   if (fState.workers.size === 0) { toast('Selecione ao menos 1 funcionário', 'err'); return; }
   if (!regBy) { toast('Informe quem está registrando', 'err'); return; }
+
+  if (timeToMinutes(tStart) >= timeToMinutes(tEnd)) {
+    toast('O horário de início deve ser anterior ao horário de término', 'err');
+    return;
+  }
+
+  // Validação de disponibilidade de cada colaborador selecionado
+  for (const [id, name] of fState.workers.entries()) {
+    const conflictMsg = await checkPersonActivityConflict(name, 'colaborador', date, tStart, tEnd);
+    if (conflictMsg) {
+      alert(conflictMsg);
+      return;
+    }
+  }
 
   const { totalCost, perEmp, hours } = fUpdateCalc();
 
