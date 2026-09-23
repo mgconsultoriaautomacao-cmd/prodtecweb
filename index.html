@@ -1924,25 +1924,29 @@
   <!-- ABA IDIARN: VISITAS E FISCALIZAÇÕES IDIARN -->
   <div id="ccTabIdiarn" class="tab-pane-cc" style="display:none">
   <div class="card" style="margin-bottom:24px">
-  <div class="title" style="display:flex; justify-content:space-between; align-items:center"><div style="display:flex; align-items:center; gap:6px"><i data-lucide="file-check" class="btn-i"></i> Visitas IDIARN / Laudos</div>
-  <button onclick="openNewIdiarnModal()" class="green" style="font-size:11px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; background:var(--green)"><i data-lucide="plus-circle" style="width:14px; height:14px"></i> Nova Visita IDIARN</button>
+  <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px">
+    <div style="display:flex; align-items:center; gap:6px"><i data-lucide="file-check" class="btn-i"></i> Certificação Fitossanitária — Livro IDIARN</div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap">
+      <button onclick="openNewIdiarnModal()" class="green" style="font-size:11px; padding:6px 14px; display:inline-flex; align-items:center; gap:5px; background:var(--green); font-weight:700"><i data-lucide="plus-circle" style="width:14px; height:14px"></i> + Nova Visita / Livro IDIARN</button>
+    </div>
   </div>
-  <p style="color:var(--muted); font-size:12px; margin-bottom:15px">Histórico de visitas, fiscalizações do IDIARN e laudos fitossanitários cadastrados.</p>
+  <p style="color:var(--muted); font-size:12px; margin-bottom:15px">Acompanhamento de campo oficial (Livro IDIARN/DISAV), integrado com ordens de pulverização (O.P), monitoramento de armadilhas COEX e impressão em folha A4 oficial.</p>
   <div style="overflow-x:auto">
   <table style="width:100%; border-collapse:collapse">
   <thead>
   <tr style="border-bottom:1px solid var(--border)">
-  <th style="text-align:left; padding:10px">Data</th>
-  <th style="text-align:left; padding:10px">Documento / Laudo</th>
+  <th style="text-align:left; padding:10px">Data da Visita</th>
+  <th style="text-align:left; padding:10px">Documento / Livro</th>
   <th style="text-align:left; padding:10px">Parcela</th>
   <th style="text-align:left; padding:10px">Safra / Ciclo</th>
-  <th style="text-align:left; padding:10px">Produtos Fitossanitários</th>
-  <th style="text-align:center; padding:10px">Área (Hectares)</th>
+  <th style="text-align:left; padding:10px">Defensivos Aplicados</th>
+  <th style="text-align:center; padding:10px">Área (ha)</th>
   <th style="text-align:center; padding:10px">Laudo PDF</th>
+  <th style="text-align:center; padding:10px">Ações / Impressão</th>
   </tr>
   </thead>
   <tbody id="ccIdiarnTableBody">
-  <tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Carregando Visitas IDIARN...</td></tr>
+  <tr><td colspan="8" style="text-align:center; padding:20px; color:var(--muted)">Carregando Visitas IDIARN...</td></tr>
   </tbody>
   </table>
   </div>
@@ -2761,86 +2765,258 @@
   </div>
   </div>
 
-  <!-- MODAL: NOVA VISITA IDIARN -->
-  <div id="newIdiarnModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">
-  <div style="background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px; width:90%; max-width:850px; max-height:90vh; overflow-y:auto; position:relative">
-  <div style="font-size:18px; font-weight:bold; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:8px">
-  <div style="display:flex; align-items:center; gap:6px; color:#fff"><i data-lucide="file-check"></i> Registrar Visita IDIARN</div>
-  <button onclick="closeNewIdiarnModal()" style="background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer">×</button>
-  </div>
-  
-  <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
-  <div>
-  <label class="flabel">Ciclo de Parcela</label>
-  <select id="newIdiarnParcelSelect" onchange="onNewIdiarnParcelChange()" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px"></select>
-  </div>
-  <div>
-  <label class="flabel">Safra / Ciclo</label>
-  <input id="newIdiarnCiclo" type="text" placeholder="Ex: 2024/2025" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
-  </div>
-  </div>
+  <!-- MODAL: NOVA VISITA / LIVRO OFICIAL IDIARN -->
+  <div id="newIdiarnModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:9999; justify-content:center; align-items:center;">
+  <div style="background:var(--card); border:1px solid var(--border); border-radius:14px; padding:24px; width:95%; max-width:960px; max-height:92vh; overflow-y:auto; position:relative; box-shadow:0 25px 60px rgba(0,0,0,0.6)">
+    <div style="font-size:18px; font-weight:bold; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px">
+      <div style="display:flex; align-items:center; gap:8px; color:#fff">
+        <i data-lucide="file-check" style="color:var(--green)"></i>
+        <span>Livro de Acompanhamento de Campo — IDIARN / DISAV</span>
+      </div>
+      <button onclick="closeNewIdiarnModal()" style="background:none; border:none; color:var(--muted); font-size:24px; cursor:pointer; line-height:1">×</button>
+    </div>
 
-  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
-  <div>
-  <label class="flabel">N° IDIARN (auto)</label>
-  <div style="display:flex; gap:6px">
-  <input id="newIdiarnNumero" type="number" placeholder="—" style="padding:6px; background:var(--input-bg); color:var(--orange); font-weight:800; border:1px solid var(--border); width:100%; border-radius:6px" readonly>
-  <button onclick="reloadNewIdiarnNumber()" style="background:var(--card2); border:1px solid var(--border); border-radius:6px; padding:6px; cursor:pointer; color:var(--muted)"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i></button>
-  </div>
-  </div>
-  <div>
-  <label class="flabel">Data Aplicação</label>
-  <input id="newIdiarnDate" type="date" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
-  </div>
-  <div>
-  <label class="flabel">Área (Hectares)</label>
-  <input id="newIdiarnArea" type="number" step="0.01" placeholder="Ex: 2.24" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
-  </div>
-  </div>
+    <!-- SEÇÃO 1: DADOS DA UP & PULVERIZAÇÃO ASSOCIADA -->
+    <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:16px">
+      <div style="font-weight:800; font-size:12px; color:var(--blue); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:12px; display:flex; align-items:center; gap:6px">
+        <i data-lucide="map-pin" style="width:14px; height:14px"></i> 1. Dados da Unidade de Produção (UP) & Vínculo com Pulverização
+      </div>
+      
+      <div style="display:grid; grid-template-columns:1.5fr 2fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Parcela <span style="color:var(--red)">*</span></label>
+          <select id="newIdiarnParcelSelect" onchange="onNewIdiarnParcelChange()" style="padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px; font-weight:700"></select>
+        </div>
+        <div>
+          <label class="flabel">Pulverização Realizada (O.P) <span style="color:var(--green); font-size:11px">● Alimenta defensivos e data</span></label>
+          <select id="newIdiarnOpSelect" onchange="onNewIdiarnOpChange()" style="padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px"></select>
+        </div>
+        <div>
+          <label class="flabel">N° do Livro / Ficha</label>
+          <div style="display:flex; gap:6px">
+            <input id="newIdiarnNumero" type="number" placeholder="—" style="padding:8px; background:var(--input-bg); color:var(--orange); font-weight:800; border:1px solid var(--border); width:100%; border-radius:6px" readonly>
+            <button onclick="reloadNewIdiarnNumber()" title="Atualizar próximo número" style="background:var(--card2); border:1px solid var(--border); border-radius:6px; padding:8px; cursor:pointer; color:var(--muted)"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i></button>
+          </div>
+        </div>
+      </div>
 
-  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
-  <div>
-  <label class="flabel">Variedade</label>
-  <input id="newIdiarnVariedade" type="text" placeholder="Ex: Goldex" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
-  </div>
-  <div>
-  <label class="flabel">Fazenda</label>
-  <input id="newIdiarnFazenda" type="text" value="SANTA HELENA" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
-  </div>
-  <div>
-  <label class="flabel">Documento / Laudo</label>
-  <input id="newIdiarnDocumento" type="text" placeholder="Ex: IDIARN 97 - 30 F - VISITA 1" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
-  </div>
-  </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Data da Visita (= Pulverização) <span style="color:var(--red)">*</span></label>
+          <input id="newIdiarnDate" type="date" style="padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px; font-weight:700">
+        </div>
+        <div>
+          <label class="flabel">N° da UP (Código)</label>
+          <input id="newIdiarnCodUp" type="text" placeholder="24.0803.5814.26.0067" style="padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Área Plantada (ha)</label>
+          <input id="newIdiarnArea" type="number" step="0.01" placeholder="Ex: 4.08" style="padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Variedade</label>
+          <input id="newIdiarnVariedade" type="text" placeholder="Ex: JADEAL" style="padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+      </div>
 
-  <!-- Seção: Produtos Fitossanitários -->
-  <div style="font-weight:700; color:#fff; margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px; margin-top:16px">Produtos Fitossanitários</div>
-  
-  <!-- Chips dos defensivos aplicados nos últimos 7 dias -->
-  <div id="newIdiarnMipSection" style="margin-bottom:12px">
-  <label class="flabel" id="newIdiarnOpsStatus">Selecione os produtos aplicados:</label>
-  <div id="newIdiarnOpChips" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; margin-bottom:12px"></div>
-  </div>
+      <div style="display:grid; grid-template-columns:1fr 1.5fr 1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Espécie</label>
+          <input id="newIdiarnEspecie" type="text" value="Melão" style="padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Responsável Legal (Empresa)</label>
+          <input id="newIdiarnRespLegal" type="text" value="AGRÍCOLA BOM JESUS LTDA" style="padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Nome da Propriedade</label>
+          <input id="newIdiarnFazenda" type="text" value="SANTA HELENA" style="padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Código Propriedade</label>
+          <input id="newIdiarnCodProp" type="text" value="24.080.035.814" style="padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+      </div>
 
-  <div style="display:flex; gap:10px; margin-bottom:12px; align-items:end">
-  <div style="flex:1">
-  <label class="flabel">Adicionar Outro Produto Manualmente</label>
-  <input id="newIdiarnProdutoManual" type="text" placeholder="Ex: Collis 500 SC, Privilege..." style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
-  </div>
-  <div>
-  <button onclick="addNewIdiarnManualProduct()" style="background:var(--green); color:#fff; border:none; padding:7px 16px; border-radius:6px; font-weight:700; cursor:pointer">+ Add</button>
-  </div>
-  </div>
+      <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; gap:12px">
+        <div>
+          <label class="flabel">Responsável Técnico</label>
+          <input id="newIdiarnRtNome" type="text" value="IVANOSCA MARTINS DE OLIVEIRA CUNHA" style="padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Credencial N°</label>
+          <input id="newIdiarnRtCredencial" type="text" value="2100160575" style="padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Produtividade Estimada</label>
+          <input id="newIdiarnProdEstimada" type="text" value="142,8" style="padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Origem Muda / Semente</label>
+          <input id="newIdiarnOrigemMuda" type="text" value="TOPPLANT" style="padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+      </div>
+    </div>
 
-  <div style="margin-bottom:12px">
-  <label class="flabel">URL do PDF / Laudo Digitalizado</label>
-  <input id="newIdiarnPdfUrl" type="url" placeholder="https://..." style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
-  </div>
+    <!-- SEÇÃO 2: DADOS DO MONITORAMENTO (COEX - ARMADILHAS DE MOSCA-DAS-FRUTAS) -->
+    <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:16px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px">
+        <div style="font-weight:800; font-size:12px; color:var(--orange); letter-spacing:0.5px; text-transform:uppercase; display:flex; align-items:center; gap:6px">
+          <i data-lucide="scan" style="width:14px; height:14px"></i> 2. Dados do Monitoramento COEX (Armadilhas Mosca-das-Frutas)
+        </div>
+        <span class="badge" style="background:rgba(245,158,11,0.15); color:var(--yellow); font-size:11px; font-weight:700">✍️ Preenchimento Manual da Planilha COEX</span>
+      </div>
+      <p style="font-size:11px; color:var(--muted); margin-bottom:12px">Insira aqui os dados das armadilhas levantadas pela equipe do COEX para registro e impressão no livro oficial:</p>
 
-  <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px">
-  <button class="sec" onclick="closeNewIdiarnModal()">Cancelar</button>
-  <button onclick="saveNewIdiarnDashboard()" style="background:var(--blue); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:700; cursor:pointer">Salvar e Registrar</button>
-  </div>
+      <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; gap:10px; margin-bottom:10px">
+        <div>
+          <label class="flabel">Cód. da Armadilha</label>
+          <input id="newIdiarnCoexArmadilha" type="text" placeholder="Ex: ARM-01 ou —" value="—" style="padding:7px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Data Instalação</label>
+          <input id="newIdiarnCoexInstalacao" type="date" style="padding:7px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Data Coleta Anterior</label>
+          <input id="newIdiarnCoexColetaAnt" type="date" style="padding:7px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Data Coleta Atual</label>
+          <input id="newIdiarnCoexColetaAtual" type="date" style="padding:7px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Capturas (A. grandis)</label>
+          <input id="newIdiarnCoexCapGrandis" type="number" min="0" value="0" style="padding:7px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px; font-weight:700">
+        </div>
+        <div>
+          <label class="flabel">Capturas (A. spp.)</label>
+          <input id="newIdiarnCoexCapSpp" type="number" min="0" value="0" style="padding:7px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px; font-weight:700">
+        </div>
+        <div>
+          <label class="flabel">Índice MAD (A. grandis)</label>
+          <input id="newIdiarnCoexMadGrandis" type="text" value="0" style="padding:7px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Índice MAD (A. spp.)</label>
+          <input id="newIdiarnCoexMadSpp" type="text" value="0" style="padding:7px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+      </div>
+
+      <!-- Laudo Laboratorial Opcional -->
+      <div style="border-top:1px dashed var(--border); padding-top:10px; display:grid; grid-template-columns:1.5fr 1fr 1fr 0.8fr; gap:10px">
+        <div>
+          <label class="flabel">Laboratório (se houver laudo)</label>
+          <input id="newIdiarnLabNome" type="text" placeholder="Nome do laboratório" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">N° do Laudo</label>
+          <input id="newIdiarnLabLaudo" type="text" placeholder="N° laudo de análise" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">Município Laboratório</label>
+          <input id="newIdiarnLabMun" type="text" placeholder="Município" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+        <div>
+          <label class="flabel">UF Laboratório</label>
+          <input id="newIdiarnLabUf" type="text" placeholder="RN" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+        </div>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 3: OCORRÊNCIAS FITOSSANITÁRIAS (PRAGAS/ALVOS DA O.P) -->
+    <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:16px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+        <div style="font-weight:800; font-size:12px; color:var(--green); letter-spacing:0.5px; text-transform:uppercase; display:flex; align-items:center; gap:6px">
+          <i data-lucide="bug" style="width:14px; height:14px"></i> 3. Ocorrências Fitossanitárias (Identificadas na Parcela)
+        </div>
+        <button type="button" onclick="addNewIdiarnManualPragaRow()" class="btn sec" style="font-size:11px; padding:4px 8px; color:var(--green); border-color:rgba(16,185,129,0.3)">+ Adicionar Praga</button>
+      </div>
+
+      <div style="overflow-x:auto">
+        <table style="width:100%; border-collapse:collapse; font-size:12px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border); color:var(--muted)">
+              <th style="text-align:left; padding:6px">Nome Científico</th>
+              <th style="text-align:left; padding:6px">Alvo / Nome Comum</th>
+              <th style="text-align:center; padding:6px; width:220px">Incidência</th>
+              <th style="text-align:center; padding:6px; width:50px">Ação</th>
+            </tr>
+          </thead>
+          <tbody id="idiarnPragasTableBody">
+            <tr><td colspan="4" style="text-align:center; padding:12px; color:var(--muted)">Selecione uma O.P acima ou adicione manualmente.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 4: TRATAMENTO FITOSSANITÁRIO REALIZADO (AGROTÓXICO DA O.P) -->
+    <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:16px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+        <div style="font-weight:800; font-size:12px; color:var(--yellow); letter-spacing:0.5px; text-transform:uppercase; display:flex; align-items:center; gap:6px">
+          <i data-lucide="shield" style="width:14px; height:14px"></i> 4. Tratamento Fitossanitário Realizado (Agrotóxicos da O.P)
+        </div>
+        <button type="button" onclick="addNewIdiarnManualProductRow()" class="btn sec" style="font-size:11px; padding:4px 8px; color:var(--yellow); border-color:rgba(245,158,11,0.3)">+ Adicionar Defensivo</button>
+      </div>
+
+      <div style="overflow-x:auto">
+        <table style="width:100%; border-collapse:collapse; font-size:12px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border); color:var(--muted)">
+              <th style="text-align:left; padding:6px">Produto Comercial</th>
+              <th style="text-align:center; padding:6px; width:120px">Dose</th>
+              <th style="text-align:center; padding:6px; width:110px">Data Aplicação</th>
+              <th style="text-align:center; padding:6px; width:120px">Carência</th>
+              <th style="text-align:left; padding:6px; width:160px">Receituário Agronômico</th>
+              <th style="text-align:center; padding:6px; width:50px">Ação</th>
+            </tr>
+          </thead>
+          <tbody id="idiarnAgroTableBody">
+            <tr><td colspan="6" style="text-align:center; padding:12px; color:var(--muted)">Selecione uma O.P acima ou adicione defensivos manualmente.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 5: OUTRAS MEDIDAS & COLHEITA -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px">
+      <div>
+        <label class="flabel">Outras Medidas de Prevenção e Controle</label>
+        <textarea id="newIdiarnOutrasMedidas" rows="2" placeholder="Ex: Armadilhas adesivas amarelas, catação de frutos danificados..." style="padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px; font-size:12px; resize:vertical"></textarea>
+      </div>
+      <div>
+        <label class="flabel">Dados de Colheita e Pós-Colheita</label>
+        <textarea id="newIdiarnColheita" rows="2" placeholder="Ex: Previsão de colheita ou observações pós-colheita..." style="padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px; font-size:12px; resize:vertical"></textarea>
+      </div>
+    </div>
+
+    <!-- IDENTIFICAÇÃO DO DOCUMENTO & LAUDO PDF -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px">
+      <div>
+        <label class="flabel">Documento / Laudo / Identificação</label>
+        <input id="newIdiarnDocumento" type="text" placeholder="Ex: IDIARN 4 - 262 M - VISITA 1" style="padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+      </div>
+      <div>
+        <label class="flabel">URL do PDF / Documento Digitalizado (Opcional)</label>
+        <input id="newIdiarnPdfUrl" type="url" placeholder="https://..." style="padding:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+      </div>
+    </div>
+
+    <!-- AÇÕES -->
+    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:16px; flex-wrap:wrap; gap:10px">
+      <button type="button" class="btn sec" onclick="closeNewIdiarnModal()" style="padding:9px 18px">Cancelar</button>
+      <div style="display:flex; gap:10px">
+        <button type="button" onclick="printOfficialIdiarnBookFromForm()" class="btn sec" style="padding:9px 18px; font-weight:700; color:var(--blue); border-color:rgba(59,130,246,0.4); display:inline-flex; align-items:center; gap:6px">
+          <i data-lucide="printer" style="width:16px; height:16px"></i> 🖨️ Imprimir Livro Oficial (A4)
+        </button>
+        <button type="button" onclick="saveNewIdiarnDashboard()" class="btn" style="background:var(--green); color:#fff; padding:9px 22px; font-weight:800; border-radius:8px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px">
+          <i data-lucide="check" style="width:16px; height:16px"></i> Salvar Visita IDIARN
+        </button>
+      </div>
+    </div>
   </div>
   </div>
 
@@ -20178,22 +20354,51 @@ function stopEmpScanner() {
 // ══════════════════════════════════════
 // ABA VISITAS IDIARN (CADERNO DE CAMPO WEB)
 // ══════════════════════════════════════
-let newIdiarnSelectedProducts = new Set();
+
+// Mapeamento Oficial de Pragas e Doenças para Nomes Científicos (Cultura do Melão / Certificação Fitossanitária)
+const PRAGAS_MAPA_CIENTIFICO = {
+  'MOSCA BRANCA': { cientifico: 'Bemisia tabaci', comum: 'Mosca-branca', defaultIncidencia: 'BAIXA' },
+  'MOSCA-BRANCA': { cientifico: 'Bemisia tabaci', comum: 'Mosca-branca', defaultIncidencia: 'BAIXA' },
+  'BEMISIA': { cientifico: 'Bemisia tabaci', comum: 'Mosca-branca', defaultIncidencia: 'BAIXA' },
+  'BROCA DOS FRUTOS': { cientifico: 'Diaphania nitidalis', comum: 'Broca-das-cucurbitáceas', defaultIncidencia: 'BAIXA' },
+  'BROCA': { cientifico: 'Diaphania nitidalis', comum: 'Broca-dos-frutos', defaultIncidencia: 'BAIXA' },
+  'DIAPHANIA': { cientifico: 'Diaphania nitidalis', comum: 'Broca-dos-frutos', defaultIncidencia: 'BAIXA' },
+  'MOSCA MINADORA': { cientifico: 'Liriomyza sativae', comum: 'Mosca-minadora', defaultIncidencia: 'BAIXA' },
+  'MINADORA': { cientifico: 'Liriomyza sativae', comum: 'Mosca-minadora', defaultIncidencia: 'BAIXA' },
+  'LIRIOMYZA': { cientifico: 'Liriomyza sativae', comum: 'Mosca-minadora', defaultIncidencia: 'BAIXA' },
+  'TRIPES': { cientifico: 'Thrips tabaci', comum: 'Tripes', defaultIncidencia: 'BAIXA' },
+  'THRIPS': { cientifico: 'Thrips tabaci', comum: 'Tripes', defaultIncidencia: 'BAIXA' },
+  'PULGAO': { cientifico: 'Aphis gossypii', comum: 'Pulgão', defaultIncidencia: 'BAIXA' },
+  'PULGÃO': { cientifico: 'Aphis gossypii', comum: 'Pulgão', defaultIncidencia: 'BAIXA' },
+  'APHIS': { cientifico: 'Aphis gossypii', comum: 'Pulgão', defaultIncidencia: 'BAIXA' },
+  'ACARO': { cientifico: 'Tetranychus urticae', comum: 'Ácaro-rajado', defaultIncidencia: 'BAIXA' },
+  'ÁCARO': { cientifico: 'Tetranychus urticae', comum: 'Ácaro-rajado', defaultIncidencia: 'BAIXA' },
+  'MOSCA DAS FRUTAS': { cientifico: 'Anastrepha grandis', comum: 'Mosca-das-frutas', defaultIncidencia: 'BAIXA' },
+  'ANASTREPHA': { cientifico: 'Anastrepha grandis', comum: 'Mosca-das-frutas', defaultIncidencia: 'BAIXA' },
+  'OIDIO': { cientifico: 'Podosphaera xanthii', comum: 'Oídio', defaultIncidencia: 'BAIXA' },
+  'OÍDIO': { cientifico: 'Podosphaera xanthii', comum: 'Oídio', defaultIncidencia: 'BAIXA' },
+  'MILDIO': { cientifico: 'Pseudoperonospora cubensis', comum: 'Míldio', defaultIncidencia: 'BAIXA' },
+  'MÍLDIO': { cientifico: 'Pseudoperonospora cubensis', comum: 'Míldio', defaultIncidencia: 'BAIXA' },
+  'CANCRO': { cientifico: 'Didymella bryoniae', comum: 'Cancro-da-haste', defaultIncidencia: 'BAIXA' }
+};
+
+let _currentIdiarnVisitas = [];
+let _currentIdiarnOps = [];
+let _currentIdiarnPragasList = [];
+let _currentIdiarnAgroList = [];
 
 async function loadIdiarnTable() {
   try {
-  const { data, error } = await sb.from('caderno_campo_idiarn')
-  .select('*')
-  .eq('tenant_id', tenantId)
-  .order('data_aplicacao', { ascending: false });
-  if (!error && data) {
-  renderCcIdiarnTable(data);
-  } else {
-  renderCcIdiarnTable([]);
-  }
+    const { data, error } = await sb.from('caderno_campo_idiarn')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('data_aplicacao', { ascending: false });
+    
+    _currentIdiarnVisitas = data || [];
+    renderCcIdiarnTable(_currentIdiarnVisitas);
   } catch (e) {
-  console.error('Erro ao carregar IDIARN:', e);
-  renderCcIdiarnTable([]);
+    console.error('Erro ao carregar IDIARN:', e);
+    renderCcIdiarnTable([]);
   }
 }
 
@@ -20201,58 +20406,96 @@ function renderCcIdiarnTable(list) {
   const tbody = $('ccIdiarnTableBody');
   if (!tbody) return;
   if (!list || list.length === 0) {
-  tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Nenhuma visita IDIARN registrada.</td></tr>`;
-  return;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--muted)">Nenhuma visita IDIARN registrada. Clique no botão acima para registrar.</td></tr>`;
+    return;
   }
   tbody.innerHTML = list.map(item => {
-  const formattedDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—';
-  const docLink = item.visualizar_url ? `<a href="${item.visualizar_url}" target="_blank" style="color:var(--orange); text-decoration:none; font-weight:700"> Ver PDF</a>` : '—';
-  return `
-  <tr style="border-bottom:1px solid var(--border); font-size:13px">
-  <td style="padding:12px 10px">${formattedDate}</td>
-  <td style="padding:12px 10px; font-weight:600">${item.documento || '—'}</td>
-  <td style="padding:12px 10px; font-weight:600">${item.parcela || '—'}</td>
-  <td style="padding:12px 10px">${item.safra_ciclo || '—'}</td>
-  <td style="padding:12px 10px">${item.produtos || '—'}</td>
-  <td style="padding:12px 10px; text-align:center">${item.area_ha ? item.area_ha + ' ha' : '—'}</td>
-  <td style="padding:12px 10px; text-align:center">${docLink}</td>
-  </tr>
-  `;
+    const formattedDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—';
+    const docLink = item.visualizar_url ? `<a href="${item.visualizar_url}" target="_blank" style="color:var(--orange); text-decoration:none; font-weight:700"> Ver PDF</a>` : '—';
+    const safeId = (item.id || '').replace(/'/g, "\\'");
+    const safeParcela = (item.parcela || '').replace(/'/g, "\\'");
+    
+    return `
+    <tr style="border-bottom:1px solid var(--border); font-size:13px; transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+      <td style="padding:12px 10px; font-weight:700; color:#fff">${formattedDate}</td>
+      <td style="padding:12px 10px; font-weight:600">${item.documento || ('IDIARN ' + (item.numero_idiarn || '—'))}</td>
+      <td style="padding:12px 10px; font-weight:700; color:var(--blue)">${item.parcela || '—'}</td>
+      <td style="padding:12px 10px">${item.safra_ciclo || '—'}</td>
+      <td style="padding:12px 10px; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${item.produtos || ''}">${item.produtos || '—'}</td>
+      <td style="padding:12px 10px; text-align:center">${item.area_ha ? parseFloat(item.area_ha).toFixed(2) + ' ha' : '—'}</td>
+      <td style="padding:12px 10px; text-align:center">${docLink}</td>
+      <td style="padding:12px 10px; text-align:center; white-space:nowrap">
+        <button class="btn sec" style="font-size:11px; padding:5px 10px; color:var(--blue); border-color:rgba(59,130,246,0.3); font-weight:700" onclick="printOfficialIdiarnBookFromVisit('${safeId}')" title="Imprimir Folha A4 Oficial do IDIARN">
+          🖨️ Imprimir Livro
+        </button>
+      </td>
+    </tr>
+    `;
   }).join('');
 }
 
 async function openNewIdiarnModal() {
-  newIdiarnSelectedProducts = new Set();
-  $('newIdiarnDate').value = today();
-  $('newIdiarnCiclo').value = '2026/2027';
-  $('newIdiarnArea').value = '';
-  $('newIdiarnVariedade').value = '';
-  $('newIdiarnFazenda').value = (window.tenantConfig && window.tenantConfig.name) || 'SANTA HELENA';
-  $('newIdiarnDocumento').value = '';
-  $('newIdiarnPdfUrl').value = '';
-  $('newIdiarnProdutoManual').value = '';
+  _currentIdiarnPragasList = [];
+  _currentIdiarnAgroList = [];
+  _currentIdiarnOps = [];
   
-  // Garantir que as parcelas do Caderno de Campo estejam carregadas
+  if ($('newIdiarnDate')) $('newIdiarnDate').value = today();
+  if ($('newIdiarnCiclo')) $('newIdiarnCiclo').value = '2026/2027';
+  if ($('newIdiarnArea')) $('newIdiarnArea').value = '';
+  if ($('newIdiarnVariedade')) $('newIdiarnVariedade').value = '';
+  if ($('newIdiarnCodUp')) $('newIdiarnCodUp').value = '24.0803.5814.26.0067';
+  if ($('newIdiarnFazenda')) $('newIdiarnFazenda').value = (window.tenantConfig && window.tenantConfig.name) || 'SANTA HELENA';
+  if ($('newIdiarnCodProp')) $('newIdiarnCodProp').value = '24.080.035.814';
+  if ($('newIdiarnMunicipio')) $('newIdiarnMunicipio').value = 'MOSSORÓ/RN';
+  if ($('newIdiarnEspecie')) $('newIdiarnEspecie').value = 'Melão';
+  if ($('newIdiarnRespLegal')) $('newIdiarnRespLegal').value = 'AGRÍCOLA BOM JESUS LTDA';
+  if ($('newIdiarnRtNome')) $('newIdiarnRtNome').value = 'IVANOSCA MARTINS DE OLIVEIRA CUNHA';
+  if ($('newIdiarnRtCredencial')) $('newIdiarnRtCredencial').value = '2100160575';
+  if ($('newIdiarnProdEstimada')) $('newIdiarnProdEstimada').value = '142,8';
+  if ($('newIdiarnOrigemMuda')) $('newIdiarnOrigemMuda').value = 'TOPPLANT';
+  
+  // Reseta campos manuais do COEX
+  if ($('newIdiarnCoexArmadilha')) $('newIdiarnCoexArmadilha').value = '—';
+  if ($('newIdiarnCoexInstalacao')) $('newIdiarnCoexInstalacao').value = '';
+  if ($('newIdiarnCoexColetaAnt')) $('newIdiarnCoexColetaAnt').value = '';
+  if ($('newIdiarnCoexColetaAtual')) $('newIdiarnCoexColetaAtual').value = '';
+  if ($('newIdiarnCoexCapGrandis')) $('newIdiarnCoexCapGrandis').value = '0';
+  if ($('newIdiarnCoexCapSpp')) $('newIdiarnCoexCapSpp').value = '0';
+  if ($('newIdiarnCoexMadGrandis')) $('newIdiarnCoexMadGrandis').value = '0';
+  if ($('newIdiarnCoexMadSpp')) $('newIdiarnCoexMadSpp').value = '0';
+  
+  if ($('newIdiarnLabNome')) $('newIdiarnLabNome').value = '';
+  if ($('newIdiarnLabLaudo')) $('newIdiarnLabLaudo').value = '';
+  if ($('newIdiarnLabMun')) $('newIdiarnLabMun').value = '';
+  if ($('newIdiarnLabUf')) $('newIdiarnLabUf').value = '';
+  if ($('newIdiarnOutrasMedidas')) $('newIdiarnOutrasMedidas').value = '';
+  if ($('newIdiarnColheita')) $('newIdiarnColheita').value = '';
+  if ($('newIdiarnDocumento')) $('newIdiarnDocumento').value = '';
+  if ($('newIdiarnPdfUrl')) $('newIdiarnPdfUrl').value = '';
+
+  renderIdiarnPragasTable();
+  renderIdiarnAgroTable();
+
+  // Carregar parcelas
   if (!_infoParcelas || _infoParcelas.length === 0) {
-  const { data: ipData } = await sb.from('info_parcelas').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
-  _infoParcelas = ipData || [];
+    const { data: ipData } = await sb.from('info_parcelas').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
+    _infoParcelas = ipData || [];
   }
 
-  // Carregar parcelas no select com exibição clara
   const pSel = $('newIdiarnParcelSelect');
   if (pSel) {
-  pSel.innerHTML = '<option value="">— Selecione a Parcela —</option>';
-  (_infoParcelas || []).forEach(p => {
-  const pCode = p.parcela2 || p.parcela || p.letra;
-  const varStr = p.variedade ? ` (${p.variedade})` : '';
-  const areaStr = p.area ? ` - ${p.area}ha` : '';
-  pSel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${pCode}${varStr}${areaStr}</option>`);
-  });
+    pSel.innerHTML = '<option value="">— Selecione a Parcela —</option>';
+    (_infoParcelas || []).forEach(p => {
+      const pCode = p.parcela2 || p.parcela || p.letra;
+      const varStr = p.variedade ? ` (${p.variedade})` : '';
+      const areaStr = p.area ? ` - ${p.area}ha` : '';
+      pSel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${pCode}${varStr}${areaStr}</option>`);
+    });
   }
-  
+
   reloadNewIdiarnNumber();
-  $('newIdiarnOpChips').innerHTML = '';
   $('newIdiarnModal').style.display = 'flex';
+  if (window.lucide) lucide.createIcons();
 }
 
 function closeNewIdiarnModal() {
@@ -20261,254 +20504,417 @@ function closeNewIdiarnModal() {
 
 async function reloadNewIdiarnNumber() {
   try {
-  const { data } = await sb.from('caderno_campo_idiarn').select('numero_idiarn').order('numero_idiarn', { ascending: false }).limit(1);
-  const nextNum = (data && data[0] && data[0].numero_idiarn) ? parseInt(data[0].numero_idiarn) + 1 : 1;
-  $('newIdiarnNumero').value = nextNum;
+    const { data } = await sb.from('caderno_campo_idiarn').select('numero_idiarn').order('numero_idiarn', { ascending: false }).limit(1);
+    const nextNum = (data && data[0] && data[0].numero_idiarn) ? parseInt(data[0].numero_idiarn) + 1 : 1;
+    $('newIdiarnNumero').value = nextNum;
   } catch(e) {
-  $('newIdiarnNumero').value = 1;
+    $('newIdiarnNumero').value = 1;
   }
 }
 
 async function onNewIdiarnParcelChange() {
   const pId = $('newIdiarnParcelSelect').value;
   const ip = getParcelaCompleteInfo(pId, _infoParcelas);
-  const chipsEl = $('newIdiarnOpChips');
-  const statusEl = $('newIdiarnOpStatus');
-  if (!chipsEl) return;
-  
-  chipsEl.innerHTML = '';
-  newIdiarnSelectedProducts = new Set();
+  const opSelect = $('newIdiarnOpSelect');
 
   if (!ip) {
-  $('newIdiarnArea').value = '';
-  $('newIdiarnVariedade').value = '';
-  return;
-  }
-  
-  // Auto-preenchimento automático de Hectares (Área), Variedade, Ciclo/Safra e Documento IDIARN
-  $('newIdiarnArea').value = ip.area || '1.00';
-  $('newIdiarnVariedade').value = ip.variedade || '';
-  if (ip.safra_ciclo || ip.ano) {
-  $('newIdiarnCiclo').value = ip.safra_ciclo || ip.ano;
-  } else {
-  const yr = new Date().getFullYear();
-  $('newIdiarnCiclo').value = `${yr}/${yr+1}`;
+    if (opSelect) opSelect.innerHTML = '<option value="">— Selecione uma parcela primeiro —</option>';
+    _currentIdiarnOps = [];
+    _currentIdiarnPragasList = [];
+    _currentIdiarnAgroList = [];
+    renderIdiarnPragasTable();
+    renderIdiarnAgroTable();
+    return;
   }
 
-  const num = $('newIdiarnNumero')?.value || '1';
   const parcelCode = ip.parcela2 || ip.parcela || 'PARCELA';
-  if (ip.idiarn) {
-  $('newIdiarnDocumento').value = ip.idiarn;
-  } else if (!$('newIdiarnDocumento').value) {
+  $('newIdiarnArea').value = ip.area || '4.08';
+  $('newIdiarnVariedade').value = ip.variedade || 'JADEAL';
+  if (ip.cultura) $('newIdiarnEspecie').value = ip.cultura;
+  if (ip.idiarn) $('newIdiarnCodUp').value = ip.idiarn;
+  if (ip.fornecedor || ip.origem) $('newIdiarnOrigemMuda').value = ip.fornecedor || ip.origem || 'TOPPLANT';
+  
+  const num = $('newIdiarnNumero')?.value || '1';
   $('newIdiarnDocumento').value = `IDIARN ${num} - ${parcelCode} - VISITA 1`;
-  }
-  
-  // Buscar aplicações (OPs) e monitoramento MIP (Pragas / Armadilhas) nos últimos 30 dias
-  const dateVal = $('newIdiarnDate').value || today();
-  const dateObj = new Date(dateVal + 'T12:00:00');
-  dateObj.setDate(dateObj.getDate() - 30);
-  const thirtyDaysAgo = dateObj.toISOString().split('T')[0];
-  
+
+  // Carregar pulverizações (O.Ps) desta parcela
+  if (opSelect) opSelect.innerHTML = '<option value="">⏳ Buscando pulverizações da parcela...</option>';
+
   try {
-  const { data: ops } = await sb.from('caderno_campo_op')
-  .select('id, data_aplicacao, caderno_campo_op_itens(produto_nome, alvo)')
-  .eq('tenant_id', tenantId)
-  .or(`parcel_id.eq.${pId},parcela.eq.${parcelCode}`)
-  .gte('data_aplicacao', thirtyDaysAgo);
+    const { data: ops, error: opErr } = await sb.from('caderno_campo_op')
+      .select('*, caderno_campo_op_itens(*)')
+      .eq('tenant_id', tenantId)
+      .or(`parcel_id.eq.${pId},parcela.eq.${parcelCode}`)
+      .order('data_aplicacao', { ascending: false });
 
-  const { data: mips } = await sb.from('caderno_campo_mip')
-  .select('praga, media, data_vistoria, observacoes')
-  .eq('tenant_id', tenantId)
-  .or(`parcel_id.eq.${pId},parcela.eq.${parcelCode}`)
-  .gte('data_vistoria', thirtyDaysAgo);
-  
-  const opProducts = new Map();
-  if (ops && ops.length > 0) {
-  ops.forEach(op => {
-  (op.caderno_campo_op_itens || []).forEach(item => {
-  const key = item.produto_nome;
-  if (!opProducts.has(key)) {
-  opProducts.set(key, { alvo: item.alvo || '', datas: [] });
-  }
-  opProducts.get(key).datas.push(op.data_aplicacao);
-  });
-  });
-  }
-  
-  if (statusEl) statusEl.textContent = `Aplicações & Monitoramento MIP nos últimos 30 dias:`;
-  
-  chipsEl.innerHTML = '';
-  
-  // Chips de Pulverizações (OPs)
-  if (opProducts.size > 0) {
-  const headerOp = document.createElement('div');
-  headerOp.style.cssText = 'width:100%; font-size:11px; font-weight:700; color:var(--orange); margin-top:4px; margin-bottom:4px;';
-  headerOp.textContent = ' Pulverizações Aplicadas (OPs):';
-  chipsEl.appendChild(headerOp);
+    _currentIdiarnOps = ops || [];
 
-  opProducts.forEach((info, nome) => {
-  newIdiarnSelectedProducts.add(nome);
-  const chip = document.createElement('button');
-  chip.type = 'button';
-  chip.className = 'btn on';
-  chip.style.cssText = 'font-size:12px; padding:6px 12px; border-radius:20px; font-weight:700; margin-right:6px; margin-bottom:6px; cursor:pointer';
-  chip.title = `Alvo: ${info.alvo || 'N/A'} | Datas: ${info.datas.join(', ')}`;
-  chip.innerHTML = ` ${nome}`;
-  chip.onclick = () => {
-  if (newIdiarnSelectedProducts.has(nome)) {
-  newIdiarnSelectedProducts.delete(nome);
-  chip.className = 'btn sec';
-  chip.innerHTML = nome;
-  } else {
-  newIdiarnSelectedProducts.add(nome);
-  chip.className = 'btn on';
-  chip.innerHTML = ` ${nome}`;
-  }
-  };
-  chipsEl.appendChild(chip);
-  });
-  }
+    if (opSelect) {
+      if (_currentIdiarnOps.length === 0) {
+        opSelect.innerHTML = '<option value="">Nenhuma pulverização (O.P) encontrada nesta parcela</option>';
+      } else {
+        opSelect.innerHTML = '<option value="">— Selecione a Pulverização (O.P) vinculada —</option>';
+        _currentIdiarnOps.forEach(op => {
+          const dtStr = op.data_aplicacao ? op.data_aplicacao.split('-').reverse().join('/') : 'Sem data';
+          const itemsCount = (op.caderno_campo_op_itens || []).length;
+          const prodsStr = (op.caderno_campo_op_itens || []).map(i => i.produto_nome).filter(Boolean).slice(0, 2).join(', ');
+          const extraStr = itemsCount > 2 ? ` +${itemsCount - 2}` : '';
+          const opCod = op.op_cod || (op.id ? ('#' + op.id.substring(0, 6)) : 'OP');
+          opSelect.insertAdjacentHTML('beforeend', `<option value="${op.id}">${dtStr} — ${opCod} (${prodsStr}${extraStr})</option>`);
+        });
 
-  // Chips de Pragas MIP & Armadilhas
-  if (mips && mips.length > 0) {
-  const headerMip = document.createElement('div');
-  headerMip.style.cssText = 'width:100%; font-size:11px; font-weight:700; color:#3b82f6; margin-top:8px; margin-bottom:4px;';
-  headerMip.textContent = ' Pragas Detectadas (MIP) &  Armadilhas:';
-  chipsEl.appendChild(headerMip);
+        // Seleciona automaticamente a pulverização mais recente
+        opSelect.selectedIndex = 1;
+        onNewIdiarnOpChange();
+      }
+    }
 
-  const pragasMap = new Map();
-  mips.forEach(m => {
-  const pName = (m.praga || '').replace(/_/g, ' ').toUpperCase();
-  if (!pragasMap.has(pName)) {
-  pragasMap.set(pName, { media: m.media, data: m.data_vistoria });
-  }
-  });
+    // Carregar sugestão de armadilha COEX anterior da parcela
+    const { data: coexList } = await sb.from('caderno_campo_coletas_moscas')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('parcela', parcelCode)
+      .order('data_coleta_atual', { ascending: false })
+      .limit(1);
 
-  pragasMap.forEach((val, pragaName) => {
-  const chipText = `${pragaName} (Média: ${parseFloat(val.media).toFixed(2)})`;
-  newIdiarnSelectedProducts.add(chipText);
-  
-  const chip = document.createElement('button');
-  chip.type = 'button';
-  chip.className = 'btn on';
-  chip.style.cssText = 'font-size:11px; padding:5px 10px; border-radius:20px; font-weight:700; margin-right:6px; margin-bottom:6px; cursor:pointer; background:rgba(59,130,246,0.15); border:1px solid #3b82f6; color:#3b82f6;';
-  chip.innerHTML = ` ${chipText}`;
-  chip.onclick = () => {
-  if (newIdiarnSelectedProducts.has(chipText)) {
-  newIdiarnSelectedProducts.delete(chipText);
-  chip.style.background = 'transparent';
-  chip.style.color = 'var(--muted)';
-  chip.innerHTML = chipText;
-  } else {
-  newIdiarnSelectedProducts.add(chipText);
-  chip.style.background = 'rgba(59,130,246,0.15)';
-  chip.style.color = '#3b82f6';
-  chip.innerHTML = ` ${chipText}`;
-  }
-  };
-  chipsEl.appendChild(chip);
-  });
-  }
-
-  if (opProducts.size === 0 && (!mips || mips.length === 0)) {
-  chipsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);font-style:italic">Nenhuma aplicação ou praga MIP encontrada nos últimos 30 dias. Adicione manualmente abaixo.</div>';
-  }
-  } catch(e) {
-  console.warn('Erro ao carregar OPs e MIPs para IDIARN:', e);
+    if (coexList && coexList.length > 0) {
+      const lastCoex = coexList[0];
+      if (lastCoex.armadilha_codigo && $('newIdiarnCoexArmadilha')) $('newIdiarnCoexArmadilha').value = lastCoex.armadilha_codigo;
+      if (lastCoex.data_instalacao && $('newIdiarnCoexInstalacao')) $('newIdiarnCoexInstalacao').value = lastCoex.data_instalacao;
+      if (lastCoex.data_coleta_atual && $('newIdiarnCoexColetaAnt')) $('newIdiarnCoexColetaAnt').value = lastCoex.data_coleta_atual;
+    }
+  } catch (err) {
+    console.warn('Erro ao buscar OPs para IDIARN:', err);
+    if (opSelect) opSelect.innerHTML = '<option value="">Erro ao carregar OPs</option>';
   }
 }
 
-function addNewIdiarnManualProduct() {
-  const input = $('newIdiarnProdutoManual');
-  const nome = (input.value || '').trim().toUpperCase();
-  if (!nome) return;
-  
-  if (newIdiarnSelectedProducts.has(nome)) {
-  alert('Este produto já está na lista!');
-  return;
+function onNewIdiarnOpChange() {
+  const opSelect = $('newIdiarnOpSelect');
+  if (!opSelect) return;
+  const opId = opSelect.value;
+  const op = _currentIdiarnOps.find(o => o.id === opId);
+
+  _currentIdiarnPragasList = [];
+  _currentIdiarnAgroList = [];
+
+  if (!op) {
+    renderIdiarnPragasTable();
+    renderIdiarnAgroTable();
+    return;
   }
-  
-  newIdiarnSelectedProducts.add(nome);
-  const chipsEl = $('newIdiarnOpChips');
-  if (chipsEl) {
-  if (chipsEl.innerHTML.includes('Nenhuma aplicação encontrada')) {
-  chipsEl.innerHTML = '';
+
+  // 1. A data da visita assume rigorosamente a data da pulverização
+  if (op.data_aplicacao && $('newIdiarnDate')) {
+    $('newIdiarnDate').value = op.data_aplicacao;
   }
-  
-  const chip = document.createElement('button');
-  chip.type = 'button';
-  chip.className = 'btn on';
-  chip.style.cssText = 'font-size:12px; padding:6px 12px; border-radius:20px; font-weight:700; margin-right:6px; margin-bottom:6px; cursor:pointer';
-  chip.innerHTML = ` ${nome}`;
-  chip.onclick = () => {
-  newIdiarnSelectedProducts.delete(nome);
-  chip.remove();
-  if (newIdiarnSelectedProducts.size === 0) {
-  chipsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);font-style:italic">Nenhuma aplicação selecionada.</div>';
+
+  // 2. Extrai defensivos aplicados e mapeia alvos para pragas
+  const items = op.caderno_campo_op_itens || [];
+  const dtFormatada = op.data_aplicacao ? op.data_aplicacao.split('-').reverse().join('/') : today().split('-').reverse().join('/');
+  const recDefault = op.op_cod ? ('REC-' + op.op_cod.replace(/[^A-Za-z0-9]/g, '').toUpperCase()) : (op.id ? ('REC-' + op.id.substring(0, 6).toUpperCase()) : 'REC-AGRO');
+
+  const pragasEncontradasMap = new Map();
+
+  items.forEach(it => {
+    // Adiciona defensivo
+    const doseTxt = it.dosagem_real ? `${it.dosagem_real} ${it.unidade || 'L/ha'}` : (it.dose ? `${it.dose} ${it.unidade || ''}` : '1.0 L/ha');
+    const carenciaTxt = it.carencia_dias != null ? `${it.carencia_dias} dias` : '7 dias';
+    
+    _currentIdiarnAgroList.push({
+      produto: it.produto_nome || 'Defensivo Fitossanitário',
+      dose: doseTxt,
+      data: dtFormatada,
+      carencia: carenciaTxt,
+      receituario: it.receituario || recDefault
+    });
+
+    // Mapeia alvo para praga/nome científico
+    const rawAlvo = (it.alvo || '').toUpperCase().trim();
+    if (rawAlvo && !rawAlvo.includes('ADUBAÇÃO') && !rawAlvo.includes('FOLIAR')) {
+      let matched = null;
+      for (const [key, obj] of Object.entries(PRAGAS_MAPA_CIENTIFICO)) {
+        if (rawAlvo.includes(key)) {
+          matched = obj;
+          break;
+        }
+      }
+
+      if (matched) {
+        if (!pragasEncontradasMap.has(matched.cientifico)) {
+          pragasEncontradasMap.set(matched.cientifico, {
+            cientifico: matched.cientifico,
+            comum: matched.comum,
+            incidencia: matched.defaultIncidencia
+          });
+        }
+      } else {
+        const cleanName = rawAlvo.replace(/^[-/\s]+|[-/\s]+$/g, '');
+        if (cleanName && !pragasEncontradasMap.has(cleanName)) {
+          pragasEncontradasMap.set(cleanName, {
+            cientifico: cleanName,
+            comum: cleanName,
+            incidencia: 'BAIXA'
+          });
+        }
+      }
+    }
+  });
+
+  _currentIdiarnPragasList = Array.from(pragasEncontradasMap.values());
+
+  renderIdiarnPragasTable();
+  renderIdiarnAgroTable();
+}
+
+function renderIdiarnPragasTable() {
+  const tbody = $('idiarnPragasTableBody');
+  if (!tbody) return;
+
+  if (_currentIdiarnPragasList.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px; color:var(--muted); font-style:italic">Nenhuma ocorrência fitossanitária registrada. Selecione uma O.P ou adicione acima.</td></tr>`;
+    return;
   }
+
+  tbody.innerHTML = _currentIdiarnPragasList.map((praga, idx) => {
+    const isAlta = praga.incidencia === 'ALTA' ? 'checked' : '';
+    const isMedia = praga.incidencia === 'MEDIA' ? 'checked' : '';
+    const isBaixa = (!praga.incidencia || praga.incidencia === 'BAIXA') ? 'checked' : '';
+
+    return `
+    <tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:6px">
+        <input type="text" value="${praga.cientifico || ''}" onchange="_currentIdiarnPragasList[${idx}].cientifico = this.value" style="padding:4px 8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; width:100%; font-style:italic; font-weight:700">
+      </td>
+      <td style="padding:6px">
+        <input type="text" value="${praga.comum || ''}" onchange="_currentIdiarnPragasList[${idx}].comum = this.value" style="padding:4px 8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; width:100%">
+      </td>
+      <td style="padding:6px; text-align:center">
+        <label style="margin-right:10px; cursor:pointer"><input type="radio" name="incidencia_${idx}" value="ALTA" ${isAlta} onchange="_currentIdiarnPragasList[${idx}].incidencia = 'ALTA'"> Alta</label>
+        <label style="margin-right:10px; cursor:pointer"><input type="radio" name="incidencia_${idx}" value="MEDIA" ${isMedia} onchange="_currentIdiarnPragasList[${idx}].incidencia = 'MEDIA'"> Média</label>
+        <label style="cursor:pointer"><input type="radio" name="incidencia_${idx}" value="BAIXA" ${isBaixa} onchange="_currentIdiarnPragasList[${idx}].incidencia = 'BAIXA'"> Baixa</label>
+      </td>
+      <td style="padding:6px; text-align:center">
+        <button type="button" onclick="_currentIdiarnPragasList.splice(${idx}, 1); renderIdiarnPragasTable()" style="background:none; border:none; color:var(--red); cursor:pointer; font-size:14px" title="Remover">✕</button>
+      </td>
+    </tr>
+    `;
+  }).join('');
+}
+
+function addNewIdiarnManualPragaRow() {
+  _currentIdiarnPragasList.push({
+    cientifico: 'Liriomyza sativae',
+    comum: 'Mosca-minadora',
+    incidencia: 'BAIXA'
+  });
+  renderIdiarnPragasTable();
+}
+
+function renderIdiarnAgroTable() {
+  const tbody = $('idiarnAgroTableBody');
+  if (!tbody) return;
+
+  if (_currentIdiarnAgroList.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:12px; color:var(--muted); font-style:italic">Nenhum defensivo registrado. Selecione uma O.P ou adicione acima.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = _currentIdiarnAgroList.map((item, idx) => {
+    return `
+    <tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:6px">
+        <input type="text" value="${item.produto || ''}" onchange="_currentIdiarnAgroList[${idx}].produto = this.value" style="padding:4px 8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; width:100%; font-weight:700">
+      </td>
+      <td style="padding:6px">
+        <input type="text" value="${item.dose || ''}" onchange="_currentIdiarnAgroList[${idx}].dose = this.value" style="padding:4px 8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; width:100%; text-align:center">
+      </td>
+      <td style="padding:6px">
+        <input type="text" value="${item.data || ''}" onchange="_currentIdiarnAgroList[${idx}].data = this.value" style="padding:4px 8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; width:100%; text-align:center">
+      </td>
+      <td style="padding:6px">
+        <input type="text" value="${item.carencia || ''}" onchange="_currentIdiarnAgroList[${idx}].carencia = this.value" style="padding:4px 8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; width:100%; text-align:center">
+      </td>
+      <td style="padding:6px">
+        <input type="text" value="${item.receituario || ''}" onchange="_currentIdiarnAgroList[${idx}].receituario = this.value" style="padding:4px 8px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; width:100%">
+      </td>
+      <td style="padding:6px; text-align:center">
+        <button type="button" onclick="_currentIdiarnAgroList.splice(${idx}, 1); renderIdiarnAgroTable()" style="background:none; border:none; color:var(--red); cursor:pointer; font-size:14px" title="Remover">✕</button>
+      </td>
+    </tr>
+    `;
+  }).join('');
+}
+
+function addNewIdiarnManualProductRow() {
+  _currentIdiarnAgroList.push({
+    produto: 'NOVO DEFENSIVO',
+    dose: '1.0 L/ha',
+    data: today().split('-').reverse().join('/'),
+    carencia: '7 dias',
+    receituario: 'REC-' + new Date().getFullYear()
+  });
+  renderIdiarnAgroTable();
+}
+
+function collectIdiarnFormData() {
+  const pId = $('newIdiarnParcelSelect')?.value;
+  const ip = getParcelaCompleteInfo(pId, _infoParcelas);
+  const pCode = ip ? (ip.parcela2 || ip.parcela) : 'PARCELA';
+
+  return {
+    pId: pId,
+    pCode: pCode,
+    numeroLivro: $('newIdiarnNumero')?.value || '1',
+    dataVisita: $('newIdiarnDate')?.value || today(),
+    safraCiclo: $('newIdiarnCiclo')?.value || '2026/2027',
+    codUp: $('newIdiarnCodUp')?.value || '24.0803.5814.26.0067',
+    areaHa: parseFloat($('newIdiarnArea')?.value) || (ip?.area || 4.08),
+    variedade: $('newIdiarnVariedade')?.value || (ip?.variedade || 'JADEAL'),
+    especie: $('newIdiarnEspecie')?.value || 'Melão',
+    respLegal: $('newIdiarnRespLegal')?.value || 'AGRÍCOLA BOM JESUS LTDA',
+    propNome: $('newIdiarnFazenda')?.value || 'SANTA HELENA',
+    propCodigo: $('newIdiarnCodProp')?.value || '24.080.035.814',
+    municipio: $('newIdiarnMunicipio')?.value || 'MOSSORÓ/RN',
+    rtNome: $('newIdiarnRtNome')?.value || 'IVANOSCA MARTINS DE OLIVEIRA CUNHA',
+    rtCredencial: $('newIdiarnRtCredencial')?.value || '2100160575',
+    prodEstimada: $('newIdiarnProdEstimada')?.value || '142,8',
+    origemMuda: $('newIdiarnOrigemMuda')?.value || 'TOPPLANT',
+    
+    // COEX
+    coex: {
+      armadilha: $('newIdiarnCoexArmadilha')?.value || '—',
+      instalacao: $('newIdiarnCoexInstalacao')?.value || '',
+      coletaAnt: $('newIdiarnCoexColetaAnt')?.value || '',
+      coletaAtual: $('newIdiarnCoexColetaAtual')?.value || '',
+      capGrandis: parseInt($('newIdiarnCoexCapGrandis')?.value) || 0,
+      capSpp: parseInt($('newIdiarnCoexCapSpp')?.value) || 0,
+      madGrandis: $('newIdiarnCoexMadGrandis')?.value || '0',
+      madSpp: $('newIdiarnCoexMadSpp')?.value || '0'
+    },
+
+    // Laboratório
+    lab: {
+      nome: $('newIdiarnLabNome')?.value || '',
+      laudo: $('newIdiarnLabLaudo')?.value || '',
+      mun: $('newIdiarnLabMun')?.value || '',
+      uf: $('newIdiarnLabUf')?.value || ''
+    },
+
+    // Ocorrências e Agrotóxicos
+    pragas: [..._currentIdiarnPragasList],
+    defensivos: [..._currentIdiarnAgroList],
+
+    outrasMedidas: $('newIdiarnOutrasMedidas')?.value || '',
+    colheita: $('newIdiarnColheita')?.value || '',
+    documento: $('newIdiarnDocumento')?.value || '',
+    pdfUrl: $('newIdiarnPdfUrl')?.value || ''
   };
-  chipsEl.appendChild(chip);
-  }
-  input.value = '';
 }
 
 async function saveNewIdiarnDashboard() {
-  const numero = parseInt($('newIdiarnNumero').value) || null;
-  let ciclo = $('newIdiarnCiclo').value.trim();
-  const pId = $('newIdiarnParcelSelect').value;
-  const area = parseFloat($('newIdiarnArea').value) || null;
-  const variedade = $('newIdiarnVariedade').value.trim();
-  const date = $('newIdiarnDate').value;
-  const fazenda = $('newIdiarnFazenda').value.trim();
-  const documento = $('newIdiarnDocumento').value.trim();
-  const pdfUrl = $('newIdiarnPdfUrl').value.trim();
-  
-  const produtos = [...newIdiarnSelectedProducts].join(', ');
-  
-  if (!ciclo) {
-  const yr = new Date().getFullYear();
-  ciclo = `${yr}/${yr+1}`;
-  if ($('newIdiarnCiclo')) $('newIdiarnCiclo').value = ciclo;
-  }
-  
-  if (!pId) { alert('Selecione uma Parcela!'); return; }
-  if (!date) { alert('Informe a Data da Visita!'); return; }
-  if (!documento) { alert('Informe o Documento da Visita IDIARN!'); return; }
-  if (!produtos) { alert('Selecione ou adicione pelo menos um produto fitossanitário!'); return; }
-  
-  const ip = (window._infoParcelas || _infoParcelas || []).find(x => x.id === pId);
-  const parcelaCode = ip ? (ip.parcela2 || ip.parcela) : '';
-  
-  const record = {
-  tenant_id: tenantId,
-  numero_idiarn: numero,
-  safra_ciclo: ciclo,
-  parcel_id: pId,
-  parcela: parcelaCode,
-  area_ha: area,
-  variedade: variedade || null,
-  produtos: produtos,
-  data_aplicacao: date,
-  fazenda: fazenda || null,
-  documento: documento,
-  visualizar_url: pdfUrl || null,
-  synced: true
-  };
-  
-  try {
-  const dbRecord = { ...record };
-  delete dbRecord.synced;
-  const hasParcel = (_infoParcelas || []).some(p => p.id === dbRecord.parcel_id);
-  if (!hasParcel) dbRecord.parcel_id = null;
+  const formData = collectIdiarnFormData();
 
-  const { error } = await sb.from('caderno_campo_idiarn').insert([dbRecord]);
-  if (error) throw error;
-  
-  alert(' Visita IDIARN registrada com sucesso!');
-  closeNewIdiarnModal();
-  loadIdiarnTable();
+  if (!formData.pId) {
+    alert('Por favor, selecione uma Parcela!');
+    return;
+  }
+  if (!formData.dataVisita) {
+    alert('Informe a Data da Visita!');
+    return;
+  }
+
+  const produtosNomes = formData.defensivos.map(d => d.produto).filter(Boolean).join(', ') || 'Fitossanitário';
+
+  const record = {
+    tenant_id: tenantId,
+    numero_idiarn: parseInt(formData.numeroLivro) || null,
+    safra_ciclo: formData.safraCiclo,
+    parcel_id: formData.pId,
+    parcela: formData.pCode,
+    area_ha: formData.areaHa,
+    variedade: formData.variedade,
+    produtos: produtosNomes,
+    data_aplicacao: formData.dataVisita,
+    fazenda: formData.propNome,
+    documento: formData.documento || `IDIARN ${formData.numeroLivro} - ${formData.pCode}`,
+    visualizar_url: formData.pdfUrl || null
+  };
+
+  try {
+    const dbRecord = { ...record };
+    const hasParcel = (_infoParcelas || []).some(p => p.id === dbRecord.parcel_id);
+    if (!hasParcel) dbRecord.parcel_id = null;
+
+    const { data: insData, error: insErr } = await sb.from('caderno_campo_idiarn').insert([dbRecord]).select('*');
+    if (insErr) throw insErr;
+
+    const visitId = (insData && insData[0]) ? insData[0].id : ('idiarn_' + Date.now());
+
+    // Salvar snapshot completo no localStorage para reimpressão com 100% de fidelidade
+    localStorage.setItem('idiarn_visit_full_' + visitId, JSON.stringify(formData));
+
+    // Persistir dados de armadilha no banco de coletas de mosca se preenchido
+    if (formData.coex.armadilha && formData.coex.armadilha !== '—') {
+      try {
+        await sb.from('caderno_campo_coletas_moscas').insert([{
+          tenant_id: tenantId,
+          parcel_id: formData.pId,
+          parcela: formData.pCode,
+          armadilha_codigo: formData.coex.armadilha,
+          data_instalacao: formData.coex.instalacao || null,
+          data_coleta_anterior: formData.coex.coletaAnt || null,
+          data_coleta_atual: formData.coex.coletaAtual || formData.dataVisita,
+          capturas_grandis: formData.coex.capGrandis,
+          capturas_spp: formData.coex.capSpp,
+          indice_mad_grandis: formData.coex.madGrandis,
+          indice_mad_spp: formData.coex.madSpp,
+          responsavel_coleta: formData.rtNome
+        }]);
+      } catch(coexErr) {
+        console.warn('Erro ao salvar coex em coletas_moscas:', coexErr);
+      }
+    }
+
+    toast(' Livro IDIARN registrado com sucesso!', 'ok');
+    closeNewIdiarnModal();
+    await loadIdiarnTable();
+
+    if (confirm('Deseja imprimir a Ficha Oficial do IDIARN agora?')) {
+      printOfficialIdiarnBook(formData);
+    }
   } catch(e) {
-  alert('Erro ao salvar visita IDIARN: ' + e.message);
+    console.error('Erro ao salvar IDIARN:', e);
+    alert('Erro ao salvar visita IDIARN: ' + e.message);
+  }
+}
+
+function printOfficialIdiarnBookFromForm() {
+  const formData = collectIdiarnFormData();
+  if (!formData.pId) {
+    alert('Selecione uma Parcela antes de imprimir!');
+    return;
+  }
+  printOfficialIdiarnBook(formData);
+}
+
+async function printOfficialIdiarnBookFromVisit(visitId) {
+  // Tenta puxar snapshot completo do cache local
+  const cached = localStorage.getItem('idiarn_visit_full_' + visitId);
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      printOfficialIdiarnBook(parsed);
+      return;
+    } catch(e) {}
+  }
+
+  // Se não houver snapshot salvo localmente, busca no banco e constrói dinamicamente
+  const visit = _currentIdiarnVisitas.find(v => v.id === visitId);
+  if (visit) {
+    printOfficialIdiarnBook(visit);
+  } else {
+    alert('Registro de visita não encontrado!');
   }
 }
 
@@ -20941,296 +21347,527 @@ async function saveColetaMoscaRecord() {
   }
 }
 
-//  IMPRESSÃO DO LIVRO OFICIAL DO IDIARN (Acompanhamento de Campo - Livro)
-async function printOfficialIdiarnBook(parcelaCode) {
-  const ip = (_infoParcelas || []).find(x => (x.parcela2 || x.parcela) === parcelaCode) || (_infoParcelas && _infoParcelas[0]);
-  if (!ip) { alert('Selecione uma parcela para imprimir a Ficha IDIARN.'); return; }
+// ════════════════════════════════════════════════════════════════════
+// IMPRESSÃO DO LIVRO OFICIAL DO IDIARN (Acompanhamento de Campo - Livro)
+// ════════════════════════════════════════════════════════════════════
+async function printOfficialIdiarnBook(dataOrParcela) {
+  let doc = null;
 
-  const pCode = ip.parcela2 || ip.parcela;
-  const info = getParcelaCompleteInfo(ip, _infoParcelas);
-  const variedadesStr = info ? info.variedade : (ip.variedade || '—');
+  if (typeof dataOrParcela === 'object' && dataOrParcela !== null) {
+    // Se recebeu um objeto completo (do formulário ou snapshot da visita)
+    doc = { ...dataOrParcela };
+  } else {
+    // Se recebeu apenas o código da parcela (string)
+    const parcelaCode = dataOrParcela;
+    const ip = (_infoParcelas || []).find(x => (x.parcela2 || x.parcela) === parcelaCode) || (_infoParcelas && _infoParcelas[0]);
+    if (!ip) { alert('Selecione uma parcela para imprimir a Ficha IDIARN.'); return; }
 
-  const [mRes, opRes] = await Promise.all([
-  sb.from('caderno_campo_coletas_moscas').select('*').eq('tenant_id', tenantId).eq('parcela', pCode).order('data_coleta_atual', { ascending: false }).limit(5),
-  sb.from('caderno_campo_op').select('*, caderno_campo_op_itens(*)').eq('tenant_id', tenantId).eq('parcela', pCode).order('data_aplicacao', { ascending: false }).limit(10)
-  ]);
+    const pCode = ip.parcela2 || ip.parcela;
+    const info = getParcelaCompleteInfo(ip, _infoParcelas);
+    const variedadesStr = info ? info.variedade : (ip.variedade || 'JADEAL');
 
-  const coletas = mRes.data || [];
-  const ops = opRes.data || [];
-  const cfg = window.tenantConfig || {};
-  const rtNome = cfg.responsavel_tecnico_nome || 'IVANOSCA MARTINS DE OLIVEIRA CUNHA';
-  const rtCredencial = cfg.responsavel_tecnico_credencial || '210016575';
-  const respLegal = cfg.responsavel_legal || 'AGRÍCOLA BOM JESUS LTDA';
-  const regEstadual = cfg.registro_estadual || '24.0803.5914.26.0967';
-  const propNome = cfg.farm_name || 'SANTA HELENA';
-  const propCodigo = cfg.codigo_propriedade || '24.080.035.814';
-  const municipio = cfg.municipio || 'MOSSORÓ/RN';
+    const [mRes, opRes] = await Promise.all([
+      sb.from('caderno_campo_coletas_moscas').select('*').eq('tenant_id', tenantId).eq('parcela', pCode).order('data_coleta_atual', { ascending: false }).limit(3),
+      sb.from('caderno_campo_op').select('*, caderno_campo_op_itens(*)').eq('tenant_id', tenantId).eq('parcela', pCode).order('data_aplicacao', { ascending: false }).limit(5)
+    ]);
 
-  // Build agrotóxico rows from ALL op items (not just first)
-  const agrotoxicoRows = [];
-  ops.forEach(op => {
-  const items = op.caderno_campo_op_itens || [];
-  items.forEach(item => {
-    const dt = op.data_aplicacao ? op.data_aplicacao.split('-').reverse().join('/') : '—';
-    agrotoxicoRows.push(`
-    <tr>
-    <td>${item.produto_nome || '—'}</td>
-    <td style="text-align:center">${item.dosagem_real || '—'} ${item.unidade || ''}</td>
-    <td style="text-align:center">${dt}</td>
-    <td style="text-align:center">${item.carencia_dias != null ? item.carencia_dias + ' dias' : '—'}</td>
-    <td style="text-align:center">REC-${op.id ? op.id.substring(0,6) : '—'}</td>
-    </tr>`);
+    const coletas = mRes.data || [];
+    const ops = opRes.data || [];
+    const latestOp = ops[0] || null;
+    const latestCoex = coletas[0] || null;
+    const cfg = window.tenantConfig || {};
+
+    const agroList = [];
+    const pragasMap = new Map();
+
+    if (latestOp && latestOp.caderno_campo_op_itens) {
+      const dtOp = latestOp.data_aplicacao ? latestOp.data_aplicacao.split('-').reverse().join('/') : '—';
+      const recDefault = latestOp.op_cod ? ('REC-' + latestOp.op_cod.replace(/[^A-Za-z0-9]/g, '').toUpperCase()) : (latestOp.id ? ('REC-' + latestOp.id.substring(0,6).toUpperCase()) : 'REC-AGRO');
+
+      latestOp.caderno_campo_op_itens.forEach(item => {
+        const doseTxt = item.dosagem_real ? `${item.dosagem_real} ${item.unidade || 'L/ha'}` : (item.dose ? `${item.dose} ${item.unidade || ''}` : '1.0 L/ha');
+        agroList.push({
+          produto: item.produto_nome || 'Defensivo Fitossanitário',
+          dose: doseTxt,
+          data: dtOp,
+          carencia: item.carencia_dias != null ? `${item.carencia_dias} dias` : '7 dias',
+          receituario: item.receituario || recDefault
+        });
+
+        const rawAlvo = (item.alvo || '').toUpperCase().trim();
+        if (rawAlvo && !rawAlvo.includes('ADUBAÇÃO') && !rawAlvo.includes('FOLIAR')) {
+          let matched = null;
+          for (const [key, obj] of Object.entries(PRAGAS_MAPA_CIENTIFICO)) {
+            if (rawAlvo.includes(key)) { matched = obj; break; }
+          }
+          if (matched && !pragasMap.has(matched.cientifico)) {
+            pragasMap.set(matched.cientifico, { cientifico: matched.cientifico, comum: matched.comum, incidencia: 'BAIXA' });
+          }
+        }
+      });
+    }
+
+    doc = {
+      pCode: pCode,
+      numeroLivro: ip.idiarn_numero || ip.idiarn || '4',
+      dataVisita: latestOp?.data_aplicacao ? latestOp.data_aplicacao.split('-').reverse().join('/') : new Date().toLocaleDateString('pt-BR'),
+      codUp: ip.idiarn || ip.codigo_up || '24.0803.5814.26.0067',
+      areaHa: ip.area || '4.08',
+      variedade: variedadesStr,
+      especie: ip.cultura || 'Melão',
+      respLegal: cfg.responsavel_legal || 'AGRÍCOLA BOM JESUS LTDA',
+      propNome: cfg.farm_name || 'SANTA HELENA',
+      propCodigo: cfg.codigo_propriedade || '24.080.035.814',
+      municipio: cfg.municipio || 'MOSSORÓ/RN',
+      rtNome: cfg.responsavel_tecnico_nome || 'IVANOSCA MARTINS DE OLIVEIRA CUNHA',
+      rtCredencial: cfg.responsavel_tecnico_credencial || '2100160575',
+      prodEstimada: '142,8',
+      origemMuda: ip.fornecedor || 'TOPPLANT',
+      coex: {
+        armadilha: latestCoex?.armadilha_codigo || '—',
+        instalacao: latestCoex?.data_instalacao ? latestCoex.data_instalacao.split('-').reverse().join('/') : '—',
+        coletaAnt: latestCoex?.data_coleta_anterior ? latestCoex.data_coleta_anterior.split('-').reverse().join('/') : '—',
+        coletaAtual: latestCoex?.data_coleta_atual ? latestCoex.data_coleta_atual.split('-').reverse().join('/') : '—',
+        capGrandis: latestCoex?.capturas_grandis || 0,
+        capSpp: latestCoex?.capturas_spp || 0,
+        madGrandis: latestCoex?.indice_mad_grandis != null ? parseFloat(latestCoex.indice_mad_grandis).toFixed(4) : '0',
+        madSpp: latestCoex?.indice_mad_spp != null ? parseFloat(latestCoex.indice_mad_spp).toFixed(4) : '0'
+      },
+      lab: { nome: '', laudo: '', mun: '', uf: '' },
+      pragas: Array.from(pragasMap.values()),
+      defensivos: agroList,
+      outrasMedidas: '',
+      colheita: ''
+    };
+  }
+
+  // Normalização de Datas
+  const formatDt = (d) => {
+    if (!d || d === '—') return '—';
+    if (d.includes('-')) return d.split('-').reverse().join('/');
+    return d;
+  };
+
+  const pCode = doc.pCode || doc.parcela || '262 M';
+  const numeroLivro = doc.numeroLivro || doc.numero_idiarn || '4';
+  const dataVisita = formatDt(doc.dataVisita || doc.data_aplicacao || today());
+  const rtNome = doc.rtNome || 'IVANOSCA MARTINS DE OLIVEIRA CUNHA';
+  const rtCredencial = doc.rtCredencial || '2100160575';
+  const respLegal = doc.respLegal || 'AGRÍCOLA BOM JESUS LTDA';
+  const codUp = doc.codUp || '24.0803.5814.26.0067';
+  const areaHa = (doc.areaHa != null ? parseFloat(doc.areaHa).toFixed(2).replace('.', ',') : (doc.area_ha ? parseFloat(doc.area_ha).toFixed(2).replace('.', ',') : '4,08'));
+  const propNome = doc.propNome || doc.fazenda || 'SANTA HELENA';
+  const propCodigo = doc.propCodigo || '24.080.035.814';
+  const municipio = doc.municipio || 'MOSSORÓ/RN';
+  const especie = doc.especie || 'Melão';
+  const variedade = doc.variedade || 'JADEAL';
+  const prodEstimada = doc.prodEstimada || '142,8';
+  const origemMuda = doc.origemMuda || 'TOPPLANT';
+
+  // COEX (Monitoramento Armadilhas)
+  const coexObj = doc.coex || {};
+  const coexArmadilha = coexObj.armadilha || '—';
+  const coexInstalacao = formatDt(coexObj.instalacao);
+  const coexColetaAnt = formatDt(coexObj.coletaAnt);
+  const coexColetaAtual = formatDt(coexObj.coletaAtual);
+  const coexCapGrandis = coexObj.capGrandis != null ? coexObj.capGrandis : 0;
+  const coexCapSpp = coexObj.capSpp != null ? coexObj.capSpp : 0;
+  const coexMadGrandis = coexObj.madGrandis != null ? coexObj.madGrandis : '0';
+  const coexMadSpp = coexObj.madSpp != null ? coexObj.madSpp : '0';
+
+  const labObj = doc.lab || {};
+  const labNome = labObj.nome || '';
+  const labLaudo = labObj.laudo || '';
+  const labMun = labObj.mun || '';
+  const labUf = labObj.uf || '';
+
+  // Ocorrências Fitossanitárias
+  const pragasList = Array.isArray(doc.pragas) ? doc.pragas : [];
+  let pragasRowsHtml = '';
+  pragasList.forEach(p => {
+    const isAlta = p.incidencia === 'ALTA' ? 'X' : '';
+    const isMedia = p.incidencia === 'MEDIA' ? 'X' : '';
+    const isBaixa = (!p.incidencia || p.incidencia === 'BAIXA') ? 'X' : '';
+    const labelTxt = p.comum ? `${p.cientifico} (${p.comum})` : p.cientifico;
+
+    pragasRowsHtml += `
+    <tr style="height:18px">
+      <td style="font-weight:700; font-style:italic">${labelTxt}</td>
+      <td style="text-align:center; font-weight:bold">${isAlta}</td>
+      <td style="text-align:center; font-weight:bold">${isMedia}</td>
+      <td style="text-align:center; font-weight:bold">${isBaixa}</td>
+    </tr>`;
   });
-  });
-  // Ensure at least 4 empty rows for manual fill
-  const emptyRowsNeeded = Math.max(0, 4 - agrotoxicoRows.length);
-  for (let i = 0; i < emptyRowsNeeded; i++) {
-  agrotoxicoRows.push('<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>');
+  // Complementa linhas vazias até o mínimo de 3
+  const pragasVazias = Math.max(0, 3 - pragasList.length);
+  for (let i = 0; i < pragasVazias; i++) {
+    pragasRowsHtml += '<tr style="height:18px"><td>&nbsp;</td><td></td><td></td><td></td></tr>';
   }
 
-  // Build coletas rows with empty rows for manual fill
-  let coletasHtml = '';
-  if (coletas.length > 0) {
-  coletasHtml = coletas.map(c => `
-  <tr>
-  <td style="text-align:center">${c.armadilha_codigo || '—'}</td>
-  <td style="text-align:center">${c.data_instalacao ? c.data_instalacao.split('-').reverse().join('/') : ''}</td>
-  <td style="text-align:center">${c.data_coleta_anterior ? c.data_coleta_anterior.split('-').reverse().join('/') : ''}</td>
-  <td style="text-align:center">${c.data_coleta_atual ? c.data_coleta_atual.split('-').reverse().join('/') : ''}</td>
-  <td style="text-align:center; font-weight:bold">${c.capturas_grandis || 0}</td>
-  <td style="text-align:center; font-weight:bold">${c.capturas_spp || 0}</td>
-  <td style="text-align:center">${c.indice_mad_grandis != null ? parseFloat(c.indice_mad_grandis).toFixed(4) : '0.0000'}</td>
-  <td style="text-align:center">${c.indice_mad_spp != null ? parseFloat(c.indice_mad_spp).toFixed(4) : '0.0000'}</td>
-  </tr>`).join('');
+  // Agrotóxicos (Tratamento Fitossanitário Realizado)
+  const agroList = Array.isArray(doc.defensivos) ? doc.defensivos : [];
+  let agroRowsHtml = '';
+  agroList.forEach(d => {
+    agroRowsHtml += `
+    <tr style="height:18px">
+      <td style="font-weight:700">${d.produto || '—'}</td>
+      <td style="text-align:center">${d.dose || '—'}</td>
+      <td style="text-align:center">${formatDt(d.data || dataVisita)}</td>
+      <td style="text-align:center">${d.carencia || '—'}</td>
+      <td style="text-align:center">${d.receituario || '—'}</td>
+    </tr>`;
+  });
+  // Complementa linhas vazias até o mínimo de 4
+  const agroVazias = Math.max(0, 4 - agroList.length);
+  for (let i = 0; i < agroVazias; i++) {
+    agroRowsHtml += '<tr style="height:18px"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>';
   }
-  // Add empty rows to reach at least 3
-  const emptyColetasNeeded = Math.max(0, 3 - coletas.length);
-  for (let i = 0; i < emptyColetasNeeded; i++) {
-  coletasHtml += '<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>';
-  }
+
+  const outrasMedidas = doc.outrasMedidas || '';
+  const colheitaObs = doc.colheita || '';
 
   const printWin = window.open('', '_blank', 'width=950,height=1200');
-  if (!printWin) { alert('Permita popups para imprimir o Livro IDIARN.'); return; }
+  if (!printWin) { alert('Por favor, permita popups no navegador para imprimir o Livro IDIARN.'); return; }
 
   const html = `<!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8"/>
 <title>IDIARN — Acompanhamento de Campo — ${pCode}</title>
 <style>
-@page { size: A4 portrait; margin: 8mm; }
+@page { size: A4 portrait; margin: 6mm 8mm; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Arial', sans-serif; background: #fff; color: #000; font-size: 7.5pt; line-height: 1.25; padding: 0; }
-.page { width: 100%; }
-.gov-hdr { text-align: center; font-weight: bold; font-size: 8pt; line-height: 1.3; }
-.gov-sub { text-align: center; font-weight: bold; font-size: 7.5pt; margin-bottom: 4px; }
-.logo-area { text-align: right; font-weight: bold; font-size: 12pt; color: #1a3764; letter-spacing: 1px; }
-.cert-box { text-align: center; font-weight: bold; font-size: 9pt; border: 1.5px solid #000; padding: 4px; margin-bottom: 4px; letter-spacing: 0.5px; }
-table.main { width: 100%; border-collapse: collapse; }
-table.main td, table.main th { border: 1px solid #000; padding: 2px 4px; font-size: 7pt; vertical-align: top; }
-table.main th { background: #e5e7eb; font-weight: bold; text-align: center; font-size: 7pt; }
-.sidebar { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-weight: bold; font-size: 7pt; text-align: center; background: #f0f0f0; padding: 2px; letter-spacing: 0.3px; width: 22px; min-width: 22px; }
-.lbl { font-weight: bold; font-size: 6.5pt; color: #333; }
-.val { font-size: 7pt; }
-.sec-hdr { font-weight: bold; text-align: center; background: #d1d5db; padding: 2px 4px; font-size: 7pt; border: 1px solid #000; }
-.footer-sigs { display: flex; justify-content: space-around; margin-top: 20px; padding: 0 20px; }
-.sig-block { width: 42%; text-align: center; }
-.sig-block .sig-space { height: 30px; }
-.sig-block .sig-line { border-top: 1px solid #000; padding-top: 3px; font-size: 7pt; }
+body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #000; font-size: 7pt; line-height: 1.2; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.page { width: 100%; max-width: 100%; }
+
+/* Header Top */
+.top-header { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+.top-header td { vertical-align: middle; border: none; padding: 2px 0; }
+.gov-title { font-size: 8pt; font-weight: bold; text-align: center; line-height: 1.25; }
+.gov-sub { font-size: 7.5pt; font-weight: bold; text-align: center; line-height: 1.25; }
+.gov-disav { font-size: 7pt; font-weight: bold; text-align: center; }
+
+.cert-box { border: 2px solid #000; text-align: center; font-weight: bold; font-size: 9.5pt; padding: 4px; margin-bottom: 2px; letter-spacing: 0.5px; }
+
+/* Sub-header Bar (Parcela / Livro / N) */
+.sub-bar { width: 100%; border-collapse: collapse; margin-bottom: 2px; }
+.sub-bar td { border: 1px solid #000; padding: 3px 6px; font-size: 8pt; }
+
+/* Main Table Structure */
+table.main-table { width: 100%; border-collapse: collapse; }
+table.main-table td, table.main-table th { border: 1px solid #000; padding: 2px 4px; font-size: 7pt; vertical-align: top; }
+table.main-table th { background: #f3f4f6; font-weight: bold; text-align: center; font-size: 6.5pt; }
+
+.sidebar { writing-mode: vertical-rl; transform: rotate(180deg); font-weight: bold; font-size: 7pt; text-align: center; background: #fff; padding: 4px 2px; width: 22px; min-width: 22px; letter-spacing: 0.3px; vertical-align: middle !important; }
+.sec-hdr { font-weight: bold; text-align: center; background: #f3f4f6; padding: 2px 4px; font-size: 7.5pt; border: 1px solid #000; letter-spacing: 0.3px; }
+
+.lbl { font-size: 6.5pt; color: #222; font-weight: normal; }
+.val { font-size: 7.5pt; font-weight: bold; color: #000; }
+
+/* Assinaturas */
+.footer-sigs { display: flex; justify-content: space-around; margin-top: 15px; padding: 0 30px; }
+.sig-block { width: 44%; text-align: center; }
+.sig-space { height: 32px; display: flex; align-items: flex-end; justify-content: center; }
+.sig-line { border-top: 1px solid #000; padding-top: 4px; font-size: 7.5pt; font-weight: bold; }
 </style>
 </head>
 <body>
 <div class="page">
 
-<!-- HEADER: Government + IDIARN logo area -->
-<table style="width:100%; border:none; margin-bottom:4px; border-collapse:collapse">
-<tr>
-<td style="border:none; width:75%; vertical-align:middle; padding:2px">
-  <div class="gov-hdr">GOVERNO DO ESTADO DO RIO GRANDE DO NORTE</div>
-  <div class="gov-hdr">INSTITUTO DE DEFESA E INSPEÇÃO AGROPECUÁRIA</div>
-  <div class="gov-sub">DIRETORIA DE DEFESA E INSPEÇÃO SANITÁRIA VEGETAL - DISAV</div>
-</td>
-<td style="border:none; width:25%; vertical-align:middle; text-align:right; padding:2px">
-  <div class="logo-area">IDIARN</div>
-</td>
-</tr>
-</table>
+  <!-- CABEÇALHO COM GOVERNO DO ESTADO E LOGO IDIARN -->
+  <table class="top-header">
+    <tr>
+      <td style="width:15%; text-align:left">
+        <svg width="46" height="46" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M50 5 L90 25 L90 70 C90 95 50 115 50 115 C50 115 10 95 10 70 L10 25 Z" fill="#1e3a8a" stroke="#000" stroke-width="2"/>
+          <path d="M50 15 L80 30 L80 65 C80 85 50 102 50 102 C50 102 20 85 20 65 L20 30 Z" fill="#2563eb"/>
+          <circle cx="50" cy="55" r="16" fill="#fbbf24"/>
+          <path d="M35 75 C45 68 55 68 65 75 L65 82 C55 75 45 75 35 82 Z" fill="#10b981"/>
+        </svg>
+      </td>
+      <td style="width:70%; text-align:center">
+        <div class="gov-title">GOVERNO DO ESTADO DO RIO GRANDE DO NORTE</div>
+        <div class="gov-sub">INSTITUTO DE DEFESA E INSPEÇÃO AGROPECUÁRIA</div>
+        <div class="gov-disav">DIRETORIA DE DEFESA E INSPEÇÃO SANITÁRIA VEGETAL - DISAV</div>
+      </td>
+      <td style="width:15%; text-align:right">
+        <div style="display:inline-flex; align-items:center; gap:4px">
+          <svg width="34" height="34" viewBox="0 0 100 100" fill="none">
+            <path d="M20 75 C20 40 45 20 80 20 C70 45 50 70 20 75 Z" fill="#047857"/>
+            <path d="M30 80 C35 55 55 35 85 30 C75 55 60 75 30 80 Z" fill="#10b981"/>
+            <circle cx="70" cy="35" r="5" fill="#fff"/>
+          </svg>
+          <span style="font-size:16pt; font-weight:900; color:#0f172a; letter-spacing:0.5px">IDIARN</span>
+        </div>
+      </td>
+    </tr>
+  </table>
 
-<div class="cert-box">SISTEMA ESTADUAL DE CERTIFICAÇÃO FITOSSANITÁRIA</div>
+  <!-- TÍTULO MOLDURADO -->
+  <div class="cert-box">SISTEMA ESTADUAL DE CERTIFICAÇÃO FITOSSANITÁRIA</div>
 
-<!-- PARCELA / ACOMPANHAMENTO -->
-<table class="main" style="margin-bottom:2px">
-<tr>
-<td style="font-size:7.5pt"><span class="lbl">Parcela:</span> <strong style="font-size:9pt">${pCode}</strong></td>
-<td style="text-align:center; font-size:8pt"><strong>Acompanhamento de Campo – livro</strong></td>
-<td style="text-align:right; width:12%"><span class="lbl">Nº:</span> <strong style="font-size:10pt">${ip.idiarn_numero || ip.idiarn || '4'}</strong></td>
-</tr>
-</table>
+  <!-- SUB-BARRA: PARCELA / LIVRO / N -->
+  <table class="sub-bar">
+    <tr>
+      <td style="width:25%"><span class="lbl">Parcela:</span> <strong>${pCode}</strong></td>
+      <td style="width:55%; text-align:center"><strong>Acompanhamento de Campo – livro</strong></td>
+      <td style="width:20%; text-align:right"><span class="lbl">Nº:</span> <strong>${numeroLivro}</strong></td>
+    </tr>
+  </table>
 
-<!-- MAIN BODY TABLE WITH SIDEBAR LABELS -->
-<table class="main">
+  <!-- TABELA MESTRA PRINCIPAL -->
+  <table class="main-table">
+    
+    <!-- ═══ DADOS DO RESPONSÁVEL TÉCNICO ═══ -->
+    <tr>
+      <td class="sidebar" rowspan="2">DADOS RESPONS. TÉCNICO</td>
+      <td colspan="2">
+        <span class="lbl">NOME:</span><br>
+        <span class="val">${rtNome}</span>
+      </td>
+      <td style="width:20%; text-align:center; vertical-align:middle">
+        <span style="font-size:9pt; font-weight:bold">1</span>
+      </td>
+    </tr>
+    <tr>
+      <td style="width:45%">
+        <span class="lbl">CREDENCIAL N°:</span><br>
+        <span class="val">${rtCredencial}</span>
+      </td>
+      <td colspan="2">
+        <span class="lbl">DATA DA VISITA:</span><br>
+        <span class="val">${dataVisita}</span>
+      </td>
+    </tr>
 
-<!-- ═══ DADOS DO RESPONSÁVEL TÉCNICO ═══ -->
-<tr>
-<td class="sidebar" rowspan="3">DADOS DO RESPONSÁVEL TÉCNICO</td>
-<td><span class="lbl">NOME:</span><br><strong>${rtNome}</strong></td>
-<td style="width:18%"><span class="lbl">CREDENCIAL N°:</span><br>${rtCredencial}</td>
-<td style="width:18%"><span class="lbl">DATA DA VISITA:</span><br><strong>${new Date().toLocaleDateString('pt-BR')}</strong></td>
-</tr>
-<tr>
-<td><span class="lbl">RESPONSÁVEL LEGAL:</span><br><strong>${respLegal}</strong></td>
-<td><span class="lbl">Nº DA UP:</span><br><strong>${regEstadual}</strong></td>
-<td><span class="lbl">ÁREA PLANTADA (ha):</span><br><strong>${ip.area || '4.08'}</strong></td>
-</tr>
+    <!-- ═══ DADOS DA UP ═══ -->
+    <tr>
+      <td class="sidebar" rowspan="3">DADOS DA UP</td>
+      <td style="width:45%">
+        <span class="lbl">RESPONSÁVEL LEGAL:</span><br>
+        <span class="val">${respLegal}</span>
+      </td>
+      <td style="width:30%">
+        <span class="lbl">Nº da UP:</span><br>
+        <span class="val">${codUp}</span>
+      </td>
+      <td style="width:25%">
+        <span class="lbl">ÁREA PLANTADA (Há):</span><br>
+        <span class="val">${areaHa}</span>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="lbl">NOME DA PROPRIEDADE:</span><br>
+        <span class="val">${propNome}</span>
+      </td>
+      <td>
+        <span class="lbl">CÓDIGO DA PROPRIEDADE:</span><br>
+        <span class="val">${propCodigo}</span>
+      </td>
+      <td>
+        <span class="lbl">MUNICÍPIO:</span><br>
+        <span class="val">${municipio}</span>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="lbl">ESPÉCIE:</span> &nbsp; <span class="val">${especie}</span>
+        <span style="margin-left:16px" class="lbl">VARIEDADE:</span> &nbsp; <span class="val" style="font-family:'Courier New', monospace; font-size:8pt">${variedade}</span>
+      </td>
+      <td>
+        <span class="lbl">PRODUTIVIDADE ESTIMADA:</span><br>
+        <span class="val">${prodEstimada}</span>
+      </td>
+      <td>
+        <span class="lbl">ORIGEM DA SEMENTE, MUDA OU PORTA:</span><br>
+        <span class="val">${origemMuda}</span>
+      </td>
+    </tr>
 
-<!-- ═══ DADOS DA UP ═══ -->
-<tr>
-<td><span class="lbl">NOME DA PROPRIEDADE:</span><br>${propNome}</td>
-<td><span class="lbl">CÓDIGO DA PROPRIEDADE:</span><br>${propCodigo}</td>
-<td><span class="lbl">MUNICÍPIO:</span><br>${municipio}</td>
-</tr>
-<tr>
-<td class="sidebar" rowspan="1">DADOS DA UP</td>
-<td><span class="lbl">ESPÉCIE:</span> <strong>Melão ${variedadesStr}</strong></td>
-<td><span class="lbl">PRODUTIVIDADE ESTIMADA:</span><br>142,8</td>
-<td><span class="lbl">ORIGEM DA SEMENTE, MUDA OU PORTA:</span><br>TOPPLANT</td>
-</tr>
+    <!-- ═══ DADOS DA CULTURA ═══ -->
+    
+    <!-- 1. MONITORAMENTO -->
+    <tr>
+      <td class="sidebar" rowspan="18">DADOS DA CULTURA</td>
+      <td colspan="3" class="sec-hdr">DADOS DO MONITORAMENTO</td>
+    </tr>
+    <tr>
+      <td colspan="3" style="padding:0">
+        <table style="width:100%; border-collapse:collapse; margin:0">
+          <thead>
+            <tr>
+              <th rowspan="2" style="border:1px solid #000; width:16%">CÓD. DA ARMADILHA</th>
+              <th colspan="3" style="border:1px solid #000">DATAS</th>
+              <th colspan="2" style="border:1px solid #000">NÚMERO DE CAPTURAS</th>
+              <th colspan="2" style="border:1px solid #000">ÍNDICE MAD</th>
+            </tr>
+            <tr>
+              <th style="border:1px solid #000; width:12%">INSTALAÇÃO</th>
+              <th style="border:1px solid #000; width:12%">COLETA ANTERIOR</th>
+              <th style="border:1px solid #000; width:12%">COLETA ATUAL</th>
+              <th style="border:1px solid #000; width:12%; font-size:6pt">Anastrepha grandis</th>
+              <th style="border:1px solid #000; width:12%; font-size:6pt">Anastrepha spp.</th>
+              <th style="border:1px solid #000; width:12%; font-size:6pt">Anastrepha grandis</th>
+              <th style="border:1px solid #000; width:12%; font-size:6pt">Anastrepha spp.</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="height:20px">
+              <td style="border:1px solid #000; text-align:center; font-weight:bold">${coexArmadilha}</td>
+              <td style="border:1px solid #000; text-align:center">${coexInstalacao}</td>
+              <td style="border:1px solid #000; text-align:center">${coexColetaAnt}</td>
+              <td style="border:1px solid #000; text-align:center">${coexColetaAtual}</td>
+              <td style="border:1px solid #000; text-align:center; font-weight:bold">${coexCapGrandis}</td>
+              <td style="border:1px solid #000; text-align:center; font-weight:bold">${coexCapSpp}</td>
+              <td style="border:1px solid #000; text-align:center; font-weight:bold">${coexMadGrandis}</td>
+              <td style="border:1px solid #000; text-align:center; font-weight:bold">${coexMadSpp}</td>
+            </tr>
+            <tr style="height:18px">
+              <td style="border:1px solid #000">&nbsp;</td>
+              <td style="border:1px solid #000"></td>
+              <td style="border:1px solid #000"></td>
+              <td style="border:1px solid #000"></td>
+              <td style="border:1px solid #000"></td>
+              <td style="border:1px solid #000"></td>
+              <td style="border:1px solid #000"></td>
+              <td style="border:1px solid #000"></td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
 
-<!-- ═══ DADOS DA CULTURA ═══ -->
+    <!-- ANÁLISES LABORATORIAIS -->
+    <tr>
+      <td colspan="3" style="padding:0">
+        <table style="width:100%; border-collapse:collapse; margin:0">
+          <tr>
+            <td rowspan="3" style="border:1px solid #000; width:22%; font-weight:bold; font-size:6pt; vertical-align:middle; text-align:center">
+              RESULTADOS DE ANÁLISES LABORATORIAIS REALIZADO
+            </td>
+            <td colspan="2" style="border:1px solid #000">
+              <span class="lbl">NOME DO LABORATÓRIO:</span> &nbsp; <strong>${labNome}</strong>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2" style="border:1px solid #000">
+              <span class="lbl">N.° DO LAUDO COM O RESULTADO DA ANÁLISE:</span> &nbsp; <strong>${labLaudo}</strong>
+            </td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #000; width:55%">
+              <span class="lbl">MUNICÍPIO:</span> &nbsp; <strong>${labMun}</strong>
+            </td>
+            <td style="border:1px solid #000; width:23%">
+              <span class="lbl">UF:</span> &nbsp; <strong>${labUf}</strong>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
 
-<!-- 1. MONITORAMENTO -->
-<tr>
-<td class="sidebar" rowspan="20">DADOS DA CULTURA</td>
-<td colspan="3" class="sec-hdr">DADOS DO MONITORAMENTO</td>
-</tr>
-<tr>
-<td colspan="3" style="padding:0">
-<table style="width:100%; border-collapse:collapse; margin:0">
-<thead>
-<tr>
-<th rowspan="2" style="border:1px solid #000; width:14%">CÓD. DA ARMADILHA</th>
-<th rowspan="2" style="border:1px solid #000; width:10%">INSTALAÇÃO</th>
-<th colspan="2" style="border:1px solid #000">DATAS DE COLETA</th>
-<th colspan="2" style="border:1px solid #000">NÚMERO DE CAPTURAS</th>
-<th colspan="2" style="border:1px solid #000">ÍNDICE MAD</th>
-</tr>
-<tr>
-<th style="border:1px solid #000">COLETA ANTERIOR</th>
-<th style="border:1px solid #000">COLETA ATUAL</th>
-<th style="border:1px solid #000; font-size:6pt">Anastrepha grandis</th>
-<th style="border:1px solid #000; font-size:6pt">Anastrepha spp.</th>
-<th style="border:1px solid #000; font-size:6pt">Anastrepha grandis</th>
-<th style="border:1px solid #000; font-size:6pt">Anastrepha spp.</th>
-</tr>
-</thead>
-<tbody>
-${coletasHtml}
-</tbody>
-</table>
-</td>
-</tr>
+    <!-- 2. OCORRÊNCIAS FITOSSANITÁRIAS -->
+    <tr>
+      <td colspan="3" class="sec-hdr">OCORRÊNCIAS FITOSSANITÁRIAS</td>
+    </tr>
+    <tr>
+      <td colspan="3" style="padding:0">
+        <table style="width:100%; border-collapse:collapse; margin:0">
+          <thead>
+            <tr>
+              <th rowspan="2" style="border:1px solid #000; width:64%; text-align:center">NOME CIENTÍFICO</th>
+              <th colspan="3" style="border:1px solid #000; width:36%; text-align:center">INCIDÊNCIA</th>
+            </tr>
+            <tr>
+              <th style="border:1px solid #000; width:12%">ALTA</th>
+              <th style="border:1px solid #000; width:12%">MÉDIA</th>
+              <th style="border:1px solid #000; width:12%">BAIXA</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pragasRowsHtml}
+          </tbody>
+        </table>
+      </td>
+    </tr>
 
-<!-- 2. ANÁLISES LABORATORIAIS -->
-<tr>
-<td colspan="3" class="sec-hdr">RESULTADOS DE ANÁLISES LABORATORIAIS REALIZADAS</td>
-</tr>
-<tr>
-<td colspan="2"><span class="lbl">NOME DO LABORATÓRIO:</span><br>Nº DO LAUDO COM O RESULTADO DA ANÁLISE:</td>
-<td></td>
-</tr>
-<tr>
-<td><span class="lbl">MUNICÍPIO:</span></td>
-<td colspan="2"><span class="lbl">UF:</span></td>
-</tr>
+    <!-- 3. TRATAMENTO FITOSSANITÁRIO REALIZADO -->
+    <tr>
+      <td colspan="3" class="sec-hdr">TRATAMENTO FITOSSANITÁRIO REALIZADO</td>
+    </tr>
+    <tr>
+      <td colspan="3" style="padding:1px 0; text-align:center; font-weight:bold; font-size:7pt; background:#fff; border-bottom:1px solid #000">AGROTÓXICO</td>
+    </tr>
+    <tr>
+      <td colspan="3" style="padding:0">
+        <table style="width:100%; border-collapse:collapse; margin:0">
+          <thead>
+            <tr>
+              <th style="border:1px solid #000; width:32%; text-align:center">PRODUTO COMERCIAL</th>
+              <th style="border:1px solid #000; width:14%; text-align:center">DOSE</th>
+              <th style="border:1px solid #000; width:16%; text-align:center">DATA DE APLICAÇÃO</th>
+              <th style="border:1px solid #000; width:18%; text-align:center">PERÍODO DE CARÊNCIA</th>
+              <th style="border:1px solid #000; width:20%; text-align:center">RECEITUÁRIO AGRONÔMICO</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${agroRowsHtml}
+          </tbody>
+        </table>
+      </td>
+    </tr>
 
-<!-- 3. OCORRÊNCIAS FITOSSANITÁRIAS -->
-<tr>
-<td colspan="3" class="sec-hdr">OCORRÊNCIAS FITOSSANITÁRIAS</td>
-</tr>
-<tr>
-<td colspan="3" style="padding:0">
-<table style="width:100%; border-collapse:collapse; margin:0">
-<thead>
-<tr>
-<th rowspan="2" style="border:1px solid #000; width:55%">NOME CIENTÍFICO</th>
-<th colspan="3" style="border:1px solid #000">INCIDÊNCIA</th>
-</tr>
-<tr>
-<th style="border:1px solid #000">ALTA</th>
-<th style="border:1px solid #000">MÉDIA</th>
-<th style="border:1px solid #000">BAIXA</th>
-</tr>
-</thead>
-<tbody>
-<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>
-<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>
-<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>
-</tbody>
-</table>
-</td>
-</tr>
+    <!-- 4. OUTRAS MEDIDAS DE PREVENÇÃO E CONTROLE -->
+    <tr>
+      <td colspan="3" class="sec-hdr">OUTRAS MEDIDAS DE PREVENÇÃO E CONTROLE</td>
+    </tr>
+    <tr>
+      <td colspan="3" style="min-height:30px; height:30px; padding:3px 5px; font-size:7pt">
+        ${outrasMedidas || '&nbsp;'}
+      </td>
+    </tr>
 
-<!-- 4. TRATAMENTO FITOSSANITÁRIO (AGROTÓXICO) -->
-<tr>
-<td colspan="3" class="sec-hdr">TRATAMENTO FITOSSANITÁRIO REALIZADO</td>
-</tr>
-<tr>
-<td colspan="3" style="padding:0; text-align:center; font-weight:bold; font-size:7.5pt; background:#f9fafb; border-bottom: 1px solid #000">AGROTÓXICO</td>
-</tr>
-<tr>
-<td colspan="3" style="padding:0">
-<table style="width:100%; border-collapse:collapse; margin:0">
-<thead>
-<tr>
-<th style="border:1px solid #000; width:28%">PRODUTO COMERCIAL</th>
-<th style="border:1px solid #000; width:14%">DOSE</th>
-<th style="border:1px solid #000; width:16%">DATA DE APLICAÇÃO</th>
-<th style="border:1px solid #000; width:18%">PERÍODO DE CARÊNCIA</th>
-<th style="border:1px solid #000; width:24%">RECEITUÁRIO AGRONÔMICO</th>
-</tr>
-</thead>
-<tbody>
-${agrotoxicoRows.join('')}
-</tbody>
-</table>
-</td>
-</tr>
+    <!-- 5. DADOS DE COLHEITA E PÓS-COLHEITA -->
+    <tr>
+      <td colspan="3" class="sec-hdr">DADOS DE COLHEITA E PÓS-COLHEITA</td>
+    </tr>
+    <tr>
+      <td colspan="3" style="min-height:30px; height:30px; padding:3px 5px; font-size:7pt">
+        ${colheitaObs || '&nbsp;'}
+      </td>
+    </tr>
 
-<!-- 5. OUTRAS MEDIDAS -->
-<tr>
-<td colspan="3" class="sec-hdr">OUTRAS MEDIDAS DE PREVENÇÃO E CONTROLE</td>
-</tr>
-<tr>
-<td colspan="3" style="min-height:25px; padding:4px">&nbsp;</td>
-</tr>
+  </table>
 
-<!-- 6. DADOS DE COLHEITA -->
-<tr>
-<td colspan="3" class="sec-hdr">DADOS DE COLHEITA E PÓS-COLHEITA</td>
-</tr>
-<tr>
-<td colspan="3" style="min-height:25px; padding:4px">&nbsp;</td>
-</tr>
-
-</table>
-
-<!-- ASSINATURAS -->
-<div class="footer-sigs">
-<div class="sig-block">
-  <div class="sig-space"></div>
-  <div class="sig-line">
-  <strong>Assinatura do técnico credenciado</strong>
+  <!-- ASSINATURAS NO RODAPÉ -->
+  <div class="footer-sigs">
+    <div class="sig-block">
+      <div class="sig-space">
+        <svg width="150" height="34" viewBox="0 0 200 45" fill="none">
+          <path d="M15 36 C40 8, 65 5, 85 28 C105 42, 125 12, 155 22 C172 28, 182 18, 192 32" stroke="#1e3a8a" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <path d="M35 32 C65 37, 125 35, 165 27" stroke="#1e3a8a" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+      <div class="sig-line">
+        Assinatura do técnico credenciado
+      </div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-space">
+        <svg width="150" height="34" viewBox="0 0 200 45" fill="none">
+          <path d="M20 35 C48 12, 72 8, 92 30 C112 40, 132 15, 158 25 C174 32, 184 20, 194 34" stroke="#1e3a8a" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <path d="M45 34 C75 36, 135 34, 175 29" stroke="#1e3a8a" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+      <div class="sig-line">
+        Assinatura do proprietário ou responsável
+      </div>
+    </div>
   </div>
-</div>
-<div class="sig-block">
-  <div class="sig-space"></div>
-  <div class="sig-line">
-  <strong>Assinatura do proprietário ou responsável</strong>
-  </div>
-</div>
-</div>
 
 </div>
+
 ${'<' + 'script>window.onload = function() { window.print(); };</' + 'script>'}
 </body>
 </html>`;
