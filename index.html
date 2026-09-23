@@ -21547,9 +21547,35 @@ async function printOfficialIdiarnBook(dataOrParcela) {
     return d;
   };
 
+  const formatVisitaDate = (d) => {
+    if (!d || d === '—') return '—';
+    const clean = String(d).trim();
+    const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+    if (clean.includes('-')) {
+      const p = clean.split('-');
+      if (p[0].length === 4) { // YYYY-MM-DD
+        const mIdx = parseInt(p[1], 10) - 1;
+        const yr = p[0].slice(-2);
+        return `${p[2].padStart(2, '0')}-${meses[mIdx] || p[1]}-${yr}`;
+      } else if (p.length === 3 && p[1].length === 3) {
+        return clean;
+      }
+    } else if (clean.includes('/')) {
+      const p = clean.split('/');
+      if (p.length === 3) {
+        const mIdx = parseInt(p[1], 10) - 1;
+        const yr = p[2].slice(-2);
+        return `${p[0].padStart(2, '0')}-${meses[mIdx] || p[1]}-${yr}`;
+      }
+    }
+    return clean;
+  };
+
   const pCode = doc.pCode || doc.parcela || '262 M';
-  const numeroLivro = doc.numeroLivro || doc.numero_idiarn || '4';
-  const dataVisita = formatDt(doc.dataVisita || doc.data_aplicacao || today());
+  const rawNumLivro = doc.numeroLivro || doc.numero_idiarn || '49';
+  const numeroLivro = String(rawNumLivro).padStart(3, '0');
+  const dataVisita = doc.dataVisita || doc.data_aplicacao || today();
+  const dataVisitaFmt = formatVisitaDate(dataVisita);
   const rtNome = doc.rtNome || 'IVANOSCA MARTINS DE OLIVEIRA CUNHA';
   const rtCredencial = doc.rtCredencial || '2100160575';
   const respLegal = doc.respLegal || 'AGRÍCOLA BOM JESUS LTDA';
@@ -21561,18 +21587,18 @@ async function printOfficialIdiarnBook(dataOrParcela) {
   const especie = doc.especie || 'Melão';
   const variedade = doc.variedade || 'JADEAL';
   const prodEstimada = doc.prodEstimada || '142,8';
-  const origemMuda = doc.origemMuda || 'TOPPLANT';
+  const origemMuda = doc.origemMuda || 'TOP PLANT';
 
   // COEX (Monitoramento Armadilhas)
   const coexObj = doc.coex || {};
-  const coexArmadilha = coexObj.armadilha || '—';
-  const coexInstalacao = formatDt(coexObj.instalacao);
-  const coexColetaAnt = formatDt(coexObj.coletaAnt);
-  const coexColetaAtual = formatDt(coexObj.coletaAtual);
-  const coexCapGrandis = coexObj.capGrandis != null ? coexObj.capGrandis : 0;
-  const coexCapSpp = coexObj.capSpp != null ? coexObj.capSpp : 0;
-  const coexMadGrandis = coexObj.madGrandis != null ? coexObj.madGrandis : '0';
-  const coexMadSpp = coexObj.madSpp != null ? coexObj.madSpp : '0';
+  const coexArmadilha = coexObj.armadilha && coexObj.armadilha !== '—' ? coexObj.armadilha : '001';
+  const coexInstalacao = (coexObj.instalacao && formatDt(coexObj.instalacao) !== '—') ? formatDt(coexObj.instalacao) : '-';
+  const coexColetaAnt = (coexObj.coletaAnt && formatDt(coexObj.coletaAnt) !== '—') ? formatDt(coexObj.coletaAnt) : '-';
+  const coexColetaAtual = (coexObj.coletaAtual && formatDt(coexObj.coletaAtual) !== '—') ? formatDt(coexObj.coletaAtual) : '-';
+  const coexCapGrandis = coexObj.capGrandis != null ? coexObj.capGrandis : '-';
+  const coexCapSpp = coexObj.capSpp != null ? coexObj.capSpp : '-';
+  const coexMadGrandis = (coexObj.madGrandis != null && coexObj.madGrandis !== '0') ? coexObj.madGrandis : '-';
+  const coexMadSpp = (coexObj.madSpp != null && coexObj.madSpp !== '0') ? coexObj.madSpp : '-';
 
   const labObj = doc.lab || {};
   const labNome = labObj.nome || '';
@@ -21580,46 +21606,44 @@ async function printOfficialIdiarnBook(dataOrParcela) {
   const labMun = labObj.mun || '';
   const labUf = labObj.uf || '';
 
-  // Ocorrências Fitossanitárias
+  // Ocorrências Fitossanitárias (4 linhas oficiais)
   const pragasList = Array.isArray(doc.pragas) ? doc.pragas : [];
   let pragasRowsHtml = '';
   pragasList.forEach(p => {
     const isAlta = p.incidencia === 'ALTA' ? 'X' : '';
     const isMedia = p.incidencia === 'MEDIA' ? 'X' : '';
     const isBaixa = (!p.incidencia || p.incidencia === 'BAIXA') ? 'X' : '';
-    const labelTxt = p.comum ? `${p.cientifico} (${p.comum})` : p.cientifico;
+    const labelTxt = p.cientifico || p.comum || '—';
 
     pragasRowsHtml += `
-    <tr style="height:18px">
-      <td style="font-weight:700; font-style:italic">${labelTxt}</td>
+    <tr style="height:17px">
+      <td style="font-weight:700; font-style:italic; padding-left:6px">${labelTxt}</td>
       <td style="text-align:center; font-weight:bold">${isAlta}</td>
       <td style="text-align:center; font-weight:bold">${isMedia}</td>
       <td style="text-align:center; font-weight:bold">${isBaixa}</td>
     </tr>`;
   });
-  // Complementa linhas vazias até o mínimo de 3
-  const pragasVazias = Math.max(0, 3 - pragasList.length);
+  const pragasVazias = Math.max(0, 4 - pragasList.length);
   for (let i = 0; i < pragasVazias; i++) {
-    pragasRowsHtml += '<tr style="height:18px"><td>&nbsp;</td><td></td><td></td><td></td></tr>';
+    pragasRowsHtml += '<tr style="height:17px"><td>&nbsp;</td><td></td><td></td><td></td></tr>';
   }
 
-  // Agrotóxicos (Tratamento Fitossanitário Realizado)
+  // Agrotóxicos (Tratamento Fitossanitário Realizado - 5 linhas)
   const agroList = Array.isArray(doc.defensivos) ? doc.defensivos : [];
   let agroRowsHtml = '';
   agroList.forEach(d => {
     agroRowsHtml += `
-    <tr style="height:18px">
-      <td style="font-weight:700">${d.produto || '—'}</td>
+    <tr style="height:17px">
+      <td style="font-weight:700; padding-left:6px">${d.produto || '—'}</td>
       <td style="text-align:center">${d.dose || '—'}</td>
       <td style="text-align:center">${formatDt(d.data || dataVisita)}</td>
       <td style="text-align:center">${d.carencia || '—'}</td>
       <td style="text-align:center">${d.receituario || '—'}</td>
     </tr>`;
   });
-  // Complementa linhas vazias até o mínimo de 4
-  const agroVazias = Math.max(0, 4 - agroList.length);
+  const agroVazias = Math.max(0, 5 - agroList.length);
   for (let i = 0; i < agroVazias; i++) {
-    agroRowsHtml += '<tr style="height:18px"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>';
+    agroRowsHtml += '<tr style="height:17px"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>';
   }
 
   const outrasMedidas = doc.outrasMedidas || '';
@@ -21634,130 +21658,215 @@ async function printOfficialIdiarnBook(dataOrParcela) {
 <meta charset="utf-8"/>
 <title>IDIARN — Acompanhamento de Campo — ${pCode}</title>
 <style>
-@page { size: A4 portrait; margin: 6mm 8mm; }
+@page { size: A4 portrait; margin: 8mm 8mm 6mm 8mm; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #000; font-size: 7pt; line-height: 1.2; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #000; font-size: 7.5pt; line-height: 1.15; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .page { width: 100%; max-width: 100%; }
 
 /* Header Top */
-.top-header { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-.top-header td { vertical-align: middle; border: none; padding: 2px 0; }
-.gov-title { font-size: 8pt; font-weight: bold; text-align: center; line-height: 1.25; }
-.gov-sub { font-size: 7.5pt; font-weight: bold; text-align: center; line-height: 1.25; }
-.gov-disav { font-size: 7pt; font-weight: bold; text-align: center; }
+.top-header { width: 100%; border-collapse: collapse; margin-bottom: 2px; }
+.top-header td { vertical-align: middle; border: none; padding: 0; }
+.gov-title { font-size: 8.5pt; font-weight: bold; text-align: center; line-height: 1.3; font-family: "Times New Roman", Times, serif; }
+.gov-sub { font-size: 8pt; font-weight: bold; text-align: center; line-height: 1.3; font-family: "Times New Roman", Times, serif; }
+.gov-disav { font-size: 7.5pt; font-weight: bold; font-style: italic; text-align: center; line-height: 1.3; font-family: "Times New Roman", Times, serif; }
 
-.cert-box { border: 2px solid #000; text-align: center; font-weight: bold; font-size: 9.5pt; padding: 4px; margin-bottom: 2px; letter-spacing: 0.5px; }
+.header-divider { width: 100%; height: 3px; display: flex; margin: 4px 0 6px 0; }
+.header-divider-green { width: 12%; height: 100%; background: #15803d; }
+.header-divider-red { width: 88%; height: 100%; background: #881337; }
 
-/* Sub-header Bar (Parcela / Livro / N) */
-.sub-bar { width: 100%; border-collapse: collapse; margin-bottom: 2px; }
-.sub-bar td { border: 1px solid #000; padding: 3px 6px; font-size: 8pt; }
+/* Sub-titles */
+.doc-title { text-align: center; font-weight: bold; font-size: 9.5pt; text-decoration: underline; margin-bottom: 8px; letter-spacing: 0.3px; }
+.sub-bar { width: 100%; display: flex; justify-content: space-between; align-items: baseline; font-size: 8pt; margin-bottom: 4px; padding: 0 4px; }
+.sub-bar-center { font-weight: bold; flex: 1; text-align: center; margin-left: 80px; }
+.sub-bar-quadra { font-weight: bold; margin-right: 40px; }
+.sub-bar-num { font-weight: bold; white-space: nowrap; }
 
-/* Main Table Structure */
-table.main-table { width: 100%; border-collapse: collapse; }
-table.main-table td, table.main-table th { border: 1px solid #000; padding: 2px 4px; font-size: 7pt; vertical-align: top; }
-table.main-table th { background: #f3f4f6; font-weight: bold; text-align: center; font-size: 6.5pt; }
+/* Grid Table */
+table.main-idiarn { width: 100%; border-collapse: collapse; border: 1.5px solid #000; }
+table.main-idiarn td, table.main-idiarn th { border: 1px solid #000; padding: 2px 4px; vertical-align: top; font-size: 7pt; color: #000; }
 
-.sidebar { writing-mode: vertical-rl; transform: rotate(180deg); font-weight: bold; font-size: 7pt; text-align: center; background: #fff; padding: 4px 2px; width: 22px; min-width: 22px; letter-spacing: 0.3px; vertical-align: middle !important; }
-.sec-hdr { font-weight: bold; text-align: center; background: #f3f4f6; padding: 2px 4px; font-size: 7.5pt; border: 1px solid #000; letter-spacing: 0.3px; }
+.v-col-outer {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  text-align: center;
+  font-weight: bold;
+  font-size: 7pt;
+  letter-spacing: 0.3px;
+  width: 22px;
+  min-width: 22px;
+  max-width: 22px;
+  vertical-align: middle !important;
+  line-height: 1.1;
+  padding: 4px 0;
+}
 
-.lbl { font-size: 6.5pt; color: #222; font-weight: normal; }
+.v-col-sub {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  text-align: center;
+  font-weight: bold;
+  font-size: 6.5pt;
+  letter-spacing: 0.2px;
+  width: 20px;
+  min-width: 20px;
+  max-width: 20px;
+  vertical-align: middle !important;
+  line-height: 1.1;
+  padding: 4px 0;
+}
+
+.lbl { font-size: 6.5pt; color: #111; font-weight: normal; }
 .val { font-size: 7.5pt; font-weight: bold; color: #000; }
 
-/* Assinaturas */
-.footer-sigs { display: flex; justify-content: space-around; margin-top: 18px; padding: 0 20px; }
-.sig-block { width: 44%; text-align: center; }
-.sig-space { height: 48px; }
-.sig-line { border-top: 1px solid #000; padding-top: 5px; font-size: 7.5pt; font-weight: bold; line-height: 1.35; }
+/* Inner tables */
+.inner-tbl { width: 100%; border-collapse: collapse; }
+.inner-tbl td, .inner-tbl th { border: 1px solid #000; padding: 2px 3px; font-size: 6.5pt; }
+.inner-tbl th { font-weight: bold; text-align: center; }
+
+.inner-tbl tr:first-child th, .inner-tbl tr:first-child td { border-top: none; }
+.inner-tbl tr:last-child td { border-bottom: none; }
+.inner-tbl tr th:first-child, .inner-tbl tr td:first-child { border-left: none; }
+.inner-tbl tr th:last-child, .inner-tbl tr td:last-child { border-right: none; }
+
+.inner-lines { width: 100%; border-collapse: collapse; }
+.inner-lines td { border: none; font-size: 7pt; }
+
+/* Signatures */
+.footer-sigs { display: flex; justify-content: space-between; margin-top: 30px; padding: 0 40px; }
+.sig-block { width: 42%; text-align: center; }
+.sig-line { border-top: 1px solid #000; margin-bottom: 4px; }
+.sig-text { font-size: 7.5pt; font-family: Arial, sans-serif; }
 </style>
 </head>
 <body>
 <div class="page">
 
-  <!-- CABEÇALHO COM GOVERNO DO ESTADO E LOGO IDIARN -->
+  <!-- CABEÇALHO OFICIAL COM BRASÃO DO RN E LOGO IDIARN -->
   <table class="top-header">
     <tr>
-      <td style="width:15%; text-align:left">
-        <svg width="46" height="46" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M50 5 L90 25 L90 70 C90 95 50 115 50 115 C50 115 10 95 10 70 L10 25 Z" fill="#1e3a8a" stroke="#000" stroke-width="2"/>
-          <path d="M50 15 L80 30 L80 65 C80 85 50 102 50 102 C50 102 20 85 20 65 L20 30 Z" fill="#2563eb"/>
-          <circle cx="50" cy="55" r="16" fill="#fbbf24"/>
-          <path d="M35 75 C45 68 55 68 65 75 L65 82 C55 75 45 75 35 82 Z" fill="#10b981"/>
+      <!-- Brasão do Rio Grande do Norte -->
+      <td style="width:15%; text-align:left; vertical-align:middle">
+        <svg width="48" height="56" viewBox="0 0 100 115" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Ramos laterais -->
+          <path d="M12 95 C10 65, 18 35, 32 18 C28 35, 24 60, 26 95 Z" fill="#15803d"/>
+          <circle cx="18" cy="40" r="4.5" fill="#f8fafc" stroke="#15803d" stroke-width="1.5"/>
+          <circle cx="14" cy="60" r="4.5" fill="#f8fafc" stroke="#15803d" stroke-width="1.5"/>
+          <circle cx="18" cy="80" r="4.5" fill="#f8fafc" stroke="#15803d" stroke-width="1.5"/>
+          
+          <path d="M88 95 C90 65, 82 35, 68 18 C72 35, 76 60, 74 95 Z" fill="#15803d"/>
+          <rect x="76" y="32" width="6" height="3" rx="1.5" fill="#ca8a04"/>
+          <rect x="80" y="52" width="6" height="3" rx="1.5" fill="#ca8a04"/>
+          <rect x="78" y="72" width="6" height="3" rx="1.5" fill="#ca8a04"/>
+          
+          <!-- Estrela Amarela no Topo -->
+          <polygon points="50,2 54,12 65,12 56,19 60,29 50,23 40,29 44,19 35,12 46,12" fill="#eab308" stroke="#ca8a04" stroke-width="1"/>
+          
+          <!-- Escudo do RN -->
+          <path d="M26 24 L74 24 L74 68 C74 90 50 106 50 106 C50 106 26 90 26 68 Z" fill="#fff" stroke="#ca8a04" stroke-width="2.5"/>
+          <path d="M28 26 L72 26 L72 67 C72 87 50 102 50 102 C50 102 28 87 28 67 Z" fill="#15803d" stroke="#15803d" stroke-width="1"/>
+          
+          <!-- Interior do Escudo: Céu, Sol, Terra, Coqueiro, Mar e Jangada -->
+          <path d="M30 28 L70 28 L70 54 L30 54 Z" fill="#0284c7"/>
+          <polygon points="50,32 52,37 57,37 53,40 55,45 50,42 45,45 47,40 43,37 48,37" fill="#fef08a"/>
+          
+          <path d="M30 54 Q50 50 70 54 L70 68 L30 68 Z" fill="#16a34a"/>
+          <path d="M42 66 Q46 54 44 44 L46 44 Q48 54 45 66 Z" fill="#78350f"/>
+          <path d="M45 44 C40 38, 32 40, 31 43 C36 43, 41 45, 45 45 Z" fill="#15803d"/>
+          <path d="M45 44 C45 36, 42 33, 41 33 C42 38, 44 42, 45 45 Z" fill="#15803d"/>
+          <path d="M45 44 C50 38, 58 40, 59 43 C54 43, 49 45, 45 45 Z" fill="#15803d"/>
+          
+          <path d="M30 68 L70 68 L70 78 C70 87 50 100 50 100 C50 100 30 87 30 78 Z" fill="#0369a1"/>
+          <path d="M32 76 Q40 73 50 76 Q60 79 68 76" stroke="#bae6fd" stroke-width="1.5" fill="none"/>
+          <path d="M36 84 Q44 82 50 84 Q56 86 64 84" stroke="#bae6fd" stroke-width="1.5" fill="none"/>
+          
+          <polygon points="58,74 58,63 52,72" fill="#ffffff" stroke="#000" stroke-width="0.5"/>
+          <path d="M49 74 L62 74 L60 76 L51 76 Z" fill="#78350f"/>
         </svg>
       </td>
-      <td style="width:70%; text-align:center">
+
+      <!-- Textos Centrais Governamentais -->
+      <td style="width:70%; text-align:center; vertical-align:middle">
         <div class="gov-title">GOVERNO DO ESTADO DO RIO GRANDE DO NORTE</div>
         <div class="gov-sub">INSTITUTO DE DEFESA E INSPEÇÃO AGROPECUÁRIA</div>
         <div class="gov-disav">DIRETORIA DE DEFESA E INSPEÇÃO SANITÁRIA VEGETAL - DISAV</div>
       </td>
-      <td style="width:15%; text-align:right">
-        <div style="display:inline-flex; align-items:center; gap:4px">
-          <svg width="34" height="34" viewBox="0 0 100 100" fill="none">
-            <path d="M20 75 C20 40 45 20 80 20 C70 45 50 70 20 75 Z" fill="#047857"/>
-            <path d="M30 80 C35 55 55 35 85 30 C75 55 60 75 30 80 Z" fill="#10b981"/>
-            <circle cx="70" cy="35" r="5" fill="#fff"/>
+
+      <!-- Logo IDIARN Oficial -->
+      <td style="width:15%; text-align:right; vertical-align:middle">
+        <div style="display:flex; flex-direction:column; align-items:flex-end; justify-content:center">
+          <svg width="44" height="26" viewBox="0 0 60 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M28 35 C28 20, 38 10, 52 8 C50 20, 42 32, 28 35 Z" fill="#15803d"/>
+            <path d="M28 35 C22 25, 20 18, 12 16 C16 26, 22 32, 28 35 Z" fill="#22c55e"/>
+            <path d="M33 10 C33 6, 36 2, 38 0 C40 2, 43 6, 43 10 C43 13, 38 15, 33 10 Z" fill="#991b1b"/>
           </svg>
-          <span style="font-size:16pt; font-weight:900; color:#0f172a; letter-spacing:0.5px">IDIARN</span>
+          <span style="font-family:Arial, Helvetica, sans-serif; font-weight:900; font-size:20pt; color:#881337; line-height:0.9; letter-spacing:-0.5px">IDIARN</span>
         </div>
       </td>
     </tr>
   </table>
 
-  <!-- TÍTULO MOLDURADO -->
-  <div class="cert-box">SISTEMA ESTADUAL DE CERTIFICAÇÃO FITOSSANITÁRIA</div>
+  <!-- BARRA DIVISÓRIA BICOLOR (VERDE / BORDÔ) -->
+  <div class="header-divider">
+    <div class="header-divider-green"></div>
+    <div class="header-divider-red"></div>
+  </div>
 
-  <!-- SUB-BARRA: PARCELA / LIVRO / N -->
-  <table class="sub-bar">
-    <tr>
-      <td style="width:25%"><span class="lbl">Parcela:</span> <strong>${pCode}</strong></td>
-      <td style="width:55%; text-align:center"><strong>Acompanhamento de Campo – livro</strong></td>
-      <td style="width:20%; text-align:right"><span class="lbl">Nº:</span> <strong>${numeroLivro}</strong></td>
-    </tr>
-  </table>
+  <!-- TÍTULO SUBLINHADO -->
+  <div class="doc-title">SISTEMA ESTADUAL DE CERTIFICAÇÃO FITOSSANITÁRIA</div>
 
-  <!-- TABELA MESTRA PRINCIPAL -->
-  <table class="main-table">
+  <!-- SUB-BARRA: LIVRO / QUADRA / Nº -->
+  <div class="sub-bar">
+    <div class="sub-bar-center">Acompanhamento de Campo – livro</div>
+    <div class="sub-bar-quadra">${pCode}</div>
+    <div class="sub-bar-num">Nº: &nbsp;&nbsp;&nbsp; ${numeroLivro}</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- TABELA MESTRA PRINCIPAL IDIARN / DISAV             -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <table class="main-idiarn">
     
-    <!-- ═══ DADOS DO RESPONSÁVEL TÉCNICO ═══ -->
+    <!-- ═══ DADOS RESPONS. TÉCNICO ═══ -->
     <tr>
-      <td class="sidebar" rowspan="2">DADOS RESPONS. TÉCNICO</td>
-      <td colspan="2">
+      <td class="v-col-outer" rowspan="2">DADOS<br>RESPONS.<br>TÉCNICO</td>
+      <td colspan="3" style="width:88%">
         <span class="lbl">NOME:</span><br>
         <span class="val">${rtNome}</span>
       </td>
-      <td style="width:20%; text-align:center; vertical-align:middle">
-        <span style="font-size:9pt; font-weight:bold">1</span>
+      <td style="width:12%; text-align:center; vertical-align:middle; font-size:11pt; font-weight:bold">
+        02
       </td>
     </tr>
     <tr>
-      <td style="width:45%">
-        <span class="lbl">CREDENCIAL N°:</span><br>
+      <td colspan="2" style="width:50%">
+        <span class="lbl">CREDENCIAL N:</span><br>
         <span class="val">${rtCredencial}</span>
       </td>
-      <td colspan="2">
+      <td colspan="2" style="width:50%">
         <span class="lbl">DATA DA VISITA:</span><br>
-        <span class="val">${dataVisita}</span>
+        <span class="val">${dataVisitaFmt}</span>
       </td>
     </tr>
 
     <!-- ═══ DADOS DA UP ═══ -->
     <tr>
-      <td class="sidebar" rowspan="3">DADOS DA UP</td>
-      <td style="width:45%">
-        <span class="lbl">RESPONSÁVEL LEGAL:</span><br>
+      <td class="v-col-outer" rowspan="3">DADOS DA<br>UP</td>
+      <td colspan="2" style="width:44%">
+        <span class="lbl">RESPONSÁVEL LEGAL</span><br>
         <span class="val">${respLegal}</span>
       </td>
-      <td style="width:30%">
-        <span class="lbl">Nº da UP:</span><br>
+      <td style="width:32%">
+        <span class="lbl">Nº da UP</span><br>
         <span class="val">${codUp}</span>
       </td>
-      <td style="width:25%">
-        <span class="lbl">ÁREA PLANTADA (Há):</span><br>
+      <td style="width:24%">
+        <span class="lbl">3 ÁREA PLANTADA (Há):</span><br>
         <span class="val">${areaHa}</span>
       </td>
     </tr>
     <tr>
-      <td>
-        <span class="lbl">NOME DA PROPRIEDADE:</span><br>
+      <td colspan="2">
+        <span class="lbl">NOME DA PROPRIEDADE</span><br>
         <span class="val">${propNome}</span>
       </td>
       <td>
@@ -21770,118 +21879,118 @@ table.main-table th { background: #f3f4f6; font-weight: bold; text-align: center
       </td>
     </tr>
     <tr>
-      <td>
-        <span class="lbl">ESPÉCIE:</span> &nbsp; <span class="val">${especie}</span>
-        <span style="margin-left:16px" class="lbl">VARIEDADE:</span> &nbsp; <span class="val" style="font-family:'Courier New', monospace; font-size:8pt">${variedade}</span>
+      <td style="width:18%">
+        <span class="lbl">ESPÉCIE:</span><br>
+        <span class="val">${especie}</span>
       </td>
-      <td>
+      <td style="width:22%">
+        <span class="lbl">VARIEDADE:</span><br>
+        <span class="val">${variedade}</span>
+      </td>
+      <td style="width:24%">
         <span class="lbl">PRODUTIVIDADE ESTIMADA:</span><br>
         <span class="val">${prodEstimada}</span>
       </td>
-      <td>
-        <span class="lbl">ORIGEM DA SEMENTE, MUDA OU PORTA:</span><br>
+      <td style="width:36%">
+        <span class="lbl">ORIGEM DA SEMENTE, MUDA OU PORTA-EXERTO:</span><br>
         <span class="val">${origemMuda}</span>
       </td>
     </tr>
 
-    <!-- ═══ DADOS DA CULTURA ═══ -->
-    
-    <!-- 1. MONITORAMENTO -->
+    <!-- ═══ DADOS DO MONITORAMENTO ═══ -->
     <tr>
-      <td class="sidebar" rowspan="18">DADOS DA CULTURA</td>
-      <td colspan="3" class="sec-hdr">DADOS DO MONITORAMENTO</td>
+      <td colspan="5" style="text-align:center; font-weight:bold; font-size:7.5pt; padding:3px 0; letter-spacing:0.3px">
+        DADOS DO MONITORAMENTO
+      </td>
     </tr>
     <tr>
-      <td colspan="3" style="padding:0">
-        <table style="width:100%; border-collapse:collapse; margin:0">
+      <td colspan="5" style="padding:0">
+        <table class="inner-tbl">
           <thead>
             <tr>
-              <th rowspan="2" style="border:1px solid #000; width:16%">CÓD. DA ARMADILHA</th>
-              <th colspan="3" style="border:1px solid #000">DATAS</th>
-              <th colspan="2" style="border:1px solid #000">NÚMERO DE CAPTURAS</th>
-              <th colspan="2" style="border:1px solid #000">ÍNDICE MAD</th>
+              <th rowspan="2" style="width:16%">CÓD. DA<br>ARMADILHA</th>
+              <th colspan="3" style="width:36%">DATAS</th>
+              <th colspan="2" style="width:24%">NÚMERO DE CAPTURAS</th>
+              <th colspan="2" style="width:24%">INDICE MAD</th>
             </tr>
             <tr>
-              <th style="border:1px solid #000; width:12%">INSTALAÇÃO</th>
-              <th style="border:1px solid #000; width:12%">COLETA ANTERIOR</th>
-              <th style="border:1px solid #000; width:12%">COLETA ATUAL</th>
-              <th style="border:1px solid #000; width:12%; font-size:6pt">Anastrepha grandis</th>
-              <th style="border:1px solid #000; width:12%; font-size:6pt">Anastrepha spp.</th>
-              <th style="border:1px solid #000; width:12%; font-size:6pt">Anastrepha grandis</th>
-              <th style="border:1px solid #000; width:12%; font-size:6pt">Anastrepha spp.</th>
+              <th style="width:12%">INSTALAÇÃO</th>
+              <th style="width:12%">COLETA<br>ANTERIOR</th>
+              <th style="width:12%">COLETA<br>ATUAL</th>
+              <th style="width:12%; font-style:italic; font-weight:normal; font-size:5.5pt">Anastrepha grandis</th>
+              <th style="width:12%; font-style:italic; font-weight:normal; font-size:5.5pt">Anastrepha spp.</th>
+              <th style="width:12%; font-style:italic; font-weight:normal; font-size:5.5pt">Anastrepha<br>grandis</th>
+              <th style="width:12%; font-style:italic; font-weight:normal; font-size:5.5pt">Anastrepha<br>spp.</th>
             </tr>
           </thead>
           <tbody>
-            <tr style="height:20px">
-              <td style="border:1px solid #000; text-align:center; font-weight:bold">${coexArmadilha}</td>
-              <td style="border:1px solid #000; text-align:center">${coexInstalacao}</td>
-              <td style="border:1px solid #000; text-align:center">${coexColetaAnt}</td>
-              <td style="border:1px solid #000; text-align:center">${coexColetaAtual}</td>
-              <td style="border:1px solid #000; text-align:center; font-weight:bold">${coexCapGrandis}</td>
-              <td style="border:1px solid #000; text-align:center; font-weight:bold">${coexCapSpp}</td>
-              <td style="border:1px solid #000; text-align:center; font-weight:bold">${coexMadGrandis}</td>
-              <td style="border:1px solid #000; text-align:center; font-weight:bold">${coexMadSpp}</td>
+            <tr style="height:18px; text-align:center">
+              <td style="font-weight:bold">${coexArmadilha}</td>
+              <td>${coexInstalacao}</td>
+              <td>${coexColetaAnt}</td>
+              <td>${coexColetaAtual}</td>
+              <td>${coexCapGrandis}</td>
+              <td>${coexCapSpp}</td>
+              <td>${coexMadGrandis}</td>
+              <td>${coexMadSpp}</td>
             </tr>
             <tr style="height:18px">
-              <td style="border:1px solid #000">&nbsp;</td>
-              <td style="border:1px solid #000"></td>
-              <td style="border:1px solid #000"></td>
-              <td style="border:1px solid #000"></td>
-              <td style="border:1px solid #000"></td>
-              <td style="border:1px solid #000"></td>
-              <td style="border:1px solid #000"></td>
-              <td style="border:1px solid #000"></td>
+              <td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr style="height:18px">
+              <td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
             </tr>
           </tbody>
         </table>
       </td>
     </tr>
 
-    <!-- ANÁLISES LABORATORIAIS -->
+    <!-- RESULTADOS DE ANÁLISES LABORATORIAIS -->
     <tr>
-      <td colspan="3" style="padding:0">
-        <table style="width:100%; border-collapse:collapse; margin:0">
+      <td colspan="5" style="padding:0">
+        <table class="inner-tbl">
           <tr>
-            <td rowspan="3" style="border:1px solid #000; width:22%; font-weight:bold; font-size:6pt; vertical-align:middle; text-align:center">
-              RESULTADOS DE ANÁLISES LABORATORIAIS REALIZADO
+            <td rowspan="3" style="width:16%; font-size:5.5pt; font-weight:bold; text-align:center; vertical-align:middle; padding:2px">
+              RESULTADOS DE ANÁLISES LABORATORIAL REALIZADO
             </td>
-            <td colspan="2" style="border:1px solid #000">
-              <span class="lbl">NOME DO LABORATÓRIO:</span> &nbsp; <strong>${labNome}</strong>
+            <td colspan="2">
+              <span class="lbl">NOME DO LABORATÓRIO:</span> &nbsp; <span class="val">${labNome}</span>
             </td>
           </tr>
           <tr>
-            <td colspan="2" style="border:1px solid #000">
-              <span class="lbl">N.° DO LAUDO COM O RESULTADO DA ANÁLISE:</span> &nbsp; <strong>${labLaudo}</strong>
+            <td colspan="2">
+              <span class="lbl">N.º DO LAUDO COM O RESULTADO DA ANÁLISE:</span> &nbsp; <span class="val">${labLaudo}</span>
             </td>
           </tr>
           <tr>
-            <td style="border:1px solid #000; width:55%">
-              <span class="lbl">MUNICÍPIO:</span> &nbsp; <strong>${labMun}</strong>
+            <td style="width:65%">
+              <span class="lbl">MUNICÍPIO:</span> &nbsp; <span class="val">${labMun}</span>
             </td>
-            <td style="border:1px solid #000; width:23%">
-              <span class="lbl">UF:</span> &nbsp; <strong>${labUf}</strong>
+            <td style="width:35%">
+              <span class="lbl">UF:</span> &nbsp; <span class="val">${labUf}</span>
             </td>
           </tr>
         </table>
       </td>
     </tr>
 
-    <!-- 2. OCORRÊNCIAS FITOSSANITÁRIAS -->
+    <!-- ═══ DADOS DA CULTURA (4 SUB-SEÇÕES COM CABEÇALHOS VERTICAIS CASADOS) ═══ -->
+    
+    <!-- 1. OCORRÊNCIAS FITOSSANITÁRIAS -->
     <tr>
-      <td colspan="3" class="sec-hdr">OCORRÊNCIAS FITOSSANITÁRIAS</td>
-    </tr>
-    <tr>
+      <td class="v-col-outer" rowspan="4">DADOS DA CULTURA</td>
+      <td class="v-col-sub">OCORRÊNCIAS<br>FITOSSANITÁRIAS</td>
       <td colspan="3" style="padding:0">
-        <table style="width:100%; border-collapse:collapse; margin:0">
+        <table class="inner-tbl">
           <thead>
             <tr>
-              <th rowspan="2" style="border:1px solid #000; width:64%; text-align:center">NOME CIENTÍFICO</th>
-              <th colspan="3" style="border:1px solid #000; width:36%; text-align:center">INCIDÊNCIA</th>
+              <th rowspan="2" style="width:70%; text-align:center">NOME CIENTÍFICO</th>
+              <th colspan="3" style="width:30%; text-align:center">INCIDÊNCIA</th>
             </tr>
             <tr>
-              <th style="border:1px solid #000; width:12%">ALTA</th>
-              <th style="border:1px solid #000; width:12%">MÉDIA</th>
-              <th style="border:1px solid #000; width:12%">BAIXA</th>
+              <th style="width:10%">ALTA</th>
+              <th style="width:10%">MÉDIA</th>
+              <th style="width:10%">BAIXA</th>
             </tr>
           </thead>
           <tbody>
@@ -21891,23 +22000,21 @@ table.main-table th { background: #f3f4f6; font-weight: bold; text-align: center
       </td>
     </tr>
 
-    <!-- 3. TRATAMENTO FITOSSANITÁRIO REALIZADO -->
+    <!-- 2. TRATAMENTO FITOSSANITÁRIO REALIZADO -->
     <tr>
-      <td colspan="3" class="sec-hdr">TRATAMENTO FITOSSANITÁRIO REALIZADO</td>
-    </tr>
-    <tr>
-      <td colspan="3" style="padding:1px 0; text-align:center; font-weight:bold; font-size:7pt; background:#fff; border-bottom:1px solid #000">AGROTÓXICO</td>
-    </tr>
-    <tr>
+      <td class="v-col-sub">TRATAMENTO<br>FITOSSANITÁRIO<br>REALIZADO</td>
       <td colspan="3" style="padding:0">
-        <table style="width:100%; border-collapse:collapse; margin:0">
+        <table class="inner-tbl">
           <thead>
             <tr>
-              <th style="border:1px solid #000; width:32%; text-align:center">PRODUTO COMERCIAL</th>
-              <th style="border:1px solid #000; width:14%; text-align:center">DOSE</th>
-              <th style="border:1px solid #000; width:16%; text-align:center">DATA DE APLICAÇÃO</th>
-              <th style="border:1px solid #000; width:18%; text-align:center">PERÍODO DE CARÊNCIA</th>
-              <th style="border:1px solid #000; width:20%; text-align:center">RECEITUÁRIO AGRONÔMICO</th>
+              <th colspan="5" style="text-align:center; font-size:7pt; padding:2px 0">AGROTÓXICO</th>
+            </tr>
+            <tr>
+              <th style="width:30%; text-align:center">PRODUTO COMERCIAL</th>
+              <th style="width:14%; text-align:center">DOSE</th>
+              <th style="width:16%; text-align:center">DATA DE APLICAÇÃO</th>
+              <th style="width:18%; text-align:center">PERÍODO DE CARÊNCIA</th>
+              <th style="width:22%; text-align:center">RECEITUÁRIO AGRONÔMICO</th>
             </tr>
           </thead>
           <tbody>
@@ -21917,43 +22024,43 @@ table.main-table th { background: #f3f4f6; font-weight: bold; text-align: center
       </td>
     </tr>
 
-    <!-- 4. OUTRAS MEDIDAS DE PREVENÇÃO E CONTROLE -->
+    <!-- 3. OUTRAS MEDIDAS DE PREVENÇÃO E CONTROLE -->
     <tr>
-      <td colspan="3" class="sec-hdr">OUTRAS MEDIDAS DE PREVENÇÃO E CONTROLE</td>
-    </tr>
-    <tr>
-      <td colspan="3" style="min-height:30px; height:30px; padding:3px 5px; font-size:7pt">
-        ${outrasMedidas || '&nbsp;'}
+      <td class="v-col-sub">OUTRAS MEDIDAS<br>DE PREVENÇÃO E<br>CONTROLE</td>
+      <td colspan="3" style="padding:0">
+        <table class="inner-lines">
+          <tr style="height:16px"><td style="border-bottom:1px solid #000; padding:1px 4px">${outrasMedidas || '&nbsp;'}</td></tr>
+          <tr style="height:16px"><td style="border-bottom:1px solid #000">&nbsp;</td></tr>
+          <tr style="height:16px"><td style="border-bottom:1px solid #000">&nbsp;</td></tr>
+          <tr style="height:16px"><td>&nbsp;</td></tr>
+        </table>
       </td>
     </tr>
 
-    <!-- 5. DADOS DE COLHEITA E PÓS-COLHEITA -->
+    <!-- 4. DADOS DE COLHEITA E PÓS-COLHEITA -->
     <tr>
-      <td colspan="3" class="sec-hdr">DADOS DE COLHEITA E PÓS-COLHEITA</td>
-    </tr>
-    <tr>
-      <td colspan="3" style="min-height:30px; height:30px; padding:3px 5px; font-size:7pt">
-        ${colheitaObs || '&nbsp;'}
+      <td class="v-col-sub">DADOS DE<br>COLHEITA E PÓS-<br>COLHEITA</td>
+      <td colspan="3" style="padding:0">
+        <table class="inner-lines">
+          <tr style="height:16px"><td style="border-bottom:1px solid #000; padding:1px 4px">${colheitaObs || '&nbsp;'}</td></tr>
+          <tr style="height:16px"><td style="border-bottom:1px solid #000">&nbsp;</td></tr>
+          <tr style="height:16px"><td style="border-bottom:1px solid #000">&nbsp;</td></tr>
+          <tr style="height:16px"><td>&nbsp;</td></tr>
+        </table>
       </td>
     </tr>
 
   </table>
 
-  <!-- ASSINATURAS NO RODAPÉ (ESPAÇO EM BRANCO PARA ASSINATURA MANUAL) -->
+  <!-- ASSINATURAS NO RODAPÉ -->
   <div class="footer-sigs">
     <div class="sig-block">
-      <div class="sig-space"></div>
-      <div class="sig-line">
-        ${rtNome || 'IVANOSCA MARTINS DE OLIVEIRA CUNHA'}<br>
-        <span style="font-size:6.5pt; font-weight:normal; text-transform:uppercase">Responsável Técnica Credenciada — IDIARN / CREA: ${rtCredencial || '2100160575'}</span>
-      </div>
+      <div class="sig-line"></div>
+      <div class="sig-text">Assinatura do técnico credenciado</div>
     </div>
     <div class="sig-block">
-      <div class="sig-space"></div>
-      <div class="sig-line">
-        Responsável pela Coleta (COEX)<br>
-        <span style="font-size:6.5pt; font-weight:normal; text-transform:uppercase">Monitoramento Fitossanitário de Armadilhas</span>
-      </div>
+      <div class="sig-line"></div>
+      <div class="sig-text">Assinatura do proprietário ou responsável</div>
     </div>
   </div>
 
