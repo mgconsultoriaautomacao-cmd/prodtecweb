@@ -23,6 +23,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
   <script src="campo/infoParcelasData.js"></script>
+  <script src="assets/idiarn_logos_b64.js"></script>
   <style>
   :root, html[data-theme="dark"] {
   --bg: #030712;
@@ -21652,6 +21653,9 @@ async function printOfficialIdiarnBook(dataOrParcela) {
   const printWin = window.open('', '_blank', 'width=950,height=1200');
   if (!printWin) { alert('Por favor, permita popups no navegador para imprimir o Livro IDIARN.'); return; }
 
+  const idiarnBrasaoSrc = (typeof IDIARN_BRASAO_RN_BASE64 !== 'undefined' && IDIARN_BRASAO_RN_BASE64) ? IDIARN_BRASAO_RN_BASE64 : 'assets/brasao_rn.png';
+  const idiarnLogoSrc = (typeof IDIARN_LOGO_BASE64 !== 'undefined' && IDIARN_LOGO_BASE64) ? IDIARN_LOGO_BASE64 : 'assets/logo_idiarn.png';
+
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -21745,62 +21749,20 @@ table.main-idiarn td, table.main-idiarn th { border: 1px solid #000; padding: 2p
   <table class="top-header">
     <tr>
       <!-- Brasão do Rio Grande do Norte -->
-      <td style="width:15%; text-align:left; vertical-align:middle">
-        <svg width="48" height="56" viewBox="0 0 100 115" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Ramos laterais -->
-          <path d="M12 95 C10 65, 18 35, 32 18 C28 35, 24 60, 26 95 Z" fill="#15803d"/>
-          <circle cx="18" cy="40" r="4.5" fill="#f8fafc" stroke="#15803d" stroke-width="1.5"/>
-          <circle cx="14" cy="60" r="4.5" fill="#f8fafc" stroke="#15803d" stroke-width="1.5"/>
-          <circle cx="18" cy="80" r="4.5" fill="#f8fafc" stroke="#15803d" stroke-width="1.5"/>
-          
-          <path d="M88 95 C90 65, 82 35, 68 18 C72 35, 76 60, 74 95 Z" fill="#15803d"/>
-          <rect x="76" y="32" width="6" height="3" rx="1.5" fill="#ca8a04"/>
-          <rect x="80" y="52" width="6" height="3" rx="1.5" fill="#ca8a04"/>
-          <rect x="78" y="72" width="6" height="3" rx="1.5" fill="#ca8a04"/>
-          
-          <!-- Estrela Amarela no Topo -->
-          <polygon points="50,2 54,12 65,12 56,19 60,29 50,23 40,29 44,19 35,12 46,12" fill="#eab308" stroke="#ca8a04" stroke-width="1"/>
-          
-          <!-- Escudo do RN -->
-          <path d="M26 24 L74 24 L74 68 C74 90 50 106 50 106 C50 106 26 90 26 68 Z" fill="#fff" stroke="#ca8a04" stroke-width="2.5"/>
-          <path d="M28 26 L72 26 L72 67 C72 87 50 102 50 102 C50 102 28 87 28 67 Z" fill="#15803d" stroke="#15803d" stroke-width="1"/>
-          
-          <!-- Interior do Escudo: Céu, Sol, Terra, Coqueiro, Mar e Jangada -->
-          <path d="M30 28 L70 28 L70 54 L30 54 Z" fill="#0284c7"/>
-          <polygon points="50,32 52,37 57,37 53,40 55,45 50,42 45,45 47,40 43,37 48,37" fill="#fef08a"/>
-          
-          <path d="M30 54 Q50 50 70 54 L70 68 L30 68 Z" fill="#16a34a"/>
-          <path d="M42 66 Q46 54 44 44 L46 44 Q48 54 45 66 Z" fill="#78350f"/>
-          <path d="M45 44 C40 38, 32 40, 31 43 C36 43, 41 45, 45 45 Z" fill="#15803d"/>
-          <path d="M45 44 C45 36, 42 33, 41 33 C42 38, 44 42, 45 45 Z" fill="#15803d"/>
-          <path d="M45 44 C50 38, 58 40, 59 43 C54 43, 49 45, 45 45 Z" fill="#15803d"/>
-          
-          <path d="M30 68 L70 68 L70 78 C70 87 50 100 50 100 C50 100 30 87 30 78 Z" fill="#0369a1"/>
-          <path d="M32 76 Q40 73 50 76 Q60 79 68 76" stroke="#bae6fd" stroke-width="1.5" fill="none"/>
-          <path d="M36 84 Q44 82 50 84 Q56 86 64 84" stroke="#bae6fd" stroke-width="1.5" fill="none"/>
-          
-          <polygon points="58,74 58,63 52,72" fill="#ffffff" stroke="#000" stroke-width="0.5"/>
-          <path d="M49 74 L62 74 L60 76 L51 76 Z" fill="#78350f"/>
-        </svg>
+      <td style="width:16%; text-align:left; vertical-align:middle">
+        <img src="${idiarnBrasaoSrc}" alt="Governo do RN" style="height:56px; max-width:85px; object-fit:contain; display:block"/>
       </td>
 
       <!-- Textos Centrais Governamentais -->
-      <td style="width:70%; text-align:center; vertical-align:middle">
+      <td style="width:68%; text-align:center; vertical-align:middle">
         <div class="gov-title">GOVERNO DO ESTADO DO RIO GRANDE DO NORTE</div>
         <div class="gov-sub">INSTITUTO DE DEFESA E INSPEÇÃO AGROPECUÁRIA</div>
         <div class="gov-disav">DIRETORIA DE DEFESA E INSPEÇÃO SANITÁRIA VEGETAL - DISAV</div>
       </td>
 
       <!-- Logo IDIARN Oficial -->
-      <td style="width:15%; text-align:right; vertical-align:middle">
-        <div style="display:flex; flex-direction:column; align-items:flex-end; justify-content:center">
-          <svg width="44" height="26" viewBox="0 0 60 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M28 35 C28 20, 38 10, 52 8 C50 20, 42 32, 28 35 Z" fill="#15803d"/>
-            <path d="M28 35 C22 25, 20 18, 12 16 C16 26, 22 32, 28 35 Z" fill="#22c55e"/>
-            <path d="M33 10 C33 6, 36 2, 38 0 C40 2, 43 6, 43 10 C43 13, 38 15, 33 10 Z" fill="#991b1b"/>
-          </svg>
-          <span style="font-family:Arial, Helvetica, sans-serif; font-weight:900; font-size:20pt; color:#881337; line-height:0.9; letter-spacing:-0.5px">IDIARN</span>
-        </div>
+      <td style="width:16%; text-align:right; vertical-align:middle">
+        <img src="${idiarnLogoSrc}" alt="IDIARN" style="height:56px; max-width:85px; object-fit:contain; display:inline-block"/>
       </td>
     </tr>
   </table>
