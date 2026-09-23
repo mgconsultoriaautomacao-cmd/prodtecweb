@@ -1731,7 +1731,8 @@
   <button class="btn sec" id="ccTabColheitasBtn" onclick="showCcTab('colheitas')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="shopping-bag" style="width:14px;height:14px"></i> Colheitas por Parcela</button>
   <button class="btn sec" id="ccTabMipBtn" onclick="showCcTab('mip')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="bug" style="width:14px;height:14px"></i> Monitoramento MIP</button>
   <button class="btn sec" id="ccTabOpBtn" onclick="showCcTab('op')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="file-text" style="width:14px;height:14px"></i> Aplicação O.P</button>
-  <button class="btn sec" id="ccTabDefregBtn" onclick="showCcTab('defreg')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="shield" style="width:14px;height:14px"></i> Defensivos/Estoque</button>
+  <button class="btn sec" id="ccTabDefregBtn" onclick="showCcTab('defreg')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="shield" style="width:14px;height:14px; color:#60a5fa"></i> Estoque Defensivos</button>
+  <button class="btn sec" id="ccTabFoliaresBtn" onclick="showCcTab('foliares')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="sprout" style="width:14px;height:14px; color:#4ade80"></i> Estoque Foliares</button>
   <button class="btn sec" id="ccTabCalagemBtn" onclick="showCcTab('calagem')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="layers" style="width:14px;height:14px"></i> Ordem de Calagem</button>
   <button class="btn sec" id="ccTabFertBtn" onclick="showCcTab('fert')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="droplet" style="width:14px;height:14px"></i> Fertirrigação</button>
   <button class="btn sec" id="ccTabTratosBtn" onclick="showCcTab('tratos')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="clipboard-list" style="width:14px;height:14px"></i> Tratos Culturais</button>
@@ -1948,159 +1949,284 @@
   </div>
   </div>
 
-  <!-- ABA 3: CADASTRO DE DEFENSIVOS E CONTROLE DE ESTOQUE -->
+  <!-- ABA 3: ESTOQUE DE DEFENSIVOS (PESTICIDAS & FITOSSANITÁRIOS) -->
   <div id="ccTabDefreg" class="tab-pane-cc" style="display:none">
-  <!-- Sub-navegação interna de Estoque -->
-  <div style="display:flex; gap:8px; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:8px">
-  <button id="defSubTabCadBtn" class="btn on" onclick="switchDefSubTab('cad')" style="font-size:12px; padding:6px 14px"> Cadastro Técnico Defensivos</button>
-  <button id="defSubTabEstoqueBtn" class="btn sec" onclick="switchDefSubTab('estoque')" style="font-size:12px; padding:6px 14px"> Controle de Estoque & Importador XML NFe</button>
+    <!-- Sub-navegação interna de Defensivos -->
+    <div style="display:flex; gap:8px; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:8px">
+      <button id="defSubTabEstoqueBtn" class="btn on" onclick="switchDefSubTab('estoque')" style="font-size:12px; padding:6px 14px; display:inline-flex; align-items:center; gap:6px">
+        <i data-lucide="warehouse" style="width:14px; height:14px"></i> Saldos & Movimentações de Defensivos
+      </button>
+      <button id="defSubTabCadBtn" class="btn sec" onclick="switchDefSubTab('cad')" style="font-size:12px; padding:6px 14px; display:inline-flex; align-items:center; gap:6px">
+        <i data-lucide="shield" style="width:14px; height:14px"></i> Catálogo Técnico de Defensivos (Pesticidas)
+      </button>
+    </div>
+
+    <!-- SEÇÃO 1: SALDOS & MOVIMENTAÇÕES DE DEFENSIVOS -->
+    <div id="defSubTabEstoque">
+      <!-- KPIs do Estoque de Defensivos -->
+      <div class="kgrid" style="margin-bottom:20px">
+        <div class="kcard blue">
+          <div class="klabel">Itens no Estoque (Defensivos)</div>
+          <div id="estDefKpiTotalItens" class="kval blue">0</div>
+          <div class="ksub">defensivos cadastrados</div>
+        </div>
+        <div class="kcard green">
+          <div class="klabel">Total de Entradas (NFe/Manual)</div>
+          <div id="estDefKpiEntradas" class="kval green">0</div>
+          <div class="ksub">entradas de defensivos</div>
+        </div>
+        <div class="kcard orange">
+          <div class="klabel">Baixas por Pulverização (O.P)</div>
+          <div id="estDefKpiSaidas" class="kval orange">0</div>
+          <div class="ksub">saídas aplicadas no campo</div>
+        </div>
+        <div class="kcard cyan">
+          <div class="klabel">Saldo Disponível em Estoque</div>
+          <div id="estDefKpiSaldoTotal" class="kval cyan">0.00</div>
+          <div class="ksub">volume disponível (L / KG)</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:24px">
+        <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+          <div style="display:flex; align-items:center; gap:8px">
+            <i data-lucide="shield" class="btn-i" style="color:var(--blue)"></i> 
+            <span>Saldos de Estoque — DEFENSIVOS FITOSSANITÁRIOS</span>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap">
+            <button onclick="downloadStockInventoryTemplateCSV('DEFENSIVOS')" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px" title="Baixar Modelo de Planilha de Inventário Inicial de Defensivos"><i data-lucide="download" style="width:14px;height:14px"></i> Modelo Inventário</button>
+            <button onclick="openImportStockModal('DEFENSIVOS')" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--blue); border-color:rgba(59,130,246,0.3)" title="Importar planilha de saldo de defensivos"><i data-lucide="upload" style="width:14px;height:14px"></i> Importar Inventário</button>
+            <button onclick="openXmlNfeModal('DEFENSIVOS')" class="btn on" style="font-size:12px; padding:6px 14px; background:linear-gradient(135deg,#0ea5e9,#0284c7); border:none; color:#fff; font-weight:bold; display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-code" style="width:16px;height:16px"></i> Importar XML de NFe</button>
+            <button onclick="openManualStockModal('', 'DEFENSIVOS')" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:6px; background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3); color:var(--green)"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> + Nova Entrada</button>
+            <button onclick="openManualStockExitModal('', 'DEFENSIVOS')" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--orange); border-color:rgba(245,158,11,0.3)"><i data-lucide="minus-circle" style="width:14px;height:14px"></i> - Baixa Manual</button>
+          </div>
+        </div>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:16px">Controle rigoroso do estoque de defensivos fitossanitários (inseticidas, fungicidas, acaricidas, herbicidas). As saídas são abatidas automaticamente pelas pulverizações (O.P).</p>
+
+        <!-- Barra de Filtros de Estoque Defensivos -->
+        <div class="fbar" style="margin-bottom:16px; padding:10px 12px; gap:12px">
+          <div class="f" style="flex:2"><div class="flabel">Buscar Produto ou Ingrediente Ativo</div><input id="estDefSearch" oninput="filterEstoqueDefensivosTable()" placeholder="Ex: Abamectina, Score, Ortus, Priori, Ampligo, Decis..." /></div>
+          <div class="f" style="flex:1"><div class="flabel">Status do Saldo</div>
+            <select id="estDefTipoFilter" onchange="filterEstoqueDefensivosTable()">
+              <option value="">Todos os Saldos</option>
+              <option value="DISPONIVEL">Apenas com Saldo Disponível</option>
+              <option value="BAIXO">Apenas Saldo Baixo (&lt; 10)</option>
+              <option value="ZERADO">Apenas Zerado / Crítico (&le; 0)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border); font-size:12px; color:var(--muted)">
+                <th style="text-align:left; padding:10px">Produto (Nome Comercial)</th>
+                <th style="text-align:left; padding:10px">Ingrediente Ativo / Tipo</th>
+                <th style="text-align:center; padding:10px">Qtd Entradas</th>
+                <th style="text-align:center; padding:10px">Qtd Saídas (O.P)</th>
+                <th style="text-align:center; padding:10px">Saldo Atual</th>
+                <th style="text-align:center; padding:10px">Unidade</th>
+                <th style="text-align:center; padding:10px">Status</th>
+                <th style="text-align:center; padding:10px">Ações Rápidas</th>
+              </tr>
+            </thead>
+            <tbody id="estoqueDefensivosSaldosTableBody">
+              <tr><td colspan="8" style="text-align:center; padding:20px; color:var(--muted)">Carregando saldos de defensivos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 2: CATÁLOGO TÉCNICO DE DEFENSIVOS -->
+    <div id="defSubTabCad" style="display:none">
+      <div class="card" style="margin-bottom:24px">
+        <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+          <div style="display:flex; align-items:center; gap:8px"><i data-lucide="shield" class="btn-i" style="color:var(--yellow)"></i> Catálogo Técnico de Defensivos Fitossanitários</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap">
+            <button onclick="downloadDefensivosTemplateCSV()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px" title="Baixar Modelo de Defensivos Químicos"><i data-lucide="download" style="width:14px;height:14px"></i> Modelo Planilha Defensivos</button>
+            <button onclick="openImportDefensivosModal('DEFENSIVO')" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="upload" style="width:14px;height:14px"></i> Importar Planilha</button>
+            <button onclick="cleanCorruptedDefensivos()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--yellow); border-color:rgba(245,158,11,0.4)" title="Remove registros duplicados ou inválidos"><i data-lucide="sparkles" style="width:14px;height:14px"></i> Limpar Inválidos</button>
+            <button onclick="openDefensivoModal(null, 'DEFENSIVO')" class="green" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; background:var(--blue); border:none"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> + Novo Defensivo</button>
+          </div>
+        </div>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:15px">Cadastre e gerencie defensivos fitossanitários (inseticidas, fungicidas, herbicidas, biológicos) com prazos de carência, dosagens e alvos por cultura.</p>
+
+        <!-- Filtro de Defensivos -->
+        <div class="fbar" style="margin-bottom:16px; padding:12px; gap:12px">
+          <div class="f" style="flex:2"><div class="flabel">Buscar Produto, Princípio Ativo ou Alvo</div><input id="defSearch" oninput="filterDefensivosTable()" placeholder="Ex: Abamectina, Score, Ortus, Mosca minadora, Ácaro rajado..." /></div>
+          <div class="f" style="flex:1"><div class="flabel">Cultura</div>
+            <select id="defCulturaFilter" onchange="filterDefensivosTable()">
+              <option value="">Todas as Culturas</option>
+              <option value="MELÃO">Melão</option>
+              <option value="MELANCIA">Melancia</option>
+              <option value="MAMÃO">Mamão</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:left; padding:10px">Produto (Nome Comercial)</th>
+                <th style="text-align:left; padding:10px">Ingrediente Ativo</th>
+                <th style="text-align:center; padding:10px">Registro MAPA</th>
+                <th style="text-align:left; padding:10px">Alvo / Praga</th>
+                <th style="text-align:center; padding:10px">Dose</th>
+                <th style="text-align:center; padding:10px">Carência (Dias)</th>
+                <th style="text-align:center; padding:10px">Intervalo</th>
+                <th style="text-align:center; padding:10px">Cultura</th>
+                <th style="text-align:center; padding:10px">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="ccDefensivosTableBody">
+              <tr><td colspan="9" style="text-align:center; padding:20px; color:var(--muted)">Carregando cadastro de defensivos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- SEÇÃO 1: CADASTRO TÉCNICO -->
-  <div id="defSubTabCad">
-  <div class="card" style="margin-bottom:24px">
-  <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
-  <div style="display:flex; align-items:center; gap:8px"><i data-lucide="shield" class="btn-i" style="color:var(--yellow)"></i> Cadastro Geral de Defensivos &amp; Adubos Foliares</div>
-  <div style="display:flex; gap:8px; flex-wrap:wrap">
-  <button onclick="downloadDefensivosTemplateCSV()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px" title="Baixar Modelo de Defensivos Químicos"><i data-lucide="download" style="width:14px;height:14px"></i> Modelo Defensivos</button>
-  <button onclick="downloadAdubosTemplateCSV()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--green); border-color:rgba(16,185,129,0.3)" title="Baixar Modelo de Adubos Foliares e Nutrição"><i data-lucide="download" style="width:14px;height:14px"></i> Modelo Adubos/Foliares</button>
-  <button onclick="openImportDefensivosModal()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="upload" style="width:14px;height:14px"></i> Importar Planilha</button>
-  <button onclick="cleanCorruptedDefensivos()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--yellow); border-color:rgba(245,158,11,0.4)" title="Remove registros duplicados ou inválidos"><i data-lucide="sparkles" style="width:14px;height:14px"></i> Limpar Inválidos</button>
-  <button onclick="openDefensivoModal(null, 'ADUBO')" class="btn on" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; background:var(--green); border:none"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> + Novo Adubo / Foliar</button>
-  <button onclick="openDefensivoModal(null, 'DEFENSIVO')" class="green" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; background:var(--blue); border:none"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> + Novo Defensivo</button>
-  </div>
-  </div>
-  <p style="color:var(--muted); font-size:12px; margin-bottom:15px">Cadastre e importe defensivos fitossanitários e adubos foliares com prazos de carência, dosagens e nutrientes por cultura.</p>
+  <!-- ABA 4: ESTOQUE DE FOLIARES (ADUBOS FOLIARES & NUTRIÇÃO FOLIAR) -->
+  <div id="ccTabFoliares" class="tab-pane-cc" style="display:none">
+    <!-- Sub-navegação interna de Foliares -->
+    <div style="display:flex; gap:8px; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:8px">
+      <button id="folSubTabEstoqueBtn" class="btn on" onclick="switchFolSubTab('estoque')" style="font-size:12px; padding:6px 14px; display:inline-flex; align-items:center; gap:6px">
+        <i data-lucide="warehouse" style="width:14px; height:14px"></i> Saldos & Movimentações de Foliares
+      </button>
+      <button id="folSubTabCadBtn" class="btn sec" onclick="switchFolSubTab('cad')" style="font-size:12px; padding:6px 14px; display:inline-flex; align-items:center; gap:6px">
+        <i data-lucide="sprout" style="width:14px; height:14px"></i> Catálogo Técnico de Adubos Foliares & Nutrição
+      </button>
+    </div>
 
-  <!-- Filtro de Defensivos & Adubos -->
-  <div class="fbar" style="margin-bottom:16px; padding:12px; gap:12px">
-  <div class="f" style="flex:2"><div class="flabel">Buscar Produto, Princípio Ativo ou Nutriente</div><input id="defSearch" oninput="filterDefensivosTable()" placeholder="Ex: Abamectina, Nutrifoliar, Boro, Ortus, Cálcio..." /></div>
-  <div class="f" style="flex:1"><div class="flabel">Estoque / Grupo</div>
-  <select id="defCategoriaFilter" onchange="filterDefensivosTable()">
-  <option value="">Todos os Produtos</option>
-  <option value="DEFENSIVO">DEFENSIVOS</option>
-  <option value="FOLIAR">FOLIARES</option>
-  </select>
-  </div>
-  <div class="f" style="flex:1"><div class="flabel">Cultura</div>
-  <select id="defCulturaFilter" onchange="filterDefensivosTable()">
-  <option value="">Todas as Culturas</option>
-  <option value="MELÃO">Melão</option>
-  <option value="MELANCIA">Melancia</option>
-  <option value="MAMÃO">Mamão</option>
-  </select>
-  </div>
-  </div>
+    <!-- SEÇÃO 1: SALDOS & MOVIMENTAÇÕES DE FOLIARES -->
+    <div id="folSubTabEstoque">
+      <!-- KPIs do Estoque de Foliares -->
+      <div class="kgrid" style="margin-bottom:20px">
+        <div class="kcard green">
+          <div class="klabel">Itens no Estoque (Foliares)</div>
+          <div id="estFolKpiTotalItens" class="kval green">0</div>
+          <div class="ksub">adubos foliares cadastrados</div>
+        </div>
+        <div class="kcard green">
+          <div class="klabel">Total de Entradas (NFe/Manual)</div>
+          <div id="estFolKpiEntradas" class="kval green">0</div>
+          <div class="ksub">entradas de foliares</div>
+        </div>
+        <div class="kcard orange">
+          <div class="klabel">Baixas por Pulverização (O.P)</div>
+          <div id="estFolKpiSaidas" class="kval orange">0</div>
+          <div class="ksub">saídas aplicadas no campo</div>
+        </div>
+        <div class="kcard cyan">
+          <div class="klabel">Saldo Disponível em Estoque</div>
+          <div id="estFolKpiSaldoTotal" class="kval cyan">0.00</div>
+          <div class="ksub">volume disponível (L / KG / SC)</div>
+        </div>
+      </div>
 
-  <div style="overflow-x:auto">
-  <table style="width:100%; border-collapse:collapse">
-  <thead>
-  <tr style="border-bottom:1px solid var(--border)">
-  <th style="text-align:left; padding:10px">Produto (Nome Comercial)</th>
-  <th style="text-align:left; padding:10px">Ingrediente Ativo / Nutrientes</th>
-  <th style="text-align:center; padding:10px">Grupo</th>
-  <th style="text-align:left; padding:10px">Alvo / Finalidade</th>
-  <th style="text-align:center; padding:10px">Dose</th>
-  <th style="text-align:center; padding:10px">Carência (Dias)</th>
-  <th style="text-align:center; padding:10px">Intervalo</th>
-  <th style="text-align:center; padding:10px">Cultura</th>
-  <th style="text-align:center; padding:10px">Ações</th>
-  </tr>
-  </thead>
-  <tbody id="ccDefensivosTableBody">
-  <tr><td colspan="9" style="text-align:center; padding:20px; color:var(--muted)">Carregando cadastro de defensivos e foliares...</td></tr>
-  </tbody>
-  </table>
-  </div>
-  </div>
-  </div>
+      <div class="card" style="margin-bottom:24px">
+        <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+          <div style="display:flex; align-items:center; gap:8px">
+            <i data-lucide="sprout" class="btn-i" style="color:var(--green)"></i> 
+            <span>Saldos de Estoque — ADUBOS FOLIARES & NUTRIÇÃO FOLIAR</span>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap">
+            <button onclick="downloadStockInventoryTemplateCSV('FOLIARES')" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--green); border-color:rgba(16,185,129,0.3)" title="Baixar Modelo de Planilha de Inventário Inicial de Foliares"><i data-lucide="download" style="width:14px;height:14px"></i> Modelo Inventário</button>
+            <button onclick="openImportStockModal('FOLIARES')" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--green); border-color:rgba(16,185,129,0.3)" title="Importar planilha de saldo de foliares"><i data-lucide="upload" style="width:14px;height:14px"></i> Importar Inventário</button>
+            <button onclick="openXmlNfeModal('FOLIARES')" class="btn on" style="font-size:12px; padding:6px 14px; background:linear-gradient(135deg,#10b981,#059669); border:none; color:#fff; font-weight:bold; display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-code" style="width:16px;height:16px"></i> Importar XML de NFe</button>
+            <button onclick="openManualStockModal('', 'FOLIARES')" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:6px; background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3); color:var(--green)"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> + Nova Entrada</button>
+            <button onclick="openManualStockExitModal('', 'FOLIARES')" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--orange); border-color:rgba(245,158,11,0.3)"><i data-lucide="minus-circle" style="width:14px;height:14px"></i> - Baixa Manual</button>
+          </div>
+        </div>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:16px">Controle independente do estoque de adubos foliares, bioestimulantes e nutrição mineral. As saídas são abatidas automaticamente pelas pulverizações (O.P) que utilizam foliares.</p>
 
-  <!-- SEÇÃO 2: CONTROLE DE ESTOQUE (DEFENSIVOS & FOLIARES SEPARADOS) -->
-  <div id="defSubTabEstoque" style="display:none">
-  <!-- Seletor de Estoque: DEFENSIVOS vs FOLIARES -->
-  <div style="display:flex; gap:12px; margin-bottom:20px; background:rgba(0,0,0,0.25); padding:6px; border-radius:12px; border:1px solid var(--border)">
-    <button id="btnEstoqueGroupDefensivos" class="btn on" onclick="switchEstoqueGroup('DEFENSIVOS')" style="flex:1; padding:10px 16px; font-weight:800; font-size:13px; display:inline-flex; align-items:center; justify-content:center; gap:8px; background:var(--blue); color:#fff; border:none; border-radius:8px">
-      <i data-lucide="shield" style="width:16px; height:16px"></i> 1. ESTOQUE DE DEFENSIVOS
-    </button>
-    <button id="btnEstoqueGroupFoliares" class="btn sec" onclick="switchEstoqueGroup('FOLIARES')" style="flex:1; padding:10px 16px; font-weight:800; font-size:13px; display:inline-flex; align-items:center; justify-content:center; gap:8px; background:transparent; color:var(--muted); border:1px solid var(--border); border-radius:8px">
-      <i data-lucide="sprout" style="width:16px; height:16px"></i> 2. ESTOQUE DE FOLIARES
-    </button>
-  </div>
+        <!-- Barra de Filtros de Estoque Foliares -->
+        <div class="fbar" style="margin-bottom:16px; padding:10px 12px; gap:12px">
+          <div class="f" style="flex:2"><div class="flabel">Buscar Produto ou Nutriente</div><input id="estFolSearch" oninput="filterEstoqueFoliaresTable()" placeholder="Ex: Liqui-Plex, Conductor, Boro, Cálcio, Bio 20, Calmax, Aminoácidos..." /></div>
+          <div class="f" style="flex:1"><div class="flabel">Status do Saldo</div>
+            <select id="estFolTipoFilter" onchange="filterEstoqueFoliaresTable()">
+              <option value="">Todos os Saldos</option>
+              <option value="DISPONIVEL">Apenas com Saldo Disponível</option>
+              <option value="BAIXO">Apenas Saldo Baixo (&lt; 10)</option>
+              <option value="ZERADO">Apenas Zerado / Crítico (&le; 0)</option>
+            </select>
+          </div>
+        </div>
 
-  <!-- KPIs do Estoque Ativo -->
-  <div class="kgrid" style="margin-bottom:20px">
-  <div class="kcard blue">
-  <div class="klabel" id="estKpiLabelItens">Itens em Estoque (Defensivos)</div>
-  <div id="estKpiTotalItens" class="kval blue">0</div>
-  <div class="ksub" id="estKpiSubItens">produtos cadastrados</div>
-  </div>
-  <div class="kcard green">
-  <div class="klabel">Total de Entradas (NFe/Manual)</div>
-  <div id="estKpiEntradas" class="kval green">0</div>
-  <div class="ksub">entradas registradas</div>
-  </div>
-  <div class="kcard orange">
-  <div class="klabel">Baixas Registradas</div>
-  <div id="estKpiSaidas" class="kval orange">0</div>
-  <div class="ksub">saídas por pulverização/manual</div>
-  </div>
-  <div class="kcard cyan">
-  <div class="klabel">Saldo Total em Estoque</div>
-  <div id="estKpiSaldoTotal" class="kval cyan">0.00</div>
-  <div class="ksub">quantidade total disponível</div>
-  </div>
-  </div>
+        <div style="overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border); font-size:12px; color:var(--muted)">
+                <th style="text-align:left; padding:10px">Produto (Nome Comercial)</th>
+                <th style="text-align:left; padding:10px">Nutrientes / Formulação</th>
+                <th style="text-align:center; padding:10px">Qtd Entradas</th>
+                <th style="text-align:center; padding:10px">Qtd Saídas (O.P)</th>
+                <th style="text-align:center; padding:10px">Saldo Atual</th>
+                <th style="text-align:center; padding:10px">Unidade</th>
+                <th style="text-align:center; padding:10px">Status</th>
+                <th style="text-align:center; padding:10px">Ações Rápidas</th>
+              </tr>
+            </thead>
+            <tbody id="estoqueFoliaresSaldosTableBody">
+              <tr><td colspan="8" style="text-align:center; padding:20px; color:var(--muted)">Carregando saldos de foliares...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
-  <div class="card" style="margin-bottom:24px">
-  <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
-  <div style="display:flex; align-items:center; gap:8px">
-    <i id="estSectionIcon" data-lucide="shield" class="btn-i" style="color:var(--yellow)"></i> 
-    <span id="estSectionTitle">Saldos e Movimentações — Estoque de DEFENSIVOS</span>
-  </div>
-  <div style="display:flex; gap:8px; flex-wrap:wrap">
-  <button onclick="downloadStockInventoryTemplateCSV()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px" title="Baixar Modelo de Planilha de Inventário Inicial"><i data-lucide="download" style="width:14px;height:14px"></i> Modelo Inventário</button>
-  <button onclick="openImportStockModal()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--blue); border-color:rgba(59,130,246,0.3)" title="Importar planilha de saldo/inventário"><i data-lucide="upload" style="width:14px;height:14px"></i> Importar Inventário</button>
-  <button onclick="openXmlNfeModal()" class="btn on" style="font-size:12px; padding:6px 14px; background:linear-gradient(135deg,#0ea5e9,#0284c7); border:none; color:#fff; font-weight:bold; display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-code" style="width:16px;height:16px"></i> Importar XML de NFe</button>
-  <button id="btnNovaEntradaEstoque" onclick="openManualStockModal()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:6px; background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3); color:var(--green)"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> + Nova Entrada</button>
-  <button id="btnNovaBaixaEstoque" onclick="openManualStockExitModal()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--orange); border-color:rgba(245,158,11,0.3)"><i data-lucide="minus-circle" style="width:14px;height:14px"></i> - Baixa Manual</button>
-  </div>
-  </div>
-  <p id="estSectionDesc" style="color:var(--muted); font-size:12px; margin-bottom:16px">Controle independente do estoque de defensivos fitossanitários. As saídas são abatidas automaticamente pelas pulverizações (O.P) que utilizam defensivos.</p>
+    <!-- SEÇÃO 2: CATÁLOGO TÉCNICO DE FOLIARES -->
+    <div id="folSubTabCad" style="display:none">
+      <div class="card" style="margin-bottom:24px">
+        <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+          <div style="display:flex; align-items:center; gap:8px"><i data-lucide="sprout" class="btn-i" style="color:var(--green)"></i> Catálogo Técnico de Adubos Foliares &amp; Nutrição</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap">
+            <button onclick="carregarFoliaresOficiais()" class="btn on" style="font-size:12px; padding:7px 14px; display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, #10b981, #059669); border:none; box-shadow:0 4px 12px rgba(16,185,129,0.3)" title="Carrega todo o catálogo de nutrientes e fertilizantes foliares oficiais para a fazenda">
+              <i data-lucide="sparkles" style="width:15px;height:15px"></i> 🌱 Carregar Catálogo Oficial de Foliares (100+ Adubos)
+            </button>
+            <button onclick="downloadAdubosTemplateCSV()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--green); border-color:rgba(16,185,129,0.3)" title="Baixar Modelo de Adubos Foliares e Nutrição"><i data-lucide="download" style="width:14px;height:14px"></i> Modelo Planilha Foliares</button>
+            <button onclick="openImportDefensivosModal('FOLIAR')" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="upload" style="width:14px;height:14px"></i> Importar Planilha</button>
+            <button onclick="openDefensivoModal(null, 'ADUBO')" class="btn on" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; background:var(--green); border:none"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> + Novo Adubo / Foliar</button>
+          </div>
+        </div>
+        <p style="color:var(--muted); font-size:12px; margin-bottom:15px">Cadastre adubos foliares, bioestimulantes e corretores nutricionais com garantias de nutrientes (N, P2O5, K2O, Ca, B, Mg, Zn), dosagens recomendadas e fases de aplicação.</p>
 
-  <!-- Barra de Filtros de Estoque -->
-  <div class="fbar" style="margin-bottom:16px; padding:10px 12px; gap:12px">
-  <div class="f" style="flex:2"><div class="flabel" id="estSearchLabel">Buscar Produto no Estoque de Defensivos</div><input id="estSearch" oninput="filterEstoqueTable()" placeholder="Ex: Abamectina, Score, Ortus, Priori, Ampligo..." /></div>
-  <div class="f" style="flex:1"><div class="flabel">Status do Saldo</div>
-  <select id="estTipoFilter" onchange="filterEstoqueTable()">
-  <option value="">Todos os Saldos</option>
-  <option value="DISPONIVEL">Apenas com Saldo Disponível</option>
-  <option value="BAIXO">Apenas Saldo Baixo (&lt; 10)</option>
-  <option value="ZERADO">Apenas Zerado / Crítico (&le; 0)</option>
-  </select>
-  </div>
-  </div>
+        <!-- Filtro de Foliares -->
+        <div class="fbar" style="margin-bottom:16px; padding:12px; gap:12px">
+          <div class="f" style="flex:2"><div class="flabel">Buscar Adubo Foliar ou Nutriente</div><input id="folSearch" oninput="filterFoliaresTable()" placeholder="Ex: Liqui-Plex, Boro, Sulfato, Cálcio, Conductor, Zinco, Aminoácidos..." /></div>
+          <div class="f" style="flex:1"><div class="flabel">Cultura</div>
+            <select id="folCulturaFilter" onchange="filterFoliaresTable()">
+              <option value="">Todas as Culturas</option>
+              <option value="MELÃO">Melão</option>
+              <option value="MELANCIA">Melancia</option>
+              <option value="MAMÃO">Mamão</option>
+            </select>
+          </div>
+        </div>
 
-  <div style="overflow-x:auto">
-  <table style="width:100%; border-collapse:collapse">
-  <thead>
-  <tr style="border-bottom:1px solid var(--border); font-size:12px; color:var(--muted)">
-  <th style="text-align:left; padding:10px">Produto (Nome Comercial)</th>
-  <th style="text-align:left; padding:10px">Estoque / Grupo</th>
-  <th style="text-align:center; padding:10px">Qtd Entradas</th>
-  <th style="text-align:center; padding:10px">Qtd Saídas</th>
-  <th style="text-align:center; padding:10px">Saldo Atual</th>
-  <th style="text-align:center; padding:10px">Unidade</th>
-  <th style="text-align:center; padding:10px">Status do Saldo</th>
-  <th style="text-align:center; padding:10px">Ações Rápidas</th>
-  </tr>
-  </thead>
-  <tbody id="estoqueSaldosTableBody">
-  <tr><td colspan="8" style="text-align:center; padding:20px; color:var(--muted)">Carregando saldos de estoque...</td></tr>
-  </tbody>
-  </table>
-  </div>
-  </div>
-  </div>
+        <div style="overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:left; padding:10px">Adubo Foliar (Nome Comercial)</th>
+                <th style="text-align:left; padding:10px">Nutrientes / Garantias</th>
+                <th style="text-align:left; padding:10px">Finalidade / Alvo Nutricional</th>
+                <th style="text-align:center; padding:10px">Dose Recomendada</th>
+                <th style="text-align:center; padding:10px">Carência</th>
+                <th style="text-align:center; padding:10px">Cultura</th>
+                <th style="text-align:center; padding:10px">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="ccFoliaresTableBody">
+              <tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Carregando catálogo de adubos foliares...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ABA: ORDEM DE CALAGEM -->
@@ -14104,7 +14230,7 @@ let webInfoParcelasData = [];
 let webVariedadeRowCount = 0;
 
 function showCcTab(tab) {
-  ['plantios','colheitas','mip','op','defreg','calagem','fert','tratos','mudas','pos','idiarn'].forEach(t => {
+  ['plantios','colheitas','mip','op','defreg','foliares','calagem','fert','tratos','mudas','pos','idiarn'].forEach(t => {
   const pane = $(`ccTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
   const btn = $(`ccTab${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
   if (pane) pane.style.display = (tab === t) ? 'block' : 'none';
@@ -14113,27 +14239,31 @@ function showCcTab(tab) {
 
   try {
   if (tab === 'plantios') {
-  loadWebPlantios();
+    loadWebPlantios();
   } else if (tab === 'colheitas') {
-  loadColheitasTable();
+    loadColheitasTable();
   } else if (tab === 'mip') {
-  loadMipTable();
+    loadMipTable();
   } else if (tab === 'op') {
-  loadOpTable();
+    loadOpTable();
   } else if (tab === 'pos') {
-  loadPosColheitaTable();
+    loadPosColheitaTable();
   } else if (tab === 'defreg') {
-  loadDefensivosTable();
+    loadDefensivosTable();
+    loadEstoqueSaldos();
+  } else if (tab === 'foliares') {
+    loadFoliaresTable();
+    loadEstoqueSaldos();
   } else if (tab === 'calagem') {
-  loadCalagemTable();
+    loadCalagemTable();
   } else if (tab === 'fert') {
-  loadFertTable();
+    loadFertTable();
   } else if (tab === 'tratos') {
-  loadTratosTable();
+    loadTratosTable();
   } else if (tab === 'mudas') {
-  loadMudasTable();
+    loadMudasTable();
   } else if (tab === 'idiarn') {
-  loadIdiarnTable();
+    loadIdiarnTable();
   }
   } catch (err) {
   console.error('Erro ao alternar aba do Caderno de Campo:', err);
@@ -15969,7 +16099,16 @@ async function loadDefensivosTable() {
   _defensivos = [];
   }
   filterDefensivosTable();
+  filterFoliaresTable();
   if (typeof populateNewOpDefensivesSelect === 'function') populateNewOpDefensivesSelect();
+}
+
+async function loadFoliaresTable() {
+  if (!webDefensivosData || webDefensivosData.length === 0) {
+    await loadDefensivosTable();
+  } else {
+    filterFoliaresTable();
+  }
 }
 
 async function cleanCorruptedDefensivos() {
@@ -16008,26 +16147,20 @@ async function purgeAllDefensivos() {
 function filterDefensivosTable() {
   const query = ($('defSearch')?.value || '').toLowerCase().trim();
   const cultura = $('defCulturaFilter')?.value || '';
-  const categoria = $('defCategoriaFilter')?.value || '';
 
   const norm = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
   const isAdb = d => {
     const t = norm(d.tipo || ''); const p = norm(d.produto || ''); const ia = norm(d.ingrediente_ativo || ''); const al = norm(d.alvo || '');
-    return t.includes('FOLIAR') || t.includes('ADUBO') || t.includes('NUTRI') || t.includes('FERTILIZ') || p.includes('FOLIAR') || p.includes('NUTRI') || ia.includes('FOLIAR') || al.includes('FOLIAR') || ia.includes('BORO') || ia.includes('POTASSIO') || ia.includes('CALCIO');
+    return d.is_fertilizer || t.includes('FOLIAR') || t.includes('ADUBO') || t.includes('NUTRI') || t.includes('FERTILIZ') || p.includes('FOLIAR') || p.includes('NUTRI') || ia.includes('FOLIAR') || al.includes('FOLIAR') || ia.includes('BORO') || ia.includes('POTASSIO') || ia.includes('CALCIO');
   };
 
   const filtered = webDefensivosData.filter(d => {
+    if (isAdb(d)) return false; // Apenas defensivos fitossanitários nesta tabela
     const searchStr = [d.produto, d.ingrediente_ativo, d.registro_mapa, d.alvo, d.cultura, d.tipo]
       .filter(Boolean).join(' ').toLowerCase();
     const matchQuery = !query || searchStr.includes(query);
     const matchCultura = !cultura || d.cultura === cultura || d.cultura === 'TODAS';
-    
-    let matchCat = true;
-    if (categoria === 'DEFENSIVO') matchCat = !isAdb(d);
-    else if (categoria === 'FOLIAR') matchCat = isAdb(d);
-    else if (categoria === 'FERTILIZANTE') matchCat = norm(d.tipo || '').includes('FERTILIZ') || norm(d.alvo || '').includes('FERTILIZ');
-    
-    return matchQuery && matchCultura && matchCat;
+    return matchQuery && matchCultura;
   });
 
   renderDefensivosTable(filtered);
@@ -16038,51 +16171,207 @@ function renderDefensivosTable(data) {
   if (!tbody) return;
 
   if (!data || data.length === 0) {
-  tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--muted)">Nenhum defensivo cadastrado com os filtros selecionados.</td></tr>`;
-  return;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--muted)">Nenhum defensivo cadastrado com os filtros selecionados.</td></tr>`;
+    return;
   }
+
+  tbody.innerHTML = data.map(d => {
+    const carenciaVal = d.carencia_dias || 0;
+    const carenciaBadge = carenciaVal === 0 
+      ? `<span style="font-size:11px; background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:6px; font-weight:700">Isento (0d)</span>`
+      : `<span style="font-size:11px; background:rgba(245,158,11,0.15); color:var(--yellow); border:1px solid rgba(245,158,11,0.3); padding:3px 8px; border-radius:6px; font-weight:700">${carenciaVal} dias</span>`;
+
+    const doseStr = d.dose_texto || (d.dose ? `${d.dose} ${d.unidade_dose || 'L/ha'}` : '—');
+    const tarjaColors = { VERMELHA: '#ef4444', AMARELA: '#f59e0b', AZUL: '#3b82f6', VERDE: '#22c55e' };
+    const tarjaDot = d.tarja ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${tarjaColors[d.tarja]||'#64748b'};margin-right:3px"></span>` : '';
+    const tipoStr = d.tipo ? `<span style="font-size:10px; background:rgba(59,130,246,0.1); color:var(--blue); padding:2px 6px; border-radius:4px; font-weight:700">${d.tipo}</span>` : '';
+    const tescoStr = d.condicao_tesco && d.condicao_tesco !== 'NA' ? `<span style="font-size:9px; background:rgba(239,68,68,0.1); color:var(--red); padding:2px 5px; border-radius:4px; font-weight:700">${d.condicao_tesco}</span>` : '';
+
+    return `
+    <tr style="border-bottom:1px solid var(--border); font-size:13px; transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+      <td style="padding:12px; font-weight:800; color:var(--text)">${tarjaDot}${d.produto || '—'}</td>
+      <td style="padding:12px; color:var(--blue); font-weight:600">${d.ingrediente_ativo || '—'}<br>${tipoStr}</td>
+      <td style="padding:12px; text-align:center; font-size:11px">${d.registro_mapa || '—'}</td>
+      <td style="padding:12px; font-size:12px">${d.alvo || '—'}</td>
+      <td style="padding:12px; text-align:center; font-weight:700; font-size:11px">${doseStr}</td>
+      <td style="padding:12px; text-align:center">${carenciaBadge}</td>
+      <td style="padding:12px; text-align:center; font-weight:600">${d.intervalo_dias ? d.intervalo_dias + 'd' : '7d'}</td>
+      <td style="padding:12px; text-align:center; font-size:11px; color:var(--muted)">${d.cultura || 'TODAS'}<br>${tescoStr}</td>
+      <td style="padding:12px; text-align:center; white-space:nowrap">
+        <button onclick="openDefensivoModal('${d.id}')" class="sec" style="padding:4px 8px; font-size:11px; display:inline-flex; align-items:center; gap:3px" title="Editar"><i data-lucide="edit-3" style="width:12px;height:12px"></i> Editar</button>
+        <button onclick="deleteDefensivo('${d.id}')" class="danger" style="padding:4px 8px; font-size:11px; margin-left:4px" title="Excluir"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>
+      </td>
+    </tr>
+    `;
+  }).join('');
+
+  if (window.lucide) lucide.createIcons();
+}
+
+// ── Gestão Exclusiva de Adubos Foliares & Nutrição ─────────────────────────────
+function filterFoliaresTable() {
+  const query = ($('folSearch')?.value || '').toLowerCase().trim();
+  const cultura = $('folCulturaFilter')?.value || '';
 
   const norm = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
   const isAdb = d => {
     const t = norm(d.tipo || ''); const p = norm(d.produto || ''); const ia = norm(d.ingrediente_ativo || ''); const al = norm(d.alvo || '');
-    return t.includes('FOLIAR') || t.includes('ADUBO') || t.includes('NUTRI') || t.includes('FERTILIZ') || p.includes('FOLIAR') || p.includes('NUTRI') || ia.includes('FOLIAR') || al.includes('FOLIAR');
+    return d.is_fertilizer || t.includes('FOLIAR') || t.includes('ADUBO') || t.includes('NUTRI') || t.includes('FERTILIZ') || p.includes('FOLIAR') || p.includes('NUTRI') || ia.includes('FOLIAR') || al.includes('FOLIAR') || ia.includes('BORO') || ia.includes('POTASSIO') || ia.includes('CALCIO');
   };
 
+  const filtered = webDefensivosData.filter(d => {
+    if (!isAdb(d)) return false; // Apenas adubos foliares nesta tabela
+    const searchStr = [d.produto, d.ingrediente_ativo, d.alvo, d.cultura, d.tipo]
+      .filter(Boolean).join(' ').toLowerCase();
+    const matchQuery = !query || searchStr.includes(query);
+    const matchCultura = !cultura || d.cultura === cultura || d.cultura === 'TODAS';
+    return matchQuery && matchCultura;
+  });
+
+  renderFoliaresTable(filtered);
+}
+
+function renderFoliaresTable(data) {
+  const tbody = $('ccFoliaresTableBody');
+  if (!tbody) return;
+
+  if (!data || data.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align:center; padding:35px 20px; color:var(--muted)">
+          <div style="font-size:14px; font-weight:700; color:#fff; margin-bottom:8px">Nenhum adubo foliar cadastrado nesta fazenda</div>
+          <p style="font-size:12px; margin-bottom:14px">Clique no botão abaixo para carregar automaticamente mais de 100 formulações de nutrientes oficiais.</p>
+          <button onclick="carregarFoliaresOficiais()" class="btn on" style="font-size:12px; padding:8px 16px; background:linear-gradient(135deg,#10b981,#059669); border:none; display:inline-flex; align-items:center; gap:6px">
+            <i data-lucide="sparkles" style="width:14px;height:14px"></i> 🌱 Carregar Catálogo Oficial de Foliares Agora
+          </button>
+        </td>
+      </tr>
+    `;
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
   tbody.innerHTML = data.map(d => {
-  const carenciaVal = d.carencia_dias || 0;
-  const carenciaBadge = carenciaVal === 0 
-  ? `<span style="font-size:11px; background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:6px; font-weight:700">Isento (0d)</span>`
-  : `<span style="font-size:11px; background:rgba(245,158,11,0.15); color:var(--yellow); border:1px solid rgba(245,158,11,0.3); padding:3px 8px; border-radius:6px; font-weight:700">${carenciaVal} dias</span>`;
+    const doseStr = d.dose_texto || (d.dose ? `${d.dose} ${d.unidade_dose || 'L/ha'}` : '1.0 a 2.0 L/ha');
+    const carenciaBadge = `<span style="font-size:11px; background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:6px; font-weight:700">Isento (0d)</span>`;
+    const nutrText = d.ingrediente_ativo || 'Nutrição Mineral / Foliar';
 
-  const doseStr = d.dose_texto || (d.dose ? `${d.dose} ${d.unidade_dose || 'L/ha'}` : '—');
-  
-  const isAdubo = isAdb(d);
-  const tarjaColors = { VERMELHA: '#ef4444', AMARELA: '#f59e0b', AZUL: '#3b82f6', VERDE: '#22c55e' };
-  const tarjaDot = d.tarja ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${tarjaColors[d.tarja]||'#64748b'};margin-right:3px"></span>` : (isAdubo ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:3px"></span>' : '');
-  
-  const tipoColor = isAdubo ? 'background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3);' : 'background:rgba(59,130,246,0.1); color:var(--blue);';
-  const tipoStr = d.tipo ? `<span style="font-size:10px; ${tipoColor} padding:2px 6px; border-radius:4px; font-weight:700">${d.tipo}</span>` : (isAdubo ? '<span style="font-size:10px; background:rgba(16,185,129,0.15); color:var(--green); padding:2px 6px; border-radius:4px; font-weight:700">ADUBO FOLIAR</span>' : '');
-  const tescoStr = d.condicao_tesco && d.condicao_tesco !== 'NA' ? `<span style="font-size:9px; background:rgba(239,68,68,0.1); color:var(--red); padding:2px 5px; border-radius:4px; font-weight:700">${d.condicao_tesco}</span>` : '';
-
-  return `
-  <tr style="border-bottom:1px solid var(--border); font-size:13px; transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
-  <td style="padding:12px; font-weight:800; color:${isAdubo ? '#fff' : 'var(--text)'}">${tarjaDot}${d.produto || '—'}</td>
-  <td style="padding:12px; color:${isAdubo ? 'var(--green)' : 'var(--blue)'}; font-weight:600">${d.ingrediente_ativo || (isAdubo ? 'Nutrição Foliar' : '—')}<br>${tipoStr}</td>
-  <td style="padding:12px; text-align:center; font-size:11px">${d.registro_mapa || '—'}</td>
-  <td style="padding:12px; font-size:12px">${d.alvo || '—'}</td>
-  <td style="padding:12px; text-align:center; font-weight:700; font-size:11px">${doseStr}</td>
-  <td style="padding:12px; text-align:center">${carenciaBadge}</td>
-  <td style="padding:12px; text-align:center; font-weight:600">${d.intervalo_dias ? d.intervalo_dias + 'd' : '7d'}</td>
-  <td style="padding:12px; text-align:center; font-size:11px; color:var(--muted)">${d.cultura || 'TODAS'}<br>${tescoStr}</td>
-  <td style="padding:12px; text-align:center; white-space:nowrap">
-  <button onclick="openDefensivoModal('${d.id}')" class="sec" style="padding:4px 8px; font-size:11px; display:inline-flex; align-items:center; gap:3px" title="Editar"><i data-lucide="edit-3" style="width:12px;height:12px"></i> Editar</button>
-  <button onclick="deleteDefensivo('${d.id}')" class="danger" style="padding:4px 8px; font-size:11px; margin-left:4px" title="Excluir"></button>
-  </td>
-  </tr>
-  `;
+    return `
+    <tr style="border-bottom:1px solid var(--border); font-size:13px; transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+      <td style="padding:12px; font-weight:800; color:#fff">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:6px"></span>${d.produto}
+      </td>
+      <td style="padding:12px; color:var(--green); font-weight:600; font-size:12px">
+        <i data-lucide="zap" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:4px"></i>${nutrText}
+      </td>
+      <td style="padding:12px; font-size:12px; color:var(--text)">${d.alvo || 'Nutrição e Adubação Foliar'}</td>
+      <td style="padding:12px; text-align:center; font-weight:700; font-size:11px">${doseStr}</td>
+      <td style="padding:12px; text-align:center">${carenciaBadge}</td>
+      <td style="padding:12px; text-align:center; font-size:11px; color:var(--muted)">${d.cultura || 'MELÃO / MELANCIA'}</td>
+      <td style="padding:12px; text-align:center; white-space:nowrap">
+        <button onclick="openDefensivoModal('${d.id}', 'ADUBO')" class="sec" style="padding:4px 8px; font-size:11px; display:inline-flex; align-items:center; gap:3px" title="Editar"><i data-lucide="edit-3" style="width:12px;height:12px"></i> Editar</button>
+        <button onclick="deleteDefensivo('${d.id}')" class="danger" style="padding:4px 8px; font-size:11px; margin-left:4px" title="Excluir"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>
+      </td>
+    </tr>
+    `;
   }).join('');
 
   if (window.lucide) lucide.createIcons();
+}
+
+// ── Carregamento em Lote do Catálogo Oficial de Adubos Foliares ─────────────────
+async function carregarFoliaresOficiais() {
+  if (!tenantId) {
+    alert('Tenant não identificado.');
+    return;
+  }
+  if (!confirm('Deseja carregar o Catálogo Oficial de Adubos Foliares e Nutrição no sistema?\n\nIsso sincronizará mais de 100 formulações de adubos foliares com garantias nutricionais completas (N, P, K, Ca, Mg, B, Zn, etc.) para sua fazenda.')) {
+    return;
+  }
+
+  toast('⏳ Carregando catálogo oficial de adubos foliares...', 'info');
+
+  try {
+    const { data: existingData, error: exErr } = await sb.from('caderno_campo_defensivos_cadastro')
+      .select('produto')
+      .eq('tenant_id', tenantId);
+    if (exErr) throw exErr;
+
+    const norm = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+    const existingSet = new Set((existingData || []).map(d => norm(d.produto)));
+
+    const foliaresMap = (typeof FERTILIZANTES_NUTRIENTES_MAP !== 'undefined') ? FERTILIZANTES_NUTRIENTES_MAP : {};
+    const officialNames = (typeof FERTILIZANTES_CATALOGO_OFICIAL !== 'undefined' && Array.isArray(FERTILIZANTES_CATALOGO_OFICIAL)) 
+      ? FERTILIZANTES_CATALOGO_OFICIAL 
+      : Object.keys(foliaresMap);
+
+    const extraFoliares = [
+      { nome: 'CALMAX GOLD', nutr: 'CaO: 15% + N: 10% + Mg: 2% + B: 0.05%', alvo: 'Firmeza de casca e prevenção de desordens fisiológicas' },
+      { nome: 'BIO 20', nutr: 'N: 20% + P2O5: 20% + K2O: 20% + Extrato de Algas', alvo: 'Bioestimulante e equilíbrio vegetativo geral' },
+      { nome: 'FULVIN 40-22', nutr: 'Ácidos Fúlvicos: 22% + Mat. Orgânica: 40% + K2O: 3%', alvo: 'Condicionador radicular e ativação foliar' },
+      { nome: 'LIQUI-PLEX BONDER', nutr: 'N: 1% + P2O5: 2% + K2O: 1% + Quelatos', alvo: 'Complexante nutricional e anti-deriva' },
+      { nome: 'LIQUI-PLEX Ca+Mg+B', nutr: 'CaO: 6% + MgO: 2% + B: 2%', alvo: 'Pegamento de florada e firmeza do fruto' },
+      { nome: 'CONDUCTOR', nutr: 'CaO: 5% + MgO: 1% + SO3: 1% + B: 1%', alvo: 'Translocação de açúcares e pegamento' }
+    ];
+
+    const allCandidateNames = new Set([...officialNames]);
+    extraFoliares.forEach(ef => allCandidateNames.add(ef.nome));
+
+    const toInsert = [];
+
+    allCandidateNames.forEach(pName => {
+      const cleanName = pName.trim().toUpperCase();
+      if (!cleanName || existingSet.has(norm(cleanName))) return;
+
+      let nutrSummary = '';
+      const extraFound = extraFoliares.find(ef => norm(ef.nome) === norm(cleanName));
+      if (extraFound) {
+        nutrSummary = extraFound.nutr;
+      } else if (foliaresMap[cleanName]) {
+        const entries = Object.entries(foliaresMap[cleanName]);
+        nutrSummary = entries.map(([k, v]) => `${k}: ${v}%`).join(' + ');
+      }
+
+      toInsert.push({
+        tenant_id: tenantId,
+        produto: cleanName,
+        tipo: 'FOLIAR',
+        ingrediente_ativo: nutrSummary || 'Nutrição Mineral Foliar',
+        alvo: extraFound?.alvo || 'Nutrição Foliar & Correção Nutricional',
+        dose: '1.0 a 2.0 L/ha',
+        dose_texto: '1.0 a 2.0 L/ha (conforme recomendação agronômica)',
+        unidade: 'L/ha',
+        unidade_dose: 'L/ha',
+        carencia_dias: 0,
+        intervalo_dias: 7,
+        reentrada_dias: 0,
+        cultura: 'MELÃO / MELANCIA',
+        is_fertilizer: true
+      });
+      existingSet.add(norm(cleanName));
+    });
+
+    if (toInsert.length === 0) {
+      toast('Todos os adubos foliares oficiais já constam cadastrados!', 'info');
+      return;
+    }
+
+    const batchSize = 50;
+    let insertedCount = 0;
+    for (let i = 0; i < toInsert.length; i += batchSize) {
+      const batch = toInsert.slice(i, i + batchSize);
+      const { error: insErr } = await sb.from('caderno_campo_defensivos_cadastro').insert(batch);
+      if (insErr) throw insErr;
+      insertedCount += batch.length;
+    }
+
+    toast(` ${insertedCount} adubos foliares carregados com sucesso!`, 'ok');
+    await loadDefensivosTable();
+    await loadEstoqueSaldos();
+  } catch(e) {
+    console.error('Erro ao carregar foliares:', e);
+    alert('Erro ao carregar adubos foliares: ' + e.message);
+  }
 }
 
 function openDefensivoModal(editId, defaultCategory) {
@@ -19566,16 +19855,17 @@ async function saveNewOpDashboard() {
         } else if (areaHa > 0 && (String(i.unidade || '').toLowerCase().includes('ha') || String(i.unidade || '').toLowerCase().includes('l/ha') || String(i.unidade || '').toLowerCase().includes('kg/ha'))) {
           totalQtd = doseVal * areaHa;
         }
+        const isFoliar = typeof getProductGroup === 'function' && getProductGroup(i.produto_nome) === 'FOLIARES';
         return {
           tenant_id: tenantId,
           produto_nome: i.produto_nome,
           quantidade_saida: totalQtd || doseVal,
           unidade_medida: String(i.unidade || '').toLowerCase().includes('kg') ? 'KG' : 'L',
-          motivo_saida: 'PULVERIZACAO',
+          motivo_saida: isFoliar ? 'PULVERIZACAO_FOLIAR' : 'PULVERIZACAO_DEFENSIVO',
           referencia_id: opData.id,
           parcela: recordOP.parcela,
           data_saida: recordOP.data_aplicacao || today(),
-          observacao: `Baixa automática O.P. Parcela ${recordOP.parcela}`
+          observacao: `Baixa automática O.P (${isFoliar ? 'Foliar' : 'Defensivo'}) Parcela ${recordOP.parcela}`
         };
       });
       if (stockExits.length > 0) {
@@ -20231,28 +20521,62 @@ function switchDefSubTab(sub) {
   const cBtn = $('defSubTabCadBtn');
   const eBtn = $('defSubTabEstoqueBtn');
   if (sub === 'cad') {
-  if (cEl) cEl.style.display = 'block';
-  if (eEl) eEl.style.display = 'none';
-  if (cBtn) cBtn.className = 'btn on';
-  if (eBtn) eBtn.className = 'btn sec';
+    if (cEl) cEl.style.display = 'block';
+    if (eEl) eEl.style.display = 'none';
+    if (cBtn) { cBtn.className = 'btn on'; }
+    if (eBtn) { eBtn.className = 'btn sec'; }
+    filterDefensivosTable();
   } else {
-  if (cEl) cEl.style.display = 'none';
-  if (eEl) eEl.style.display = 'block';
-  if (cBtn) cBtn.className = 'btn sec';
-  if (eBtn) eBtn.className = 'btn on';
-  loadEstoqueSaldos();
+    if (cEl) cEl.style.display = 'none';
+    if (eEl) eEl.style.display = 'block';
+    if (cBtn) { cBtn.className = 'btn sec'; }
+    if (eBtn) { eBtn.className = 'btn on'; }
+    loadEstoqueSaldos();
+  }
+}
+
+function switchFolSubTab(sub) {
+  const cEl = $('folSubTabCad');
+  const eEl = $('folSubTabEstoque');
+  const cBtn = $('folSubTabCadBtn');
+  const eBtn = $('folSubTabEstoqueBtn');
+  if (sub === 'cad') {
+    if (cEl) cEl.style.display = 'block';
+    if (eEl) eEl.style.display = 'none';
+    if (cBtn) { cBtn.className = 'btn on'; }
+    if (eBtn) { eBtn.className = 'btn sec'; }
+    filterFoliaresTable();
+  } else {
+    if (cEl) cEl.style.display = 'none';
+    if (eEl) eEl.style.display = 'block';
+    if (cBtn) { cBtn.className = 'btn sec'; }
+    if (eBtn) { eBtn.className = 'btn on'; }
+    loadEstoqueSaldos();
   }
 }
 
 let _pendingXmlItems = null;
+let _currentXmlTargetGroup = 'DEFENSIVOS';
 
-function openXmlNfeModal() {
+function openXmlNfeModal(targetGroup) {
+  _currentXmlTargetGroup = targetGroup || 'DEFENSIVOS';
   $('xmlNfePreview').style.display = 'none';
   $('xmlNfeFileName').textContent = 'Nenhum arquivo selecionado';
   $('btnConfirmXmlImport').disabled = true;
   $('xmlNfeFileInput').value = '';
   _pendingXmlItems = null;
+  
+  const title = $('xmlNfeModalTitle');
+  if (title) {
+    if (_currentXmlTargetGroup === 'FOLIARES') {
+      title.innerHTML = '<i data-lucide="file-code" style="width:20px;height:20px;color:var(--green)"></i> Importar XML de NFe — Estoque de Adubos Foliares';
+    } else {
+      title.innerHTML = '<i data-lucide="file-code" style="width:20px;height:20px;color:var(--blue)"></i> Importar XML de NFe — Estoque de Defensivos';
+    }
+  }
+  
   $('xmlNfeModal').style.display = 'flex';
+  if (window.lucide) lucide.createIcons();
 }
 
 function closeXmlNfeModal() {
@@ -20266,35 +20590,42 @@ function handleXmlNfeFile(input) {
   
   const reader = new FileReader();
   reader.onload = function(e) {
-  const xmlText = e.target.result;
-  try {
-  const parsed = parseNfeXml(xmlText);
-  if (!parsed.items || parsed.items.length === 0) {
-  alert('Nenhum produto válido encontrado neste XML de NFe!');
-  return;
-  }
-  _pendingXmlItems = parsed;
-  $('xmlPreviewEmit').textContent = parsed.emitName;
-  $('xmlPreviewNfe').textContent = parsed.nNf;
-  $('xmlPreviewData').textContent = parsed.dhEmi ? parsed.dhEmi.split('-').reverse().join('/') : '—';
-  
-  const tbody = $('xmlPreviewTbody');
-  tbody.innerHTML = parsed.items.map(item => `
-  <tr style="border-bottom:1px solid var(--border)">
-  <td style="padding:6px"><strong>${item.produto}</strong></td>
-  <td style="padding:6px; text-align:center">${item.quantidade}</td>
-  <td style="padding:6px; text-align:center">${item.unidade}</td>
-  <td style="padding:6px; text-align:center">${item.lote || '—'}</td>
-  <td style="padding:6px; text-align:center">${item.validade ? item.validade.split('-').reverse().join('/') : '—'}</td>
-  <td style="padding:6px; text-align:right">R$ ${item.valor_unitario.toFixed(2)}</td>
-  </tr>
-  `).join('');
-  
-  $('xmlNfePreview').style.display = 'block';
-  $('btnConfirmXmlImport').disabled = false;
-  } catch(err) {
-  alert('Erro ao ler arquivo XML: ' + err.message);
-  }
+    const xmlText = e.target.result;
+    try {
+      const parsed = parseNfeXml(xmlText);
+      if (!parsed.items || parsed.items.length === 0) {
+        alert('Nenhum produto válido encontrado neste XML de NFe!');
+        return;
+      }
+      _pendingXmlItems = parsed;
+      $('xmlPreviewEmit').textContent = parsed.emitName;
+      $('xmlPreviewNfe').textContent = parsed.nNf;
+      $('xmlPreviewData').textContent = parsed.dhEmi ? parsed.dhEmi.split('-').reverse().join('/') : '—';
+      
+      const tbody = $('xmlPreviewTbody');
+      tbody.innerHTML = parsed.items.map(item => {
+        const grp = getProductGroup(item.produto);
+        const grpBadge = grp === 'FOLIARES' 
+          ? '<span class="badge" style="background:rgba(16,185,129,0.15); color:var(--green); font-size:10px">FOLIAR</span>'
+          : '<span class="badge" style="background:rgba(59,130,246,0.15); color:var(--blue); font-size:10px">DEFENSIVO</span>';
+
+        return `
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:6px"><strong>${item.produto}</strong><br/>${grpBadge}</td>
+          <td style="padding:6px; text-align:center">${item.quantidade}</td>
+          <td style="padding:6px; text-align:center">${item.unidade}</td>
+          <td style="padding:6px; text-align:center">${item.lote || '—'}</td>
+          <td style="padding:6px; text-align:center">${item.validade ? item.validade.split('-').reverse().join('/') : '—'}</td>
+          <td style="padding:6px; text-align:right">R$ ${item.valor_unitario.toFixed(2)}</td>
+        </tr>
+        `;
+      }).join('');
+      
+      $('xmlNfePreview').style.display = 'block';
+      $('btnConfirmXmlImport').disabled = false;
+    } catch(err) {
+      alert('Erro ao ler arquivo XML: ' + err.message);
+    }
   };
   reader.readAsText(file);
 }
@@ -20312,27 +20643,27 @@ function parseNfeXml(xmlText) {
   const items = [];
   const dets = xmlDoc.querySelectorAll("det");
   dets.forEach(det => {
-  const xProd = det.querySelector("prod > xProd")?.textContent || "Produto NFe";
-  const qCom = parseFloat(det.querySelector("prod > qCom")?.textContent || "0");
-  const uCom = (det.querySelector("prod > uCom")?.textContent || "L").toUpperCase();
-  const vUnCom = parseFloat(det.querySelector("prod > vUnCom")?.textContent || "0");
-  const vProd = parseFloat(det.querySelector("prod > vProd")?.textContent || "0");
-  const nLote = det.querySelector("rastro > nLote")?.textContent || det.querySelector("med > nLote")?.textContent || "";
-  const dVal = det.querySelector("rastro > dVal")?.textContent || det.querySelector("med > dVal")?.textContent || "";
-  
-  items.push({
-  produto: xProd,
-  quantidade: qCom,
-  unidade: uCom,
-  valor_unitario: vUnCom,
-  valor_total: vProd,
-  lote: nLote,
-  validade: dVal || null,
-  fornecedor: emitName,
-  cnpj_fornecedor: emitCnpj,
-  nfe: nNf,
-  data_emissao: dhEmi
-  });
+    const xProd = det.querySelector("prod > xProd")?.textContent || "Produto NFe";
+    const qCom = parseFloat(det.querySelector("prod > qCom")?.textContent || "0");
+    const uCom = (det.querySelector("prod > uCom")?.textContent || "L").toUpperCase();
+    const vUnCom = parseFloat(det.querySelector("prod > vUnCom")?.textContent || "0");
+    const vProd = parseFloat(det.querySelector("prod > vProd")?.textContent || "0");
+    const nLote = det.querySelector("rastro > nLote")?.textContent || det.querySelector("med > nLote")?.textContent || "";
+    const dVal = det.querySelector("rastro > dVal")?.textContent || det.querySelector("med > dVal")?.textContent || "";
+    
+    items.push({
+      produto: xProd,
+      quantidade: qCom,
+      unidade: uCom,
+      valor_unitario: vUnCom,
+      valor_total: vProd,
+      lote: nLote,
+      validade: dVal || null,
+      fornecedor: emitName,
+      cnpj_fornecedor: emitCnpj,
+      nfe: nNf,
+      data_emissao: dhEmi
+    });
   });
   
   return { emitName, emitCnpj, nNf, dhEmi, items };
@@ -20344,31 +20675,35 @@ async function confirmXmlNfeImport() {
   btn.disabled = true; btn.textContent = 'Importando...';
   
   try {
-  const inserts = _pendingXmlItems.items.map(i => ({
-  tenant_id: tenantId,
-  produto_nome: i.produto.toUpperCase(),
-  tipo_produto: 'DEFENSIVO',
-  lote: i.lote || null,
-  validade: i.validade || null,
-  quantidade_entrada: i.quantidade,
-  unidade_medida: i.unidade,
-  valor_unitario: i.valor_unitario,
-  valor_total: i.valor_total,
-  fornecedor_nome: i.fornecedor,
-  numero_nfe: i.nfe,
-  data_entrada: i.data_emissao || today(),
-  observacao: `Importado via NFe ${i.nfe}`
-  }));
+    const inserts = _pendingXmlItems.items.map(i => {
+      const grp = getProductGroup(i.produto);
+      const tipo = grp === 'FOLIARES' ? 'FOLIAR' : 'DEFENSIVO';
+      return {
+        tenant_id: tenantId,
+        produto_nome: i.produto.toUpperCase(),
+        tipo_produto: tipo,
+        lote: i.lote || null,
+        validade: i.validade || null,
+        quantidade_entrada: i.quantidade,
+        unidade_medida: i.unidade,
+        valor_unitario: i.valor_unitario,
+        valor_total: i.valor_total,
+        fornecedor_nome: i.fornecedor,
+        numero_nfe: i.nfe,
+        data_entrada: i.data_emissao || today(),
+        observacao: `Importado via NFe ${i.nfe} (${grp})`
+      };
+    });
 
-  const { error } = await sb.from('estoque_defensivos_entradas').insert(inserts);
-  if (error) throw error;
+    const { error } = await sb.from('estoque_defensivos_entradas').insert(inserts);
+    if (error) throw error;
 
-  alert(` ${inserts.length} item(ns) importado(s) da NFe ${_pendingXmlItems.nNf} com sucesso!`);
-  closeXmlNfeModal();
-  loadEstoqueSaldos();
+    toast(` ${inserts.length} item(ns) importado(s) da NFe ${_pendingXmlItems.nNf} com sucesso!`, 'ok');
+    closeXmlNfeModal();
+    loadEstoqueSaldos();
   } catch(e) {
-  alert('Erro ao importar NFe: ' + e.message);
-  btn.disabled = false; btn.textContent = 'Confirmar Entrada no Estoque';
+    alert('Erro ao importar NFe: ' + e.message);
+    btn.disabled = false; btn.textContent = 'Confirmar Entrada no Estoque';
   }
 }
 
@@ -20377,6 +20712,9 @@ function closeManualStockModal() {
 }
 
 let _currentEstoqueGroup = 'DEFENSIVOS'; // 'DEFENSIVOS' ou 'FOLIARES'
+let _rawEstoqueBalancesDefensivos = [];
+let _rawEstoqueBalancesFoliares = [];
+let _rawEstoqueBalances = [];
 
 function getProductGroup(itemOrName) {
   if (!itemOrName) return 'DEFENSIVOS';
@@ -20385,13 +20723,15 @@ function getProductGroup(itemOrName) {
     if (t === 'FOLIAR' || t.includes('FOLIAR') || t.includes('ADUBO') || t.includes('NUTRI') || t.includes('FERTILIZ') || itemOrName.is_fertilizer) {
       return 'FOLIARES';
     }
-    if (t === 'DEFENSIVO' || t.includes('DEFENSIV') || t.includes('INSETIC') || t.includes('FUNGIC') || t.includes('ACARIC') || t.includes('HERBIC') || t.includes('BACTER')) {
+    if (t === 'DEFENSIVO' || t.includes('DEFENSIV') || t.includes('INSETIC') || t.includes('FUNGIC') || t.includes('ACARIC') || t.includes('HERBIC') || t.includes('BACTER') || t.includes('NEMAT')) {
       return 'DEFENSIVOS';
     }
     itemOrName = itemOrName.produto || '';
   }
-  const norm = String(itemOrName).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
-  const found = (window._defensivos || []).find(d => String(d.produto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === norm);
+  const norm = String(itemOrName).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+  
+  // 1. Procurar no cadastro técnico
+  const found = (window._defensivos || []).find(d => String(d.produto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase() === norm);
   if (found) {
     const ft = (found.tipo || '').toUpperCase();
     if (ft === 'FOLIAR' || ft.includes('FOLIAR') || ft.includes('ADUBO') || ft.includes('NUTRI') || ft.includes('FERTILIZ') || found.is_fertilizer) {
@@ -20399,70 +20739,37 @@ function getProductGroup(itemOrName) {
     }
     return 'DEFENSIVOS';
   }
+
+  // 2. Lista de produtos foliares conhecidos (da fazenda e mercado)
+  const knownFoliares = [
+    'BIO 20', 'CALMAX GOLD', 'FULVIN', 'LIQUI-PLEX', 'CONDUCTOR', 'CALBIT', 'BORAMIN',
+    'AJIFOL', 'UBYFOL', 'MEGAFOL', 'PROSPER', 'SUNRED', 'SWEET', 'RUTER', 'RADIFARM',
+    'REXOLIM', 'FETRILON', 'QUIMIFOL', 'DELFAN', 'CODA', 'FERTILEADER', 'FERTIACTYL',
+    'NIPHOKAM', 'NUTRIFOLHA', 'NUTRIPHITE', 'PEKACID', 'BENEFIT', 'BORO PLUS', 'CAB MAX',
+    'AMINOAGRO', 'AMINOMAX', 'ATON', 'BARRIER', 'BIO PIROL', 'BIONUTRI', 'ACTIWAVE',
+    'GROWMASTER', 'IMUNE', 'KAPPA', 'KELIRAN', 'KSC', 'MAGPHOS', 'NATUFRUIT', 'NATURAMIM',
+    'NATURQUEL', 'PLANT-PROD', 'PLANTAFOL', 'POLY FEED', 'SPRAY DUNGER', 'THIOTRAC', 'TORPED',
+    'TRADEBOR', 'TRINADOR', 'TROTTER', 'TURBO FLOWER', 'VITA LOK', 'YANTRA', 'JISA 40-22'
+  ];
+  if (knownFoliares.some(k => norm.includes(k))) {
+    return 'FOLIARES';
+  }
+
+  // 3. Palavras-chave de nutrientes e fertilizantes
   if (norm.includes('FOLIAR') || norm.includes('ADUBO') || norm.includes('NUTRI') || norm.includes('FERTILIZ') || norm.includes('SULFATO') || norm.includes('CALCINIT') || norm.includes('UREIA') || norm.includes('BORO') || norm.includes('POTASSIO') || norm.includes('ZINCO') || norm.includes('MAGNESIO') || norm.includes('CALCIO') || norm.includes('MAP') || norm.includes('KTS') || norm.includes('AMINO')) {
     return 'FOLIARES';
   }
+
   return 'DEFENSIVOS';
 }
 
 function switchEstoqueGroup(group) {
   _currentEstoqueGroup = group;
-  const btnDef = $('btnEstoqueGroupDefensivos');
-  const btnFol = $('btnEstoqueGroupFoliares');
-  const icon = $('estSectionIcon');
-  const title = $('estSectionTitle');
-  const desc = $('estSectionDesc');
-  const searchLabel = $('estSearchLabel');
-  const searchInput = $('estSearch');
-
   if (group === 'FOLIARES') {
-    if (btnDef) {
-      btnDef.className = 'btn sec';
-      btnDef.style.background = 'transparent';
-      btnDef.style.color = 'var(--muted)';
-      btnDef.style.border = '1px solid var(--border)';
-    }
-    if (btnFol) {
-      btnFol.className = 'btn on';
-      btnFol.style.background = 'var(--green)';
-      btnFol.style.color = '#fff';
-      btnFol.style.border = 'none';
-    }
-    if (icon) {
-      icon.setAttribute('data-lucide', 'sprout');
-      icon.style.color = 'var(--green)';
-    }
-    if (title) title.textContent = 'Saldos e Movimentações — Estoque de FOLIARES';
-    if (desc) desc.textContent = 'Controle independente do estoque de adubos foliares e nutrição foliar. As saídas são abatidas automaticamente pelas pulverizações (O.P) que utilizam foliares.';
-    if (searchLabel) searchLabel.textContent = 'Buscar Produto no Estoque de Foliares';
-    if (searchInput) searchInput.placeholder = 'Ex: Nutrifoliar, Boro, Sulfato, Cálcio, Aminoácidos...';
-    if ($('estKpiLabelItens')) $('estKpiLabelItens').textContent = 'Itens em Estoque (Foliares)';
+    showCcTab('foliares');
   } else {
-    if (btnDef) {
-      btnDef.className = 'btn on';
-      btnDef.style.background = 'var(--blue)';
-      btnDef.style.color = '#fff';
-      btnDef.style.border = 'none';
-    }
-    if (btnFol) {
-      btnFol.className = 'btn sec';
-      btnFol.style.background = 'transparent';
-      btnFol.style.color = 'var(--muted)';
-      btnFol.style.border = '1px solid var(--border)';
-    }
-    if (icon) {
-      icon.setAttribute('data-lucide', 'shield');
-      icon.style.color = 'var(--yellow)';
-    }
-    if (title) title.textContent = 'Saldos e Movimentações — Estoque de DEFENSIVOS';
-    if (desc) desc.textContent = 'Controle independente do estoque de defensivos fitossanitários. As saídas são abatidas automaticamente pelas pulverizações (O.P) que utilizam defensivos.';
-    if (searchLabel) searchLabel.textContent = 'Buscar Produto no Estoque de Defensivos';
-    if (searchInput) searchInput.placeholder = 'Ex: Abamectina, Score, Ortus, Priori, Ampligo...';
-    if ($('estKpiLabelItens')) $('estKpiLabelItens').textContent = 'Itens em Estoque (Defensivos)';
+    showCcTab('defreg');
   }
-  
-  if (window.lucide) lucide.createIcons();
-  filterEstoqueTable();
 }
 
 async function loadEstoqueSaldos() {
@@ -20477,13 +20784,13 @@ async function loadEstoqueSaldos() {
 
     const balances = new Map();
     
-    // 1. Incluir todos os itens cadastrados no cadastro técnico para ficarem visíveis no estoque correspondente
+    // 1. Incluir todos os itens cadastrados no cadastro técnico
     (window._defensivos || []).forEach(d => {
       if (d && d.produto) {
         const name = d.produto.trim().toUpperCase();
         if (!balances.has(name)) {
           const group = getProductGroup(d);
-          balances.set(name, { produto: name, group: group, ingrediente: d.ingrediente_ativo || '', entradas: 0, saidas: 0, unidade: d.unidade_dose || 'L' });
+          balances.set(name, { produto: name, group: group, ingrediente: d.ingrediente_ativo || '', entradas: 0, saidas: 0, unidade: d.unidade_dose || d.unidade || 'L' });
         }
       }
     });
@@ -20511,8 +20818,13 @@ async function loadEstoqueSaldos() {
       balances.get(name).saidas += parseFloat(s.quantidade_saida) || 0;
     });
 
-    _rawEstoqueBalances = Array.from(balances.values()).sort((a,b) => a.produto.localeCompare(b.produto));
-    filterEstoqueTable();
+    const allBalances = Array.from(balances.values()).sort((a,b) => a.produto.localeCompare(b.produto));
+    _rawEstoqueBalances = allBalances;
+    _rawEstoqueBalancesDefensivos = allBalances.filter(item => item.group === 'DEFENSIVOS');
+    _rawEstoqueBalancesFoliares = allBalances.filter(item => item.group === 'FOLIARES');
+
+    filterEstoqueDefensivosTable();
+    filterEstoqueFoliaresTable();
   } catch(e) {
     console.error('Erro ao calcular saldos de estoque:', e);
   }
@@ -21140,24 +21452,30 @@ function downloadAdubosTemplateCSV() {
   toast('Planilha modelo de adubos/foliares baixada com sucesso!', 'ok');
 }
 
-function downloadStockInventoryTemplateCSV() {
+function downloadStockInventoryTemplateCSV(targetGroup) {
+  const isFoliar = targetGroup === 'FOLIARES';
   const csvHeaders = 'PRODUTO,QUANTIDADE,UNIDADE,LOTE,VALIDADE,FORNECEDOR,NOTA_FISCAL,DATA_ENTRADA\n';
-  const csvRows = [
-    'NUTRIFOLIAR POTASSIO,100,L,L-2026/01,2027-12-31,FORNECEDOR EXEMPLO,12345,2026-09-18',
-    'CALCINIT,500,KG,L-2026/02,2028-06-30,YARA BRASIL,12346,2026-09-18',
-    'SULFATO DE MAGNESIO,250,KG,L-2026/03,2028-12-31,FORNECEDOR EXEMPLO,12347,2026-09-18',
-    'ORTUS 50 SC,20,L,L-84920,2027-08-31,SYNGENTA,12348,2026-09-18'
+  const csvRows = isFoliar ? [
+    'BIO 20,100,L,L-2026/01,2028-12-31,OMEX AGRIFLUIDS,12345,2026-09-18',
+    'CALMAX GOLD,80,L,L-2026/02,2028-06-30,OMEX AGRIFLUIDS,12346,2026-09-18',
+    'CONDUCTOR,50,L,L-2026/03,2028-12-31,FORNECEDOR EXEMPLO,12347,2026-09-18',
+    'LIQUI-PLEX Ca+Mg+B,120,L,L-84920,2027-08-31,ALLTECH CROP SCIENCE,12348,2026-09-18'
+  ].join('\n') : [
+    'SCORE,50,L,L-2026/01,2028-12-31,SYNGENTA,12345,2026-09-18',
+    'AMPLIGO,40,L,L-2026/02,2028-06-30,SYNGENTA,12346,2026-09-18',
+    'ORTUS 50 SC,20,L,L-84920,2027-08-31,IHARA,12347,2026-09-18',
+    'DECIS 25 EC,15,L,L-84921,2027-05-20,BAYER,12348,2026-09-18'
   ].join('\n');
 
   const blob = new Blob([csvHeaders + csvRows], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', 'Modelo_Inventario_Estoque.csv');
+  link.setAttribute('download', isFoliar ? 'Modelo_Inventario_Foliares.csv' : 'Modelo_Inventario_Defensivos.csv');
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  toast('Planilha modelo de inventário baixada!', 'ok');
+  toast(`Planilha modelo de inventário (${isFoliar ? 'Foliares' : 'Defensivos'}) baixada!`, 'ok');
 }
 
 function switchDefCategoryMode(mode) {
@@ -21211,21 +21529,44 @@ function switchDefCategoryMode(mode) {
   if (window.lucide) lucide.createIcons();
 }
 
-function getAllAvailableProductsList() {
+function getAvailableProductsList(group) {
   const prodsSet = new Set();
+  const isFoliarOnly = group === 'FOLIARES';
+  const isDefOnly = group === 'DEFENSIVOS';
+
   (window._defensivos || []).forEach(d => {
-    if (d && d.produto) prodsSet.add(d.produto.trim().toUpperCase());
+    if (!d || !d.produto) return;
+    const prodGroup = typeof getProductGroup === 'function' ? getProductGroup(d) : 'DEFENSIVOS';
+    if (isFoliarOnly && prodGroup !== 'FOLIARES') return;
+    if (isDefOnly && prodGroup !== 'DEFENSIVOS') return;
+    prodsSet.add(d.produto.trim().toUpperCase());
   });
-  if (typeof FERTILIZANTES_CATALOGO_OFICIAL !== 'undefined' && Array.isArray(FERTILIZANTES_CATALOGO_OFICIAL)) {
+
+  if (!isDefOnly && typeof FERTILIZANTES_CATALOGO_OFICIAL !== 'undefined' && Array.isArray(FERTILIZANTES_CATALOGO_OFICIAL)) {
     FERTILIZANTES_CATALOGO_OFICIAL.forEach(f => {
       if (f) prodsSet.add(f.trim().toUpperCase());
     });
   }
+
+  if (!isDefOnly && Array.isArray(_rawEstoqueBalancesFoliares)) {
+    _rawEstoqueBalancesFoliares.forEach(item => { if (item.produto) prodsSet.add(item.produto); });
+  }
+  if (!isFoliarOnly && Array.isArray(_rawEstoqueBalancesDefensivos)) {
+    _rawEstoqueBalancesDefensivos.forEach(item => { if (item.produto) prodsSet.add(item.produto); });
+  }
+
   return Array.from(prodsSet).sort();
 }
 
+function getAllAvailableProductsList() {
+  return getAvailableProductsList('ALL');
+}
+
 // ── Modais de Entrada e Saída Manual de Estoque ──────────────────────
-async function openManualStockModal(prefillProdName) {
+let _currentManualStockTargetGroup = 'DEFENSIVOS';
+
+async function openManualStockModal(prefillProdName, targetGroup) {
+  _currentManualStockTargetGroup = targetGroup || (prefillProdName ? (typeof getProductGroup === 'function' ? getProductGroup(prefillProdName) : 'DEFENSIVOS') : 'DEFENSIVOS');
   $('stkProdNome').value = prefillProdName || '';
   $('stkQtd').value = '';
   $('stkLote').value = '';
@@ -21233,11 +21574,20 @@ async function openManualStockModal(prefillProdName) {
   $('stkNfe').value = '';
   $('stkDataEntrada').value = today();
   
-  // Popular lista completa unificada de produtos
+  const modalTitle = document.querySelector('#manualStockModal h3');
+  if (modalTitle) {
+    if (_currentManualStockTargetGroup === 'FOLIARES') {
+      modalTitle.innerHTML = '<span style="color:var(--green)">🌿 Registrar Entrada de Foliar / Nutrição</span>';
+    } else {
+      modalTitle.innerHTML = '<span style="color:var(--blue)">🛡️ Registrar Entrada de Defensivo Fitossanitário</span>';
+    }
+  }
+
+  // Popular lista filtrada de produtos
   const dList = $('stkProdList');
   if (dList) {
-    const allProds = getAllAvailableProductsList();
-    dList.innerHTML = allProds.map(p => `<option value="${p}">`).join('');
+    const prods = getAvailableProductsList(_currentManualStockTargetGroup);
+    dList.innerHTML = prods.map(p => `<option value="${p}">`).join('');
   }
 
   // Popular lista de fornecedores
@@ -21266,7 +21616,8 @@ async function saveManualStockEntry() {
   if (!prod) { alert('Informe o nome do produto!'); return; }
   if (qtd <= 0) { alert('Informe uma quantidade válida!'); return; }
 
-  const group = typeof getProductGroup === 'function' ? getProductGroup(prod) : 'DEFENSIVOS';
+  const detectedGroup = typeof getProductGroup === 'function' ? getProductGroup(prod) : 'DEFENSIVOS';
+  const group = _currentManualStockTargetGroup || detectedGroup;
   const tipoProduto = group === 'FOLIARES' ? 'FOLIAR' : 'DEFENSIVO';
 
   try {
@@ -21292,16 +21643,28 @@ async function saveManualStockEntry() {
   }
 }
 
-function openManualStockExitModal(prefillProdName) {
+let _currentManualStockExitTargetGroup = 'DEFENSIVOS';
+
+function openManualStockExitModal(prefillProdName, targetGroup) {
+  _currentManualStockExitTargetGroup = targetGroup || (prefillProdName ? (typeof getProductGroup === 'function' ? getProductGroup(prefillProdName) : 'DEFENSIVOS') : 'DEFENSIVOS');
   $('stkExitProdNome').value = prefillProdName || '';
   $('stkExitQtd').value = '';
   $('stkExitObs').value = '';
   $('stkExitData').value = today();
   
+  const modalTitle = document.querySelector('#manualStockExitModal h3');
+  if (modalTitle) {
+    if (_currentManualStockExitTargetGroup === 'FOLIARES') {
+      modalTitle.innerHTML = '<i data-lucide="minus-circle" style="width:20px; height:20px; color:var(--green)"></i> <span style="color:var(--green)">Baixa Manual de Foliar / Nutrição</span>';
+    } else {
+      modalTitle.innerHTML = '<i data-lucide="minus-circle" style="width:20px; height:20px; color:var(--orange)"></i> <span style="color:var(--orange)">Baixa Manual de Defensivo Fitossanitário</span>';
+    }
+  }
+
   const dList = $('stkExitProdList');
   if (dList) {
-    const allProds = getAllAvailableProductsList();
-    dList.innerHTML = allProds.map(p => `<option value="${p}">`).join('');
+    const prods = getAvailableProductsList(_currentManualStockExitTargetGroup);
+    dList.innerHTML = prods.map(p => `<option value="${p}">`).join('');
   }
   
   const pSel = $('stkExitParcelSelect');
@@ -21314,6 +21677,7 @@ function openManualStockExitModal(prefillProdName) {
   }
   
   $('manualStockExitModal').style.display = 'flex';
+  if (window.lucide) lucide.createIcons();
   if (prefillProdName && $('stkExitQtd')) $('stkExitQtd').focus();
 }
 
@@ -21333,7 +21697,8 @@ async function saveManualStockExit() {
   if (!prod) { alert('Informe o nome do produto!'); return; }
   if (qtd <= 0) { alert('Informe uma quantidade de saída válida!'); return; }
 
-  const group = typeof getProductGroup === 'function' ? getProductGroup(prod) : 'DEFENSIVOS';
+  const detectedGroup = typeof getProductGroup === 'function' ? getProductGroup(prod) : 'DEFENSIVOS';
+  const group = _currentManualStockExitTargetGroup || detectedGroup;
   let finalMotivo = motivo;
   if (motivo === 'PULVERIZACAO') {
     finalMotivo = group === 'FOLIARES' ? 'PULVERIZACAO_FOLIAR' : 'PULVERIZACAO_DEFENSIVO';
@@ -21364,12 +21729,25 @@ let pendingImportStock = [];
 let _importStock2DRows = [];
 let _importStockCSVHeaders = [];
 
-function openImportStockModal() {
+let _currentImportStockTargetGroup = 'DEFENSIVOS';
+
+function openImportStockModal(targetGroup) {
+  _currentImportStockTargetGroup = targetGroup || 'DEFENSIVOS';
   pendingImportStock = [];
   $('importStockPreviewContainer').style.display = 'none';
   $('btnConfirmImportStock').disabled = true;
   $('btnConfirmImportStock').style.opacity = '0.5';
   $('fileInputStock').value = '';
+  
+  const title = document.querySelector('#importStockModal h3');
+  if (title) {
+    if (_currentImportStockTargetGroup === 'FOLIARES') {
+      title.innerHTML = '<i data-lucide="sprout" style="width:22px; height:22px; color:var(--green)"></i> Importar Inventário de Foliares & Nutrição';
+    } else {
+      title.innerHTML = '<i data-lucide="shield" style="width:22px; height:22px; color:var(--blue)"></i> Importar Inventário de Defensivos Fitossanitários';
+    }
+  }
+
   $('importStockModal').style.display = 'flex';
   if (window.lucide) lucide.createIcons();
 }
@@ -21509,9 +21887,13 @@ function rebuildImportStockPreview() {
     else if (un.includes('GL') || un.includes('GAL')) un = 'GL';
     else un = 'UN';
 
+    const grp = _currentImportStockTargetGroup || (typeof getProductGroup === 'function' ? getProductGroup(produto) : 'DEFENSIVOS');
+    const tipo = grp === 'FOLIARES' ? 'FOLIAR' : 'DEFENSIVO';
+
     pendingImportStock.push({
       tenant_id: tenantId,
       produto_nome: produto,
+      tipo_produto: tipo,
       quantidade_entrada: qtd,
       unidade_medida: un,
       lote: getVal(cols, 'lote') || null,
@@ -21519,7 +21901,7 @@ function rebuildImportStockPreview() {
       fornecedor_nome: getVal(cols, 'fornecedor') || null,
       numero_nfe: getVal(cols, 'nfe') || null,
       data_entrada: getVal(cols, 'data') || today(),
-      observacao: 'Importação de inventário inicial'
+      observacao: `Importação de inventário inicial (${grp})`
     });
   }
 
@@ -21579,26 +21961,23 @@ async function confirmImportStock() {
   }
 }
 
-// ── Filtros da Tabela de Saldos de Estoque ─────────────────────────────
-function filterEstoqueTable() {
-  const search = ($('estSearch')?.value || '').trim().toUpperCase();
-  const tipoFilter = $('estTipoFilter')?.value || '';
-  const currentGroup = _currentEstoqueGroup || 'DEFENSIVOS';
+// ── Filtros e Renderização das Tabelas de Saldos de Estoque ───────────────
+function filterEstoqueDefensivosTable() {
+  const search = ($('estDefSearch')?.value || '').trim().toUpperCase();
+  const tipoFilter = $('estDefTipoFilter')?.value || '';
+  const groupItems = _rawEstoqueBalancesDefensivos || [];
 
-  const groupItems = _rawEstoqueBalances.filter(item => item.group === currentGroup);
-
-  // Calcular KPIs para o estoque ativo selecionado
   const totalItens = groupItems.length;
   const totalEntradas = groupItems.reduce((acc, it) => acc + (it.entradas || 0), 0);
   const totalSaidas = groupItems.reduce((acc, it) => acc + (it.saidas || 0), 0);
   const saldoTotal = totalEntradas - totalSaidas;
 
-  if ($('estKpiTotalItens')) $('estKpiTotalItens').textContent = totalItens;
-  if ($('estKpiEntradas')) $('estKpiEntradas').textContent = totalEntradas.toFixed(2);
-  if ($('estKpiSaidas')) $('estKpiSaidas').textContent = totalSaidas.toFixed(2);
-  if ($('estKpiSaldoTotal')) {
-    $('estKpiSaldoTotal').textContent = saldoTotal.toFixed(2);
-    $('estKpiSaldoTotal').className = 'kval ' + (saldoTotal <= 0 ? 'orange' : 'green');
+  if ($('estDefKpiTotalItens')) $('estDefKpiTotalItens').textContent = totalItens;
+  if ($('estDefKpiEntradas')) $('estDefKpiEntradas').textContent = totalEntradas.toFixed(2);
+  if ($('estDefKpiSaidas')) $('estDefKpiSaidas').textContent = totalSaidas.toFixed(2);
+  if ($('estDefKpiSaldoTotal')) {
+    $('estDefKpiSaldoTotal').textContent = saldoTotal.toFixed(2);
+    $('estDefKpiSaldoTotal').className = 'kval ' + (saldoTotal <= 0 ? 'orange' : 'cyan');
   }
 
   const norm = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
@@ -21614,17 +21993,15 @@ function filterEstoqueTable() {
     return matchSearch && matchTipo;
   });
 
-  renderEstoqueSaldosTable(filtered);
+  renderEstoqueDefensivosTable(filtered);
 }
 
-function renderEstoqueSaldosTable(list) {
-  const tbody = $('estoqueSaldosTableBody');
+function renderEstoqueDefensivosTable(list) {
+  const tbody = $('estoqueDefensivosSaldosTableBody');
   if (!tbody) return;
 
-  const currentGroup = _currentEstoqueGroup || 'DEFENSIVOS';
-
   if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--muted)">Nenhum produto encontrado no <strong>Estoque de ${currentGroup}</strong> com os filtros aplicados.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--muted)">Nenhum defensivo fitossanitário encontrado com os filtros aplicados.</td></tr>`;
     return;
   }
 
@@ -21636,25 +22013,21 @@ function renderEstoqueSaldosTable(list) {
       ? '<span class="pill" style="background:rgba(245,158,11,0.15);color:var(--yellow);font-weight:bold">⚠ Estoque Baixo</span>'
       : '<span class="pill" style="background:rgba(16,185,129,0.15);color:var(--green);font-weight:bold"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;margin-right:4px"></span> Disponível</span>';
     
-    const isFoliar = item.group === 'FOLIARES';
-    const catBadge = isFoliar
-      ? '<span class="badge" style="background:rgba(16,185,129,0.15); color:var(--green); font-size:10px; font-weight:800; border:1px solid rgba(16,185,129,0.3)">🌿 FOLIAR</span>'
-      : '<span class="badge" style="background:rgba(59,130,246,0.15); color:var(--blue); font-size:10px; font-weight:800; border:1px solid rgba(59,130,246,0.3)">🛡️ DEFENSIVO</span>';
-    
+    const catBadge = '<span class="badge" style="background:rgba(59,130,246,0.15); color:var(--blue); font-size:10px; font-weight:800; border:1px solid rgba(59,130,246,0.3)">🛡️ DEFENSIVO</span>';
     const safeProd = item.produto.replace(/'/g, "\\'");
 
     return `
     <tr style="border-bottom:1px solid var(--border); font-size:13px; transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
       <td style="padding:12px 10px; font-weight:800; color:#fff">${item.produto}</td>
-      <td style="padding:12px 10px">${catBadge}</td>
+      <td style="padding:12px 10px">${catBadge} <span style="font-size:11px; color:var(--muted); margin-left:6px">${item.ingrediente || '—'}</span></td>
       <td style="padding:12px 10px; text-align:center; color:var(--green); font-weight:700">+ ${item.entradas.toFixed(2)}</td>
       <td style="padding:12px 10px; text-align:center; color:var(--orange); font-weight:700">- ${item.saidas.toFixed(2)}</td>
       <td style="padding:12px 10px; text-align:center; font-weight:900; font-size:14px; color:${saldo<=0?'var(--red)':'#fff'}">${saldo.toFixed(2)}</td>
       <td style="padding:12px 10px; text-align:center; color:var(--muted)">${item.unidade}</td>
       <td style="padding:12px 10px; text-align:center">${statusPill}</td>
       <td style="padding:12px 10px; text-align:center; white-space:nowrap">
-        <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:4px; color:var(--green); border-color:rgba(16,185,129,0.3)" onclick="openManualStockModal('${safeProd}', '${item.group}')" title="Dar nova entrada deste produto">+ Entrada</button>
-        <button class="btn sec" style="font-size:11px; padding:4px 8px; color:var(--orange); border-color:rgba(245,158,11,0.3)" onclick="openManualStockExitModal('${safeProd}', '${item.group}')" title="Dar baixa deste produto">- Baixa</button>
+        <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:4px; color:var(--green); border-color:rgba(16,185,129,0.3)" onclick="openManualStockModal('${safeProd}', 'DEFENSIVOS')" title="Dar nova entrada deste defensivo">+ Entrada</button>
+        <button class="btn sec" style="font-size:11px; padding:4px 8px; color:var(--orange); border-color:rgba(245,158,11,0.3)" onclick="openManualStockExitModal('${safeProd}', 'DEFENSIVOS')" title="Dar baixa deste defensivo">- Baixa</button>
       </td>
     </tr>
     `;
@@ -21662,6 +22035,91 @@ function renderEstoqueSaldosTable(list) {
   
   if (window.lucide) lucide.createIcons();
 }
+
+function filterEstoqueFoliaresTable() {
+  const search = ($('estFolSearch')?.value || '').trim().toUpperCase();
+  const tipoFilter = $('estFolTipoFilter')?.value || '';
+  const groupItems = _rawEstoqueBalancesFoliares || [];
+
+  const totalItens = groupItems.length;
+  const totalEntradas = groupItems.reduce((acc, it) => acc + (it.entradas || 0), 0);
+  const totalSaidas = groupItems.reduce((acc, it) => acc + (it.saidas || 0), 0);
+  const saldoTotal = totalEntradas - totalSaidas;
+
+  if ($('estFolKpiTotalItens')) $('estFolKpiTotalItens').textContent = totalItens;
+  if ($('estFolKpiEntradas')) $('estFolKpiEntradas').textContent = totalEntradas.toFixed(2);
+  if ($('estFolKpiSaidas')) $('estFolKpiSaidas').textContent = totalSaidas.toFixed(2);
+  if ($('estFolKpiSaldoTotal')) {
+    $('estFolKpiSaldoTotal').textContent = saldoTotal.toFixed(2);
+    $('estFolKpiSaldoTotal').className = 'kval ' + (saldoTotal <= 0 ? 'orange' : 'green');
+  }
+
+  const norm = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+
+  const filtered = groupItems.filter(item => {
+    const matchSearch = !search || norm(item.produto).includes(norm(search)) || norm(item.ingrediente).includes(norm(search));
+    const saldo = item.entradas - item.saidas;
+    let matchTipo = true;
+    if (tipoFilter === 'DISPONIVEL') matchTipo = saldo > 0;
+    else if (tipoFilter === 'BAIXO') matchTipo = saldo > 0 && saldo < 10;
+    else if (tipoFilter === 'ZERADO') matchTipo = saldo <= 0;
+    
+    return matchSearch && matchTipo;
+  });
+
+  renderEstoqueFoliaresTable(filtered);
+}
+
+function renderEstoqueFoliaresTable(list) {
+  const tbody = $('estoqueFoliaresSaldosTableBody');
+  if (!tbody) return;
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--muted)">Nenhum adubo foliar ou nutrição encontrado com os filtros aplicados.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(item => {
+    const saldo = item.entradas - item.saidas;
+    const statusPill = saldo <= 0 
+      ? '<span class="pill" style="background:rgba(239,68,68,0.15);color:var(--red);font-weight:bold"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:4px"></span> Zerado / Crítico</span>' 
+      : saldo < 10 
+      ? '<span class="pill" style="background:rgba(245,158,11,0.15);color:var(--yellow);font-weight:bold">⚠ Estoque Baixo</span>'
+      : '<span class="pill" style="background:rgba(16,185,129,0.15);color:var(--green);font-weight:bold"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;margin-right:4px"></span> Disponível</span>';
+    
+    const catBadge = '<span class="badge" style="background:rgba(16,185,129,0.15); color:var(--green); font-size:10px; font-weight:800; border:1px solid rgba(16,185,129,0.3)">🌿 FOLIAR</span>';
+    const safeProd = item.produto.replace(/'/g, "\\'");
+
+    return `
+    <tr style="border-bottom:1px solid var(--border); font-size:13px; transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+      <td style="padding:12px 10px; font-weight:800; color:#fff">${item.produto}</td>
+      <td style="padding:12px 10px">${catBadge} <span style="font-size:11px; color:var(--muted); margin-left:6px">${item.ingrediente || 'Garantias Nutricionais'}</span></td>
+      <td style="padding:12px 10px; text-align:center; color:var(--green); font-weight:700">+ ${item.entradas.toFixed(2)}</td>
+      <td style="padding:12px 10px; text-align:center; color:var(--orange); font-weight:700">- ${item.saidas.toFixed(2)}</td>
+      <td style="padding:12px 10px; text-align:center; font-weight:900; font-size:14px; color:${saldo<=0?'var(--red)':'#fff'}">${saldo.toFixed(2)}</td>
+      <td style="padding:12px 10px; text-align:center; color:var(--muted)">${item.unidade}</td>
+      <td style="padding:12px 10px; text-align:center">${statusPill}</td>
+      <td style="padding:12px 10px; text-align:center; white-space:nowrap">
+        <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:4px; color:var(--green); border-color:rgba(16,185,129,0.3)" onclick="openManualStockModal('${safeProd}', 'FOLIARES')" title="Dar nova entrada deste foliar">+ Entrada</button>
+        <button class="btn sec" style="font-size:11px; padding:4px 8px; color:var(--orange); border-color:rgba(245,158,11,0.3)" onclick="openManualStockExitModal('${safeProd}', 'FOLIARES')" title="Dar baixa deste foliar">- Baixa</button>
+      </td>
+    </tr>
+    `;
+  }).join('');
+  
+  if (window.lucide) lucide.createIcons();
+}
+
+function filterEstoqueTable() {
+  filterEstoqueDefensivosTable();
+  filterEstoqueFoliaresTable();
+}
+
+function renderEstoqueSaldosTable(list) {
+  renderEstoqueDefensivosTable(list);
+  renderEstoqueFoliaresTable(list);
+}
+
 
 </script><!-- DRAWER DE DESEMPENHO DO COLABORADOR -->
 <div id="empDrawer" class="drawer">
