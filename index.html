@@ -2794,8 +2794,8 @@
         <div>
           <label class="flabel">N° do Livro / Ficha</label>
           <div style="display:flex; gap:6px">
-            <input id="newIdiarnNumero" type="number" placeholder="—" style="padding:8px; background:var(--input-bg); color:var(--orange); font-weight:800; border:1px solid var(--border); width:100%; border-radius:6px" readonly>
-            <button onclick="reloadNewIdiarnNumber()" title="Atualizar próximo número" style="background:var(--card2); border:1px solid var(--border); border-radius:6px; padding:8px; cursor:pointer; color:var(--muted)"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i></button>
+            <input id="newIdiarnNumero" type="number" placeholder="—" style="padding:8px; background:var(--input-bg); color:var(--orange); font-weight:800; border:1px solid var(--border); width:100%; border-radius:6px" title="Número sequencial do Livro IDIARN">
+            <button type="button" onclick="reloadNewIdiarnNumber()" title="Atualizar próximo número sequencial" style="background:var(--card2); border:1px solid var(--border); border-radius:6px; padding:8px; cursor:pointer; color:var(--muted)"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i></button>
           </div>
         </div>
       </div>
@@ -16514,7 +16514,7 @@ async function carregarFoliaresOficiais() {
         tipo: 'FOLIAR',
         ingrediente_ativo: nutrSummary || 'Nutrição Mineral Foliar',
         alvo: extraFound?.alvo || 'Nutrição Foliar & Correção Nutricional',
-        dose: '1.0 a 2.0 L/ha',
+        dose: 1.5,
         dose_texto: '1.0 a 2.0 L/ha (conforme recomendação agronômica)',
         unidade: 'L/ha',
         unidade_dose: 'L/ha',
@@ -16536,7 +16536,17 @@ async function carregarFoliaresOficiais() {
     let insertedCount = 0;
     for (let i = 0; i < toInsert.length; i += batchSize) {
       const batch = toInsert.slice(i, i + batchSize);
-      const { error: insErr } = await sb.from('caderno_campo_defensivos_cadastro').insert(batch);
+      let { error: insErr } = await sb.from('caderno_campo_defensivos_cadastro').insert(batch);
+      if (insErr && (insErr.code === '22P02' || (insErr.message && insErr.message.includes('dose')))) {
+        // Fallback resiliente: se a coluna dose no Postgres rejeitar número ou formato, remove o campo dose
+        const fallbackBatch = batch.map(b => {
+          const c = { ...b };
+          delete c.dose;
+          return c;
+        });
+        const retry = await sb.from('caderno_campo_defensivos_cadastro').insert(fallbackBatch);
+        insErr = retry.error;
+      }
       if (insErr) throw insErr;
       insertedCount += batch.length;
     }
@@ -20493,7 +20503,7 @@ async function openNewIdiarnModal() {
     });
   }
 
-  reloadNewIdiarnNumber();
+  await reloadNewIdiarnNumber();
   $('newIdiarnModal').style.display = 'flex';
   if (window.lucide) lucide.createIcons();
 }
@@ -20504,11 +20514,38 @@ function closeNewIdiarnModal() {
 
 async function reloadNewIdiarnNumber() {
   try {
-    const { data } = await sb.from('caderno_campo_idiarn').select('numero_idiarn').order('numero_idiarn', { ascending: false }).limit(1);
-    const nextNum = (data && data[0] && data[0].numero_idiarn) ? parseInt(data[0].numero_idiarn) + 1 : 1;
-    $('newIdiarnNumero').value = nextNum;
+    let maxNum = 0;
+    // 1. Verificar registros já carregados em memória para o tenant atual
+    if (Array.isArray(_currentIdiarnVisitas) && _currentIdiarnVisitas.length > 0) {
+      _currentIdiarnVisitas.forEach(v => {
+        const n = parseInt(v.numero_idiarn, 10);
+        if (!isNaN(n) && n > maxNum) maxNum = n;
+      });
+    }
+    // 2. Consultar o banco pelo tenant atual
+    if (tenantId) {
+      const { data, error } = await sb.from('caderno_campo_idiarn')
+        .select('numero_idiarn')
+        .eq('tenant_id', tenantId)
+        .order('numero_idiarn', { ascending: false })
+        .limit(20);
+      if (!error && Array.isArray(data)) {
+        data.forEach(d => {
+          const n = parseInt(d.numero_idiarn, 10);
+          if (!isNaN(n) && n > maxNum) maxNum = n;
+        });
+      }
+    }
+    const nextNum = maxNum > 0 ? (maxNum + 1) : 1;
+    if ($('newIdiarnNumero')) $('newIdiarnNumero').value = nextNum;
+    return nextNum;
   } catch(e) {
-    $('newIdiarnNumero').value = 1;
+    console.warn('Erro ao calcular próximo número IDIARN:', e);
+    const fallback = (_currentIdiarnVisitas && _currentIdiarnVisitas.length > 0)
+      ? Math.max(0, ..._currentIdiarnVisitas.map(v => parseInt(v.numero_idiarn, 10) || 0)) + 1
+      : 1;
+    if ($('newIdiarnNumero')) $('newIdiarnNumero').value = fallback;
+    return fallback;
   }
 }
 
@@ -20535,7 +20572,9 @@ async function onNewIdiarnParcelChange() {
   if (ip.fornecedor || ip.origem) $('newIdiarnOrigemMuda').value = ip.fornecedor || ip.origem || 'TOPPLANT';
   
   const num = $('newIdiarnNumero')?.value || '1';
-  $('newIdiarnDocumento').value = `IDIARN ${num} - ${parcelCode} - VISITA 1`;
+  const prevVisits = (_currentIdiarnVisitas || []).filter(v => (v.parcela || '').trim().toUpperCase() === parcelCode.trim().toUpperCase());
+  const visitIndex = prevVisits.length + 1;
+  $('newIdiarnDocumento').value = `IDIARN ${num} - ${parcelCode} - VISITA ${visitIndex}`;
 
   // Carregar pulverizações (O.Ps) desta parcela
   if (opSelect) opSelect.innerHTML = '<option value="">⏳ Buscando pulverizações da parcela...</option>';
@@ -20826,28 +20865,82 @@ async function saveNewIdiarnDashboard() {
 
   const produtosNomes = formData.defensivos.map(d => d.produto).filter(Boolean).join(', ') || 'Fitossanitário';
 
+  // Garantir carregamento das parcelas reais para resolução de chave estrangeira (parcels table)
+  if (!window._parcels || window._parcels.length === 0) {
+    try {
+      const { data: pData } = await sb.from('parcels').select('id, code').eq('tenant_id', tenantId);
+      if (pData) window._parcels = pData;
+    } catch(e) {
+      console.warn('Erro ao carregar parcels:', e);
+    }
+  }
+
+  // Resolver ID real da tabela 'parcels' (FK constraint no banco)
+  const isUUID = str => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+  const ip = getParcelaCompleteInfo(formData.pId, _infoParcelas);
+  const parcelCode = formData.pCode || (ip ? (ip.parcela2 || ip.parcela) : '');
+
+  let realParcelId = null;
+  const parcelsList = window._parcels || [];
+
+  // 1. Tentar por ip.parcel_id se for um UUID válido existente em parcels
+  if (ip && ip.parcel_id && isUUID(ip.parcel_id) && parcelsList.some(p => p.id === ip.parcel_id)) {
+    realParcelId = ip.parcel_id;
+  }
+  // 2. Tentar por código da parcela
+  if (!realParcelId && parcelCode) {
+    const norm = s => (s || '').trim().toUpperCase();
+    const found = parcelsList.find(p => norm(p.code) === norm(parcelCode) || norm(p.p_code) === norm(parcelCode));
+    if (found) realParcelId = found.id;
+  }
+  // 3. Tentar se formData.pId por acaso já for um id de parcels
+  if (!realParcelId && isUUID(formData.pId) && parcelsList.some(p => p.id === formData.pId)) {
+    realParcelId = formData.pId;
+  }
+
   const record = {
     tenant_id: tenantId,
     numero_idiarn: parseInt(formData.numeroLivro) || null,
     safra_ciclo: formData.safraCiclo,
-    parcel_id: formData.pId,
-    parcela: formData.pCode,
+    parcel_id: realParcelId, // Chave estrangeira válida para parcels(id) ou null
+    parcela: parcelCode,
     area_ha: formData.areaHa,
     variedade: formData.variedade,
     produtos: produtosNomes,
     data_aplicacao: formData.dataVisita,
     fazenda: formData.propNome,
-    documento: formData.documento || `IDIARN ${formData.numeroLivro} - ${formData.pCode}`,
+    documento: formData.documento || `IDIARN ${formData.numeroLivro} - ${parcelCode}`,
     visualizar_url: formData.pdfUrl || null
   };
 
   try {
     const dbRecord = { ...record };
-    const hasParcel = (_infoParcelas || []).some(p => p.id === dbRecord.parcel_id);
-    if (!hasParcel) dbRecord.parcel_id = null;
 
-    const { data: insData, error: insErr } = await sb.from('caderno_campo_idiarn').insert([dbRecord]).select('*');
-    if (insErr) throw insErr;
+    let { data: insData, error: insErr } = await sb.from('caderno_campo_idiarn').insert([dbRecord]).select('*');
+
+    // Se ocorrer erro 409 / 23503 por Foreign Key em parcel_id, remove parcel_id e retenta
+    if (insErr && (insErr.code === '23503' || (insErr.message && (insErr.message.includes('parcel_id') || insErr.message.includes('foreign key'))))) {
+      console.warn('Conflito de chave estrangeira em parcel_id. Retentando com parcel_id = null...', insErr);
+      dbRecord.parcel_id = null;
+      const retryFk = await sb.from('caderno_campo_idiarn').insert([dbRecord]).select('*');
+      insData = retryFk.data;
+      insErr = retryFk.error;
+    }
+
+    // Se ocorrer erro 409 / 23505 por Unique Violation (número ou documento duplicado), ajusta número e documento e retenta
+    if (insErr && (insErr.code === '23505' || (insErr.message && (insErr.message.includes('duplicate') || insErr.message.includes('unique'))))) {
+      console.warn('Conflito de unicidade (número ou documento). Ajustando número e retentando...', insErr);
+      const nextNum = (parseInt(dbRecord.numero_idiarn, 10) || 0) + 1;
+      dbRecord.numero_idiarn = nextNum;
+      dbRecord.documento = `IDIARN ${nextNum} - ${parcelCode} - ${Date.now().toString().slice(-4)}`;
+      const retryUnique = await sb.from('caderno_campo_idiarn').insert([dbRecord]).select('*');
+      insData = retryUnique.data;
+      insErr = retryUnique.error;
+    }
+
+    if (insErr) {
+      throw new Error(insErr.message || insErr.details || insErr.hint || JSON.stringify(insErr));
+    }
 
     const visitId = (insData && insData[0]) ? insData[0].id : ('idiarn_' + Date.now());
 
@@ -20857,10 +20950,10 @@ async function saveNewIdiarnDashboard() {
     // Persistir dados de armadilha no banco de coletas de mosca se preenchido
     if (formData.coex.armadilha && formData.coex.armadilha !== '—') {
       try {
-        await sb.from('caderno_campo_coletas_moscas').insert([{
+        const coexPayload = {
           tenant_id: tenantId,
-          parcel_id: formData.pId,
-          parcela: formData.pCode,
+          parcel_id: realParcelId || null,
+          parcela: parcelCode,
           armadilha_codigo: formData.coex.armadilha,
           data_instalacao: formData.coex.instalacao || null,
           data_coleta_anterior: formData.coex.coletaAnt || null,
@@ -20870,7 +20963,12 @@ async function saveNewIdiarnDashboard() {
           indice_mad_grandis: formData.coex.madGrandis,
           indice_mad_spp: formData.coex.madSpp,
           responsavel_coleta: formData.rtNome
-        }]);
+        };
+        let { error: coexErr } = await sb.from('caderno_campo_coletas_moscas').insert([coexPayload]);
+        if (coexErr && (coexErr.code === '23503' || (coexErr.message && coexErr.message.includes('parcel_id')))) {
+          coexPayload.parcel_id = null;
+          await sb.from('caderno_campo_coletas_moscas').insert([coexPayload]);
+        }
       } catch(coexErr) {
         console.warn('Erro ao salvar coex em coletas_moscas:', coexErr);
       }
@@ -20885,7 +20983,8 @@ async function saveNewIdiarnDashboard() {
     }
   } catch(e) {
     console.error('Erro ao salvar IDIARN:', e);
-    alert('Erro ao salvar visita IDIARN: ' + e.message);
+    const msg = e?.message || e?.details || e?.hint || (typeof e === 'object' ? JSON.stringify(e) : String(e));
+    alert('Erro ao salvar visita IDIARN: ' + msg);
   }
 }
 

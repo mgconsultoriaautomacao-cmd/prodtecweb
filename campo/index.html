@@ -4816,7 +4816,12 @@ let varieties = [];
   } else {
   const dbRecord = { ...record };
   delete dbRecord.synced;
-  const { error } = await sb.from('caderno_campo_idiarn').insert([dbRecord]);
+  let { error } = await sb.from('caderno_campo_idiarn').insert([dbRecord]);
+  if (error && (error.code === '23503' || (error.message && error.message.includes('parcel_id')))) {
+    dbRecord.parcel_id = null;
+    const retry = await sb.from('caderno_campo_idiarn').insert([dbRecord]);
+    error = retry.error;
+  }
   if (error) throw error;
   
   toast(' Visita IDIARN registrada!', 'ok');
@@ -8593,7 +8598,13 @@ async function pushIdiarn(record) {
   const hasParcel = (dbParcels || []).some(p => p.id === record.parcel_id);
   const cleanRecord = { ...record, parcel_id: hasParcel ? record.parcel_id : null };
   delete cleanRecord.synced;
-  const { data, error } = await sb.from('caderno_campo_idiarn').insert([cleanRecord]).select('*');
+  let { data, error } = await sb.from('caderno_campo_idiarn').insert([cleanRecord]).select('*');
+  if (error && (error.code === '23503' || (error.message && error.message.includes('parcel_id')))) {
+    cleanRecord.parcel_id = null;
+    const retry = await sb.from('caderno_campo_idiarn').insert([cleanRecord]).select('*');
+    data = retry.data;
+    error = retry.error;
+  }
   if (error) throw error;
   return data;
 }
