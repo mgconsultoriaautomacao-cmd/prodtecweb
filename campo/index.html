@@ -4918,6 +4918,19 @@ let varieties = [];
 
   
 
+function getTenantLogoUrl() {
+  return (window.tenantConfig && window.tenantConfig.logo_url) ||
+         window._tenantLogoBase64 ||
+         localStorage.getItem('tenant_logo_url') ||
+         'logo.png';
+}
+
+function getTenantLogoHtml(maxHeight = 45, maxWidth = 130) {
+  const logoUrl = getTenantLogoUrl();
+  if (!logoUrl) return '';
+  return `<img src="${logoUrl}" style="max-height:${maxHeight}px; max-width:${maxWidth}px; object-fit:contain;" alt="Logo" onerror="this.src='logo.png'"/>`;
+}
+
 function normalizeParcelCode(val) {
   if (!val) return '';
   let s = String(val).trim().toUpperCase();
@@ -4937,13 +4950,16 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
   let targetId = '';
 
   if (typeof parcelInput === 'object') {
-    targetCode = parcelInput.parcela2 || parcelInput.parcela || parcelInput.code || parcelInput.parcel_id || '';
+    targetCode = parcelInput.parcela2 || 
+                 ((parcelInput.parcela || '') + (parcelInput.letra ? parcelInput.letra : '')) || 
+                 parcelInput.code || 
+                 parcelInput.parcel_id || '';
     targetId = parcelInput.id || parcelInput.parcel_id || '';
   } else {
     const inputStr = String(parcelInput).trim();
     const foundById = list.find(x => x && (String(x.id) === inputStr || String(x.parcel_id) === inputStr));
     if (foundById) {
-      targetCode = foundById.parcela2 || foundById.parcela || foundById.code || '';
+      targetCode = foundById.parcela2 || ((foundById.parcela || '') + (foundById.letra ? foundById.letra : '')) || foundById.code || '';
       targetId = foundById.id;
     } else {
       targetCode = inputStr;
@@ -4960,11 +4976,13 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
     const p2_raw = normalizeParcelCode(x.parcela);
     const p3 = normalizeParcelCode(x.code);
     const p_id = normalizeParcelCode(x.id);
-    return (p1 && normTarget && p1 === normTarget) || 
-           (p2 && normTarget && p2 === normTarget) || 
-           (p3 && normTarget && p3 === normTarget) ||
-           (p_id && normTarget && p_id === normTarget) ||
-           (!x.letra && p2_raw && normTarget && p2_raw === normTarget);
+
+    if (p1 && normTarget && p1 === normTarget) return true;
+    if (p2 && normTarget && p2 === normTarget) return true;
+    if (p3 && normTarget && p3 === normTarget) return true;
+    if (p_id && normTarget && p_id === normTarget) return true;
+    if (!x.letra && p2_raw && normTarget && p2_raw === normTarget && !/[A-Z]$/.test(normTarget)) return true;
+    return false;
   });
 
   if (matches.length === 0) {
@@ -4985,7 +5003,6 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
   const varPropKeys = ['variedade', 'variedade1', 'variedade2', 'variedade3', 'variedade4', 'variedade5', 'variedade6', 'variedade7', 'variedade8', 'variedade9', 'variedade10', 'cultivar', 'cultivares'];
 
   matches.forEach(m => {
-    // Area calc per row
     let rowArea = 0;
     let hasSubAreas = false;
     for (let i = 1; i <= 10; i++) {
@@ -5001,20 +5018,19 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
     }
     totalArea += rowArea;
 
-    // Check array m.variedades if present
     if (Array.isArray(m.variedades)) {
       m.variedades.forEach(v => {
         if (v) {
           const cv = String(v).trim().toUpperCase();
           if (cv && !varietiesSet.has(cv)) {
             varietiesSet.add(cv);
-            varietiesWithArea.push({ nome: cv, area: '—' });
+            const mArea = parseFloat(m.area || m.area_ha || rowArea);
+            varietiesWithArea.push({ nome: cv, area: (!isNaN(mArea) && mArea > 0) ? mArea.toFixed(2) : '—' });
           }
         }
       });
     }
 
-    // Check all variety keys
     varPropKeys.forEach((vk, idx) => {
       const vVal = m[vk];
       if (vVal) {
@@ -5025,9 +5041,10 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
           const cv = v.trim().toUpperCase();
           if (cv && !varietiesSet.has(cv)) {
             varietiesSet.add(cv);
+            const calcArea = (!isNaN(mArea) && mArea > 0) ? mArea.toFixed(2) : ((!isNaN(rowArea) && rowArea > 0) ? rowArea.toFixed(2) : '—');
             varietiesWithArea.push({
               nome: cv,
-              area: (!isNaN(mArea) && mArea > 0) ? mArea.toFixed(2) : '—'
+              area: calcArea
             });
           }
         });
@@ -5721,7 +5738,7 @@ async function printPastaCampoSementes(idOrStr) {
           Aprovado Por: ADGF<br/>
           Frequência: Por parcela de campo.
         </td>
-        <td style="width: 25%;"></td>
+        <td style="width: 25%; text-align:center; vertical-align:middle;">${getTenantLogoHtml(42, 120)}</td>
         <td style="width: 43%; font-size: 6.5pt; line-height: 1.35;">
           <strong>DEPARTAMENTO:</strong> CAMPO<br/>
           <strong>NOME DO DOC:</strong> IDENTIFICAÇÃO DE SEMENTE, MUDAS, ADUB. DE FUND.<br/>
@@ -5810,15 +5827,15 @@ async function printPastaCampoCalendario(idOrStr) {
   if (!item) { toast('Parcela não encontrada.', 'err'); return; }
 
   const info = getParcelaCompleteInfo(item, infoParcelasData);
-  const pCode = item.parcela2 || item.parcela || '10';
+  const pCode = item.parcela2 || (item.parcela ? item.parcela + (item.letra || '') : '') || '10';
   const totalAreaStr = info && info.area ? parseFloat(info.area).toFixed(2).replace('.', ',') : (item.area ? parseFloat(item.area).toFixed(2).replace('.', ',') : '3,00');
 
-  const varsList = (info && info.variedadesList && info.variedadesList.length > 0)
-    ? info.variedadesList
-    : (item.variedades || [item.variedade || 'JADEAL', 'GOLDEX']).filter(Boolean);
-
-  const defaultStandardVars = ['JADEAL', 'GOLDEX', 'GRAND PRIX', 'ASTURIA', 'GOLDMINE'];
-  const allVarsToShow = [...new Set([...varsList, ...defaultStandardVars])].slice(0, 5);
+  // Variedades reais da parcela a partir de info.varietiesWithArea
+  const realVars = (info && info.varietiesWithArea && info.varietiesWithArea.length > 0)
+    ? info.variedadesWithArea
+    : (info && info.variedadesList && info.variedadesList.length > 0
+        ? info.variedadesList.map(v => ({ nome: v, area: '—' }))
+        : [{ nome: item.variedade || '—', area: totalAreaStr }]);
 
   const plantioDateStr = item.plantio || item.transplante || item.data_plantio1 || '2026-07-07';
   const plantioDate = new Date(plantioDateStr + (plantioDateStr.includes('T') ? '' : 'T00:00:00'));
@@ -5840,6 +5857,7 @@ async function printPastaCampoCalendario(idOrStr) {
     return formatShortDate(d);
   };
 
+  // Linhas DAP 1 a 44 (DAP 1 pintado de roxo #7c3aed para Transplantio)
   let leftRowsHtml = `
     <tr>
       <td style="border:1px solid #000; padding:2px; font-weight:bold; font-size:6.5pt; text-align:center">Plantio direto/<br/>Estufa</td>
@@ -5851,12 +5869,15 @@ async function printPastaCampoCalendario(idOrStr) {
 
   for (let dap = 1; dap <= 44; dap++) {
     const dtBr = getDayDateBr(dap);
+    const isTransplant = (dap === 1);
+    const dapStyle = isTransplant ? 'background:#7c3aed; color:#fff; font-weight:bold;' : '';
+    const dateStyle = isTransplant ? 'background:#7c3aed; color:#fff; font-weight:bold;' : '';
     leftRowsHtml += `
       <tr>
-        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.8pt; font-weight:600">${dap}</td>
-        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt">${dtBr}</td>
-        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt">${dtBr}</td>
-        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt"></td>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.8pt; font-weight:600; ${dapStyle}">${dap}</td>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt; ${dateStyle}">${dtBr}</td>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt; ${dateStyle}">${dtBr}</td>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt; ${isTransplant ? 'background:#7c3aed; color:#fff; font-weight:bold;' : ''}">${isTransplant ? 'TRANSPLANTIO' : ''}</td>
       </tr>
     `;
   }
@@ -5876,17 +5897,18 @@ async function printPastaCampoCalendario(idOrStr) {
     `;
   }
 
-  const varRowsHtml = allVarsToShow.map((v, i) => {
-    let areaVal = '-';
-    if (i === 0) areaVal = (parseFloat(totalAreaStr.replace(',', '.')) / 2).toFixed(2).replace('.', ',');
-    if (i === 1) areaVal = (parseFloat(totalAreaStr.replace(',', '.')) / 2).toFixed(2).replace('.', ',');
-    return `
+  let varRowsHtml = '';
+  for (let i = 0; i < 5; i++) {
+    const vObj = realVars[i];
+    const vName = vObj ? vObj.nome : '-';
+    const vArea = (vObj && vObj.area !== '—' && vObj.area) ? parseFloat(vObj.area).toFixed(2).replace('.', ',') : '-';
+    varRowsHtml += `
       <tr>
-        <td style="border:1px solid #000; padding:3px 6px; font-weight:bold; font-size:7pt">${v}</td>
-        <td style="border:1px solid #000; padding:3px 6px; text-align:center; font-size:7pt; font-weight:bold">${areaVal}</td>
+        <td style="border:1px solid #000; padding:3px 6px; font-weight:bold; font-size:7pt">${vName}</td>
+        <td style="border:1px solid #000; padding:3px 6px; text-align:center; font-size:7pt; font-weight:bold">${vArea}</td>
       </tr>
     `;
-  }).join('');
+  }
 
   const printWin = window.open('', '_blank', 'width=1000,height=1300');
   if (!printWin) { alert('Permita popups para imprimir.'); return; }
@@ -5931,7 +5953,7 @@ async function printPastaCampoCalendario(idOrStr) {
           Aprovado Por: ADGF<br/>
           Frequência: Por parcela de campo.
         </td>
-        <td style="width: 20%;"></td>
+        <td style="width: 20%; text-align:center; vertical-align:middle;">${getTenantLogoHtml(42, 120)}</td>
         <td style="width: 42%; font-size: 6.2pt; line-height: 1.35;">
           <strong>DEPARTAMENTO:</strong> CAMPO<br/>
           <strong>NOME DO DOC:</strong> CALENDÁRIO DE PLANTIO<br/>
@@ -6033,6 +6055,270 @@ async function printPastaCampoCalendario(idOrStr) {
   printWin.document.close();
 }
 
+// ── IMPRESSÃO OFICIAL: FERTIRRIGAÇÃO (PC07) ──
+async function printPastaCampoFertirrigacao(parcelIdOrCode) {
+  let item = null;
+  if (parcelIdOrCode) {
+    item = (infoParcelasData || []).find(p => p.id === parcelIdOrCode || (p.parcela2 || p.parcela) === parcelIdOrCode) ||
+           (window._infoParcelas && window._infoParcelas.find(p => p.id === parcelIdOrCode || (p.parcela2 || p.parcela) === parcelIdOrCode));
+  }
+  if (!item && infoParcelasData && infoParcelasData.length > 0) {
+    item = infoParcelasData[0];
+  }
+
+  const parcelCode = item ? (item.parcela2 || (item.parcela ? item.parcela + (item.letra || '') : '')) : '';
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'BOM JESUS AGRÍCOLA';
+  const rtNome = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS';
+  const rtCrea = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_crea) || '2100995243';
+  const certNome = (window.tenantConfig && window.tenantConfig.agronomo_certificacao) || 'Emanuela Moreira';
+  const areaHa = item && item.area ? parseFloat(item.area).toFixed(2) : '3.00';
+  const info = getParcelaCompleteInfo(parcelCode || item, infoParcelasData);
+  const variedadesStr = (info && info.variedadesList && info.variedadesList.length > 0)
+    ? info.variedadesList.join(', ')
+    : (item ? (item.variedades || [item.variedade || 'JADEAL']).filter(Boolean).join(', ') : 'JADEAL');
+
+  let fertData = [];
+  let itensData = [];
+
+  try {
+    if (window.sb && tenantId) {
+      let query = sb.from('caderno_campo_fertirrigacao')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('data_inicio', { ascending: true });
+      if (parcelCode) query = query.eq('parcela', parcelCode);
+      const { data: fData } = await query;
+      fertData = fData || [];
+
+      if (fertData.length > 0) {
+        const fIds = fertData.map(f => f.id);
+        const { data: iData } = await sb.from('caderno_campo_fertirrigacao_itens').select('*').in('fert_id', fIds);
+        itensData = iData || [];
+      }
+    }
+  } catch(e) {
+    console.warn('Busca fertirrigação online:', e);
+  }
+
+  const uniqueProducts = Array.from(new Set(itensData.map(it => (it.produto_nome || '').trim().toUpperCase()))).filter(Boolean);
+  const mapFertNames = {
+    'MAP': 'MAP',
+    'UREIA': 'UREIA',
+    'ACIDO BORICO': 'ÁCIDO BÓRICO',
+    'NIT. CALCIO': 'NITRATO DE CÁLCIO',
+    'SULF. MAG.': 'SULFATO DE MAGNÉSIO',
+    'SULF. POTASSIO': 'SULFATO DE POTÁSSIO',
+    'FERT': 'SUPERSOIL'
+  };
+
+  if (uniqueProducts.length === 0) {
+    ['MAP', 'UREIA', 'ÁCIDO BÓRICO', 'NITRATO DE CÁLCIO', 'SULFATO DE MAGNÉSIO', 'SULFATO DE POTÁSSIO', 'SUPERSOIL'].forEach(p => uniqueProducts.push(p));
+  }
+
+  const productTotals = {};
+  uniqueProducts.forEach(p => { productTotals[p] = 0; });
+
+  let rowsHtml = '';
+
+  if (fertData.length > 0) {
+    const itemsByFertId = {};
+    itensData.forEach(it => {
+      if (!itemsByFertId[it.fert_id]) itemsByFertId[it.fert_id] = {};
+      const pName = (it.produto_nome || '').trim().toUpperCase();
+      itemsByFertId[it.fert_id][pName] = (itemsByFertId[it.fert_id][pName] || 0) + (parseFloat(it.quantidade) || 0);
+    });
+
+    rowsHtml = fertData.map((f, idx) => {
+      const ordNum = idx + 1;
+      const dtStr = f.data_inicio ? f.data_inicio.split('-').reverse().join('/') : '—';
+      const dapVal = f.dap != null ? f.dap : '—';
+      const faseStr = `DAP ${dapVal}`;
+      const pItems = itemsByFertId[f.id] || {};
+
+      const colsHtml = uniqueProducts.map(p => {
+        const val = pItems[p];
+        if (val != null && val > 0) {
+          productTotals[p] += val;
+          return `<td style="border:1px solid #000; padding:3px 4px; text-align:center; font-weight:bold">${val.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}</td>`;
+        }
+        return `<td style="border:1px solid #000; padding:3px 4px; text-align:center; color:#999">-</td>`;
+      }).join('');
+
+      return `
+        <tr>
+          <td style="border:1px solid #000; padding:3px 4px; text-align:center">${dtStr}</td>
+          <td style="border:1px solid #000; padding:3px 4px; text-align:center; font-weight:bold">${ordNum}</td>
+          <td style="border:1px solid #000; padding:3px 4px; text-align:center; font-weight:bold">${faseStr}</td>
+          ${colsHtml}
+        </tr>
+      `;
+    }).join('');
+  } else {
+    // Protocolo fallback
+    const defaultProtoSched = {
+      "11":{"MAP":3.0,"UREIA":3.0},
+      "12":{"MAP":3.0,"UREIA":3.0,"NIT. CALCIO":2.0},
+      "13":{"MAP":3.0,"UREIA":3.0,"SULF. MAG.":1.0,"FERT":1.0},
+      "14":{"MAP":5.0,"UREIA":3.0,"NIT. CALCIO":2.0,"SULF. POTASSIO":2.0,"FERT":1.0},
+      "15":{"MAP":5.0,"UREIA":3.0,"SULF. MAG.":1.0,"FERT":1.0},
+      "20":{"MAP":5.0,"UREIA":4.0,"ACIDO BORICO":0.3,"NIT. CALCIO":2.0,"SULF. POTASSIO":2.0},
+      "25":{"MAP":6.0,"UREIA":5.0,"ACIDO BORICO":0.5,"NIT. CALCIO":2.0,"SULF. MAG.":1.0,"SULF. POTASSIO":2.0,"FERT":1.0},
+      "30":{"MAP":8.0,"ACIDO BORICO":0.5,"NIT. CALCIO":2.0,"SULF. MAG.":1.0,"SULF. POTASSIO":3.0,"FERT":1.0},
+      "35":{"MAP":9.0,"ACIDO BORICO":0.4,"NIT. CALCIO":3.0,"SULF. MAG.":2.0,"SULF. POTASSIO":3.0,"FERT":1.0},
+      "40":{"MAP":6.0,"UREIA":2.0,"ACIDO BORICO":0.4,"NIT. CALCIO":4.0,"SULF. MAG.":2.0,"SULF. POTASSIO":6.0,"FERT":1.0},
+      "45":{"UREIA":5.0,"ACIDO BORICO":0.25,"NIT. CALCIO":5.0,"SULF. MAG.":2.0,"SULF. POTASSIO":13.0,"FERT":1.0},
+      "50":{"UREIA":5.0,"ACIDO BORICO":0.25,"NIT. CALCIO":7.0,"SULF. MAG.":2.0,"SULF. POTASSIO":13.0},
+      "55":{"NIT. CALCIO":9.0,"SULF. MAG.":1.0,"SULF. POTASSIO":13.0},
+      "60":{"NIT. CALCIO":9.0,"SULF. POTASSIO":13.0}
+    };
+    const plantioStr = item ? (item.plantio || item.transplante || item.data_plantio1) : null;
+    const plantioDt = plantioStr ? new Date(plantioStr + (plantioStr.includes('T') ? '' : 'T00:00:00')) : null;
+    const areaVal = parseFloat(areaHa) || 1.0;
+
+    let orderCount = 1;
+    rowsHtml = Object.entries(defaultProtoSched).sort((a,b) => Number(a[0]) - Number(b[0])).map(([dapKey, doses]) => {
+      const dapNum = Number(dapKey);
+      let calcDtStr = '—';
+      if (plantioDt && !isNaN(plantioDt.getTime())) {
+        const d = new Date(plantioDt.getTime() + ((dapNum - 1) * 86400000));
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yy = String(d.getFullYear()).slice(-2);
+        calcDtStr = `${dd}/${mm}/${yy}`;
+      }
+      const faseStr = `DAP ${dapNum}`;
+
+      const colsHtml = uniqueProducts.map(p => {
+        let doseBase = 0;
+        Object.entries(doses).forEach(([fKey, val]) => {
+          const mappedName = mapFertNames[fKey] || fKey.trim().toUpperCase();
+          if (mappedName === p) doseBase += Number(val);
+        });
+        const totalKg = doseBase * areaVal;
+        if (totalKg > 0) {
+          productTotals[p] = (productTotals[p] || 0) + totalKg;
+          return `<td style="border:1px solid #000; padding:3px 4px; text-align:center; font-weight:bold">${totalKg.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}</td>`;
+        }
+        return `<td style="border:1px solid #000; padding:3px 4px; text-align:center; color:#999">-</td>`;
+      }).join('');
+
+      return `
+        <tr>
+          <td style="border:1px solid #000; padding:3px 4px; text-align:center">${calcDtStr}</td>
+          <td style="border:1px solid #000; padding:3px 4px; text-align:center; font-weight:bold">${orderCount++}</td>
+          <td style="border:1px solid #000; padding:3px 4px; text-align:center; font-weight:bold">${faseStr}</td>
+          ${colsHtml}
+        </tr>
+      `;
+    }).join('');
+  }
+
+  const totalsColsHtml = uniqueProducts.map(p => {
+    const tot = productTotals[p];
+    return `<td style="border:1px solid #000; padding:4px 4px; text-align:center; font-weight:bold">${tot > 0 ? tot.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) : '-'}</td>`;
+  }).join('');
+
+  const printWin = window.open('', '_blank', 'width=1200,height=900');
+  if (!printWin) { toast('Permita popups para imprimir.', 'err'); return; }
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+  <meta charset="utf-8"/>
+  <title>PC 07 — CONTROLE DO USO DE FERTILIZANTES (FERTIRRIGAÇÃO)</title>
+  <style>
+  @page { size: A4 landscape; margin: 6mm 8mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 7pt; color: #000; line-height: 1.2; }
+  .sheet { width: 100%; }
+  .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+  .hdr-table td { border: 1px solid #000; padding: 3px 5px; font-size: 6.5pt; vertical-align: middle; }
+  .main-title { font-size: 9.5pt; font-weight: bold; text-align: center; padding: 4px; border: 1.5px solid #000; margin-bottom: 5px; background: #f3f4f6; text-transform: uppercase; }
+  .info-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+  .info-table td { border: 1px solid #000; padding: 3px 5px; font-size: 7pt; }
+  .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 6.5pt; }
+  .grid-table th, .grid-table td { border: 1px solid #000; padding: 3px 3px; }
+  .grid-table th { background: #e5e7eb; font-weight: bold; text-align: center; font-size: 6.5pt; }
+  .obs-box { border: 1px solid #000; padding: 4px 6px; font-size: 6pt; line-height: 1.2; margin-bottom: 6px; background: #fafafa; }
+  </style>
+  </head>
+  <body onload="window.print()">
+  <div class="sheet">
+    <table class="hdr-table">
+      <tr>
+        <td width="38%" style="font-weight:bold; font-size:6.5pt;">
+          ELABORADO, EMITIDO e REVISADO POR: EMANUELA MOREIRA<br/>
+          Avaliado por: ADGF &nbsp;|&nbsp; Aprovado Por: ADGF<br/>
+          Frequência: Por parcela de campo.
+        </td>
+        <td width="20%" style="text-align:center; vertical-align:middle;">${getTenantLogoHtml(42, 120)}</td>
+        <td width="42%" style="font-size:6.5pt;">
+          <b>DEPARTAMENTO:</b> CAMPO<br/>
+          <b>NOME DO DOC:</b> CONTROLE DO USO DE FERTILIZANTES NO DESENVOLVIMENTO DA CULTURA<br/>
+          <b>EMISSÃO:</b> 15/06/2026 &nbsp;|&nbsp; <b>MOD E APROVAÇÃO:</b> 01/07/2026 &nbsp;|&nbsp; <b>U. REVISÃO:</b> 01/07/2026<br/>
+          <b>PAG:</b> 01 DE 01 &nbsp;\&nbsp; <b>COD:</b> PC 07 &nbsp;\&nbsp; <b>REVISÃO:</b> ANUAL &nbsp;\&nbsp; <b>VERSÃO:</b> 01
+        </td>
+      </tr>
+    </table>
+
+    <div class="main-title">CONTROLE DO USO DE FERTILIZANTES NO DESENVOLVIMENTO DA CULTURA</div>
+
+    <table class="info-table">
+      <tr>
+        <td width="20%"><b>PARCELA:</b> ${parcelCode}</td>
+        <td width="30%"><b>VARIEDADES:</b> ${variedadesStr}</td>
+        <td width="15%"><b>ÁREA TOTAL:</b> ${areaHa} ha</td>
+        <td width="15%"><b>MÉTODO:</b> FERTIRRIGAÇÃO</td>
+        <td width="20%"><b>EQUIPAMENTO:</b> VENTURE</td>
+      </tr>
+    </table>
+
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th rowspan="2" style="width:75px;">PERÍODO DE APLICAÇÃO<br/>(dd/mm/aa)</th>
+          <th rowspan="2" style="width:35px;">Nº DA ORDEM</th>
+          <th rowspan="2" style="width:110px;">FASE DA CULTURA (DAP*)</th>
+          <th colspan="${uniqueProducts.length}">N O M E S &nbsp; D O S &nbsp; F E R T I L I Z A N T E S</th>
+        </tr>
+        <tr>
+          ${uniqueProducts.map(p => `<th>${p}<br/><small style="font-weight:normal; font-size:5.5pt">Quant (Kg/L)</small></th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml || `<tr><td colspan="${3 + uniqueProducts.length}" style="text-align:center; padding:15px; color:#888">Nenhum registro de fertirrigação encontrado para esta parcela.</td></tr>`}
+        <tr style="background:#f3f4f6; font-weight:bold;">
+          <td colspan="3" style="text-align:right; padding-right:6px; font-weight:bold">TOTAL GERAL DO CICLO DA PARCELA:</td>
+          ${totalsColsHtml}
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="obs-box">
+      <b>OBS:</b> DAP* (DIAS APÓS O PLANTIO) - É OBRIGATÓRIO O REGISTRO DE TODAS AS APLICAÇÕES DE FERTILIZANTES VIA FERTIRRIGAÇÃO OU ADUBAÇÃO FOLIAR. CADA APLICAÇÃO DEVE CONTER O NOME COMERCIAL, A QUANTIDADE E A IDENTIFICAÇÃO DO OPERADOR RESPONSÁVEL.
+    </div>
+
+    <table style="width:100%; border-collapse:collapse; margin-top:12px; font-size:6.5pt">
+      <tr>
+        <td width="50%" style="border:1px solid #000; padding:5px; text-align:center; vertical-align:bottom; height:45px">
+          <div style="border-top:1px dashed #000; margin-top:20px; padding-top:2px;"><b>Responsável Técnico:</b> ${rtNome} (CREA: ${rtCrea})</div>
+        </td>
+        <td width="50%" style="border:1px solid #000; padding:5px; text-align:center; vertical-align:bottom; height:45px">
+          <div style="border-top:1px dashed #000; margin-top:20px; padding-top:2px;"><b>Agrônomo / Certificações:</b> ${certNome}</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+  </body>
+  </html>
+  `;
+
+  printWin.document.open();
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
 // ── IMPRESSÃO OFICIAL: CONTROLE DE PREPARO DO SOLO / TRATOS CULTURAIS (PC05) ──
 async function printPastaCampoTratos(idOrStr) {
   let item = null;
@@ -6116,7 +6402,7 @@ async function printPastaCampoTratos(idOrStr) {
           Aprovado Por: ADGF<br/>
           Frequência: Por parcela de campo.
         </td>
-        <td style="width: 20%;"></td>
+        <td style="width: 20%; text-align:center; vertical-align:middle;">${getTenantLogoHtml(42, 120)}</td>
         <td style="width: 45%; font-size: 6.5pt; line-height: 1.35;">
           <strong>DEPARTAMENTO:</strong> CAMPO<br/>
           <strong>NOME DO DOC:</strong> CONT. DE PREPARO DO SOLO/TRATOS CULTURAIS<br/>
@@ -6203,7 +6489,7 @@ function printPastaCampoAutColheita(itemStr) {
           Aprovado Por: ADGF<br/>
           Frequência: Por parcela de campo.
         </td>
-        <td style="width: 15%;"></td>
+        <td style="width: 15%; text-align:center; vertical-align:middle;">${getTenantLogoHtml(42, 120)}</td>
         <td style="width: 45%; font-size: 6.5pt; line-height: 1.35;">
           <strong>DEPARTAMENTO:</strong> CAMPO<br/>
           <strong>NOME DO DOC:</strong> AUTORIZAÇÃO PARA COLHEITA DE FRUTOS<br/>
