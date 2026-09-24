@@ -1664,9 +1664,39 @@
   <div id="regCarriageList" class="card-list" style="max-height:300px; overflow-y:auto"></div>
   </div>
 
-  <!-- MÁQUINAS (NOVO) -->
+  <!-- TRATORES (Dedicado) -->
   <div class="card">
-  <div class="title"><i data-lucide="cpu" class="btn-i"></i> Máquinas</div>
+  <div class="title"><i data-lucide="tractor" class="btn-i"></i> Tratores</div>
+  <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px">
+  <div style="display:flex; gap:8px">
+  <input id="regTractorCode" placeholder="Nº / Identificação (ex: Trator 01, MF 4292)" style="flex:1; text-transform:uppercase"/>
+  <button onclick="addTractor()"><i data-lucide="plus" style="width:16px;height:16px"></i></button>
+  </div>
+  <div style="display:grid; grid-template-columns:1fr; gap:6px">
+  <input id="regTractorName" placeholder="Marca / Modelo / Descrição (ex: John Deere 5075E)"/>
+  </div>
+  </div>
+  <div id="regTractorList" class="card-list" style="max-height:300px; overflow-y:auto"></div>
+  </div>
+
+  <!-- PULVERIZADORES (Dedicado) -->
+  <div class="card">
+  <div class="title"><i data-lucide="spray-can" class="btn-i"></i> Pulverizadores</div>
+  <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px">
+  <div style="display:flex; gap:8px">
+  <input id="regSprayerCode" placeholder="Nº / Identificação (ex: Pulv 01, Turbo 02)" style="flex:1; text-transform:uppercase"/>
+  <button onclick="addSprayer()"><i data-lucide="plus" style="width:16px;height:16px"></i></button>
+  </div>
+  <div style="display:grid; grid-template-columns:1fr; gap:6px">
+  <input id="regSprayerName" placeholder="Modelo / Tanque (ex: Turbo Jacto 2000L, Barra 600L)"/>
+  </div>
+  </div>
+  <div id="regSprayerList" class="card-list" style="max-height:300px; overflow-y:auto"></div>
+  </div>
+
+  <!-- OUTRAS MÁQUINAS (Colheitadeiras, etc) -->
+  <div class="card">
+  <div class="title"><i data-lucide="cpu" class="btn-i"></i> Outras Máquinas &amp; Implementos</div>
   <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px">
   <div style="display:flex; gap:8px">
   <input id="regMachineCode" placeholder="Código (ex: COL-01)" style="flex:1; text-transform:uppercase"/>
@@ -1676,8 +1706,6 @@
   <input id="regMachineName" placeholder="Nome/Descrição"/>
   <select id="regMachineType" style="font-size:11px; padding:8px">
   <option value="COLHEITADEIRA">Colheitadeira</option>
-  <option value="TRATOR">Trator</option>
-  <option value="PULVERIZADOR">Pulverizador</option>
   <option value="OUTRO">Outro</option>
   </select>
   </div>
@@ -2602,11 +2630,11 @@
   <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
   <div>
   <label class="flabel">Nº Trator</label>
-  <input id="newOpTrator" type="text" value="Trator 2" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+  <select id="newOpTrator" onchange="handleNewOpEquipmentSelect('TRATOR', this)" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px"></select>
   </div>
   <div>
-  <label class="flabel">Equipamento</label>
-  <input id="newOpEquipamento" type="text" placeholder="Ex: Turbo Jacto" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+  <label class="flabel">Pulverizador / Equipamento</label>
+  <select id="newOpEquipamento" onchange="handleNewOpEquipmentSelect('PULVERIZADOR', this)" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px"></select>
   </div>
   <div>
   <label class="flabel">Pressão / Rotação</label>
@@ -5237,20 +5265,164 @@ async function loadCarriages() {
 async function loadMachines() {
   const {data} = await sb.from('machines').select('*').eq('tenant_id', tenantId).order('code');
   window._machines = data || [];
+
+  const tractors = (data || []).filter(m => (m.type || '').toUpperCase() === 'TRATOR');
+  const sprayers = (data || []).filter(m => (m.type || '').toUpperCase() === 'PULVERIZADOR');
+  const otherMachines = (data || []).filter(m => !['TRATOR', 'PULVERIZADOR'].includes((m.type || '').toUpperCase()));
+
+  window._tractors = tractors;
+  window._sprayers = sprayers;
+  window._otherMachines = otherMachines;
+
+  // 1. Renderizar Lista de Tratores
+  const elT = $('regTractorList');
+  if (elT) {
+    elT.innerHTML = tractors.map(t => `
+      <div class="card-list-item">
+        <div class="item-info">
+          <div class="item-name">
+            <code style="background:rgba(255,255,255,.08);padding:2px 8px;border-radius:5px;font-weight:900;color:var(--yellow)"><i data-lucide="tractor" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:4px"></i>${t.code}</code>
+            <span style="margin-left:6px;font-size:12px">${t.name || ''}</span>
+          </div>
+          <div class="item-meta">
+            <span class="pill" style="background:rgba(16,185,129,.12);color:var(--green)">${t.status || 'ATIVO'}</span>
+          </div>
+        </div>
+        <div class="item-actions">
+          <button class="danger" title="Excluir Trator" onclick="delMachine('${t.id}')">×</button>
+        </div>
+      </div>
+    `).join('') || '<div style="padding:12px;color:var(--muted);font-size:12px;text-align:center">Nenhum trator cadastrado</div>';
+  }
+
+  // 2. Renderizar Lista de Pulverizadores
+  const elS = $('regSprayerList');
+  if (elS) {
+    elS.innerHTML = sprayers.map(s => `
+      <div class="card-list-item">
+        <div class="item-info">
+          <div class="item-name">
+            <code style="background:rgba(255,255,255,.08);padding:2px 8px;border-radius:5px;font-weight:900;color:var(--blue)"><i data-lucide="spray-can" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:4px"></i>${s.code}</code>
+            <span style="margin-left:6px;font-size:12px">${s.name || ''}</span>
+          </div>
+          <div class="item-meta">
+            <span class="pill" style="background:rgba(16,185,129,.12);color:var(--green)">${s.status || 'ATIVO'}</span>
+          </div>
+        </div>
+        <div class="item-actions">
+          <button class="danger" title="Excluir Pulverizador" onclick="delMachine('${s.id}')">×</button>
+        </div>
+      </div>
+    `).join('') || '<div style="padding:12px;color:var(--muted);font-size:12px;text-align:center">Nenhum pulverizador cadastrado</div>';
+  }
+
+  // 3. Renderizar Outras Máquinas
   const el = $('regMachineList');
-  if(el && data) {
-  el.innerHTML = data.map(m => `<div class="card-list-item">
-  <div class="item-info">
-  <div class="item-name"> <code style="background:rgba(255,255,255,.08);padding:2px 8px;border-radius:5px;font-weight:900">${m.code}</code> ${m.name || ''}</div>
-  <div class="item-meta">
-  <span class="pill" style="background:rgba(59,130,246,.12);color:var(--blue)">${m.type || 'OUTRO'}</span>
-  <span class="pill" style="background:${m.status==='ATIVO' ? 'rgba(16,185,129,.12);color:var(--green)' : m.status==='MANUTENCAO' ? 'rgba(245,158,11,.12);color:var(--yellow)' : 'rgba(239,68,68,.12);color:var(--red)'}">${m.status || 'ATIVO'}</span>
-  </div>
-  </div>
-  <div class="item-actions">
-  <button class="danger" onclick="delMachine('${m.id}')">×</button>
-  </div>
-  </div>`).join('') || '<div style="padding:12px;color:var(--muted);font-size:12px;text-align:center">Nenhuma máquina cadastrada</div>';
+  if(el) {
+    el.innerHTML = otherMachines.map(m => `<div class="card-list-item">
+    <div class="item-info">
+    <div class="item-name"> <code style="background:rgba(255,255,255,.08);padding:2px 8px;border-radius:5px;font-weight:900">${m.code}</code> ${m.name || ''}</div>
+    <div class="item-meta">
+    <span class="pill" style="background:rgba(59,130,246,.12);color:var(--blue)">${m.type || 'OUTRO'}</span>
+    <span class="pill" style="background:${m.status==='ATIVO' ? 'rgba(16,185,129,.12);color:var(--green)' : m.status==='MANUTENCAO' ? 'rgba(245,158,11,.12);color:var(--yellow)' : 'rgba(239,68,68,.12);color:var(--red)'}">${m.status || 'ATIVO'}</span>
+    </div>
+    </div>
+    <div class="item-actions">
+    <button class="danger" onclick="delMachine('${m.id}')">×</button>
+    </div>
+    </div>`).join('') || '<div style="padding:12px;color:var(--muted);font-size:12px;text-align:center">Nenhuma outra máquina cadastrada</div>';
+  }
+
+  if (window.lucide) lucide.createIcons();
+  updateOpEquipmentSelects();
+}
+
+async function addTractor() {
+  const code = $('regTractorCode')?.value.trim().toUpperCase();
+  const name = $('regTractorName')?.value.trim();
+  if (!code) { alert('Informe a identificação ou número do trator (ex: Trator 01, MF 4292).'); return; }
+  const {error} = await sb.from('machines').insert([{code, name: name || code, type: 'TRATOR', status: 'ATIVO', active: true, tenant_id: tenantId}]);
+  if (error) alert(error.message);
+  else {
+    if ($('regTractorCode')) $('regTractorCode').value = '';
+    if ($('regTractorName')) $('regTractorName').value = '';
+    loadMachines();
+  }
+}
+
+async function addSprayer() {
+  const code = $('regSprayerCode')?.value.trim().toUpperCase();
+  const name = $('regSprayerName')?.value.trim();
+  if (!code) { alert('Informe a identificação ou número do pulverizador (ex: Pulv 01, Turbo Jacto).'); return; }
+  const {error} = await sb.from('machines').insert([{code, name: name || code, type: 'PULVERIZADOR', status: 'ATIVO', active: true, tenant_id: tenantId}]);
+  if (error) alert(error.message);
+  else {
+    if ($('regSprayerCode')) $('regSprayerCode').value = '';
+    if ($('regSprayerName')) $('regSprayerName').value = '';
+    loadMachines();
+  }
+}
+
+function updateOpEquipmentSelects() {
+  const tratorSel = $('newOpTrator');
+  const equipSel = $('newOpEquipamento');
+  
+  if (tratorSel && tratorSel.tagName === 'SELECT') {
+    const curTrator = tratorSel.value;
+    const tractors = window._tractors || [];
+    let opts = '<option value="">— Selecione o Trator —</option>';
+    if (tractors.length > 0) {
+      opts += tractors.map(t => `<option value="${t.code}">${t.code}${t.name && t.name !== t.code ? ' — ' + t.name : ''}</option>`).join('');
+    } else {
+      opts += '<option value="Trator 1">Trator 1</option><option value="Trator 2">Trator 2</option><option value="Trator 3">Trator 3</option>';
+    }
+    opts += '<option value="OUTRO">+ Cadastrar / Outro Trator...</option>';
+    tratorSel.innerHTML = opts;
+    if (curTrator) tratorSel.value = curTrator;
+    else if (tractors.length > 0) tratorSel.value = tractors[0].code;
+    else tratorSel.value = "Trator 2";
+  }
+
+  if (equipSel && equipSel.tagName === 'SELECT') {
+    const curEquip = equipSel.value;
+    const sprayers = window._sprayers || [];
+    let opts = '<option value="">— Selecione o Pulverizador —</option>';
+    if (sprayers.length > 0) {
+      opts += sprayers.map(s => `<option value="${s.code}">${s.code}${s.name && s.name !== s.code ? ' — ' + s.name : ''}</option>`).join('');
+    } else {
+      opts += '<option value="Pulverizador Turbo">Pulverizador Turbo</option><option value="Pulverizador Barra">Pulverizador Barra</option><option value="Turbo Jacto 2000L">Turbo Jacto 2000L</option>';
+    }
+    opts += '<option value="OUTRO">+ Cadastrar / Outro Pulverizador...</option>';
+    equipSel.innerHTML = opts;
+    if (curEquip) equipSel.value = curEquip;
+    else if (sprayers.length > 0) equipSel.value = sprayers[0].code;
+    else equipSel.value = "Pulverizador Turbo";
+  }
+}
+
+async function handleNewOpEquipmentSelect(type, sel) {
+  if (sel.value === 'OUTRO') {
+    const isTrator = type === 'TRATOR';
+    const label = isTrator ? 'Trator' : 'Pulverizador';
+    const code = prompt(`Informe o código ou identificação do novo ${label} (ex: ${isTrator ? 'Trator 04, MF-4292' : 'Pulv 03, Turbo Jacto 2000L'}):`);
+    if (code && code.trim()) {
+      const cleanCode = code.trim().toUpperCase();
+      const desc = prompt(`Informe o modelo/marca ou descrição (opcional):`) || cleanCode;
+      // Salva no banco de dados e recarrega
+      const { error } = await sb.from('machines').insert([{
+        code: cleanCode,
+        name: desc.trim(),
+        type: isTrator ? 'TRATOR' : 'PULVERIZADOR',
+        status: 'ATIVO',
+        active: true,
+        tenant_id: tenantId
+      }]);
+      await loadMachines();
+      sel.value = cleanCode;
+      toast(`✅ ${label} "${cleanCode}" cadastrado com sucesso!`, 'ok');
+    } else {
+      sel.value = isTrator ? (window._tractors?.[0]?.code || 'Trator 2') : (window._sprayers?.[0]?.code || 'Pulverizador Turbo');
+    }
   }
 }
 
@@ -12146,12 +12318,54 @@ function printPastaCampoOrdemPulv(itemStr) {
   reentradaDias = match.reentrada_dias ? `${match.reentrada_dias} dia(s)` : '1 dia';
   }
 
-  const doseRealVal = parseFloat(p.dosagem_real) || 0;
+  const doseRealVal = parseFloat(p.dosagem_real) || parseFloat(p.dosagem_corrigida) || 0;
   const areaVal = parseFloat(areaHa) || 1.0;
-  const qtdTotalUtilizada = (doseRealVal * areaVal).toFixed(3);
-  const doseAreaStr = doseRealVal > 0 ? `${doseRealVal}` : '—';
-  const carenciaStr = p.carencia_dias !== '' && p.carencia_dias !== undefined ? `${p.carencia_dias}` : '—';
+  const volCaldaLtHa = parseFloat(item.volume_calda) || 500;
+  const volCaldaTanque = item.volume_tanque ? parseFloat(item.volume_tanque) : Math.round(volCaldaLtHa * areaVal);
+  const unitStr = (p.unidade || match?.unidade_dose || match?.unidade || 'L/ha').trim();
+  const isPor100L = unitStr.toLowerCase().includes('100l');
   
+  let qtdTotalUtilizadaStr = '—';
+  let doseAreaStr = '—';
+
+  if (isPor100L) {
+    // Regra Oficial para Defensivos por 100 Litros de Calda:
+    // Exemplo: 2480 L calda / 100 * 30 mL = 744 mL!
+    const totalRaw = (volCaldaTanque / 100) * doseRealVal;
+    if (unitStr.toLowerCase().startsWith('ml')) {
+      if (totalRaw >= 1000) {
+        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {maximumFractionDigits:1})} mL (${(totalRaw/1000).toLocaleString('pt-BR', {maximumFractionDigits:3})} L)`;
+      } else {
+        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {maximumFractionDigits:1})} mL`;
+      }
+      doseAreaStr = `${doseRealVal.toLocaleString('pt-BR')} mL/100L`;
+    } else if (unitStr.toLowerCase().startsWith('g')) {
+      if (totalRaw >= 1000) {
+        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {maximumFractionDigits:1})} g (${(totalRaw/1000).toLocaleString('pt-BR', {maximumFractionDigits:3})} kg)`;
+      } else {
+        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {maximumFractionDigits:1})} g`;
+      }
+      doseAreaStr = `${doseRealVal.toLocaleString('pt-BR')} g/100L`;
+    } else if (unitStr.toLowerCase().startsWith('kg')) {
+      qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {maximumFractionDigits:3})} kg`;
+      doseAreaStr = `${doseRealVal.toLocaleString('pt-BR')} kg/100L`;
+    } else {
+      qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {maximumFractionDigits:3})} L`;
+      doseAreaStr = `${doseRealVal.toLocaleString('pt-BR')} L/100L`;
+    }
+  } else {
+    // Defensivo por hectare
+    const totalRaw = doseRealVal * areaVal;
+    const baseU = unitStr.replace(/\/ha/i, '').replace(/\/há/i, '').trim();
+    qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {maximumFractionDigits:3})} ${baseU || 'L'}`;
+    doseAreaStr = `${doseRealVal.toLocaleString('pt-BR')} ${unitStr}`;
+  }
+
+  if (doseBulaText === '—') {
+    doseBulaText = `${doseRealVal.toLocaleString('pt-BR')} ${unitStr}`;
+  }
+
+  const carenciaStr = p.carencia_dias !== '' && p.carencia_dias !== undefined ? `${p.carencia_dias}` : '—';
   const numAplicRealizadas = p.produto_nome ? (typeof countOpAplicacoesCiclo === 'function' ? countOpAplicacoesCiclo(item.parcela, p.produto_nome) : '1') : '—';
   
   let dataCarStr = '—';
@@ -12161,16 +12375,14 @@ function printPastaCampoOrdemPulv(itemStr) {
   dataCarStr = appDate.toLocaleDateString('pt-BR');
   }
 
-  const volCaldaLtHa = parseFloat(item.volume_calda) || 500;
-  const volCaldaTanque = item.volume_tanque ? parseFloat(item.volume_tanque) : Math.round(volCaldaLtHa * areaVal);
-  const tipoAplic = item.equipamento || 'Barra';
+  const tipoAplic = item.equipamento || 'Pulverização';
 
   return `
   <tr style="background: ${idx % 2 === 1 ? '#f8fafc' : '#ffffff'};">
   <td style="font-weight: bold; text-align: left; padding: 4px 6px;">${p.produto_nome}</td>
   <td style="font-size: 6pt;">${activeIng}</td>
   <td style="text-align:center;">${concentration}</td>
-  <td style="text-align:center;">${p.unidade || 'L/ha'}</td>
+  <td style="text-align:center; font-weight:600">${unitStr}</td>
   <td style="font-weight: bold; text-align:center;">${carenciaStr}</td>
   <td style="text-align: left; font-size: 6pt;">${p.alvo || '—'}</td>
   <td style="text-align:center;">${numPermitidoCiclo}</td>
@@ -12178,8 +12390,8 @@ function printPastaCampoOrdemPulv(itemStr) {
   <td style="text-align:center;">${intervBula}</td>
   <td style="text-align:center;">—</td>
   <td style="color: #d97706; font-weight: bold; text-align:left;">${doseBulaText}</td>
-  <td style="font-weight: bold; text-align:center;">${qtdTotalUtilizada.replace('.', ',')}</td>
-  <td style="color: #d97706; font-weight: bold; text-align:center;">${doseAreaStr.replace('.', ',')}</td>
+  <td style="font-weight: bold; text-align:center; color: #1e3a8a;">${qtdTotalUtilizadaStr}</td>
+  <td style="color: #d97706; font-weight: bold; text-align:center;">${doseAreaStr}</td>
   <td style="text-align:center;">${volCaldaTanque}</td>
   <td style="text-align:center;">${volCaldaLtHa}</td>
   <td style="text-align:center;">${tipoAplic}</td>
@@ -12196,13 +12408,15 @@ function printPastaCampoOrdemPulv(itemStr) {
   if (foliaresOnly.length > 0) {
   foliaresRowsHtml = foliaresOnly.map((f, idx) => {
   const doseRealVal = parseFloat(f.dosagem_real) || 0;
-  const areaVal = parseFloat(areaHa) || 1.0;
-  const qtdTotal = (doseRealVal * areaVal).toFixed(3);
+  // Regra Oficial do Usuário: Nos foliares não tem nenhum cálculo! É a dosagem informada diretamente com a unidade especificada!
+  const unitFoliar = (f.unidade || 'KG ou LT').trim();
+  const unitClean = unitFoliar.replace(/\/ha/i, '').replace(/\/100L/i, '').trim();
+  const doseFormatada = `${doseRealVal.toLocaleString('pt-BR', {maximumFractionDigits:3})} ${unitClean || unitFoliar}`;
   return `
   <tr style="background: ${idx % 2 === 1 ? '#f8fafc' : '#ffffff'};">
   <td style="font-weight: bold; color: #166534; text-align: left; padding: 4px 6px;">${f.produto_nome}</td>
-  <td style="text-align:center;">${f.unidade || 'KG ou LT'}</td>
-  <td style="font-weight: bold; text-align: center; color: #d97706;">${qtdTotal.replace('.', ',')}</td>
+  <td style="text-align:center;">${unitClean || unitFoliar}</td>
+  <td style="font-weight: bold; text-align: center; color: #d97706;">${doseFormatada}</td>
   </tr>
   `;
   }).join('');
@@ -12432,13 +12646,14 @@ function printPastaCampoOrdemPulv(itemStr) {
   <td style="width: 35%; vertical-align: top; padding-right: 4px;">
   <table class="ops-grid" style="width: 100%;">
   <tr><td style="font-weight: bold; background: #e5e7eb; text-align: center;" colspan="2">PARÂMETROS OPERACIONAIS</td></tr>
-  <tr><td><strong>Volume Calda (Lt/ha):</strong></td><td>${item.volume_calda || '500'}</td></tr>
-  <tr><td><strong>Volume Calda (Tanque):</strong></td><td>${item.volume_tanque ? item.volume_tanque : Math.round((parseFloat(item.volume_calda) || 500) * (parseFloat(areaHa) || 1.0))}</td></tr>
+  <tr><td><strong>Volume Calda (Lt/ha):</strong></td><td>${volCaldaLtHa}</td></tr>
+  <tr><td><strong>Volume Calda (Tanque):</strong></td><td>${volCaldaTanque} L</td></tr>
   <tr><td><strong>Velocidade do Trator:</strong></td><td>${item.velocidade_vento_kmh ? item.velocidade_vento_kmh + ' KM/H' : '5 KM/H'}</td></tr>
-  <tr><td><strong>Nº do Trator:</strong></td><td>${item.trator || '1'}</td></tr>
-  <tr><td><strong>Nº do Pulverizador:</strong></td><td>${item.bicos || '2'}</td></tr>
-  <tr><td><strong>Pressão:</strong></td><td>${item.pressao || '70'}</td></tr>
-  <tr><td><strong>Rotação:</strong></td><td>1600</td></tr>
+  <tr><td><strong>Nº do Trator:</strong></td><td>${item.trator || 'Trator 1'}</td></tr>
+  <tr><td><strong>Pulverizador / Equipamento:</strong></td><td>${item.equipamento || item.pulverizador || 'Pulverizador Turbo'}</td></tr>
+  <tr><td><strong>Bicos:</strong></td><td>${item.bicos || 'Cone Vazio'}</td></tr>
+  <tr><td><strong>Pressão:</strong></td><td>${item.pressao || '70 PSI'}</td></tr>
+  <tr><td><strong>Rotação:</strong></td><td>1600 RPM</td></tr>
   <tr><td colspan="2"><strong>Horário de Aplicação:</strong><br/>Inicial: <strong>${item.horario_inicio || '07:00:00'}</strong> &nbsp; Final: <strong>${item.horario_fim || '08:00:00'}</strong></td></tr>
   </table>
   </td>
@@ -19002,11 +19217,10 @@ function openNewOpModal() {
   if ($('newOpBarrista')) $('newOpBarrista').innerHTML = allEmpOpts;
   if ($('newOpManipulador')) $('newOpManipulador').innerHTML = allEmpOpts;
 
-  $('newOpTrator').value = "Trator 2";
-  $('newOpEquipamento').value = "Pulverizador Turbo";
+  updateOpEquipmentSelects();
   $('newOpPressao').value = "Pressão: 70 PSI / Rotação 1900";
   $('newOpBicos').value = "Cone Vazio";
-  $('newOpVolumeCalda').value = "200";
+  $('newOpVolumeCalda').value = "500";
   $('newOpTemp').value = "";
   $('newOpUmid').value = "";
   $('newOpVento').value = "";
@@ -19422,16 +19636,42 @@ function calculateNewOpTotals() {
   const totaisEl = $('newOpTotaisPanel');
   if (dosagemReal > 0) {
     totaisEl.style.display = 'grid';
-    if (isCriterioLitro) {
-      // Por 100L de calda: total no tanque = (vol_calda / 100) × dose_bula
-      const totalTanque = (volCalda / 100) * dosagemReal;
-      $('newOpTotalParcela').textContent = `${totalTanque.toFixed(2)} ${unitBase} (tanque de ${volCalda}L)`;
-      $('newOpTotalTanque').textContent = `${dosagemReal} ${unit} de calda`;
+    if (isFoliarMode) {
+      // Regra de Ouro: Adubos foliares usam a dosagem direta informada pelo produtor (sem critério de cálculo)
+      $('newOpTotalParcela').textContent = `${dosagemReal.toLocaleString('pt-BR', {maximumFractionDigits: 3})} ${unitBase || 'kg'} (dosagem direta)`;
+      $('newOpTotalTanque').textContent = `${dosagemReal.toLocaleString('pt-BR', {maximumFractionDigits: 3})} ${unitBase || 'kg'} (total aplicado)`;
+    } else if (isCriterioLitro) {
+      // Defensivo com dose por 100L de calda:
+      // Volume total de calda da parcela = L/ha × hectares
+      const volCaldaLha = volCalda > 0 ? volCalda : 500;
+      const volTotalCalda = volCaldaLha * areaHa;
+      const totalProduto = (volTotalCalda / 100) * dosagemReal;
+      let totalStr = '';
+      if (unit.toUpperCase().startsWith('ML')) {
+        if (totalProduto >= 1000) {
+          totalStr = `${totalProduto.toLocaleString('pt-BR', {maximumFractionDigits: 1})} mL (${(totalProduto / 1000).toLocaleString('pt-BR', {maximumFractionDigits: 3})} L)`;
+        } else {
+          totalStr = `${totalProduto.toLocaleString('pt-BR', {maximumFractionDigits: 1})} mL`;
+        }
+      } else if (unit.toUpperCase().startsWith('G')) {
+        if (totalProduto >= 1000) {
+          totalStr = `${totalProduto.toLocaleString('pt-BR', {maximumFractionDigits: 1})} g (${(totalProduto / 1000).toLocaleString('pt-BR', {maximumFractionDigits: 3})} kg)`;
+        } else {
+          totalStr = `${totalProduto.toLocaleString('pt-BR', {maximumFractionDigits: 1})} g`;
+        }
+      } else if (unit.toUpperCase().startsWith('KG')) {
+        totalStr = `${totalProduto.toLocaleString('pt-BR', {maximumFractionDigits: 3})} kg`;
+      } else {
+        totalStr = `${totalProduto.toLocaleString('pt-BR', {maximumFractionDigits: 3})} L`;
+      }
+      $('newOpTotalParcela').textContent = `${totalStr} (calda: ${Math.round(volTotalCalda)} L)`;
+      const porTanque500 = (500 / 100) * dosagemReal;
+      $('newOpTotalTanque').textContent = `${porTanque500.toLocaleString('pt-BR')} ${unitBase}/tanque 500L (${dosagemReal} ${unit})`;
     } else {
-      // Por hectare: total = dose × área
+      // Por hectare: dose × área
       const totalParcela = dosagemReal * areaHa;
-      $('newOpTotalParcela').textContent = `${totalParcela.toFixed(3)} ${unitBase} (${areaHa} ha)`;
-      $('newOpTotalTanque').textContent = `${dosagemReal} ${unit} por hectare`;
+      $('newOpTotalParcela').textContent = `${totalParcela.toLocaleString('pt-BR', {maximumFractionDigits: 3})} ${unitBase} (${areaHa} ha)`;
+      $('newOpTotalTanque').textContent = `${dosagemReal.toLocaleString('pt-BR')} ${unit} por hectare`;
     }
   } else {
     totaisEl.style.display = 'none';
@@ -19726,12 +19966,43 @@ function addNewOpItem() {
   // Calcular volume total por parcela
   const unitSelected = $('newOpDosagemUnitSelect')?.value || def.unidade_dose || def.unidade || 'L/ha';
   const isCriterioLitro = unitSelected.includes('100L');
-  const volCalda = parseFloat($('newOpVolumeCalda')?.value) || 200;
+  const volCaldaLha = parseFloat($('newOpVolumeCalda')?.value) || 500;
+  const volTotalCalda = volCaldaLha * areaHa;
   let dosagemTotalParcela = 0;
-  if (isCriterioLitro) {
-    dosagemTotalParcela = parseFloat(((volCalda / 100) * dosagemReal).toFixed(4));
+  let totalDisplayStr = '';
+
+  if (isFoliarItem) {
+    // Adubos foliares: dosagem direta sem critério de cálculo
+    dosagemTotalParcela = dosagemReal;
+    const uClean = unitSelected.replace(/\/ha/i, '').replace(/\/100L/i, '').trim();
+    totalDisplayStr = `${dosagemReal.toLocaleString('pt-BR', {maximumFractionDigits: 3})} ${uClean || 'kg'}`;
+  } else if (isCriterioLitro) {
+    // Defensivo com dose por 100L de calda da parcela
+    const totalRaw = (volTotalCalda / 100) * dosagemReal;
+    dosagemTotalParcela = parseFloat(totalRaw.toFixed(4));
+    if (unitSelected.toUpperCase().startsWith('ML')) {
+      if (dosagemTotalParcela >= 1000) {
+        totalDisplayStr = `${dosagemTotalParcela.toLocaleString('pt-BR', {maximumFractionDigits: 1})} mL (${(dosagemTotalParcela / 1000).toLocaleString('pt-BR', {maximumFractionDigits: 3})} L)`;
+      } else {
+        totalDisplayStr = `${dosagemTotalParcela.toLocaleString('pt-BR', {maximumFractionDigits: 1})} mL`;
+      }
+    } else if (unitSelected.toUpperCase().startsWith('G')) {
+      if (dosagemTotalParcela >= 1000) {
+        totalDisplayStr = `${dosagemTotalParcela.toLocaleString('pt-BR', {maximumFractionDigits: 1})} g (${(dosagemTotalParcela / 1000).toLocaleString('pt-BR', {maximumFractionDigits: 3})} kg)`;
+      } else {
+        totalDisplayStr = `${dosagemTotalParcela.toLocaleString('pt-BR', {maximumFractionDigits: 1})} g`;
+      }
+    } else if (unitSelected.toUpperCase().startsWith('KG')) {
+      totalDisplayStr = `${dosagemTotalParcela.toLocaleString('pt-BR', {maximumFractionDigits: 3})} kg`;
+    } else {
+      totalDisplayStr = `${dosagemTotalParcela.toLocaleString('pt-BR', {maximumFractionDigits: 3})} L`;
+    }
   } else {
-    dosagemTotalParcela = parseFloat((dosagemReal * areaHa).toFixed(4));
+    // Por hectare
+    const totalRaw = dosagemReal * areaHa;
+    dosagemTotalParcela = parseFloat(totalRaw.toFixed(4));
+    const baseU = unitSelected.replace('/ha', '').replace('/HÁ', '').trim();
+    totalDisplayStr = `${dosagemTotalParcela.toLocaleString('pt-BR', {maximumFractionDigits: 3})} ${baseU || 'L'}`;
   }
   const unitFinal = unitSelected;
   
@@ -19744,6 +20015,7 @@ function addNewOpItem() {
     dosagem_real: dosagemReal,
     dosagem_corrigida: dosagemCorrigida,
     dosagem_total_parcela: dosagemTotalParcela,
+    total_display_str: totalDisplayStr,
     area_ha: areaHa,
     unidade: unitFinal,
     unidade_base: unitFinal.replace('/100L', '').replace('/100l', '').replace('/ha', '').trim(),
@@ -19770,9 +20042,11 @@ function renderNewOpItems() {
   
   _newOpItems.forEach((item, idx) => {
     const isFoliar = item.is_foliar || (item.alvo && item.alvo.toUpperCase().includes('FOLIAR'));
-    const totalStr = item.dosagem_total_parcela != null
-      ? `<span style="color:var(--blue); font-weight:700">&rarr; Total: ${item.dosagem_total_parcela} ${item.unidade_base || ''}</span> &bull; `
-      : '';
+    const totalStr = item.total_display_str
+      ? `<span style="color:var(--blue); font-weight:700">&rarr; Total: ${item.total_display_str}</span> &bull; `
+      : (item.dosagem_total_parcela != null
+        ? `<span style="color:var(--blue); font-weight:700">&rarr; Total: ${item.dosagem_total_parcela} ${item.unidade_base || ''}</span> &bull; `
+        : '');
     const badgeType = isFoliar 
       ? `<span style="background:rgba(20,168,50,0.15); color:var(--green); border:1px solid rgba(20,168,50,0.3); padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700; margin-left:6px">FOLIAR</span>`
       : `<span style="background:rgba(46,204,113,0.15); color:var(--blue); border:1px solid rgba(46,204,113,0.3); padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700; margin-left:6px">DEFENSIVO</span>`;
@@ -20033,21 +20307,51 @@ async function saveNewOpDashboard() {
     // Dar baixa automática de defensivos/foliares no Controle de Estoque
     try {
       const areaHa = parseFloat(recordOP.area_ha) || 1.0;
-      const volCalda = parseFloat(recordOP.volume_calda) || 0;
+      const volCaldaLha = parseFloat(recordOP.volume_calda) || 500;
+      const volTotalCalda = volCaldaLha * areaHa;
       const stockExits = itemsToInsert.map(i => {
         const doseVal = parseFloat(i.dosagem_real) || parseFloat(i.dosagem_corrigida) || 0;
-        let totalQtd = doseVal;
-        if (volCalda > 0 && String(i.unidade || '').toLowerCase().includes('100l')) {
-          totalQtd = (doseVal * volCalda) / 100;
-        } else if (areaHa > 0 && (String(i.unidade || '').toLowerCase().includes('ha') || String(i.unidade || '').toLowerCase().includes('l/ha') || String(i.unidade || '').toLowerCase().includes('kg/ha'))) {
-          totalQtd = doseVal * areaHa;
-        }
+        const u = String(i.unidade || '').toLowerCase();
         const isFoliar = typeof getProductGroup === 'function' && getProductGroup(i.produto_nome) === 'FOLIARES';
+        let totalQtd = doseVal;
+        let unitMedida = 'L';
+        
+        if (isFoliar) {
+          totalQtd = doseVal;
+          unitMedida = u.includes('kg') || u.startsWith('g') ? 'KG' : 'L';
+        } else if (volTotalCalda > 0 && u.includes('100l')) {
+          totalQtd = (volTotalCalda / 100) * doseVal;
+          if (u.startsWith('ml')) {
+            totalQtd = totalQtd / 1000;
+            unitMedida = 'L';
+          } else if (u.startsWith('g')) {
+            totalQtd = totalQtd / 1000;
+            unitMedida = 'KG';
+          } else if (u.startsWith('kg')) {
+            unitMedida = 'KG';
+          } else {
+            unitMedida = 'L';
+          }
+        } else {
+          totalQtd = doseVal * areaHa;
+          if (u.startsWith('ml')) {
+            totalQtd = totalQtd / 1000;
+            unitMedida = 'L';
+          } else if (u.startsWith('g')) {
+            totalQtd = totalQtd / 1000;
+            unitMedida = 'KG';
+          } else if (u.includes('kg')) {
+            unitMedida = 'KG';
+          } else {
+            unitMedida = 'L';
+          }
+        }
+
         return {
           tenant_id: tenantId,
           produto_nome: i.produto_nome,
           quantidade_saida: totalQtd || doseVal,
-          unidade_medida: String(i.unidade || '').toLowerCase().includes('kg') ? 'KG' : 'L',
+          unidade_medida: unitMedida,
           motivo_saida: isFoliar ? 'PULVERIZACAO_FOLIAR' : 'PULVERIZACAO_DEFENSIVO',
           referencia_id: opData.id,
           parcela: recordOP.parcela,
@@ -22114,13 +22418,35 @@ function openOpDetailModal(itemStr) {
           <tbody>
             ${itemsCalda.map(i => {
               const doseVal = parseFloat(i.dosagem_real) || parseFloat(i.dosagem_corrigida) || 0;
+              const isFoliar = (i.alvo || '').toUpperCase().includes('FOLIAR') || (i.produto_nome || '').toUpperCase().includes('FOLIAR') || i.is_foliar;
+              const unitStr = (i.unidade || 'L/ha').trim();
+              const isPor100L = unitStr.toLowerCase().includes('100l');
               let totalGasto = '—';
-              if (volCalda > 0 && String(i.unidade || '').toLowerCase().includes('100l')) {
-                totalGasto = ((doseVal * volCalda) / 100).toFixed(2) + ' ' + (i.unidade || '').replace('/100L','');
+
+              if (isFoliar) {
+                // Adubo foliar: dosagem direta sem critério de cálculo
+                const uClean = unitStr.replace(/\/ha/i, '').replace(/\/100L/i, '').trim();
+                totalGasto = `${doseVal.toLocaleString('pt-BR', {maximumFractionDigits: 3})} ${uClean || 'kg'}`;
+              } else if (isPor100L) {
+                const volLha = volCalda > 0 ? volCalda : 500;
+                const caldaTotal = volLha * areaHa;
+                const tot = (caldaTotal / 100) * doseVal;
+                if (unitStr.toLowerCase().startsWith('ml')) {
+                  totalGasto = tot >= 1000 
+                    ? `${tot.toLocaleString('pt-BR', {maximumFractionDigits: 1})} mL (${(tot/1000).toLocaleString('pt-BR', {maximumFractionDigits: 3})} L)`
+                    : `${tot.toLocaleString('pt-BR', {maximumFractionDigits: 1})} mL`;
+                } else if (unitStr.toLowerCase().startsWith('g')) {
+                  totalGasto = tot >= 1000 
+                    ? `${tot.toLocaleString('pt-BR', {maximumFractionDigits: 1})} g (${(tot/1000).toLocaleString('pt-BR', {maximumFractionDigits: 3})} kg)`
+                    : `${tot.toLocaleString('pt-BR', {maximumFractionDigits: 1})} g`;
+                } else {
+                  totalGasto = `${tot.toLocaleString('pt-BR', {maximumFractionDigits: 3})} ${unitStr.replace('/100L','')}`;
+                }
               } else if (areaHa > 0) {
-                totalGasto = (doseVal * areaHa).toFixed(3) + ' ' + (i.unidade || '').replace('/ha','');
+                const tot = doseVal * areaHa;
+                totalGasto = `${tot.toLocaleString('pt-BR', {maximumFractionDigits: 3})} ${unitStr.replace(/\/ha/i,'')}`;
               }
-              const isFoliar = (i.alvo || '').toUpperCase().includes('FOLIAR') || (i.produto_nome || '').toUpperCase().includes('FOLIAR');
+
               return `
               <tr style="border-bottom:1px solid rgba(255,255,255,0.06)">
                 <td style="padding:8px">
@@ -22128,7 +22454,7 @@ function openOpDetailModal(itemStr) {
                   ${isFoliar ? '<span class="badge" style="background:rgba(16,185,129,0.15); color:var(--green); font-size:9px; margin-left:4px">FOLIAR</span>' : ''}
                 </td>
                 <td style="padding:8px; color:var(--muted)">${i.alvo || '—'}</td>
-                <td style="padding:8px; text-align:center; font-weight:600">${doseVal} ${i.unidade || 'L/ha'}</td>
+                <td style="padding:8px; text-align:center; font-weight:600">${doseVal.toLocaleString('pt-BR')} ${unitStr}</td>
                 <td style="padding:8px; text-align:center; color:var(--yellow); font-weight:600">${totalGasto}</td>
                 <td style="padding:8px; text-align:center">
                   <strong>${i.carencia_dias || 0} dias</strong>
