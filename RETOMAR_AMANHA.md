@@ -1,53 +1,72 @@
 # 💾 Salvamento de Sessão — ProdTec Campo & Web Admin
 
-**Data:** 14/09/2026 — 23:00  
-**Conversa ID:** `37bd05d2-5113-4cf7-a868-ea93f03d8acc`  
-**Status:** ✅ Funcionalidades implementadas, testadas e deploy efetuado!
+**Data:** 24/09/2026 — 08:45  
+**Conversa ID:** `e0cc517c-5e3d-489e-b209-9a44bd1370f3`  
+**Status:** ✅ Auditoria completa realizada nas 5 fichas oficiais enviadas pelo usuário. Pronto para implementação ao retornar!
 
 ---
 
-## 🎯 O Que Foi Feito Hoje
+## 🎯 Diagnóstico e Auditoria das 5 Fichas (GlobalGAP / ADGF)
 
-1. **Desbloqueio da Pulverização Exclusivo para a Fazenda BOM JESUS:**
-   - Criado helper `isBomJesusTenant()` em `index.html` e `campo/index.html`.
-   - Na Fazenda Bom Jesus, o lançamento e salvamento de O.P de defensivos é 100% liberado sem bloqueio por falta de MIP prévio.
-   - Para os demais produtores/tenants, as travas de auditoria agronômica continuam ativas para garantir a conformidade.
+O usuário enviou as fotos dos modelos físicos oficiais para validação e conformidade no sistema:
 
-2. **Navegação com Setas e Enter no Grid MIP de 20 Pontos (EMBRAPA):**
-   - Função `handleMipGridKeyDown()` no modal `newMipModal` (`index.html`).
-   - `ArrowUp` e `ArrowDown` navegam verticalmente entre as pragas/doenças no mesmo ponto sem alterar os números.
-   - `ArrowRight` e `Enter` avançam horizontalmente pelos pontos 1 a 20 (com wrap de linha automático).
-   - `ArrowLeft` retrocede entre os pontos.
-   - Auto-select de texto ao focar (`this.select()`) e desativação de scroll acidental (`onwheel="this.blur()"`).
+### 1. **PC05 — CONTROLE DE PREPARO DO SOLO / TRATOS CULTURAIS NA CULTURA**
+* **Função Atual:** `printPastaCampoTratos(id)` em `index.html`.
+* **Ajustes Mapeados:**
+  - Remover trava/bloqueio que impede a impressão quando não há registros no banco.
+  - Implementar cabeçalho oficial de 3 caixas (Emanuela Moreira / ADGF / Dep. Campo / Cod: PC05 / Versão 01).
+  - Título vermelho centralizado.
+  - Ajustar colunas da tabela para: `DATA DD/MM/AA` | `ATIVIDADES` | `IMPLEMENTO AGRÍCOLA` | `NÚMERO DO IMPLEMENTO` | `NOME DO OPERADOR RESPONSÁVEL`.
+  - Pré-carregar o checklist das 22 operações padrão (Gradagem, Subsolagem, Aração, Mulching, TNT, Abelhas, etc.).
+  - Incluir nota de rodapé obrigatória da auditoria.
 
-3. **Puxada Completa de 100% das Variedades nos Documentos Oficiais:**
-   - Aprimoramento da função `getParcelaCompleteInfo()` para unificar todas as fontes (`variedade`, `variedade1` a `variedade10`, array `variedades`, `cultivar`, `cultivares`).
-   - Atualização de todas as fichas oficiais:
-     - **PC 01 (Capa da Pasta de Campo):** Exibe todas as variedades e hectares individuais.
-     - **PC 02 (Ordem de Pulverização):** Identifica todas as variedades da área.
-     - **PC 03 (Sementes & Mudas):** Gera uma linha para cada variedade cadastrada.
-     - **OC 01 (Adubação de Fundação):** Exibe todas as variedades em `VARIEDADES:`.
-     - **PC 04 (Tratos Culturais) & PC 06 (Autorização de Colheita):** Exibição consolidada.
-     - **PC 07 (Fertirrigação A4 Paisagem):** Puxa todas as variedades no cabeçalho.
-     - **PC 08 (MIP Embrapa 20 Pontos):** Exibe todas as variedades no laudo.
-     - **PC 09 (Fiscalização IDIARN / Moscas) & Livro Oficial IDIARN:** Variedades completas.
+### 2. **PC04 — CALENDÁRIO DE PLANTIO DA PARCELA COM A CULTURA**
+* **Função Atual:** ❌ **Inexistente** (o sistema rotulava erroneamente a Fertirrigação como PC04).
+* **Ajustes Mapeados:**
+  - Criar função dedicada `printPastaCampoCalendario(id)` em `index.html` e `campo/index.html`.
+  - Cabeçalho oficial `COD: PC04 | CALENDÁRIO DE PLANTIO | VERSÃO: 01`.
+  - Quadro de variedades e áreas (Jadeal, Goldex, Grand Prix, Asturia, Goldmine, Total Ha, Data Plantio, Previsão Colheita).
+  - Grid diário bicolunado de 1 a 90 dias (MIP, Pulverização, Previsão Colheita, Colheita Realizada, Obs).
+  - Legenda colorida oficial (Transplantio, MIP, Pulverização, Previsão Colheita, Colheita Realizada).
+  - Nota de rodapé técnica obrigatória.
+  - Adicionar botão "Calendário (PC04)" nas listagens de parcelas/plantios e renomear o botão de Fertirrigação para `PC07`.
 
-4. **Fertirrigação Inteligente & Protocolos:**
-   - Módulo de fertirrigação inteligente com protocolos EMBRAPA/Campo embarcados, cálculo de DAP por data de plantio e layout oficial A4 paisagem.
+### 3. **PC03 — IDENTIFICAÇÃO DE SEMENTE, MUDAS, ADUB. DE FUND.**
+* **Função Atual:** `printPastaCampoSementes(id)` em `index.html`.
+* **Ajustes Mapeados:**
+  - Estruturar em dois blocos com títulos em vermelho:
+    1. `IDENTIFICAÇÃO DA SEMENTE`
+    2. `CONTROLE DO USO DE MATÉRIA ORGÂNICA, FERTILIZANTES NA FUNDAÇÃO E EM COBERTURA`
+  - Na Tabela de Sementes: Coluna 1 `Data da Compra: DD/MM/AAAA`, Coluna 9 `Germinação DIAS`, e subdivisão em `Nome do Defensivo` e `Dosagem`.
+  - Na Tabela de Adubação: Coluna `Quant. Com. Kg / Parcela`, `Equipamento Utilizado`, `Método de Aplicação`, `Nome do Operador Responsável`.
+  - Adicionar campos `OBS EXTRA:` em ambas as seções.
+
+### 4. **PC11 — AUTORIZAÇÃO PARA COLHEITA DE FRUTOS LIVRE DE EXCEDENTE DE RESÍDUOS QUÍMICOS**
+* **Função Atual:** `printPastaCampoAutColheita(itemStr)` em `index.html` e `campo/index.html`.
+* **Ajustes Mapeados:**
+  - Atualizar cabeçalho com `MODELO E APROVAÇÃO: 01/07/2026 | ULTIMA REVISÃO: 01/07/2026`.
+  - Trocar tabela fechada de cortes pelo formato oficial de linhas abertas sublinhadas: `( ) PRIMEIRO / DATA _____/_____/_____ Autorização: ___________`.
+  - Colorir o parágrafo de advertência obrigatório em **vermelho**.
+  - Ajustar linha de assinatura inferior para `CARIMBO - ASSINATURA`.
+
+### 5. **OC:05 (OC05) — ORDEM E REGISTRO DE TRATAMENTO PÓS-COLHEITA**
+* **Função Atual:** `printPosColheitaReport(itemStr)` em `index.html`.
+* **Ajustes Mapeados:**
+  - Transformar no formato contínuo de Packing House (modelo oficial da foto 5).
+  - Cabeçalho: `DEP: PACKING - HOUSE | COD: OC:05 | REGISTRO DE TRATAMENTO PÓS COLHEITA`.
+  - Título vermelho: `ORDEM E REGISTRO DE TRATAMENTO PÓS-COLHEITA`.
+  - Grade com 7 colunas: Aplicação, Carroções, Produto (Nome/i.a.), Quantidade (mL Produto/L Água), Carência, Justificativa (ex: Antracnose em vermelho), Nº Aplicadores.
+  - Bloco de Recomendação Técnica: Graduate A+ (4 mL/L), Pincelamento do pedúnculo com garrafas plásticas.
+  - Tabela dos aplicadores: Antonio Kerginildo e Erico Victor.
+  - Caixa de advertência: "SOBRAS DE MISTURA, GUARDAR EM LOCAL SEGURO, ADEQUADO E IDENTIFICADO."
 
 ---
 
-## 📁 Arquivos Chave Modificados
-
-| Arquivo | Descrição |
-|---|---|
-| `index.html` | Web Admin — Desbloqueio Bom Jesus, navegação no grid MIP, extração completa de variedades nos laudos |
-| `campo/index.html` | PWA de Campo — Desbloqueio de O.P para Bom Jesus e suporte a multi-variedades |
-| `RETOMAR_AMANHA.md` | Registro de status da sessão para retomada rápida |
+## 📁 Arquivos a Modificar no Retorno
+1. [`index.html`](file:///c:/Users/mgcon/Desktop/prodtecweb/index.html) — Web Admin
+2. [`campo/index.html`](file:///c:/Users/mgcon/Desktop/prodtecweb/campo/index.html) — PWA Campo
 
 ---
 
-## ▶️ Para Retomar Amanhã
-
-1. Abrir o projeto no workspace.
-2. Conferir com o usuário os próximos itens de campo, packing house ou relatórios que ele queira evoluir.
+## ▶️ Como Retomar
+Basta dar o comando: *"Pode aplicar as alterações nas 5 fichas"* ou *"Continuar"* para que os geradores sejam atualizados e sincronizados automaticamente.
