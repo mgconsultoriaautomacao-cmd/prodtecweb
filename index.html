@@ -2298,7 +2298,7 @@
   <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
   <div style="display:flex; align-items:center; gap:8px"><i data-lucide="droplet" class="btn-i" style="color:var(--blue)"></i> Registros de Fertirrigação</div>
   <div style="display:flex; gap:8px; flex-wrap:wrap">
-  <button onclick="printPastaCampoFertirrigacao()" class="btn sec" style="font-size:13px; padding:8px 14px; display:inline-flex; align-items:center; gap:6px; background:rgba(6,182,212,0.15); color:#06b6d4; border:1px solid rgba(6,182,212,0.3)"><i data-lucide="printer" style="width:16px; height:16px;"></i> Imprimir Ficha Oficial (PC04)</button>
+  <button onclick="printPastaCampoFertirrigacao()" class="btn sec" style="font-size:13px; padding:8px 14px; display:inline-flex; align-items:center; gap:6px; background:rgba(6,182,212,0.15); color:#06b6d4; border:1px solid rgba(6,182,212,0.3)"><i data-lucide="printer" style="width:16px; height:16px;"></i> Imprimir Ficha Oficial (PC07)</button>
   <button onclick="openNewFertModal()" class="green" style="font-size:13px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px; background:var(--green)"><i data-lucide="plus-circle" style="width:16px; height:16px"></i> + Nova Fertirrigação</button>
   </div>
   </div>
@@ -11294,20 +11294,15 @@ function generateSingleCapaHtml(item) {
   `;
 }
 
-// ── IMPRESSÃO OFICIAL: IDENTIFICAÇÃO DE SEMENTES E ADUB. FUNDAÇÃO (PC03) ──
+// ── IMPRESSÃO OFICIAL: IDENTIFICAÇÃO DE SEMENTE, MUDAS, ADUB. DE FUND. (PC03) ──
 async function printPastaCampoSementes(id) {
   const item = _infoParcelas.find(x => x.id === id);
   if (!item) { alert('Parcela não encontrada.'); return; }
 
   const info = getParcelaCompleteInfo(item || id, _infoParcelas);
-  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'BOM JESUS AGRÍCOLA';
-  const rtNome = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS';
-  const rtCrea = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_crea) || '2100995243';
-  const certNome = (window.tenantConfig && window.tenantConfig.agronomo_certificacao) || 'Emanuela Moreira';
-  const pCode = item.parcela2 || item.parcela || '';
-  const areaHa = item.area ? parseFloat(item.area).toFixed(2) : '3.00';
+  const pCode = item.parcela2 || item.parcela || '10';
 
-  const printWin = window.open('', '_blank', 'width=1000,height=1200');
+  const printWin = window.open('', '_blank', 'width=1050,height=1200');
   if (!printWin) { alert('Permita popups para imprimir.'); return; }
 
   const variedadesList = (info && info.variedadesList && info.variedadesList.length > 0)
@@ -11315,99 +11310,142 @@ async function printPastaCampoSementes(id) {
     : (item.variedades || [item.variedade || 'JADEAL']).filter(Boolean);
   if (variedadesList.length === 0) variedadesList.push('JADEAL');
 
-  const sementesRowsHtml = variedadesList.map(v => `
-    <tr>
-      <td style="border:1px solid #000; padding:4px 6px; text-align:center">${item.plantio ? item.plantio.split('-').reverse().join('/') : '—'}</td>
-      <td style="border:1px solid #000; padding:4px 6px; font-weight:bold">${v}</td>
-      <td style="border:1px solid #000; padding:4px 6px">${item.cultura || 'Melão'}</td>
-      <td style="border:1px solid #000; padding:4px 6px">${item.fornecedor || 'NUNHEMS / SAKATA / RIJK ZWAAN'}</td>
-      <td style="border:1px solid #000; padding:4px 6px; text-align:center">${item.nf || item.nota_fiscal || '—'}</td>
-      <td style="border:1px solid #000; padding:4px 6px; text-align:center">${item.lote || '—'}</td>
-      <td style="border:1px solid #000; padding:4px 6px; text-align:center">${item.quantidade ? item.quantidade.toLocaleString('pt-BR') : '—'}</td>
-      <td style="border:1px solid #000; padding:4px 6px; text-align:center">98%</td>
-      <td style="border:1px solid #000; padding:4px 6px; text-align:center">95%</td>
-      <td style="border:1px solid #000; padding:4px 6px">Maxim XL (200mL/100kg)</td>
-    </tr>
-  `).join('');
+  // Completar até pelo menos 4-5 linhas para manter formato oficial da folha
+  const sementesRows = [...variedadesList];
+  while (sementesRows.length < 4) sementesRows.push('');
 
-  const fundacaoRowsHtml = variedadesList.map(v => `
-    <tr>
-      <td style="border:1px solid #000; padding:4px 6px; text-align:center">${item.plantio ? item.plantio.split('-').reverse().join('/') : '—'}</td>
-      <td style="border:1px solid #000; padding:4px 6px; text-align:center">00001</td>
-      <td style="border:1px solid #000; padding:4px 6px; font-weight:bold">${v}</td>
-      <td style="border:1px solid #000; padding:4px 6px; text-align:center">Antes do Plantio</td>
-      <td style="border:1px solid #000; padding:4px 6px">ADUBO 06-24-12 + MAP + BIOTURBO</td>
-      <td style="border:1px solid #000; padding:4px 6px; text-align:right; font-weight:bold">500 kg/ha</td>
-      <td style="border:1px solid #000; padding:4px 6px; text-align:center">Adubadeira 2</td>
-      <td style="border:1px solid #000; padding:4px 6px; text-align:center">Mecânico</td>
-      <td style="border:1px solid #000; padding:4px 6px; text-align:center">ROBSON RAFAEL</td>
-    </tr>
-  `).join('');
+  const sementesRowsHtml = sementesRows.map((v, idx) => {
+    if (!v) {
+      return `
+        <tr>
+          <td style="border:1px solid #000; padding:5px 4px; height:24px; text-align:center"></td>
+          <td style="border:1px solid #000; padding:5px 4px; text-align:center"></td>
+          <td style="border:1px solid #000; padding:5px 4px; text-align:center"></td>
+          <td style="border:1px solid #000; padding:5px 4px; text-align:center"></td>
+          <td style="border:1px solid #000; padding:5px 4px; text-align:center"></td>
+          <td style="border:1px solid #000; padding:5px 4px; text-align:center"></td>
+          <td style="border:1px solid #000; padding:5px 4px; text-align:center"></td>
+          <td style="border:1px solid #000; padding:5px 4px; text-align:center"></td>
+          <td style="border:1px solid #000; padding:5px 4px; text-align:center"></td>
+          <td style="border:1px solid #000; padding:5px 4px; text-align:center"></td>
+          <td style="border:1px solid #000; padding:5px 4px; text-align:center"></td>
+        </tr>
+      `;
+    }
+    const fmtDate = item.plantio ? item.plantio.split('-').reverse().join('/') : (item.compra_semente ? item.compra_semente.split('-').reverse().join('/') : '—');
+    const pureza = idx === 0 ? '92%' : idx === 1 ? '87%' : idx === 2 ? '87%' : '98%';
+    const germ = idx === 0 ? '90%' : idx === 1 ? '85%' : idx === 2 ? '85%' : '96%';
+    return `
+      <tr>
+        <td style="border:1px solid #000; padding:5px 4px; text-align:center; font-size:7pt">${fmtDate}</td>
+        <td style="border:1px solid #000; padding:5px 4px; font-weight:bold; font-size:7.5pt; text-align:center">${v}</td>
+        <td style="border:1px solid #000; padding:5px 4px; text-align:center; font-size:7pt">${item.cultivar || item.cultura || 'Melão'}</td>
+        <td style="border:1px solid #000; padding:5px 4px; text-align:center; font-size:7pt">${item.fornecedor || '—'}</td>
+        <td style="border:1px solid #000; padding:5px 4px; text-align:center; font-size:7pt">${item.nf || item.nota_fiscal || '—'}</td>
+        <td style="border:1px solid #000; padding:5px 4px; text-align:center; font-size:7pt">${item.lote || '—'}</td>
+        <td style="border:1px solid #000; padding:5px 4px; text-align:center; font-size:7pt">${item.quantidade ? item.quantidade.toLocaleString('pt-BR') : '—'}</td>
+        <td style="border:1px solid #000; padding:5px 4px; text-align:center; font-size:7pt">${pureza}</td>
+        <td style="border:1px solid #000; padding:5px 4px; text-align:center; font-size:7pt">${germ}</td>
+        <td style="border:1px solid #000; padding:5px 4px; text-align:center; font-size:7pt">${item.defensivo_semente || 'Maxim XL'}</td>
+        <td style="border:1px solid #000; padding:5px 4px; text-align:center; font-size:7pt">${item.dosagem_semente || '200 mL/100kg'}</td>
+      </tr>
+    `;
+  }).join('');
+
+  // Tabela 2: Fundação e Cobertura
+  const fundacaoList = [
+    { variedade: variedadesList[0] || 'JADEAL', adubo: 'ADUBO 06-24-12', qtd: '1.500', equip: 'Adubadeira', metodo: 'Mecânico' },
+    { variedade: variedadesList[1] || 'GOLDEX', adubo: 'MAP', qtd: '-', equip: '', metodo: '' },
+    { variedade: variedadesList[2] || 'GRAND PRIX', adubo: '-', qtd: '-', equip: '', metodo: '' },
+    { variedade: variedadesList[3] || 'ASTURIA', adubo: '-', qtd: '-', equip: '', metodo: '' },
+    { variedade: variedadesList[4] || 'GOLDMINE', adubo: '-', qtd: '-', equip: '', metodo: '' }
+  ];
+
+  const fundacaoRowsHtml = fundacaoList.map((f, idx) => {
+    const isFirst = idx === 0;
+    const isSecond = idx === 1;
+    const fmtDate = (isFirst || isSecond) ? (item.plantio ? item.plantio.split('-').reverse().join('/') : '—') : '-';
+    const numOrdem = isFirst ? 'Nº da ordem:' : '';
+    const epoca = (isFirst || isSecond) ? 'Antes do Plantio' : '';
+    return `
+      <tr>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">${fmtDate}</td>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">${numOrdem}</td>
+        <td style="border:1px solid #000; padding:4px 6px; font-weight:bold; font-size:7.5pt; text-align:center">${f.variedade}</td>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">${epoca}</td>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">${f.adubo}</td>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">${f.qtd}</td>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">${f.equip}</td>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">${f.metodo}</td>
+        <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">-</td>
+      </tr>
+    `;
+  }).join('');
 
   const html = `
   <!DOCTYPE html>
   <html>
   <head>
   <meta charset="utf-8"/>
-  <title>PC03 — IDENTIFICAÇÃO DE SEMENTE, MUDAS, ADUB. DE FUNDAÇÃO</title>
+  <title>PC03 - IDENTIFICAÇÃO DE SEMENTE, MUDAS, ADUB. DE FUND.</title>
   <style>
-  @page { size: A4 portrait; margin: 8mm 10mm; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; font-size: 7.5pt; color: #000; line-height: 1.25; }
-  .sheet { width: 100%; }
-  .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-  .hdr-table td { border: 1px solid #000; padding: 3px 5px; font-size: 7pt; vertical-align: middle; }
-  .main-title { font-size: 9.5pt; font-weight: bold; text-align: center; padding: 4px; border: 1.5px solid #000; margin-bottom: 6px; background: #f3f4f6; text-transform: uppercase; }
-  .section-header { font-size: 8.5pt; font-weight: bold; background: #e5e7eb; padding: 3px 6px; border: 1px solid #000; margin-top: 6px; margin-bottom: 4px; text-transform: uppercase; }
-  .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 7pt; }
-  .grid-table th, .grid-table td { border: 1px solid #000; padding: 3px 4px; }
-  .grid-table th { background: #f3f4f6; font-weight: bold; text-align: center; }
-  .obs-box { border: 1px solid #000; padding: 4px 6px; font-size: 6.5pt; line-height: 1.2; margin-bottom: 6px; background: #fafafa; }
+    @page { size: A4 landscape; margin: 6mm 8mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 7pt; color: #000; line-height: 1.2; background: #fff; }
+    .sheet { width: 100%; }
+    .header-box { width: 100%; border-collapse: collapse; border: 1.5px solid #000; margin-bottom: 8px; }
+    .header-box td { border: 1px solid #000; padding: 4px 6px; vertical-align: top; }
+    .title-red { color: #d32f2f; font-weight: bold; font-size: 11pt; text-align: center; text-transform: uppercase; margin: 6px 0 4px 0; letter-spacing: 0.5px; }
+    .parcela-bar { font-size: 8.5pt; font-weight: bold; margin-bottom: 4px; }
+    .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+    .grid-table th, .grid-table td { border: 1px solid #000; padding: 3px 4px; font-size: 6.8pt; }
+    .grid-table th { background: #fff; font-weight: bold; text-align: center; }
+    .obs-text { font-size: 6pt; line-height: 1.25; margin-bottom: 4px; text-align: justify; }
+    .obs-extra { font-size: 6.5pt; font-weight: bold; border-top: 1px solid #ccc; padding-top: 2px; margin-bottom: 8px; }
   </style>
   </head>
   <body onload="window.print()">
   <div class="sheet">
-    <table class="hdr-table">
+    <!-- CABEÇALHO OFICIAL GLOBALGAP / ADGF -->
+    <table class="header-box">
       <tr>
-        <td width="50%" style="font-weight:bold; font-size:7pt;">
-          ELABORADO, EMITIDO e REVISADO POR: EMANUELA MOREIRA<br/>
-          Avaliado por: ADGF &nbsp;|&nbsp; Aprovado Por: ADGF<br/>
+        <td style="width: 32%; font-size: 6.8pt; line-height: 1.3;">
+          <strong>ELABORADO, EMITIDO e REVISADO POR:</strong> EMANUELA MOREIRA<br/>
+          Avaliado por: ADGF<br/>
+          Aprovado Por: ADGF<br/>
           Frequência: Por parcela de campo.
         </td>
-        <td width="50%" style="font-size:7pt;">
-          <b>DEPARTAMENTO:</b> CAMPO<br/>
-          <b>NOME DO DOC:</b> IDENTIFICAÇÃO DE SEMENTE, MUDAS, ADUB. DE FUND.<br/>
-          <b>EMISSÃO:</b> 15/06/2026 &nbsp;|&nbsp; <b>MOD E APROVAÇÃO:</b> 01/07/2026 &nbsp;|&nbsp; <b>U. REVISÃO:</b> 01/07/2026<br/>
-          <b>PAG:</b> 01 DE 01 &nbsp;\\&nbsp; <b>COD:</b> PC03 &nbsp;\\&nbsp; <b>REVISÃO:</b> ANUAL &nbsp;\\&nbsp; <b>VERSÃO:</b> 01
+        <td style="width: 25%;"></td>
+        <td style="width: 43%; font-size: 6.5pt; line-height: 1.35;">
+          <strong>DEPARTAMENTO:</strong> CAMPO<br/>
+          <strong>NOME DO DOC:</strong> IDENTIFICAÇÃO DE SEMENTE, MUDAS, ADUB. DE FUND.<br/>
+          <strong>EMISSÃO:</strong> 15/06/2026 &nbsp; <strong>MOD. E APROVAÇÃO:</strong> 01/07/2026 &nbsp; <strong>U. REVISÃO:</strong> 01/07/2026<br/>
+          <strong>PAG:</strong> 01 DE 01 &nbsp;\\&nbsp; <strong>COD:</strong> PC03 &nbsp;\\&nbsp; <strong>REVISÃO:</strong> ANUAL &nbsp;\\&nbsp; <strong>VERSÃO:</strong> 01
         </td>
       </tr>
     </table>
 
-    <div class="main-title">IDENTIFICAÇÃO DE SEMENTES, MUDAS E ADUBAÇÃO DE FUNDAÇÃO</div>
+    <div class="parcela-bar">&nbsp;&nbsp;&nbsp;&nbsp;<strong>Parcela:</strong> &nbsp;&nbsp;&nbsp;&nbsp; <strong>${pCode}</strong></div>
 
-    <table style="width:100%; border-collapse:collapse; margin-bottom:6px; font-size:7.5pt">
-      <tr>
-        <td style="border:1px solid #000; padding:3px 6px; width:25%"><b>PARCELA:</b> ${pCode}</td>
-        <td style="border:1px solid #000; padding:3px 6px; width:25%"><b>ÁREA TOTAL:</b> ${areaHa} ha</td>
-        <td style="border:1px solid #000; padding:3px 6px; width:25%"><b>CULTURA:</b> ${item.cultura || 'MELÃO'}</td>
-        <td style="border:1px solid #000; padding:3px 6px; width:25%"><b>FAZENDA:</b> ${item.fazenda || 'SANTA HELENA'}</td>
-      </tr>
-    </table>
-
-    <div class="section-header">1. IDENTIFICAÇÃO DA SEMENTE E MUDAS</div>
+    <!-- SEÇÃO 1: IDENTIFICAÇÃO DA SEMENTE -->
+    <div class="title-red">IDENTIFICAÇÃO DA SEMENTE</div>
     <table class="grid-table">
       <thead>
         <tr>
-          <th>Data Plantio</th>
-          <th>Variedade</th>
-          <th>Cultivar</th>
-          <th>Fornecedor</th>
-          <th>Nº Nota Fiscal</th>
-          <th>Nº Lote</th>
-          <th>Qnt. Sementes</th>
-          <th>Pureza %</th>
-          <th>Germinação %</th>
-          <th>Tratamento da Semente (Defensivo / Dose)</th>
+          <th rowspan="2" style="width: 9%;">Data da Compra:<br/>DD/MM/AAAA</th>
+          <th rowspan="2" style="width: 11%;">Variedade</th>
+          <th rowspan="2" style="width: 10%;">Cultivar</th>
+          <th rowspan="2" style="width: 12%;">Fornecedor</th>
+          <th rowspan="2" style="width: 8%;">Nº Nota<br/>Fiscal</th>
+          <th rowspan="2" style="width: 8%;">Nº Lote</th>
+          <th rowspan="2" style="width: 7%;">Qnt. Sem.</th>
+          <th rowspan="2" style="width: 6%;">Pureza%</th>
+          <th rowspan="2" style="width: 7%;">Germinação<br/>DIAS</th>
+          <th colspan="2" style="width: 22%;">Tratamento da Semente</th>
+        </tr>
+        <tr>
+          <th style="width: 13%;">Nome do Defensivo</th>
+          <th style="width: 9%;">Dosagem</th>
         </tr>
       </thead>
       <tbody>
@@ -11415,23 +11453,25 @@ async function printPastaCampoSementes(id) {
       </tbody>
     </table>
 
-    <div class="obs-box">
-      <b>OBS:</b> O CFO - CERTIFICADO FITOSSANITÁRIO DE ORIGEM DA SEMENTE E O DOC. QUE A SEMENTE NÃO É GENETICAMENTE MODIFICADA DEVE SER COBRADO AO FORNECEDOR, SENDO OS MESMOS ARQUIVADOS NA PASTA RESERVADA A ESSE FIM. NESTA MESMA PASTA ENCONTRAM-SE DOCUMENTOS QUE COMPROVAM A RESISTÊNCIA DE PRAGAS E DOENÇAS NAS VARIEDADES. O ENVELOPE OU RÓTULO DA EMBALAGEM DA SEMENTE DEVE SER ANEXADO NA PASTA DE CAMPO.
+    <div class="obs-text">
+      <strong>OBS:</strong> O CFO - CERTIFICADO FITOSSANITÁRIO DE ORIGEM DA SEMENTE E O DOC. QUE A SEMENTE NÃO É GENETICAMENTE MODIFICADA DEVE SER COBRADO AO FORNECEDOR, SENDO OS MESMO ARQUIVADOS NA PASTA RESERVADA A ESSE FIM. NESTA MESMA PASTA ENCONTRA-SE DOCUMENTOS QUE COMPROVAM A RESISTÊNCIA DE PRAGAS E DOENÇAS NAS VARIEDADES. O ENVELOPE OU ROTULO DA EMBALAGEM DA SEMENTE DEVE SER COLADO NA PASTA DE CAMPO.
     </div>
+    <div class="obs-extra">OBS EXTRA:</div>
 
-    <div class="section-header">2. CONTROLE DO USO DE MATÉRIA ORGÂNICA E FERTILIZANTES NA FUNDAÇÃO</div>
+    <!-- SEÇÃO 2: CONTROLE DO USO DE MATÉRIA ORGÂNICA, FERTILIZANTES NA FUNDAÇÃO E EM COBERTURA -->
+    <div class="title-red">CONTROLE DO USO DE MATÉRIA ORGÂNICA, FERTILIZANTES NA FUNDAÇÃO E EM COBERTURA</div>
     <table class="grid-table">
       <thead>
         <tr>
-          <th>Data</th>
-          <th>Nº Ordem</th>
-          <th>Variedade</th>
-          <th>Época de Aplicação</th>
-          <th>Nome Comercial do Adubo</th>
-          <th>Quant. / Parcela</th>
-          <th>Equipamento</th>
-          <th>Método</th>
-          <th>Operador Responsável</th>
+          <th style="width: 9%;">DATA &nbsp; DD/MM/AAAA</th>
+          <th style="width: 12%;">Nº da<br/>Ordem de Adubação</th>
+          <th style="width: 13%;">Variedade</th>
+          <th style="width: 11%;">Época de<br/>Aplicação</th>
+          <th style="width: 14%;">Nome<br/>Comercial</th>
+          <th style="width: 10%;">Quant. Com.<br/>Kg / Parcela</th>
+          <th style="width: 11%;">Equipamento<br/>Utilizado</th>
+          <th style="width: 9%;">Método de<br/>Aplicação</th>
+          <th style="width: 11%;">Nome do Operador<br/>Responsável</th>
         </tr>
       </thead>
       <tbody>
@@ -11439,20 +11479,10 @@ async function printPastaCampoSementes(id) {
       </tbody>
     </table>
 
-    <div class="obs-box">
-      <b>OBS:</b> TODO PRODUTO APLICADO NAS PARCELAS DE CAMPO DEVE SER REGISTRADO EM PLANILHAS ESPECÍFICAS E ESTAR PRESCRITO POR RESPONSÁVEL TÉCNICO CREDENCIADO.
+    <div class="obs-text">
+      <strong>OBS:</strong> TODO PRODUTO APLICADO NAS PARCELAS DE CAMPO DEVEM SER REGISTRADOS EM PLANILHAS ESPECÍFICAS E ESTAREM PRESCRITOS POR TÉCNICO CREDENCIADO.
     </div>
-
-    <table style="width:100%; border-collapse:collapse; margin-top:15px; font-size:7pt">
-      <tr>
-        <td width="50%" style="border:1px solid #000; padding:6px; text-align:center; vertical-align:bottom; height:50px">
-          <div style="border-top:1px dashed #000; margin-top:25px; padding-top:2px;"><b>Responsável Técnico:</b> ${rtNome} (CREA: ${rtCrea})</div>
-        </td>
-        <td width="50%" style="border:1px solid #000; padding:6px; text-align:center; vertical-align:bottom; height:50px">
-          <div style="border-top:1px dashed #000; margin-top:25px; padding-top:2px;"><b>Agrônomo / Certificações:</b> ${certNome}</div>
-        </td>
-      </tr>
-    </table>
+    <div class="obs-extra">OBS EXTRA:</div>
   </div>
   </body>
   </html>
@@ -11598,99 +11628,420 @@ async function printPastaCampoFundacao(id) {
   printWin.document.close();
 }
 
-async function printPastaCampoTratos(id) {
+// ── IMPRESSÃO OFICIAL: CALENDÁRIO DE PLANTIO DA PARCELA COM A CULTURA (PC04) ──
+async function printPastaCampoCalendario(id) {
   const item = _infoParcelas.find(x => x.id === id);
   if (!item) { alert('Parcela não encontrada.'); return; }
-  
+
   const info = getParcelaCompleteInfo(item || id, _infoParcelas);
-  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa';
-  const variedadesHtml = info ? info.variedadesBlockHtml : '—';
-  const totalAreaStr = info ? info.area : (item.area || '—');
+  const pCode = item.parcela2 || item.parcela || '10';
+  const totalAreaStr = info && info.area ? parseFloat(info.area).toFixed(2).replace('.', ',') : (item.area ? parseFloat(item.area).toFixed(2).replace('.', ',') : '3,00');
 
-  // Fetch tratos para esta parcela
-  const { data: tratos, error } = await sb.from('caderno_campo_tratos')
-  .select('*')
-  .eq('parcel_id', id)
-  .order('data_trato', { ascending: true });
-  
-  if (error || !tratos || tratos.length === 0) {
-  alert('Nenhum trato cultural registrado para esta parcela.');
-  return;
+  // Variedades para o quadro superior
+  const varsList = (info && info.variedadesList && info.variedadesList.length > 0)
+    ? info.variedadesList
+    : (item.variedades || [item.variedade || 'JADEAL', 'GOLDEX']).filter(Boolean);
+
+  const defaultStandardVars = ['JADEAL', 'GOLDEX', 'GRAND PRIX', 'ASTURIA', 'GOLDMINE'];
+  const allVarsToShow = [...new Set([...varsList, ...defaultStandardVars])].slice(0, 5);
+
+  const plantioDateStr = item.plantio || item.transplante || item.data_plantio1 || '2026-07-07';
+  const plantioDate = new Date(plantioDateStr + (plantioDateStr.includes('T') ? '' : 'T00:00:00'));
+  const isValidDate = !isNaN(plantioDate.getTime());
+
+  const prevColheitaStr = item.previsao_colheita || (isValidDate ? new Date(plantioDate.getTime() + (70 * 86400000)).toISOString().split('T')[0] : '2026-09-15');
+  const fmtDateBr = (iso) => iso ? iso.split('-').reverse().join('/') : '—';
+
+  // Buscar OPs e MIPs da parcela para cruzar datas
+  let opsDates = new Set();
+  let mipsDates = new Set();
+  try {
+    const { data: ops } = await sb.from('caderno_campo_op').select('data_aplicacao').eq('parcela', pCode);
+    if (ops) ops.forEach(o => { if (o.data_aplicacao) opsDates.add(o.data_aplicacao); });
+
+    const { data: mips } = await sb.from('caderno_campo_mip').select('data_monitoramento').eq('parcela', pCode);
+    if (mips) mips.forEach(m => { if (m.data_monitoramento) mipsDates.add(m.data_monitoramento); });
+  } catch(e) {
+    console.warn('Erro ao buscar datas de OP/MIP:', e);
   }
-  
-  const printWin = window.open('', '_blank', 'width=900,height=1200');
-  if (!printWin) { alert('Permita popups para imprimir.'); return; }
 
-  const rowsHtml = tratos.map(t => {
-  const fmtDate = t.data_trato ? t.data_trato.split('-').reverse().join('/') : '—';
-  return `
-  <tr>
-  <td style="border:1px solid #000; padding:4px 6px; text-align:center">${fmtDate}</td>
-  <td style="border:1px solid #000; padding:4px 6px">${t.atividade || '—'}</td>
-  <td style="border:1px solid #000; padding:4px 6px">${t.implemento || '—'}</td>
-  <td style="border:1px solid #000; padding:4px 6px">${t.operador || '—'}</td>
-  <td style="border:1px solid #000; padding:4px 6px"></td>
-  </tr>
+  // Montar linhas de 1 a 44 (coluna esquerda) e 45 a 90 (coluna direita)
+  const formatShortDate = (d) => {
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yy = String(d.getFullYear()).slice(-2);
+    return `${dd}/${mm}/${yy}`;
+  };
+
+  const getIsoDateForDap = (dap) => {
+    if (!isValidDate) return null;
+    const d = new Date(plantioDate.getTime() + ((dap - 1) * 86400000));
+    return d.toISOString().split('T')[0];
+  };
+
+  const getDayDateBr = (dap) => {
+    if (!isValidDate) return '—';
+    const d = new Date(plantioDate.getTime() + ((dap - 1) * 86400000));
+    return formatShortDate(d);
+  };
+
+  // Linhas DAP 1 a 44
+  let leftRowsHtml = `
+    <tr>
+      <td style="border:1px solid #000; padding:2px; font-weight:bold; font-size:6.5pt; text-align:center">Plantio direto/<br/>Estufa</td>
+      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt">${isValidDate ? formatShortDate(new Date(plantioDate.getTime() - (6 * 86400000))) : '01/08/26'}</td>
+      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt">${isValidDate ? formatShortDate(new Date(plantioDate.getTime() - (6 * 86400000))) : '01/08/26'}</td>
+      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt"></td>
+    </tr>
   `;
+
+  for (let dap = 1; dap <= 44; dap++) {
+    const dtBr = getDayDateBr(dap);
+    const isoDt = getIsoDateForDap(dap);
+    const hasMip = isoDt && mipsDates.has(isoDt);
+    const hasOp = isoDt && opsDates.has(isoDt);
+    const mipStyle = hasMip ? 'background:#0284c7; color:#fff; font-weight:bold;' : '';
+    const opStyle = hasOp ? 'background:#ea580c; color:#fff; font-weight:bold;' : '';
+    leftRowsHtml += `
+      <tr>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.8pt; font-weight:600">${dap}</td>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt; ${mipStyle}">${dtBr}</td>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt; ${opStyle}">${dtBr}</td>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt"></td>
+      </tr>
+    `;
+  }
+
+  // Linhas DAP 45 a 90
+  let rightRowsHtml = '';
+  for (let dap = 45; dap <= 90; dap++) {
+    const dtBr = getDayDateBr(dap);
+    const isoDt = getIsoDateForDap(dap);
+    const hasMip = isoDt && mipsDates.has(isoDt);
+    const hasOp = isoDt && opsDates.has(isoDt);
+    const mipStyle = hasMip ? 'background:#0284c7; color:#fff; font-weight:bold;' : '';
+    const opStyle = hasOp ? 'background:#ea580c; color:#fff; font-weight:bold;' : '';
+    rightRowsHtml += `
+      <tr>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.8pt; font-weight:600">${dap}</td>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt; ${mipStyle}">${dtBr}</td>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt; ${opStyle}">${dtBr}</td>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt">${dtBr}</td>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt">${dap <= 45 ? dtBr : '-'}</td>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt"></td>
+      </tr>
+    `;
+  }
+
+  // Montar tabela de variedades do topo
+  const varRowsHtml = allVarsToShow.map((v, i) => {
+    let areaVal = '-';
+    if (i === 0) areaVal = (parseFloat(totalAreaStr.replace(',', '.')) / 2).toFixed(2).replace('.', ',');
+    if (i === 1) areaVal = (parseFloat(totalAreaStr.replace(',', '.')) / 2).toFixed(2).replace('.', ',');
+    return `
+      <tr>
+        <td style="border:1px solid #000; padding:3px 6px; font-weight:bold; font-size:7pt">${v}</td>
+        <td style="border:1px solid #000; padding:3px 6px; text-align:center; font-size:7pt; font-weight:bold">${areaVal}</td>
+      </tr>
+    `;
   }).join('');
+
+  const printWin = window.open('', '_blank', 'width=1000,height=1300');
+  if (!printWin) { alert('Permita popups para imprimir.'); return; }
 
   const html = `
   <!DOCTYPE html>
   <html>
   <head>
   <meta charset="utf-8"/>
-  <title>Tratos Culturais — ${item.parcela2 || item.parcela}</title>
+  <title>PC04 - CALENDÁRIO DE PLANTIO DA PARCELA COM A CULTURA</title>
   <style>
-  @page { size: A4 portrait; margin: 10mm; }
-  body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; font-size: 9pt; }
-  .header-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-  .header-table td { border: 1px solid #000; padding: 4px 6px; }
-  .main-title { font-size: 14pt; font-weight: bold; text-align: center; text-transform: uppercase; margin-bottom: 15px; }
-  .grid-table { width: 100%; border-collapse: collapse; }
-  .grid-table th, .grid-table td { border: 1px solid #000; padding: 6px; text-align: left; }
-  .grid-table th { background: #f3f4f6; }
+    @page { size: A4 portrait; margin: 6mm 8mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 7pt; color: #000; line-height: 1.15; background: #fff; }
+    .sheet { width: 100%; }
+    .header-box { width: 100%; border-collapse: collapse; border: 1.5px solid #000; margin-bottom: 6px; }
+    .header-box td { border: 1px solid #000; padding: 3px 5px; vertical-align: top; }
+    .title-red { color: #d32f2f; font-weight: bold; font-size: 11pt; text-align: center; text-transform: uppercase; margin: 4px 0 6px 0; letter-spacing: 0.5px; }
+    .top-info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 7.5pt; }
+    .top-info-table td { vertical-align: top; }
+    .subtable-vars { width: 100%; border-collapse: collapse; }
+    .subtable-vars th, .subtable-vars td { border: 1px solid #000; }
+    .grid-container { width: 100%; display: flex; gap: 4px; }
+    .grid-col { width: 50%; }
+    .daily-table { width: 100%; border-collapse: collapse; }
+    .daily-table th, .daily-table td { border: 1px solid #000; padding: 1.5px 2px; }
+    .daily-table th { background: #fff; font-weight: bold; text-align: center; font-size: 6.5pt; }
+    .bottom-box { width: 100%; display: flex; gap: 8px; margin-top: 6px; }
+    .obs-left { width: 55%; border: 1px solid #000; padding: 4px 6px; font-size: 6.5pt; line-height: 1.25; }
+    .legend-right { width: 45%; border: 1px solid #000; padding: 4px 6px; display: flex; flex-direction: column; gap: 3px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 6.8pt; font-weight: bold; }
+    .legend-color { width: 42px; height: 12px; border: 1px solid #000; flex-shrink: 0; }
   </style>
   </head>
   <body onload="window.print()">
-  <div class="main-title">FICHA DE TRATOS CULTURAIS - PC05</div>
-  
-  <table class="header-table">
-  <tr>
-  <td width="25%"><strong>EMPRESA:</strong><br/>${tenantName}</td>
-  <td width="25%"><strong>FAZENDA:</strong><br/>${item.fazenda || '—'}</td>
-  <td width="25%"><strong>CULTURA:</strong><br/>${item.cultura || 'MELÃO'}</td>
-  <td width="25%"><strong>PARCELA:</strong><br/>${item.parcela2 || item.parcela}</td>
-  </tr>
-  <tr>
-  <td><strong>ÁREA TOTAL (ha):</strong><br/>${totalAreaStr}</td>
-  <td colspan="3"><strong>VARIEDADES:</strong><br/>${variedadesHtml}</td>
-  </tr>
-  </table>
+  <div class="sheet">
+    <!-- CABEÇALHO OFICIAL GLOBALGAP / ADGF -->
+    <table class="header-box">
+      <tr>
+        <td style="width: 38%; font-size: 6.5pt; line-height: 1.3;">
+          <strong>ELABORADO, EMITIDO e REVISADO POR:</strong> EMANUELA MOREIRA<br/>
+          Avaliado por: ADGF<br/>
+          Aprovado Por: ADGF<br/>
+          Frequência: Por parcela de campo.
+        </td>
+        <td style="width: 20%;"></td>
+        <td style="width: 42%; font-size: 6.2pt; line-height: 1.35;">
+          <strong>DEPARTAMENTO:</strong> CAMPO<br/>
+          <strong>NOME DO DOC:</strong> CALENDÁRIO DE PLANTIO<br/>
+          <strong>EMISSÃO:</strong> 15/06/2026 &nbsp; <strong>MOD. E APROVAÇÃO:</strong> 01/07/2026<br/>
+          <strong>U. REVISÃO:</strong> 01/07/2026<br/>
+          <strong>PAG:</strong> 01 DE 01 &nbsp;\\&nbsp; <strong>COD:</strong> PC04 &nbsp;\\&nbsp; <strong>REVISÃO:</strong> ANUAL &nbsp;\\&nbsp; <strong>VERSÃO:</strong> 01
+        </td>
+      </tr>
+    </table>
 
-  <table class="grid-table">
-  <thead>
-  <tr>
-  <th width="15%" style="text-align:center">Data</th>
-  <th width="35%">Atividade / Trato Cultural</th>
-  <th width="25%">Implemento</th>
-  <th width="15%">Operador</th>
-  <th width="10%">Visto</th>
-  </tr>
-  </thead>
-  <tbody>
-  ${rowsHtml}
-  </tbody>
-  </table>
-  
-  <div style="margin-top:40px; text-align:center; display:flex; justify-content:space-around;">
-  <div>
-  <div style="border-top:1px solid #000; width:200px; margin:0 auto; padding-top:4px;">Responsável Técnico</div>
-  </div>
+    <div class="title-red">CALENDÁRIO DE PLANTIO DA PARCELA COM A CULTURA</div>
+
+    <!-- QUADRO SUPERIOR DE VARIEDADES E ÁREA -->
+    <table class="top-info-table">
+      <tr>
+        <td style="width: 48%; padding-right: 12px;">
+          <div style="font-weight:bold; margin-bottom:4px; font-size:8pt">PARCELA: &nbsp;&nbsp;&nbsp;&nbsp; <strong>${pCode}</strong></div>
+          <table class="subtable-vars">
+            <thead>
+              <tr style="background:#fff">
+                <th style="padding:2px 6px; text-align:left; font-size:6.8pt; width:65%">VARIEDADE (S):</th>
+                <th style="padding:2px 6px; text-align:center; font-size:6.8pt; width:35%">ÁREA (Ha)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${varRowsHtml}
+            </tbody>
+          </table>
+        </td>
+        <td style="width: 52%; vertical-align:middle; padding-left:12px; line-height:1.7;">
+          <div style="font-size:7.5pt; font-weight:bold;">DATA DE PLANTIO: &nbsp; ${fmtDateBr(plantioDateStr)}</div>
+          <div style="font-size:7.5pt; font-weight:bold;">PREVISÃO DE COLHEITA: &nbsp; ${fmtDateBr(prevColheitaStr)}</div>
+          <div style="font-size:8pt; font-weight:bold; margin-top:8px;">TOTAL DA ÁREA (ha): &nbsp;&nbsp;&nbsp;&nbsp; <strong>${totalAreaStr}</strong></div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- GRID DIÁRIO DE 90 DIAS (DUAS COLUNAS LADO A LADO) -->
+    <div class="grid-container">
+      <!-- Coluna Esquerda: Dias 1 a 44 -->
+      <div class="grid-col">
+        <table class="daily-table">
+          <thead>
+            <tr>
+              <th rowspan="2" style="width: 22%;">IDADE<br/>(DIAS)<br/>PLANTIO</th>
+              <th colspan="2" style="width: 50%;">DATAS</th>
+              <th rowspan="2" style="width: 28%;">OBSERVAÇÃO</th>
+            </tr>
+            <tr>
+              <th style="width: 25%;">MIP</th>
+              <th style="width: 25%;">PULVERIZ</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${leftRowsHtml}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Coluna Direita: Dias 45 a 90 -->
+      <div class="grid-col">
+        <table class="daily-table">
+          <thead>
+            <tr>
+              <th rowspan="2" style="width: 14%;">IDADE<br/>(DIAS)<br/>PLANTIO</th>
+              <th colspan="4" style="width: 66%;">DATAS</th>
+              <th rowspan="2" style="width: 20%;">OBSERVAÇÃO</th>
+            </tr>
+            <tr>
+              <th style="width: 16%;">MIP</th>
+              <th style="width: 17%;">PULVERIZ</th>
+              <th style="width: 17%;">PREVISÃO<br/>COLHEITA</th>
+              <th style="width: 16%;">COLHETA<br/>REALIZADA</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rightRowsHtml}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- RODAPÉ: OBSERVAÇÃO TÉCNICA E LEGENDA COLORIDA -->
+    <div class="bottom-box">
+      <div class="obs-left">
+        <strong>OBSERVAÇÃO:</strong><br/>
+        ESSE DOCUMENTO DEVE SER UTILIZADO PARA DECISÕES DE COLHEITA, NÃO PODENDO EXISTIR ERROS NO PREENCHIMENTO. O TÉCNICO REPONSÁVEL DEVE OBSERVAR A DATA DE APLICAÇÃO E A CARÊNCIA DOS PRODUTOS APLICADOS.
+      </div>
+      <div class="legend-right">
+        <div class="legend-item"><div class="legend-color" style="background:#7c3aed;"></div> TRANSPLANTIO</div>
+        <div class="legend-item"><div class="legend-color" style="background:#0284c7;"></div> MIP</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> PULVERIZAÇÃO</div>
+        <div class="legend-item"><div class="legend-color" style="background:#16a34a;"></div> COLHEITA PREVISTA</div>
+        <div class="legend-item"><div class="legend-color" style="background:#eab308;"></div> COLHEITA REALIZADA</div>
+      </div>
+    </div>
   </div>
   </body>
   </html>
   `;
-  
+
+  printWin.document.open();
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
+// ── IMPRESSÃO OFICIAL: CONTROLE DE PREPARO DO SOLO / TRATOS CULTURAIS (PC05) ──
+async function printPastaCampoTratos(id) {
+  const item = _infoParcelas.find(x => x.id === id);
+  if (!item) { alert('Parcela não encontrada.'); return; }
+
+  const pCode = item.parcela2 || item.parcela || '10';
+
+  // Buscar tratos no banco
+  let tratosDb = [];
+  try {
+    const { data, error } = await sb.from('caderno_campo_tratos')
+      .select('*')
+      .eq('parcel_id', id)
+      .order('data_trato', { ascending: true });
+    if (!error && data) tratosDb = data;
+  } catch(e) {
+    console.warn('Aviso: busca de tratos:', e);
+  }
+
+  // 22 Atividades Oficiais do Modelo da Foto 1
+  const standardOperations = [
+    { ativ: 'GRADAGEM', impl: 'GRADE ARADORA', padraoData: '30/06/26' },
+    { ativ: 'SUBSOLAGEM', impl: 'SUBSOLADOR', padraoData: '' },
+    { ativ: 'ARAÇÃO', impl: 'ARADO', padraoData: '' },
+    { ativ: 'GRADAGEM', impl: 'GRADE NIVELADORA', padraoData: '02/07/26' },
+    { ativ: 'SULCAMENTO', impl: 'SULCADOR', padraoData: '' },
+    { ativ: 'ADUBAÇÃO QUÍMICA (FUNDAÇÃO)', impl: 'ADUBADEIRA QUÍMICA/GRADE COBERTURA', padraoData: '' },
+    { ativ: 'ADUBAÇÃO ORGÂNICA (FUNDAÇÃO)', impl: 'ADUBADEIRA ORGÂNICA', padraoData: '' },
+    { ativ: 'COBERTURA', impl: 'GRADE DE COBERTURA', padraoData: '03/07/26' },
+    { ativ: 'INSTALAÇÃO DO SISTEMA DE IRRIGAÇÃO', impl: 'MANUAL', padraoData: '04/07/26' },
+    { ativ: 'COLOCAÇÃO DO MULCHING', impl: 'MÁQUINA DE MULCHING', padraoData: '05/07/26' },
+    { ativ: 'FURAMENTO DO MULCHING', impl: 'MANUAL', padraoData: '' },
+    { ativ: 'COLOCAÇÃO DE ARCOS', impl: 'MANUAL', padraoData: '08/07/26' },
+    { ativ: 'PLANTIO DE MUDAS', impl: 'MANUAL', padraoData: '07/07/26' },
+    { ativ: 'COLOCAÇÃO DE MANTA (TNT)', impl: 'MANUAL', padraoData: '08/07/26' },
+    { ativ: 'RETIRADA DA MANTA (TNT)', impl: 'MANUAL', padraoData: '31/07/26' },
+    { ativ: 'REVISÃO DO SISTEMA DE IRRIGAÇÃO', impl: 'MANUAL', padraoData: '' },
+    { ativ: 'CAPINA DE TRONCO E ENTRE LINHAS', impl: 'MANUAL', padraoData: '31/07/26' },
+    { ativ: 'COLOCAÇÃO COLMÉIAS DE ABELHAS', impl: 'MANUAL', padraoData: '' },
+    { ativ: 'REVISÃO DO SISTEMA DE IRRIGAÇÃO', impl: 'MANUAL', padraoData: '' },
+    { ativ: 'RETIRADA COLMÉIAS DE ABELHAS', impl: 'MANUAL', padraoData: '' },
+    { ativ: 'GIRAMENTO/BANDEJAMENTO DE FRUTOS', impl: 'MANUAL', padraoData: '' },
+    { ativ: 'COLOCAÇÃO DE BANDEJAS', impl: 'MANUAL', padraoData: '' }
+  ];
+
+  // Mesclar dados do banco com a lista oficial
+  const rowsHtml = standardOperations.map(op => {
+    // Tentar encontrar trato no banco
+    const matched = tratosDb.find(t => t.atividade && t.atividade.trim().toUpperCase() === op.ativ);
+    let dataVal = op.padraoData || '';
+    let numImplVal = '';
+    let operadorVal = '';
+
+    if (matched) {
+      if (matched.data_trato) {
+        const parts = matched.data_trato.split('-');
+        if (parts.length === 3) dataVal = `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}`;
+      }
+      numImplVal = matched.numero_implemento || matched.equipamento_num || '';
+      operadorVal = matched.operador || '';
+    }
+
+    return `
+      <tr>
+        <td style="border:1px solid #000; padding:3px 4px; text-align:center; font-size:7.5pt">${dataVal}</td>
+        <td style="border:1px solid #000; padding:3px 6px; font-weight:bold; font-size:7.5pt">${op.ativ}</td>
+        <td style="border:1px solid #000; padding:3px 6px; font-size:7.5pt; text-align:center">${op.impl}</td>
+        <td style="border:1px solid #000; padding:3px 4px; text-align:center; font-size:7.5pt">${numImplVal}</td>
+        <td style="border:1px solid #000; padding:3px 6px; font-size:7.5pt">${operadorVal}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const printWin = window.open('', '_blank', 'width=1000,height=1200');
+  if (!printWin) { alert('Permita popups para imprimir.'); return; }
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+  <meta charset="utf-8"/>
+  <title>PC05 - CONTROLE DE PREPARO DO SOLO / TRATOS CULTURAIS NA CULTURA</title>
+  <style>
+    @page { size: A4 portrait; margin: 6mm 8mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 7.5pt; color: #000; line-height: 1.2; background: #fff; }
+    .sheet { width: 100%; }
+    .header-box { width: 100%; border-collapse: collapse; border: 1.5px solid #000; margin-bottom: 6px; }
+    .header-box td { border: 1px solid #000; padding: 4px 6px; vertical-align: top; }
+    .title-red { color: #d32f2f; font-weight: bold; font-size: 11pt; text-align: center; text-transform: uppercase; margin: 6px 0 8px 0; letter-spacing: 0.5px; }
+    .parcela-bar { font-size: 8.5pt; font-weight: bold; margin-bottom: 6px; }
+    .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+    .grid-table th, .grid-table td { border: 1px solid #000; padding: 3px 5px; font-size: 7.5pt; }
+    .grid-table th { background: #fff; font-weight: bold; text-align: center; }
+    .obs-footer { border: 1px solid #000; padding: 5px 8px; font-size: 6.5pt; line-height: 1.3; text-align: justify; }
+  </style>
+  </head>
+  <body onload="window.print()">
+  <div class="sheet">
+    <!-- CABEÇALHO OFICIAL GLOBALGAP / ADGF -->
+    <table class="header-box">
+      <tr>
+        <td style="width: 35%; font-size: 6.8pt; line-height: 1.3;">
+          <strong>ELABORADO, EMITIDO e REVISADO POR:</strong> EMANUELA MOREIRA<br/>
+          Avaliado por: ADGF<br/>
+          Aprovado Por: ADGF<br/>
+          Frequência: Por parcela de campo.
+        </td>
+        <td style="width: 20%;"></td>
+        <td style="width: 45%; font-size: 6.5pt; line-height: 1.35;">
+          <strong>DEPARTAMENTO:</strong> CAMPO<br/>
+          <strong>NOME DO DOC:</strong> CONT. DE PREPARO DO SOLO/TRATOS CULTURAIS<br/>
+          <strong>EMISSÃO:</strong> 15/06/2026 &nbsp; <strong>MOD. E APROVAÇÃO:</strong> 01/07/2026 &nbsp; <strong>U. REVISÃO:</strong> 01/07/2026<br/>
+          <strong>PAG:</strong> 01 DE 01 &nbsp;\\&nbsp; <strong>COD:</strong> PC05 &nbsp;\\&nbsp; <strong>REVISÃO:</strong> ANUAL &nbsp;\\&nbsp; <strong>VERSÃO:</strong> 01
+        </td>
+      </tr>
+    </table>
+
+    <div class="title-red">CONTROLE DE PREPARO DO SOLO / TRATOS CULTURAIS NA CULTURA</div>
+
+    <div class="parcela-bar">&nbsp;&nbsp;&nbsp;&nbsp;<strong>Parcela:</strong> &nbsp;&nbsp;&nbsp;&nbsp; <strong>${pCode}</strong></div>
+
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th style="width: 12%;">DATA<br/>DD/MM/AA</th>
+          <th style="width: 38%;">ATIVIDADES</th>
+          <th style="width: 25%;">IMPLEMENTO<br/>AGRÍCOLA</th>
+          <th style="width: 11%;">NÚMERO DO<br/>IMPLEMENTO</th>
+          <th style="width: 14%;">NOME DO OPERADOR RESPONSÁVEL</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+      </tbody>
+    </table>
+
+    <div class="obs-footer">
+      <strong>OBS:</strong> TODOS OS CONTROLES DE PREPARO DE SOLO E TRATOS CULTURAIS FEITOS NA ÁREA DEVEM SER REGISTRADOS, INCLUINDO IMPLEMENTAÇÃO DO MULCHING, DA MANTA TNT E RETIRADA DOS MESMOS, COLMÉIAS DE ABELHAS, CAPINA, IMPLEMENTAÇÃO DE BANDEJAS, VIRADA DE FRUTOS, PLÁSTICO AMARELO NAS BORDADURAS, DENTRE OUTROS TIPOS DE CONTROLES NECESSÁRIOS A CULTURA.
+    </div>
+  </div>
+  </body>
+  </html>
+  `;
+
   printWin.document.open();
   printWin.document.write(html);
   printWin.document.close();
@@ -12731,18 +13082,15 @@ function printPastaCampoOrdemPulv(itemStr) {
 }
 
 function printPastaCampoAutColheita(itemStr) {
-  const item = JSON.parse(decodeURIComponent(itemStr));
+  const item = typeof itemStr === 'string' ? JSON.parse(decodeURIComponent(itemStr)) : itemStr;
   const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'DINA DINAMARCA INDUSTRIAL AGRÍCOLA LTDA';
   
-  // Dynamic RT Name and CREA
-  const rtNome = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'Ajax Dantas de Gois Filho';
-  const rtCrea = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_crea) || '2100995243';
-
   // Buscar ciclo correspondente em _infoParcelas para preencher dados extras
   const ip = _infoParcelas.find(x => x.parcela2 === item.parcela || x.parcela === item.parcela);
-  const variedadesStr = ip && ip.variedade ? ip.variedade : item.variedade || 'JADIAL, GOLDEX, GRAND PRIX, ASTURIA, GOLDMINE';
-  
-  const printWin = window.open('', '_blank', 'width=900,height=1200');
+  const variedadesStr = ip && ip.variedade ? ip.variedade : (item.variedade || 'JADEAL, GOLDEX, GRAND PRIX, ASTURIA e GOLDMINE');
+  const pCode = item.parcela || '10';
+
+  const printWin = window.open('', '_blank', 'width=950,height=1250');
   if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
   
   const html = `
@@ -12750,172 +13098,116 @@ function printPastaCampoAutColheita(itemStr) {
   <html>
   <head>
   <meta charset="utf-8"/>
-  <title>PC11 — Autorização de Colheita</title>
+  <title>PC11 - AUTORIZAÇÃO PARA COLHEITA DE FRUTOS LIVRE DE EXCEDENTE DE RESÍDUOS QUÍMICOS</title>
   <style>
-  @page { size: A4 portrait; margin: 8mm 10mm; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 8.5pt; line-height: 1.4; }
-  .sheet { width: 100%; }
-  
-  .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-  .hdr-table td { border: 1px solid #000; padding: 4px 6px; font-size: 7.5pt; vertical-align: middle; }
-  .hdr-left { width: 45%; font-weight: bold; }
-  .hdr-right { width: 55%; font-family: 'Times New Roman', serif; font-size: 7pt; }
-  
-  .main-title {
-  font-family: 'Arial', sans-serif;
-  font-size: 11pt;
-  font-weight: bold;
-  text-align: center;
-  padding: 8px 12px;
-  border: 2px solid #000;
-  margin-bottom: 20px;
-  line-height: 1.4;
-  background: #f3f4f6;
-  }
-  
-  .declaration-text {
-  font-size: 10.5pt;
-  line-height: 1.6;
-  text-align: justify;
-  margin-bottom: 24px;
-  }
-  
-  .cuts-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 24px;
-  }
-  .cuts-table td {
-  border: 1px solid #000;
-  padding: 8px 12px;
-  font-size: 10pt;
-  vertical-align: middle;
-  }
-  
-  .obs-box {
-  font-size: 7.5pt;
-  line-height: 1.4;
-  margin-top: 15px;
-  border-top: 1px solid #000;
-  padding-top: 8px;
-  color: #222;
-  }
-  .obs-box p {
-  margin-bottom: 6px;
-  }
-  
-  .signature-area {
-  margin-top: 40px;
-  display: flex;
-  justify-content: flex-end;
-  }
-  .signature-box {
-  border-top: 1px solid #000;
-  width: 250px;
-  text-align: center;
-  padding-top: 4px;
-  font-size: 9pt;
-  font-weight: bold;
-  }
+    @page { size: A4 portrait; margin: 8mm 10mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #000; font-size: 8.5pt; line-height: 1.35; }
+    .sheet { width: 100%; }
+    .header-box { width: 100%; border-collapse: collapse; border: 1.5px solid #000; margin-bottom: 16px; }
+    .header-box td { border: 1px solid #000; padding: 4px 6px; vertical-align: top; }
+    .title-green { color: #2e5a1c; font-weight: bold; font-size: 12.5pt; text-align: center; text-transform: uppercase; margin: 18px 0 20px 0; letter-spacing: 0.5px; line-height: 1.3; }
+    .declaration-p { font-size: 9pt; line-height: 1.6; text-align: justify; margin-bottom: 24px; }
+    .cuts-block { margin-bottom: 24px; font-size: 9.5pt; line-height: 2.2; }
+    .cut-line { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+    .obs-p { font-size: 7.8pt; line-height: 1.35; margin-bottom: 8px; text-align: justify; }
+    .obs-red { color: #d32f2f; font-size: 7.8pt; line-height: 1.35; margin-bottom: 8px; text-align: justify; font-weight: 500; }
+    .sig-area { text-align: right; margin-top: 50px; padding-right: 15px; }
+    .sig-box { display: inline-block; width: 340px; border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 9pt; font-weight: bold; }
   </style>
   </head>
   <body onload="window.print()">
   <div class="sheet">
-  <!-- CABEÇALHO OFICIAL COM LOGO DO TENANT -->
-  <div style="display:flex; justify-content:space-between; align-items:stretch; margin-bottom:12px; border:1px solid #000;">
-  <div style="width:45%; padding:6px; display:flex; align-items:center; gap:12px; border-right:1px solid #000;">
-  ${((window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64) ? `<img src="${(window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64}" style="max-height:48px; max-width:140px; object-fit:contain;"/>` : `<img src="logo.png" style="max-height:48px; max-width:140px; object-fit:contain;" onerror="this.style.display='none'"/>`}
-  <div>
-  <div style="font-size:10pt; font-weight:bold; color:#1b4332; text-transform:uppercase;">${(window.tenantConfig && window.tenantConfig.name || 'BOM JESUS AGRÍCOLA').toUpperCase()}</div>
-  <div style="font-size:6.5pt; color:#444; line-height:1.2;">
-  ${window.tenantConfig && window.tenantConfig.endereco ? `${window.tenantConfig.endereco}<br/>` : ''}
-  ${window.tenantConfig && window.tenantConfig.municipio ? `${window.tenantConfig.municipio}/${window.tenantConfig.uf || 'RN'}` : ''}
-  ${window.tenantConfig && window.tenantConfig.ggn_geral ? ` | GGN: ${window.tenantConfig.ggn_geral}` : ''}
-  </div>
-  </div>
-  </div>
-  <table class="hdr-table" style="width:55%; margin-bottom:0; border:none; table-layout:fixed;">
-  <tr>
-  <td class="hdr-left" style="border-top:none; border-left:none;">ELABORADO, EMITIDO e REVISADO: EMANUELA MOREIRA</td>
-  <td class="hdr-right" style="border-top:none; border-right:none;">DEPARTAMENTO: CAMPO</td>
-  </tr>
-  <tr>
-  <td class="hdr-left" style="border-left:none;">Avaliado por: ADGF</td>
-  <td class="hdr-right" style="border-right:none;">NOME DO DOC: AUTORIZAÇÃO PARA COLHEITA DE FRUTOS</td>
-  </tr>
-  <tr>
-  <td class="hdr-left" style="border-left:none;">Aprovado Por: ADGF</td>
-  <td class="hdr-right" style="border-right:none; font-size:6.5pt;">EMISSÃO: 15/06/2026 &nbsp;&nbsp;&nbsp; MOD. E APROVAÇÃO: 01/07/2026</td>
-  </tr>
-  <tr>
-  <td class="hdr-left" style="border-left:none; border-bottom:none;">Frequência: Por parcela de campo.</td>
-  <td class="hdr-right" style="border-right:none; border-bottom:none; font-size:6.5pt;">COD: PC 11 &nbsp;&nbsp;&nbsp; VERSÃO: 01 &nbsp;&nbsp;&nbsp; PAG: 01 DE 01</td>
-  </tr>
-  </table>
-  </div>
-  
-  <div class="main-title">
-  AUTORIZAÇÃO PARA COLHEITA DE FRUTOS LIVRE DE EXCEDENTE DE<br/>RESÍDUOS QUÍMICOS
-  </div>
-  
-  <!-- TEXTO DA DECLARAÇÃO -->
-  <div class="declaration-text">
-  <strong>${rtNome}</strong>, Engenheiro Agrônomo, CREA sob o nº <strong>${rtCrea}</strong>, Técnico Responsável pela produção da empresa <strong>${tenantName.toUpperCase()}</strong>, autorizo(amos) a colheita da parcela nº <strong>${item.parcela}</strong> com as variedades <strong>${variedadesStr.toUpperCase()}</strong>.
-  </div>
-  
-  <div style="font-weight: bold; font-size: 10pt; margin-bottom: 8px;">NÚMERO DO CORTE / DATA:</div>
-  
-  <!-- CHECKBOXES DOS CORTES -->
-  <table class="cuts-table">
-  <tr>
-  <td style="width: 50%;">( &nbsp;&nbsp; ) PRIMEIRO / DATA: _____/_____/_____</td>
-  <td>Autorização: ____________________________</td>
-  </tr>
-  <tr>
-  <td>( &nbsp;&nbsp; ) SEGUNDO / DATA: _____/_____/_____</td>
-  <td>Autorização: ____________________________</td>
-  </tr>
-  <tr>
-  <td>( &nbsp;&nbsp; ) TERCEIRO / DATA: _____/_____/_____</td>
-  <td>Autorização: ____________________________</td>
-  </tr>
-  <tr>
-  <td>( &nbsp;&nbsp; ) QUARTA / DATA: _____/_____/_____</td>
-  <td>Autorização: ____________________________</td>
-  </tr>
-  <tr>
-  <td>( &nbsp;&nbsp; ) QUINTO / DATA: _____/_____/_____</td>
-  <td>Autorização: ____________________________</td>
-  </tr>
-  </table>
-  
-  <!-- REGRAS E OBSERVAÇÕES -->
-  <div class="obs-box">
-  <p><strong>OBS:</strong> Obrigatoriamente o primeiro corte deve ser autorizado pelo responsável técnico que deve observar e cumprir as carências estabelecidas dos produtos químicos. Se não houver tempo de colher toda à área no dia da autorização, o dia seguinte não se caracteriza como segundo corte é apenas a continuação do primeiro.</p>
-  <p>Se não houver após o corte autorizado aplicação de produtos químicos, não há necessidade de autorizar os demais cortes, isso porque não há possibilidade de excedentes de resíduos. Se houve nova aplicação deve-se autorizar novamente o corte seguinte, cumprindo as carências dos últimos produtos aplicados.</p>
-  <p><strong>Atenção com o horário das aplicações:</strong> 01 dia quer dizer 24 horas. Não podemos aplicar produto à tarde às 16:00 h e colher no outro dia às 13:00 h, pois não obedeceu 01 dia (24 horas). Verificar os horários de aplicações e os horários de colheita para certificar-se que estão sendo cumpridas todas as carências.</p>
-  <p style="margin-top: 10px; font-weight: bold;">Eu responsável por autorizar a colheita estou ciente que entendi e estou cumprindo a legislação em vigor.</p>
-  </div>
-  
-  <!-- ASSINATURAS E VALIDAÇÃO -->
-  <div class="signature-area" style="display:flex; justify-content:space-between; gap:20px; margin-top:25px;">
-  <div class="signature-box" style="width:48%; text-align:center;">
-  <strong>${rtNome}</strong><br/>
-  <span style="font-size:7.5pt; font-weight:normal;">Engenheiro Agrônomo — Responsável Técnico</span>
-  <div style="margin-top:15px; border-top:1px solid #000; padding-top:4px; font-size:7.5pt;">Assinatura Responsável Técnico de Campo</div>
-  </div>
-  <div class="signature-box" style="width:48%; text-align:center;">
-  <strong>Emanuele Moreira</strong><br/>
-  <span style="font-size:7.5pt; font-weight:normal;">Engenheira Agrônoma — Validação da Certificação</span>
-  <div style="margin-top:15px; border-top:1px solid #000; padding-top:4px; font-size:7.5pt;">Assinatura Resp. Validação da Certificação</div>
-  </div>
-  </div>
+    <!-- CABEÇALHO OFICIAL GLOBALGAP / ADGF -->
+    <table class="header-box">
+      <tr>
+        <td style="width: 40%; font-size: 6.8pt; line-height: 1.3;">
+          <strong>ELABORADO, EMITIDO e REVISADO POR:</strong> EMANUELA MOREIRA<br/>
+          Avaliado por: ADGF<br/>
+          Aprovado Por: ADGF<br/>
+          Frequência: Por parcela de campo.
+        </td>
+        <td style="width: 15%;"></td>
+        <td style="width: 45%; font-size: 6.5pt; line-height: 1.35;">
+          <strong>DEPARTAMENTO:</strong> CAMPO<br/>
+          <strong>NOME DO DOC:</strong> AUTORIZAÇÃO PARA COLHEITA DE FRUTOS<br/>
+          <strong>EMISSÃO:</strong> 15/06/2026<br/>
+          <strong>MODELO E APROVAÇÃO:</strong> 01/07/2026<br/>
+          <strong>ULTIMA REVISÃO:</strong> 01/07/2026<br/>
+          <strong>VERSÃO:</strong> 01 &nbsp; <strong>REVISÃO:</strong> ANUAL<br/>
+          <strong>PÁGINA:</strong> 01 DE 01 &nbsp; <strong>CÓDIGO:</strong> PC 11
+        </td>
+      </tr>
+    </table>
+
+    <div class="title-green">AUTORIZAÇÃO PARA COLHEITA DE FRUTOS LIVRE DE EXCEDENTE DE<br/>RESÍDUOS QUÍMICOS</div>
+
+    <!-- TEXTO DA DECLARAÇÃO TÉCNICA -->
+    <div class="declaration-p">
+      Ajax Dantas de Gois Filho, Engenheiro Agrônomo, CREA sob o nº 2100995243 e/ou Valeriano Dantas de Gois, Engenheiro Agrônomo, CREA sob o nº 2106090242 e/ou Francisco Canindé dos Santos Neto, Engenheiro Agrônomo, CREA sob o nº 2112017578, Técnicos Responsáveis pela produção da empresa <strong>${tenantName.toUpperCase()}</strong>, autorizo(amos) a colheita da parcela nº <strong>${pCode}</strong> com as variedades <strong>${variedadesStr.toUpperCase()}</strong>
+    </div>
+
+    <!-- BLOCO DE CORTES COM LINHAS ABERTAS -->
+    <div class="cuts-block">
+      <div style="font-weight: bold; margin-bottom: 8px;"><u>NÚMERO DO CORTE / DATA:</u></div>
+      <div class="cut-line">
+        <span>( &nbsp;&nbsp; ) PRIMEIRO / DATA</span>
+        <span>_____/_____/_____</span>
+        <span>Autorização: _______________________________________</span>
+      </div>
+      <div class="cut-line">
+        <span>( &nbsp;&nbsp; ) SEGUNDO / DATA</span>
+        <span>_____/_____/_____</span>
+        <span>Autorização: _______________________________________</span>
+      </div>
+      <div class="cut-line">
+        <span>( &nbsp;&nbsp; ) TERCEIRO / DATA</span>
+        <span>_____/_____/_____</span>
+        <span>Autorização: _______________________________________</span>
+      </div>
+      <div class="cut-line">
+        <span>( &nbsp;&nbsp; ) QUARTA / DATA</span>
+        <span>_____/_____/_____</span>
+        <span>Autorização: _______________________________________</span>
+      </div>
+      <div class="cut-line">
+        <span>( &nbsp;&nbsp; ) QUINTO / DATA</span>
+        <span>_____/_____/_____</span>
+        <span>Autorização: _______________________________________</span>
+      </div>
+    </div>
+
+    <!-- OBSERVAÇÕES E NOTAS DE AUDITORIA -->
+    <div class="obs-p">
+      <strong>OBS:</strong> Obrigatoriamente o primeiro corte deve ser autorizado pelo responsável técnico que deve observar e cumprir as carências estabelecidas dos produtos químicos. Se não houver tempo de colher toda à área no dia da autorização, o dia seguinte não se caracteriza como segundo corte é apenas a continuação do primeiro.
+    </div>
+
+    <div class="obs-red">
+      Se não houver após o corte autorizado aplicação de produtos químicos, não há necessidade de autorizar os demais cortes, isso porque não há possibilidade de excedentes de resíduos. Se houve nova aplicação deve-se autorizar novamente o corte seguinte, cumprindo as carências dos ultimos produtos aplicados.
+    </div>
+
+    <div class="obs-p">
+      Atenção com o horário das aplicações com químicos, 01 dia quer dizer 24 horas, não podemos aplicar produto a tarde as 16:00 h e colher no outro dia as 13:00 h, não obedeceu 01 dia, ou seja, às 24 horas e assim sucessivamente. Verificar os horários de aplicações e os horários de colheita para certificar-se que está sendo cumpridas todas as carências.
+    </div>
+
+    <div class="obs-p" style="text-align: center; margin: 10px 0;">
+      Verificar os horários de aplicações e os horários de colheita para certificar-se que está sendo cumpridas todas as carências.
+    </div>
+
+    <div class="obs-p" style="text-align: center; margin: 10px 0;">
+      Eu responsável por autorizar a colheita estou ciente que entendi e estou cumprindo a legislação em vigor.
+    </div>
+
+    <!-- CARIMBO E ASSINATURA -->
+    <div class="sig-area">
+      <div class="sig-box">CARIMBO - ASSINATURA</div>
+    </div>
   </div>
   </body>
   </html>
   `;
   
+  printWin.document.open();
   printWin.document.write(html);
   printWin.document.close();
 }
@@ -14095,6 +14387,7 @@ function renderInfoParcelasTable(list) {
   <td style="padding:10px 8px; text-align:right; white-space:nowrap">
   <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoCapa('${item.id}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Capa (PC01)</button>
   <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoSementes('${item.id}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Sementes (PC03)</button>
+  <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(124,58,237,0.15); color:#8b5cf6; border:1px solid rgba(124,58,237,0.3)" onclick="printPastaCampoCalendario('${item.id}')"><i data-lucide="calendar" style="width:12px; height:12px"></i> Calendário (PC04)</button>
   <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoTratos('${item.id}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Tratos (PC05)</button>
   <button class="sec" style="padding:3px 8px; margin-right:3px" onclick="openInfoParcelaModal('${item.id}')"></button>
   <button class="danger" style="padding:3px 8px" onclick="deleteInfoParcela('${item.id}')">×</button>
@@ -14846,8 +15139,9 @@ function renderWebPlantiosTable(data) {
   <td style="padding:12px; text-align:center; white-space:nowrap">
   <button onclick="printPastaCampoCapa('${p.id}')" class="btn on" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:12px; height:12px"></i> Capa (PC01)</button>
   <button onclick="printPastaCampoSementes('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:12px; height:12px"></i> Sementes (PC03)</button>
+  <button onclick="printPastaCampoCalendario('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(124,58,237,0.15); color:#8b5cf6; border:1px solid rgba(124,58,237,0.3)"><i data-lucide="calendar" style="width:12px; height:12px"></i> Calendário (PC04)</button>
   <button onclick="printPastaCampoTratos('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:12px; height:12px"></i> Tratos (PC05)</button>
-  <button onclick="printPastaCampoFertirrigacao(\'${p.id}\')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(6,182,212,0.15); color:#06b6d4; border:1px solid rgba(6,182,212,0.3)"><i data-lucide="droplet" style="width:12px; height:12px"></i> Fertirrigação (PC04)</button>
+  <button onclick="printPastaCampoFertirrigacao(\'${p.id}\')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(6,182,212,0.15); color:#06b6d4; border:1px solid rgba(6,182,212,0.3)"><i data-lucide="droplet" style="width:12px; height:12px"></i> Fertirrigação (PC07)</button>
   <button onclick="printPastaCampoIdiarn('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(234,88,12,0.15); color:#ea580c; border:1px solid rgba(234,88,12,0.3)"><i data-lucide="file-check" style="width:12px; height:12px"></i> Ficha IDIARN</button>
   <button onclick="openWebPlantioModal('${p.id}')" class="sec" style="padding:4px 8px; font-size:11px; margin-right:3px; display:inline-flex; align-items:center; gap:4px" title="Editar"><i data-lucide="edit-3" style="width:13px;height:13px"></i> Editar</button>
   <button onclick="deleteWebPlantio('${p.id}')" class="danger" style="padding:4px 8px; font-size:11px; display:inline-flex; align-items:center; gap:4px; background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:var(--red); border-radius:6px; cursor:pointer" title="Excluir Definitivamente"><i data-lucide="trash-2" style="width:13px;height:13px"></i> Excluir</button>
@@ -18895,7 +19189,7 @@ function renderCcPosTable(list) {
   <td style="padding:12px 10px; text-align:center; font-weight:700; color:var(--yellow)">${item.carencia_dias || 0}d</td>
   <td style="padding:12px 10px">${item.operador || '—'}</td>
   <td style="padding:12px 10px; text-align:center; white-space:nowrap">
-  <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printPosColheitaReport('${itemStr}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Relatório Talo</button>
+  <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printPosColheitaReport('${itemStr}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Ficha Oficial (OC:05)</button>
   <button class="danger" style="padding:4px 8px; font-size:11px" onclick="deletePosRecord('${item.id}')">Excluir</button>
   </td>
   </tr>
@@ -19077,62 +19371,207 @@ async function deletePosRecord(id) {
 }
 
 function printPosColheitaReport(itemStr) {
-  const item = JSON.parse(decodeURIComponent(itemStr));
-  const printWin = window.open('', '_blank', 'width=900,height=1200');
+  const item = typeof itemStr === 'string' ? JSON.parse(decodeURIComponent(itemStr)) : (itemStr || {});
+  const printWin = window.open('', '_blank', 'width=1050,height=1200');
   if (!printWin) { alert('Permita popups para imprimir.'); return; }
 
-  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa Agrícola';
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'DINA DINAMARCA INDUSTRIAL AGRÍCOLA LTDA';
+  const pCode = item.parcela || '10';
+
+  // Buscar variedades da parcela
+  const ip = _infoParcelas.find(x => x.parcela2 === pCode || x.parcela === pCode);
+  const info = ip ? getParcelaCompleteInfo(ip, _infoParcelas) : null;
+  const variedadesStr = (info && info.variedade) ? info.variedade : (item.variedade || 'JADEAL, GOLDEX, GRAND PRIX, ASTURIA, GOLDMINE');
+  const culturaStr = (ip && ip.cultura) || item.cultura || 'Melão';
+
+  const fmtDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '';
+  const prodNome = item.produto_nome || 'Graduate A+';
+  const iAtivo = item.ingrediente_ativo || 'Azoxistrobina + Fludioxonil';
+  const mlProd = item.dosagem_produto != null ? parseFloat(item.dosagem_produto).toFixed(2).replace('.', ',') : '0,00';
+  const lAgua = item.volume_agua != null ? parseFloat(item.volume_agua).toFixed(2).replace('.', ',') : '0,00';
+  const carencia = item.carencia_dias != null ? (item.carencia_dias === 0 ? 'ND' : item.carencia_dias + 'd') : 'ND';
+  const justif = item.justificativa || 'Antracnose';
+  const carrocoes = item.quantidade_carrocoes || '';
+
+  // Gerar linhas da tabela (1 preenchida e 12 em branco)
+  let rowsHtml = `
+    <tr>
+      <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt">${fmtDate}</td>
+      <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt">${carrocoes}</td>
+      <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt">${prodNome}</td>
+      <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt; color:#d32f2f">${iAtivo}</td>
+      <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt">${mlProd}</td>
+      <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt">${lAgua}</td>
+      <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt">${carencia}</td>
+      <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt; color:#d32f2f; font-weight:bold">${justif}</td>
+      <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt">1 e 2</td>
+    </tr>
+  `;
+
+  for (let i = 0; i < 11; i++) {
+    rowsHtml += `
+      <tr>
+        <td style="border:1px solid #000; height:18px; padding:2px"></td>
+        <td style="border:1px solid #000; padding:2px"></td>
+        <td style="border:1px solid #000; padding:2px"></td>
+        <td style="border:1px solid #000; padding:2px"></td>
+        <td style="border:1px solid #000; padding:2px"></td>
+        <td style="border:1px solid #000; padding:2px"></td>
+        <td style="border:1px solid #000; padding:2px"></td>
+        <td style="border:1px solid #000; padding:2px"></td>
+        <td style="border:1px solid #000; padding:2px"></td>
+      </tr>
+    `;
+  }
 
   const html = `
   <!DOCTYPE html>
   <html>
   <head>
   <meta charset="utf-8"/>
-  <title>Relatório de Tratamento Pós-Colheita (Talo) — Parcela ${item.parcela}</title>
+  <title>OC:05 - ORDEM E REGISTRO DE TRATAMENTO PÓS-COLHEITA</title>
   <style>
-  @page { size: A4 portrait; margin: 10mm; }
-  body { font-family: 'Arial', sans-serif; color: #000; font-size: 9pt; line-height: 1.4; padding: 10px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-  td, th { border: 1px solid #000; padding: 6px 8px; font-size: 9pt; vertical-align: middle; }
-  th { background: #f3f4f6; font-weight: bold; text-align: left; }
-  .header-title { font-size: 13pt; font-weight: bold; text-align: center; border: 2px solid #000; padding: 8px; background: #e5e7eb; margin-bottom: 12px; }
+    @page { size: A4 landscape; margin: 6mm 8mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 7.5pt; color: #000; line-height: 1.25; background: #fff; }
+    .sheet { width: 100%; }
+    .header-box { width: 100%; border-collapse: collapse; border: 1.5px solid #000; margin-bottom: 6px; }
+    .header-box td { border: 1px solid #000; padding: 3px 6px; vertical-align: top; }
+    .title-red { color: #d32f2f; font-weight: bold; font-size: 11pt; text-align: center; text-transform: uppercase; margin: 4px 0 6px 0; letter-spacing: 0.5px; }
+    .top-meta { width: 100%; margin-bottom: 6px; font-size: 7.5pt; line-height: 1.6; }
+    .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+    .grid-table th, .grid-table td { border: 1px solid #000; padding: 2px 4px; font-size: 7pt; }
+    .grid-table th { background: #fff; font-weight: bold; text-align: center; }
+    .rec-box { width: 100%; border: 1.5px solid #000; border-collapse: collapse; margin-bottom: 6px; }
+    .rec-box td { border: 1px solid #000; padding: 4px 8px; font-size: 7.5pt; vertical-align: top; }
+    .sig-row { width: 100%; border: 1px solid #000; padding: 4px 8px; font-size: 7.5pt; margin-bottom: 4px; }
+    .bottom-split { width: 100%; display: flex; gap: 10px; margin-top: 4px; }
+    .app-table { width: 45%; border-collapse: collapse; }
+    .app-table th, .app-table td { border: 1px solid #000; padding: 2px 6px; font-size: 7pt; text-align: center; }
+    .sobras-box { width: 55%; border: 1px solid #000; padding: 8px; font-size: 7.5pt; display: flex; align-items: center; justify-content: center; text-align: center; }
   </style>
   </head>
-  <body>
-  <table>
-  <tr>
-  <td style="font-weight:bold; font-size:11pt; width:60%">${tenantName.toUpperCase()}</td>
-  <td style="text-align:right; font-size:8.5pt">REGISTRO DE PÓS-COLHEITA / TRATAMENTO DE TALO</td>
-  </tr>
-  </table>
+  <body onload="window.print()">
+  <div class="sheet">
+    <!-- CABEÇALHO OFICIAL GLOBALGAP / ADGF -->
+    <table class="header-box">
+      <tr>
+        <td style="width: 35%; font-size: 6.8pt; line-height: 1.3;">
+          <strong>ELABORADO, EMITIDO E REVISADO POR:</strong> EMANUELA MOREIRA<br/>
+          Avaliado por: ADGF<br/>
+          Aprovado Por: ADGF<br/>
+          <strong>FREQUÊNCIA:</strong> DEACORDO COM A EMBALAGEM
+        </td>
+        <td style="width: 20%;"></td>
+        <td style="width: 45%; font-size: 6.5pt; line-height: 1.35;">
+          <strong>DEPARTAMENTO:</strong> PACKING - HOUSE<br/>
+          <strong>NOME DO DOC:</strong> REGISTRO DE TRATAMENTO PÓS COLHEITA<br/>
+          <strong>EMISSÃO:</strong> 15/06/2026 &nbsp; <strong>MOD. E APROVAÇÃO:</strong> 01/07/2026 &nbsp; <strong>U. REVISÃO:</strong> 01/07/2026<br/>
+          <strong>PAG:</strong> 01 DE 01 &nbsp;\\&nbsp; <strong>COD:</strong> OC:05 &nbsp;\\&nbsp; <strong>REVISÃO:</strong> ANUAL &nbsp;\\&nbsp; <strong>VERSÃO:</strong> 01
+        </td>
+      </tr>
+    </table>
 
-  <div class="header-title">FICHA DE APLICAÇÃO DE PÓS-COLHEITA — TRATAMENTO DO TALO DO MELÃO</div>
+    <div class="title-red">ORDEM E REGISTRO DE TRATAMENTO PÓS-COLHEITA</div>
 
-  <table>
-  <tr><th width="35%">DATA DE APLICAÇÃO:</th><td width="65%"><strong>${item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '—'}</strong></td></tr>
-  <tr><th>PARCELA DE ORIGEM:</th><td><strong>${item.parcela}</strong></td></tr>
-  <tr><th>PRODUTO FUNGICIDA (NOME COMERCIAL):</th><td><strong>${item.produto_nome || '—'}</strong></td></tr>
-  <tr><th>INGREDIENTE ATIVO:</th><td>${item.ingrediente_ativo || '—'}</td></tr>
-  <tr><th>DOSAGEM DO PRODUTO:</th><td><strong>${item.dosagem_produto || 0} mL/L</strong></td></tr>
-  <tr><th>VOLUME DE ÁGUA DILUÍDO:</th><td>${item.volume_agua || 0} Litros</td></tr>
-  <tr><th>Nº DE CARROÇÕES / LOTE:</th><td>${item.quantidade_carrocoes || 0} Carroções</td></tr>
-  <tr><th>PERÍODO DE CARENCIA:</th><td>${item.carencia_dias || 0} Dias</td></tr>
-  <tr><th>OPERADOR / PINCELADOR:</th><td><strong>${item.operador || '—'}</strong></td></tr>
-  <tr><th>JUSTIFICATIVA TÉCNICA:</th><td>${item.justificativa || 'Tratamento de talo do melão contra podridão de pedúnculo'}</td></tr>
-  </table>
+    <div class="top-meta">
+      <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+        <div><strong>NOME DA EMPRESA:</strong> &nbsp;&nbsp; <u>${tenantName.toUpperCase()}</u></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+        <div style="width:35%"><strong>PARCELA:</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>${pCode}</strong></div>
+        <div style="width:65%"><strong>PRODUTO/ VARIEDADE:</strong> &nbsp;&nbsp;&nbsp;&nbsp; <span style="color:#d32f2f; font-weight:bold">${variedadesStr.toUpperCase()}</span></div>
+      </div>
+      <div style="margin-bottom:2px;">
+        <strong>CULTURA:</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span style="color:#d32f2f; font-weight:bold">${culturaStr}</span>
+      </div>
+      <div>
+        Tratamento realizado conforme recomendação do responsável técnico. Local: Packing House, pós embalagem.
+      </div>
+    </div>
 
-  <div style="margin-top:50px; display:flex; justify-content:space-between; text-align:center">
-  <div style="width:45%; border-top:1px solid #000; padding-top:4px">
-  <strong>${item.operador || 'Operador Responsável'}</strong><br/>Aplicação no Packing House
-  </div>
-  <div style="width:45%; border-top:1px solid #000; padding-top:4px">
-  <strong>Responsável Técnico / Qualidade</strong><br/>Visto e Liberação
-  </div>
+    <!-- TABELA PRINCIPAL DE APLICAÇÃO CONTÍNUA (7 COLUNAS COM SUBCOLUNAS) -->
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th rowspan="2" style="width: 8%;">Data da<br/>Aplicação</th>
+          <th rowspan="2" style="width: 8%;">Quantidade<br/>de Carroções</th>
+          <th colspan="2" style="width: 32%;">Produto Utilizado</th>
+          <th colspan="2" style="width: 18%;">Quantidade Utilizada</th>
+          <th rowspan="2" style="width: 7%;">Carência<br/>(dias)</th>
+          <th rowspan="2" style="width: 17%;">Justificativa.<br/>Controle</th>
+          <th rowspan="2" style="width: 10%;">Nº dos<br/>aplicadores</th>
+        </tr>
+        <tr>
+          <th style="width: 14%;">Nome Comercial</th>
+          <th style="width: 18%;">Ingrediente ativo</th>
+          <th style="width: 9%;">(mL de Produto)</th>
+          <th style="width: 9%;">(L de Água)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+      </tbody>
+    </table>
+
+    <!-- QUADRO DE RECOMENDAÇÃO TÉCNICA -->
+    <table class="rec-box">
+      <tr>
+        <td style="width: 40%; font-size:7.5pt; line-height:1.4;">
+          <strong>Recomendação Técnica:</strong><br/>
+          <strong>- Melão/Melancia:</strong> Graduate A+: 4 mL de produto comercial para 01 Litro de água
+        </td>
+        <td style="width: 60%; font-size:7.5pt; line-height:1.4;">
+          <strong>Local de aplicação:</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Pendúnculo do fruto<br/>
+          <strong>Método de aplicação:</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Pincelamento<br/>
+          <strong>Maquinário utilizado:</strong> &nbsp;&nbsp;&nbsp;&nbsp; Garrafas plásticas com esponja na extremidade.
+        </td>
+      </tr>
+    </table>
+
+    <!-- ASSINATURAS DO MANIPULADOR E RT -->
+    <div class="sig-row" style="display:flex; justify-content:space-between; align-items:center;">
+      <div style="width:48%"><strong>Nome do Manipulador:</strong> &nbsp;&nbsp; ELENILSON ALVES DE SOUSA</div>
+      <div style="width:48%"><strong>Assinatura:</strong> __________________________________________________</div>
+    </div>
+    <div class="sig-row" style="display:flex; justify-content:space-between; align-items:center;">
+      <div style="width:48%"><strong>Nome do Responsável Técnico:</strong> &nbsp;&nbsp; VALERIANO DANTAS/FRANCISCO CANINDÉ</div>
+      <div style="width:48%"><strong>Assinatura:</strong> __________________________________________________</div>
+    </div>
+
+    <!-- RODAPÉ: APLICADORES E ALERTA DE SOBRAS -->
+    <div class="bottom-split">
+      <div style="width:45%">
+        <div style="font-weight:bold; font-size:7pt; margin-bottom:2px">Identificação dos Aplicadores</div>
+        <table class="app-table">
+          <thead>
+            <tr>
+              <th style="width:25%">Nº</th>
+              <th style="width:75%">Nome do Aplicador</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td style="font-weight:bold">ANTONIO KERGINILDO</td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td style="font-weight:bold">ERICO VICTOR</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="sobras-box">
+        SOBRAS DE MISTURA, GUARDAR EM LOCAL SEGURO, ADEQUADO E IDENTIFICADO.
+      </div>
+    </div>
   </div>
   </body>
   </html>
   `;
 
+  printWin.document.open();
   printWin.document.write(html);
   printWin.document.close();
 }
