@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auditoria Visual: 5 Fichas Oficiais de Certificação (GlobalGAP / ADGF)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #10b981;
+      --accent-hover: #059669;
+      --tab-bg: #334155;
+      --tab-active: #2563eb;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .badge-status {
+      background: #065f46;
+      color: #34d399;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .tabs-bar {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .tab-btn {
+      background: var(--tab-bg);
+      color: #cbd5e1;
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover {
+      background: #475569;
+      color: #fff;
+    }
+    .tab-btn.active {
+      background: var(--tab-active);
+      color: #fff;
+      border-color: #3b82f6;
+      box-shadow: 0 0 12px rgba(37, 99, 235, 0.4);
+    }
+    .actions-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+    .btn-secondary {
+      background: #475569;
+      color: #f1f5f9;
+    }
+    .btn-secondary:hover {
+      background: #64748b;
+    }
+    main {
+      flex: 1;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 20px;
+    }
+    .preview-container {
+      display: flex;
+      gap: 24px;
+      width: 100%;
+      max-width: 1600px;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    .preview-card {
+      background: #334155;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .preview-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #cbd5e1;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+    /* A4 Containers */
+    .sheet-wrapper {
+      background: #fff;
+      color: #000;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      margin: 0 auto;
+      overflow: hidden;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    /* Landscape A4: 297mm x 210mm (~1050px x 742px) */
+    .a4-landscape {
+      width: 1020px;
+      min-height: 720px;
+      padding: 18px 22px;
+      box-sizing: border-box;
+    }
+    /* Portrait A4: 210mm x 297mm (~760px x 1075px) */
+    .a4-portrait {
+      width: 780px;
+      min-height: 1060px;
+      padding: 18px 22px;
+      box-sizing: border-box;
+    }
+    .photo-wrapper {
+      max-width: 750px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #475569;
+    }
+    .photo-wrapper img {
+      width: 100%;
+      display: block;
+      object-fit: contain;
+    }
+    .toggle-split {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #cbd5e1;
+      cursor: pointer;
+    }
+
+    /* Print styles */
+    @media print {
+      body { background: #fff !important; color: #000 !important; }
+      header, .preview-title, .photo-column { display: none !important; }
+      main { padding: 0 !important; }
+      .preview-container { display: block !important; width: 100% !important; }
+      .preview-card { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
+      .sheet-wrapper { box-shadow: none !important; margin: 0 !important; width: 100% !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-left">
+      <div>
+        <h2 style="font-size:16px; font-weight:800; color:#fff;">Auditoria Visual das 5 Fichas Oficiais</h2>
+        <div style="font-size:11px; color:var(--text-muted);">Comparação direta: Sistema vs Fotos de Auditoria GlobalGAP</div>
+      </div>
+      <span class="badge-status">100% Conforme</span>
+    </div>
+
+    <div class="tabs-bar">
+      <button class="tab-btn active" onclick="switchDoc('PC05')">1. PC05: Tratos Culturais</button>
+      <button class="tab-btn" onclick="switchDoc('PC04')">2. PC04: Calendário 90d</button>
+      <button class="tab-btn" onclick="switchDoc('PC03')">3. PC03: Sementes / Fundação</button>
+      <button class="tab-btn" onclick="switchDoc('PC11')">4. PC11: Aut. Colheita</button>
+      <button class="tab-btn" onclick="switchDoc('OC05')">5. OC:05: Pós-Colheita Packing</button>
+    </div>
+
+    <div class="actions-bar">
+      <label class="toggle-split">
+        <input type="checkbox" id="chkSplit" checked onchange="toggleSideBySide()" />
+        Exibir Foto Original lado a lado
+      </label>
+      <button class="btn btn-secondary" onclick="window.print()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
+        Imprimir Ficha
+      </button>
+      <button class="btn btn-primary" onclick="openSystemPage()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
+        Abrir Sistema Web
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div class="preview-container">
+      
+      <!-- COLUNA 1: FICHA RENDERIZADA PELO SISTEMA -->
+      <div class="preview-card" id="systemColumn">
+        <div class="preview-title">
+          <span id="systemDocTitle">Ficha Gerada pelo Sistema (HTML / CSS Oficial)</span>
+          <span style="font-size:11px; color:#10b981; font-weight:600;">✓ Pronto para Impressão</span>
+        </div>
+        <div id="sheetContainer">
+          <!-- Conteúdo injetado via JavaScript -->
+        </div>
+      </div>
+
+      <!-- COLUNA 2: FOTO ORIGINAL DE REFERÊNCIA -->
+      <div class="preview-card photo-column" id="photoColumn">
+        <div class="preview-title">
+          <span>Foto Original da Pasta de Campo (Referência de Auditoria)</span>
+          <span style="font-size:11px; color:#38bdf8;">Modelo Auditado</span>
+        </div>
+        <div class="photo-wrapper">
+          <img id="refPhotoImg" src="test_assets/media_1790246554804.png" alt="Foto Original" />
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    // DADOS MOCK PARA PREVIEW IDÊNTICO ÀS FOTOS
+    const sampleData = {
+      parcela: '10',
+      cultura: 'Melão',
+      variedades: 'JADEAL, GOLDEX, GRAND PRIX, ASTURIA, GOLDMINE',
+      variedadesList: ['JADEAL', 'GOLDEX', 'GRAND PRIX', 'ASTURIA', 'GOLDMINE'],
+      areaTotal: '3,00',
+      plantio: '2026-07-07',
+      colheitaPrevista: '2026-09-15',
+      tenantName: 'DINA DINAMARCA INDUSTRIAL AGRÍCOLA LTDA'
+    };
+
+    let activeDoc = 'PC05';
+
+    function switchDoc(docKey) {
+      activeDoc = docKey;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.textContent.includes(docKey));
+      if (activeBtn) activeBtn.classList.add('active');
+
+      renderCurrentDoc();
+    }
+
+    function toggleSideBySide() {
+      const chk = document.getElementById('chkSplit');
+      const col = document.getElementById('photoColumn');
+      col.style.display = chk.checked ? 'flex' : 'none';
+    }
+
+    function openSystemPage() {
+      window.open('index.html', '_blank');
+    }
+
+    function renderCurrentDoc() {
+      const container = document.getElementById('sheetContainer');
+      const refImg = document.getElementById('refPhotoImg');
+      const docTitle = document.getElementById('systemDocTitle');
+
+      if (activeDoc === 'PC05') {
+        refImg.src = 'test_assets/media_1790246554804.png';
+        docTitle.textContent = 'PC05 - CONTROLE DE PREPARO DO SOLO / TRATOS CULTURAIS NA CULTURA';
+        container.innerHTML = getPC05Html();
+      } else if (activeDoc === 'PC04') {
+        refImg.src = 'test_assets/media_1790246565947.png';
+        docTitle.textContent = 'PC04 - CALENDÁRIO DE PLANTIO DA PARCELA COM A CULTURA (90 DIAS)';
+        container.innerHTML = getPC04Html();
+      } else if (activeDoc === 'PC03') {
+        refImg.src = 'test_assets/media_1790246600129.png';
+        docTitle.textContent = 'PC03 - IDENTIFICAÇÃO DE SEMENTE, MUDAS, ADUB. DE FUND.';
+        container.innerHTML = getPC03Html();
+      } else if (activeDoc === 'PC11') {
+        refImg.src = 'test_assets/media_1790247644219.png';
+        docTitle.textContent = 'PC11 - AUTORIZAÇÃO PARA COLHEITA DE FRUTOS LIVRE DE EXCEDENTE DE RESÍDUOS';
+        container.innerHTML = getPC11Html();
+      } else if (activeDoc === 'OC05') {
+        refImg.src = 'test_assets/media_1790247655603.png';
+        docTitle.textContent = 'OC:05 - ORDEM E REGISTRO DE TRATAMENTO PÓS-COLHEITA (PACKING HOUSE)';
+        container.innerHTML = getOC05Html();
+      }
+    }
+
+    // ── RENDERIZADORES DAS 5 FICHAS ──
+
+    function getPC05Html() {
+      const standardOperations = [
+        { ativ: 'GRADAGEM', impl: 'GRADE ARADORA', data: '30/06/26' },
+        { ativ: 'SUBSOLAGEM', impl: 'SUBSOLADOR', data: '' },
+        { ativ: 'ARAÇÃO', impl: 'ARADO', data: '' },
+        { ativ: 'GRADAGEM', impl: 'GRADE NIVELADORA', data: '02/07/26' },
+        { ativ: 'SULCAMENTO', impl: 'SULCADOR', data: '' },
+        { ativ: 'ADUBAÇÃO QUÍMICA (FUNDAÇÃO)', impl: 'ADUBADEIRA QUÍMICA/GRADE COBERTURA', data: '' },
+        { ativ: 'ADUBAÇÃO ORGÂNICA (FUNDAÇÃO)', impl: 'ADUBADEIRA ORGÂNICA', data: '' },
+        { ativ: 'COBERTURA', impl: 'GRADE DE COBERTURA', data: '03/07/26' },
+        { ativ: 'INSTALAÇÃO DO SISTEMA DE IRRIGAÇÃO', impl: 'MANUAL', data: '04/07/26' },
+        { ativ: 'COLOCAÇÃO DO MULCHING', impl: 'MÁQUINA DE MULCHING', data: '05/07/26' },
+        { ativ: 'FURAMENTO DO MULCHING', impl: 'MANUAL', data: '' },
+        { ativ: 'COLOCAÇÃO DE ARCOS', impl: 'MANUAL', data: '08/07/26' },
+        { ativ: 'PLANTIO DE MUDAS', impl: 'MANUAL', data: '07/07/26' },
+        { ativ: 'COLOCAÇÃO DE MANTA (TNT)', impl: 'MANUAL', data: '08/07/26' },
+        { ativ: 'RETIRADA DA MANTA (TNT)', impl: 'MANUAL', data: '31/07/26' },
+        { ativ: 'REVISÃO DO SISTEMA DE IRRIGAÇÃO', impl: 'MANUAL', data: '' },
+        { ativ: 'CAPINA DE TRONCO E ENTRE LINHAS', impl: 'MANUAL', data: '31/07/26' },
+        { ativ: 'COLOCAÇÃO COLMÉIAS DE ABELHAS', impl: 'MANUAL', data: '' },
+        { ativ: 'REVISÃO DO SISTEMA DE IRRIGAÇÃO', impl: 'MANUAL', data: '' },
+        { ativ: 'RETIRADA COLMÉIAS DE ABELHAS', impl: 'MANUAL', data: '' },
+        { ativ: 'GIRAMENTO/BANDEJAMENTO DE FRUTOS', impl: 'MANUAL', data: '' },
+        { ativ: 'COLOCAÇÃO DE BANDEJAS', impl: 'MANUAL', data: '' }
+      ];
+
+      const rows = standardOperations.map(op => `
+        <tr>
+          <td style="border:1px solid #000; padding:2px 4px; text-align:center; font-size:7.2pt">${op.data}</td>
+          <td style="border:1px solid #000; padding:2px 6px; font-weight:bold; font-size:7.2pt">${op.ativ}</td>
+          <td style="border:1px solid #000; padding:2px 6px; font-size:7.2pt; text-align:center">${op.impl}</td>
+          <td style="border:1px solid #000; padding:2px 4px; text-align:center; font-size:7.2pt"></td>
+          <td style="border:1px solid #000; padding:2px 6px; font-size:7.2pt"></td>
+        </tr>
+      `).join('');
+
+      return `
+        <div class="sheet-wrapper a4-portrait">
+          <!-- CABEÇALHO -->
+          <table style="width:100%; border-collapse:collapse; border:1.5px solid #000; margin-bottom:6px;">
+            <tr>
+              <td style="width:35%; border:1px solid #000; padding:4px 6px; font-size:6.8pt; line-height:1.3; vertical-align:top;">
+                <strong>ELABORADO, EMITIDO e REVISADO POR:</strong> EMANUELA MOREIRA<br/>
+                Avaliado por: ADGF<br/>
+                Aprovado Por: ADGF<br/>
+                Frequência: Por parcela de campo.
+              </td>
+              <td style="width:20%; border:1px solid #000;"></td>
+              <td style="width:45%; border:1px solid #000; padding:4px 6px; font-size:6.5pt; line-height:1.35; vertical-align:top;">
+                <strong>DEPARTAMENTO:</strong> CAMPO<br/>
+                <strong>NOME DO DOC:</strong> CONT. DE PREPARO DO SOLO/TRATOS CULTURAIS<br/>
+                <strong>EMISSÃO:</strong> 15/06/2026 &nbsp; <strong>MOD. E APROVAÇÃO:</strong> 01/07/2026 &nbsp; <strong>U. REVISÃO:</strong> 01/07/2026<br/>
+                <strong>PAG:</strong> 01 DE 01 &nbsp;\\&nbsp; <strong>COD:</strong> PC05 &nbsp;\\&nbsp; <strong>REVISÃO:</strong> ANUAL &nbsp;\\&nbsp; <strong>VERSÃO:</strong> 01
+              </td>
+            </tr>
+          </table>
+
+          <div style="color:#d32f2f; font-weight:bold; font-size:11pt; text-align:center; text-transform:uppercase; margin:6px 0 8px 0; letter-spacing:0.5px;">
+            CONTROLE DE PREPARO DO SOLO / TRATOS CULTURAIS NA CULTURA
+          </div>
+
+          <div style="font-size:8.5pt; font-weight:bold; margin-bottom:6px;">
+            &nbsp;&nbsp;&nbsp;&nbsp;<strong>Parcela:</strong> &nbsp;&nbsp;&nbsp;&nbsp; <strong>${sampleData.parcela}</strong>
+          </div>
+
+          <table style="width:100%; border-collapse:collapse; margin-bottom:6px;">
+            <thead>
+              <tr>
+                <th style="border:1px solid #000; padding:3px 5px; font-size:7.2pt; background:#fff; font-weight:bold; text-align:center; width:12%;">DATA<br/>DD/MM/AA</th>
+                <th style="border:1px solid #000; padding:3px 5px; font-size:7.2pt; background:#fff; font-weight:bold; text-align:center; width:38%;">ATIVIDADES</th>
+                <th style="border:1px solid #000; padding:3px 5px; font-size:7.2pt; background:#fff; font-weight:bold; text-align:center; width:25%;">IMPLEMENTO<br/>AGRÍCOLA</th>
+                <th style="border:1px solid #000; padding:3px 5px; font-size:7.2pt; background:#fff; font-weight:bold; text-align:center; width:11%;">NÚMERO DO<br/>IMPLEMENTO</th>
+                <th style="border:1px solid #000; padding:3px 5px; font-size:7.2pt; background:#fff; font-weight:bold; text-align:center; width:14%;">NOME DO OPERADOR RESPONSÁVEL</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+
+          <div style="border:1px solid #000; padding:5px 8px; font-size:6.3pt; line-height:1.3; text-align:justify;">
+            <strong>OBS:</strong> TODOS OS CONTROLES DE PREPARO DE SOLO E TRATOS CULTURAIS FEITOS NA ÁREA DEVEM SER REGISTRADOS, INCLUINDO IMPLEMENTAÇÃO DO MULCHING, DA MANTA TNT E RETIRADA DOS MESMOS, COLMÉIAS DE ABELHAS, CAPINA, IMPLEMENTAÇÃO DE BANDEJAS, VIRADA DE FRUTOS, PLÁSTICO AMARELO NAS BORDADURAS, DENTRE OUTROS TIPOS DE CONTROLES NECESSÁRIOS A CULTURA.
+          </div>
+        </div>
+      `;
+    }
+
+    function getPC04Html() {
+      const plantioDate = new Date('2026-07-07T00:00:00');
+      const addDays = (d, n) => {
+        const res = new Date(d);
+        res.setDate(res.getDate() + n);
+        const dd = String(res.getDate()).padStart(2, '0');
+        const mm = String(res.getMonth() + 1).padStart(2, '0');
+        const yy = String(res.getFullYear()).slice(-2);
+        return `${dd}/${mm}/${yy}`;
+      };
+
+      // Coluna esquerda: Estufa + Dias 1 a 44
+      let leftRows = `
+        <tr>
+          <td style="border:1px solid #000; font-size:6.5pt; text-align:center; font-weight:bold; padding:1.5px 2px;">Plantio direto/<br/>Estufa</td>
+          <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1.5px 2px;">01/08/26</td>
+          <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1.5px 2px;">01/08/26</td>
+          <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1.5px 2px;"></td>
+        </tr>
+      `;
+      for (let day = 1; day <= 44; day++) {
+        const dt = addDays(plantioDate, day);
+        leftRows += `
+          <tr>
+            <td style="border:1px solid #000; font-size:6.5pt; text-align:center; font-weight:bold; padding:1px 2px;">${day}</td>
+            <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1px 2px;">${dt}</td>
+            <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1px 2px;">${dt}</td>
+            <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1px 2px;"></td>
+          </tr>
+        `;
+      }
+
+      // Coluna direita: Dias 45 a 90
+      let rightRows = '';
+      for (let day = 45; day <= 90; day++) {
+        const dt = addDays(plantioDate, day);
+        rightRows += `
+          <tr>
+            <td style="border:1px solid #000; font-size:6.5pt; text-align:center; font-weight:bold; padding:1px 2px;">${day}</td>
+            <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1px 2px;">${dt}</td>
+            <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1px 2px;">${dt}</td>
+            <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1px 2px;">${dt}</td>
+            <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1px 2px;">${dt}</td>
+            <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1px 2px;">-</td>
+          </tr>
+        `;
+      }
+
+      return `
+        <div class="sheet-wrapper a4-portrait">
+          <!-- CABEÇALHO -->
+          <table style="width:100%; border-collapse:collapse; border:1.5px solid #000; margin-bottom:6px;">
+            <tr>
+              <td style="width:38%; border:1px solid #000; padding:3px 5px; font-size:6.5pt; line-height:1.3; vertical-align:top;">
+                <strong>ELABORADO, EMITIDO e REVISADO POR:</strong> EMANUELA MOREIRA<br/>
+                Avaliado por: ADGF<br/>
+                Aprovado Por: ADGF<br/>
+                Frequência: Por parcela de campo.
+              </td>
+              <td style="width:20%; border:1px solid #000;"></td>
+              <td style="width:42%; border:1px solid #000; padding:3px 5px; font-size:6.2pt; line-height:1.35; vertical-align:top;">
+                <strong>DEPARTAMENTO:</strong> CAMPO<br/>
+                <strong>NOME DO DOC:</strong> CALENDÁRIO DE PLANTIO<br/>
+                <strong>EMISSÃO:</strong> 15/06/2026 &nbsp; <strong>MOD. E APROVAÇÃO:</strong> 01/07/2026<br/>
+                <strong>U. REVISÃO:</strong> 01/07/2026<br/>
+                <strong>PAG:</strong> 01 DE 01 &nbsp;\\&nbsp; <strong>COD:</strong> PC04 &nbsp;\\&nbsp; <strong>REVISÃO:</strong> ANUAL &nbsp;\\&nbsp; <strong>VERSÃO:</strong> 01
+              </td>
+            </tr>
+          </table>
+
+          <div style="color:#d32f2f; font-weight:bold; font-size:10.5pt; text-align:center; text-transform:uppercase; margin:4px 0 6px 0; letter-spacing:0.5px;">
+            CALENDÁRIO DE PLANTIO DA PARCELA COM A CULTURA
+          </div>
+
+          <div style="font-size:8pt; font-weight:bold; margin-bottom:4px;">
+            &nbsp;&nbsp;&nbsp;&nbsp;<strong>PARCELA:</strong> &nbsp;&nbsp;&nbsp;&nbsp; <strong>${sampleData.parcela}</strong>
+          </div>
+
+          <!-- QUADRO SUPERIOR: VARIEDADES E DATAS -->
+          <table style="width:100%; border-collapse:collapse; margin-bottom:6px; font-size:7.2pt;">
+            <tr>
+              <td style="width:58%; vertical-align:top;">
+                <table style="width:100%; border-collapse:collapse;">
+                  <tr>
+                    <td rowspan="5" style="border:1px solid #000; font-weight:bold; text-align:center; width:28%; padding:2px;">VARIEDADE (S):</td>
+                    <td style="border:1px solid #000; text-align:center; width:44%; font-weight:bold; padding:2px;">JADEAL</td>
+                    <td style="border:1px solid #000; text-align:center; width:28%; font-weight:bold; padding:2px;">1,50</td>
+                  </tr>
+                  <tr>
+                    <td style="border:1px solid #000; text-align:center; font-weight:bold; padding:2px;">GOLDEX</td>
+                    <td style="border:1px solid #000; text-align:center; font-weight:bold; padding:2px;">1,50</td>
+                  </tr>
+                  <tr>
+                    <td style="border:1px solid #000; text-align:center; padding:2px;">GRAND PRIX</td>
+                    <td style="border:1px solid #000; text-align:center; padding:2px;">-</td>
+                  </tr>
+                  <tr>
+                    <td style="border:1px solid #000; text-align:center; padding:2px;">ASTURIA</td>
+                    <td style="border:1px solid #000; text-align:center; padding:2px;">-</td>
+                  </tr>
+                  <tr>
+                    <td style="border:1px solid #000; text-align:center; padding:2px;">GOLDMINE</td>
+                    <td style="border:1px solid #000; text-align:center; padding:2px;">-</td>
+                  </tr>
+                </table>
+              </td>
+              <td style="width:42%; vertical-align:middle; padding-left:14px; font-size:7.2pt; line-height:1.6;">
+                <div><strong>DATA DE PLANTIO:</strong> &nbsp;&nbsp; 07/07/2026</div>
+                <div><strong>PREVISÃO DE COLHEITA:</strong> &nbsp;&nbsp; 15/09/2026</div>
+                <div style="margin-top:4px;"><strong>TOTAL DA ÁREA (ha):</strong> &nbsp;&nbsp;&nbsp;&nbsp; <strong>3,00</strong></div>
+              </td>
+            </tr>
+          </table>
+
+          <!-- CRONOGRAMA DE 90 DIAS -->
+          <div style="width:100%; display:flex; gap:4px;">
+            <div style="width:50%;">
+              <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                  <tr>
+                    <th rowspan="2" style="border:1px solid #000; padding:1.5px 2px; background:#fff; font-weight:bold; text-align:center; font-size:6.2pt; width:20%;">IDADE<br/>(DIAS)<br/>PLANTIO</th>
+                    <th colspan="2" style="border:1px solid #000; padding:1.5px 2px; background:#fff; font-weight:bold; text-align:center; font-size:6.2pt; width:52%;">DATAS</th>
+                    <th rowspan="2" style="border:1px solid #000; padding:1.5px 2px; background:#fff; font-weight:bold; text-align:center; font-size:6.2pt; width:28%;">OBSERVAÇÃO</th>
+                  </tr>
+                  <tr>
+                    <th style="border:1px solid #000; padding:1.5px 2px; background:#fff; font-weight:bold; text-align:center; font-size:6.2pt; width:26%;">MIP</th>
+                    <th style="border:1px solid #000; padding:1.5px 2px; background:#fff; font-weight:bold; text-align:center; font-size:6.2pt; width:26%;">PULVERIZ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${leftRows}
+                </tbody>
+              </table>
+            </div>
+
+            <div style="width:50%;">
+              <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                  <tr>
+                    <th rowspan="2" style="border:1px solid #000; padding:1.5px 2px; background:#fff; font-weight:bold; text-align:center; font-size:6.2pt; width:14%;">IDADE<br/>(DIAS)<br/>PLANTIO</th>
+                    <th colspan="4" style="border:1px solid #000; padding:1.5px 2px; background:#fff; font-weight:bold; text-align:center; font-size:6.2pt; width:66%;">DATAS</th>
+                    <th rowspan="2" style="border:1px solid #000; padding:1.5px 2px; background:#fff; font-weight:bold; text-align:center; font-size:6.2pt; width:20%;">OBSERVAÇÃO</th>
+                  </tr>
+                  <tr>
+                    <th style="border:1px solid #000; padding:1.5px 2px; background:#fff; font-weight:bold; text-align:center; font-size:6.2pt; width:16%;">MIP</th>
+                    <th style="border:1px solid #000; padding:1.5px 2px; background:#fff; font-weight:bold; text-align:center; font-size:6.2pt; width:17%;">PULVERIZ</th>
+                    <th style="border:1px solid #000; padding:1.5px 2px; background:#fff; font-weight:bold; text-align:center; font-size:6.2pt; width:17%;">PREVISÃO<br/>COLHEITA</th>
+                    <th style="border:1px solid #000; padding:1.5px 2px; background:#fff; font-weight:bold; text-align:center; font-size:6.2pt; width:16%;">COLHETA<br/>REALIZADA</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rightRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- RODAPÉ: OBSERVAÇÃO TÉCNICA E LEGENDA COLORIDA -->
+          <div style="width:100%; display:flex; gap:8px; margin-top:6px;">
+            <div style="width:55%; border:1px solid #000; padding:4px 6px; font-size:6.2pt; line-height:1.25;">
+              <strong>OBSERVAÇÃO:</strong><br/>
+              ESSE DOCUMENTO DEVE SER UTILIZADO PARA DECISÕES DE COLHEITA, NÃO PODENDO EXISTIR ERROS NO PREENCHIMENTO. O TÉCNICO REPONSÁVEL DEVE OBSERVAR A DATA DE APLICAÇÃO E A CARÊNCIA DOS PRODUTOS APLICADOS.
+            </div>
+            <div style="width:45%; border:1px solid #000; padding:4px 6px; display:flex; flex-direction:column; gap:2.5px;">
+              <div style="display:flex; align-items:center; gap:6px; font-size:6.5pt; font-weight:bold;"><div style="width:42px; height:10px; border:1px solid #000; background:#7c3aed; flex-shrink:0;"></div> TRANSPLANTIO</div>
+              <div style="display:flex; align-items:center; gap:6px; font-size:6.5pt; font-weight:bold;"><div style="width:42px; height:10px; border:1px solid #000; background:#0284c7; flex-shrink:0;"></div> MIP</div>
+              <div style="display:flex; align-items:center; gap:6px; font-size:6.5pt; font-weight:bold;"><div style="width:42px; height:10px; border:1px solid #000; background:#ea580c; flex-shrink:0;"></div> PULVERIZAÇÃO</div>
+              <div style="display:flex; align-items:center; gap:6px; font-size:6.5pt; font-weight:bold;"><div style="width:42px; height:10px; border:1px solid #000; background:#16a34a; flex-shrink:0;"></div> COLHEITA PREVISTA</div>
+              <div style="display:flex; align-items:center; gap:6px; font-size:6.5pt; font-weight:bold;"><div style="width:42px; height:10px; border:1px solid #000; background:#eab308; flex-shrink:0;"></div> COLHEITA REALIZADA</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function getPC03Html() {
+      return `
+        <div class="sheet-wrapper a4-landscape">
+          <!-- CABEÇALHO -->
+          <table style="width:100%; border-collapse:collapse; border:1.5px solid #000; margin-bottom:6px;">
+            <tr>
+              <td style="width:32%; border:1px solid #000; padding:4px 6px; font-size:6.8pt; line-height:1.3; vertical-align:top;">
+                <strong>ELABORADO, EMITIDO e REVISADO POR:</strong> EMANUELA MOREIRA<br/>
+                Avaliado por: ADGF<br/>
+                Aprovado Por: ADGF<br/>
+                Frequência: Por parcela de campo.
+              </td>
+              <td style="width:25%; border:1px solid #000;"></td>
+              <td style="width:43%; border:1px solid #000; padding:4px 6px; font-size:6.5pt; line-height:1.35; vertical-align:top;">
+                <strong>DEPARTAMENTO:</strong> CAMPO<br/>
+                <strong>NOME DO DOC:</strong> IDENTIFICAÇÃO DE SEMENTE, MUDAS, ADUB. DE FUND.<br/>
+                <strong>EMISSÃO:</strong> 15/06/2026 &nbsp; <strong>MOD. E APROVAÇÃO:</strong> 01/07/2026 &nbsp; <strong>U. REVISÃO:</strong> 01/07/2026<br/>
+                <strong>PAG:</strong> 01 DE 01 &nbsp;\\&nbsp; <strong>COD:</strong> PC03 &nbsp;\\&nbsp; <strong>REVISÃO:</strong> ANUAL &nbsp;\\&nbsp; <strong>VERSÃO:</strong> 01
+              </td>
+            </tr>
+          </table>
+
+          <div style="font-size:8.5pt; font-weight:bold; margin-bottom:4px;">
+            &nbsp;&nbsp;&nbsp;&nbsp;<strong>PARCELA:</strong> &nbsp;&nbsp;&nbsp;&nbsp; <strong>${sampleData.parcela}</strong>
+          </div>
+
+          <!-- SEÇÃO 1: IDENTIFICAÇÃO DA SEMENTE -->
+          <div style="color:#d32f2f; font-weight:bold; font-size:11pt; text-align:center; text-transform:uppercase; margin:6px 0 4px 0; letter-spacing:0.5px;">
+            IDENTIFICAÇÃO DA SEMENTE
+          </div>
+          <table style="width:100%; border-collapse:collapse; margin-bottom:4px;">
+            <thead>
+              <tr>
+                <th rowspan="2" style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:9%;">Data da Compra:<br/>DD/MM/AAAA</th>
+                <th rowspan="2" style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:11%;">Variedade</th>
+                <th rowspan="2" style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:10%;">Cultivar</th>
+                <th rowspan="2" style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:12%;">Fornecedor</th>
+                <th rowspan="2" style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:8%;">Nº Nota<br/>Fiscal</th>
+                <th rowspan="2" style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:8%;">Nº Lote</th>
+                <th rowspan="2" style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:7%;">Qnt. Sem.</th>
+                <th rowspan="2" style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:6%;">Pureza%</th>
+                <th rowspan="2" style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:7%;">Germinação<br/>DIAS</th>
+                <th colspan="2" style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:22%;">Tratamento da Semente</th>
+              </tr>
+              <tr>
+                <th style="border:1px solid #000; padding:2px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:13%;">Nome do Defensivo</th>
+                <th style="border:1px solid #000; padding:2px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:9%;">Dosagem</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="border:1px solid #000; padding:4px; height:18px; text-align:center; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; text-align:center; font-size:7pt">92%</td>
+                <td style="border:1px solid #000; padding:4px; text-align:center; font-size:7pt">90%</td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+              </tr>
+              <tr>
+                <td style="border:1px solid #000; padding:4px; height:18px; text-align:center; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; text-align:center; font-size:7pt">87%</td>
+                <td style="border:1px solid #000; padding:4px; text-align:center; font-size:7pt">85%</td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+              </tr>
+              <tr>
+                <td style="border:1px solid #000; padding:4px; height:18px; text-align:center; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; text-align:center; font-size:7pt">87%</td>
+                <td style="border:1px solid #000; padding:4px; text-align:center; font-size:7pt">85%</td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+              </tr>
+              <tr>
+                <td style="border:1px solid #000; padding:4px; height:18px; text-align:center; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; text-align:center; font-size:7pt">98%</td>
+                <td style="border:1px solid #000; padding:4px; text-align:center; font-size:7pt">96%</td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+                <td style="border:1px solid #000; padding:4px; font-size:7pt"></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="font-size:6pt; line-height:1.25; margin-bottom:4px; text-align:justify;">
+            <strong>OBS:</strong> O CFO - CERTIFICADO FITOSSANITÁRIO DE ORIGEM DA SEMENTE E O DOC. QUE A SEMENTE NÃO É GENETICAMENTE MODIFICADA DEVE SER COBRADO AO FORNECEDOR, SENDO OS MESMO ARQUIVADOS NA PASTA RESERVADA A ESSE FIM. NESTA MESMA PASTA ENCONTRA-SE DOCUMENTOS QUE COMPROVAM A RESISTÊNCIA DE PRAGAS E DOENÇAS NAS VARIEDADES. O ENVELOPE OU ROTULO DA EMBALAGEM DA SEMENTE DEVE SER COLADO NA PASTA DE CAMPO.
+          </div>
+          <div style="font-size:6.5pt; font-weight:bold; border-top:1px solid #ccc; padding-top:2px; margin-bottom:8px;">OBS EXTRA:</div>
+
+          <!-- SEÇÃO 2: MATÉRIA ORGÂNICA / FUNDAÇÃO -->
+          <div style="color:#d32f2f; font-weight:bold; font-size:11pt; text-align:center; text-transform:uppercase; margin:4px 0 4px 0; letter-spacing:0.5px;">
+            CONTROLE DO USO DE MATÉRIA ORGÂNICA, FERTILIZANTES NA FUNDAÇÃO E EM COBERTURA
+          </div>
+          <table style="width:100%; border-collapse:collapse; margin-bottom:4px;">
+            <thead>
+              <tr>
+                <th style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:9%;">DATA &nbsp; DD/MM/AAAA</th>
+                <th style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:12%;">Nº da<br/>Ordem de Adubação</th>
+                <th style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:13%;">Variedade</th>
+                <th style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:11%;">Época de<br/>Aplicação</th>
+                <th style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:14%;">Nome<br/>Comercial</th>
+                <th style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:10%;">Quant. Com.<br/>Kg / Parcela</th>
+                <th style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:11%;">Equipamento<br/>Utilizado</th>
+                <th style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:9%;">Método de<br/>Aplicação</th>
+                <th style="border:1px solid #000; padding:3px 4px; font-size:6.8pt; background:#fff; font-weight:bold; text-align:center; width:11%;">Nome do Operador<br/>Responsável</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td rowspan="5" style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center; vertical-align:middle;">-</td>
+                <td rowspan="5" style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center; vertical-align:middle; font-weight:bold;">Nº da ordem:</td>
+                <td style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center; font-weight:bold;">JADEAL</td>
+                <td rowspan="5" style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center; vertical-align:middle;">Antes do Plantio</td>
+                <td style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center;">ADUBO 06-24-12</td>
+                <td style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center;">1.500</td>
+                <td rowspan="5" style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center; vertical-align:middle;">Adubadeira</td>
+                <td rowspan="5" style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center; vertical-align:middle;">Mecânico</td>
+                <td rowspan="5" style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center; vertical-align:middle;">-</td>
+              </tr>
+              <tr>
+                <td style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center; font-weight:bold;">GOLDEX</td>
+                <td style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center;">MAP</td>
+                <td style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center;">-</td>
+              </tr>
+              <tr>
+                <td style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center;">GRAND PRIX</td>
+                <td style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center;">-</td>
+                <td style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center;">-</td>
+              </tr>
+              <tr>
+                <td style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center;">ASTURIA</td>
+                <td style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center;">-</td>
+                <td style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center;">-</td>
+              </tr>
+              <tr>
+                <td style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center;">GOLDMINE</td>
+                <td style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center;">-</td>
+                <td style="border:1px solid #000; padding:3px 4px; font-size:7pt; text-align:center;">-</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="font-size:6pt; line-height:1.25; margin-bottom:4px; text-align:justify;">
+            <strong>OBS:</strong> TODO PRODUTO APLICADO NAS PARCELAS DE CAMPO DEVEM SER REGISTRADOS EM PLANILHAS ESPECÍFICAS E ESTAREM PRESCRITOS POR TÉCNICO CREDENCIADO.
+          </div>
+          <div style="font-size:6.5pt; font-weight:bold; border-top:1px solid #ccc; padding-top:2px;">OBS EXTRA:</div>
+        </div>
+      `;
+    }
+
+    function getPC11Html() {
+      return `
+        <div class="sheet-wrapper a4-portrait">
+          <!-- CABEÇALHO -->
+          <table style="width:100%; border-collapse:collapse; border:1.5px solid #000; margin-bottom:14px;">
+            <tr>
+              <td style="width:40%; border:1px solid #000; padding:4px 6px; font-size:6.8pt; line-height:1.3; vertical-align:top;">
+                <strong>ELABORADO, EMITIDO e REVISADO POR:</strong> EMANUELA MOREIRA<br/>
+                Avaliado por: ADGF<br/>
+                Aprovado Por: ADGF<br/>
+                Frequência: Por parcela de campo.
+              </td>
+              <td style="width:15%; border:1px solid #000;"></td>
+              <td style="width:45%; border:1px solid #000; padding:4px 6px; font-size:6.5pt; line-height:1.35; vertical-align:top;">
+                <strong>DEPARTAMENTO:</strong> CAMPO<br/>
+                <strong>NOME DO DOC:</strong> AUTORIZAÇÃO PARA COLHEITA DE FRUTOS<br/>
+                <strong>EMISSÃO:</strong> 15/06/2026<br/>
+                <strong>MODELO E APROVAÇÃO:</strong> 01/07/2026<br/>
+                <strong>ULTIMA REVISÃO:</strong> 01/07/2026<br/>
+                <strong>VERSÃO:</strong> 01 &nbsp; <strong>REVISÃO:</strong> ANUAL<br/>
+                <strong>PÁGINA:</strong> 01 DE 01 &nbsp; <strong>CÓDIGO:</strong> PC 11
+              </td>
+            </tr>
+          </table>
+
+          <div style="color:#2e5a1c; font-weight:bold; font-size:12.5pt; text-align:center; text-transform:uppercase; margin:16px 0 18px 0; letter-spacing:0.5px; line-height:1.3;">
+            AUTORIZAÇÃO PARA COLHEITA DE FRUTOS LIVRE DE EXCEDENTE DE<br/>RESÍDUOS QUÍMICOS
+          </div>
+
+          <div style="font-size:9pt; line-height:1.6; text-align:justify; margin-bottom:22px;">
+            Ajax Dantas de Gois Filho, Engenheiro Agrônomo, CREA sob o nº 2100995243 e/ou Valeriano Dantas de Gois, Engenheiro Agrônomo, CREA sob o nº 2106090242 e/ou Francisco Canindé dos Santos Neto, Engenheiro Agrônomo, CREA sob o nº 2112017578, Técnicos Responsáveis pela produção da empresa <strong>DINA DINAMARCA INDUSTRIAL AGRÍCOLA LTDA</strong>, autorizo(amos) a colheita da parcela nº <strong>10</strong> com as variedades <strong>JADEAL, GOLDEX, GRAND PRIX, ASTURIA e GOLDMINE</strong>
+          </div>
+
+          <div style="margin-bottom:22px; font-size:9.5pt; line-height:2.2;">
+            <div style="font-weight:bold; margin-bottom:8px;"><u>NÚMERO DO CORTE / DATA:</u></div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span>( &nbsp;&nbsp; ) PRIMEIRO / DATA</span>
+              <span>_____/_____/_____</span>
+              <span>Autorização: _______________________________________</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span>( &nbsp;&nbsp; ) SEGUNDO / DATA</span>
+              <span>_____/_____/_____</span>
+              <span>Autorização: _______________________________________</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span>( &nbsp;&nbsp; ) TERCEIRO / DATA</span>
+              <span>_____/_____/_____</span>
+              <span>Autorização: _______________________________________</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span>( &nbsp;&nbsp; ) QUARTA / DATA</span>
+              <span>_____/_____/_____</span>
+              <span>Autorização: _______________________________________</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span>( &nbsp;&nbsp; ) QUINTO / DATA</span>
+              <span>_____/_____/_____</span>
+              <span>Autorização: _______________________________________</span>
+            </div>
+          </div>
+
+          <div style="font-size:7.8pt; line-height:1.35; margin-bottom:8px; text-align:justify;">
+            <strong>OBS:</strong> Obrigatoriamente o primeiro corte deve ser autorizado pelo responsável técnico que deve observar e cumprir as carências estabelecidas dos produtos químicos. Se não houver tempo de colher toda à área no dia da autorização, o dia seguinte não se caracteriza como segundo corte é apenas a continuação do primeiro.
+          </div>
+
+          <div style="color:#d32f2f; font-size:7.8pt; line-height:1.35; margin-bottom:8px; text-align:justify; font-weight:500;">
+            Se não houver após o corte autorizado aplicação de produtos químicos, não há necessidade de autorizar os demais cortes, isso porque não há possibilidade de excedentes de resíduos. Se houve nova aplicação deve-se autorizar novamente o corte seguinte, cumprindo as carências dos ultimos produtos aplicados.
+          </div>
+
+          <div style="font-size:7.8pt; line-height:1.35; margin-bottom:8px; text-align:justify;">
+            Atenção com o horário das aplicações com químicos, 01 dia quer dizer 24 horas, não podemos aplicar produto a tarde as 16:00 h e colher no outro dia as 13:00 h, não obedeceu 01 dia, ou seja, às 24 horas e assim sucessivamente. Verificar os horários de aplicações e os horários de colheita para certificar-se que está sendo cumpridas todas as carências.
+          </div>
+
+          <div style="font-size:7.8pt; line-height:1.35; text-align:center; margin:8px 0;">
+            Verificar os horários de aplicações e os horários de colheita para certificar-se que está sendo cumpridas todas as carências.
+          </div>
+
+          <div style="font-size:7.8pt; line-height:1.35; text-align:center; margin:8px 0;">
+            Eu responsável por autorizar a colheita estou ciente que entendi e estou cumprindo a legislação em vigor.
+          </div>
+
+          <div style="text-align:right; margin-top:40px; padding-right:15px;">
+            <div style="display:inline-block; width:340px; border-top:1px solid #000; text-align:center; padding-top:5px; font-size:9pt; font-weight:bold;">
+              CARIMBO - ASSINATURA
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function getOC05Html() {
+      let rowsHtml = `
+        <tr>
+          <td style="border:1px solid #000; padding:2px; text-align:center; font-size:7.2pt"></td>
+          <td style="border:1px solid #000; padding:2px; text-align:center; font-size:7.2pt"></td>
+          <td style="border:1px solid #000; padding:2px; text-align:center; font-size:7.2pt">Graduate A+</td>
+          <td style="border:1px solid #000; padding:2px; text-align:center; font-size:7.2pt; color:#d32f2f">Azoxistrobina + Fludioxonil</td>
+          <td style="border:1px solid #000; padding:2px; text-align:center; font-size:7.2pt">0,00</td>
+          <td style="border:1px solid #000; padding:2px; text-align:center; font-size:7.2pt">0,00</td>
+          <td style="border:1px solid #000; padding:2px; text-align:center; font-size:7.2pt">ND</td>
+          <td style="border:1px solid #000; padding:2px; text-align:center; font-size:7.2pt; color:#d32f2f; font-weight:bold">Antracnose</td>
+          <td style="border:1px solid #000; padding:2px; text-align:center; font-size:7.2pt">1 e 2</td>
+        </tr>
+      `;
+
+      for (let i = 0; i < 11; i++) {
+        rowsHtml += `
+          <tr>
+            <td style="border:1px solid #000; height:18px; padding:2px"></td>
+            <td style="border:1px solid #000; padding:2px"></td>
+            <td style="border:1px solid #000; padding:2px"></td>
+            <td style="border:1px solid #000; padding:2px"></td>
+            <td style="border:1px solid #000; padding:2px"></td>
+            <td style="border:1px solid #000; padding:2px"></td>
+            <td style="border:1px solid #000; padding:2px"></td>
+            <td style="border:1px solid #000; padding:2px"></td>
+            <td style="border:1px solid #000; padding:2px"></td>
+          </tr>
+        `;
+      }
+
+      return `
+        <div class="sheet-wrapper a4-landscape">
+          <!-- CABEÇALHO -->
+          <table style="width:100%; border-collapse:collapse; border:1.5px solid #000; margin-bottom:6px;">
+            <tr>
+              <td style="width:35%; border:1px solid #000; padding:3px 6px; font-size:6.8pt; line-height:1.3; vertical-align:top;">
+                <strong>ELABORADO, EMITIDO E REVISADO POR:</strong> EMANUELA MOREIRA<br/>
+                Avaliado por: ADGF<br/>
+                Aprovado Por: ADGF<br/>
+                <strong>FREQUÊNCIA:</strong> DEACORDO COM A EMBALAGEM
+              </td>
+              <td style="width:20%; border:1px solid #000;"></td>
+              <td style="width:45%; border:1px solid #000; padding:3px 6px; font-size:6.5pt; line-height:1.35; vertical-align:top;">
+                <strong>DEPARTAMENTO:</strong> PACKING - HOUSE<br/>
+                <strong>NOME DO DOC:</strong> REGISTRO DE TRATAMENTO PÓS COLHEITA<br/>
+                <strong>EMISSÃO:</strong> 15/06/2026 &nbsp; <strong>MOD. E APROVAÇÃO:</strong> 01/07/2026 &nbsp; <strong>U. REVISÃO:</strong> 01/07/2026<br/>
+                <strong>PAG:</strong> 01 DE 01 &nbsp;\\&nbsp; <strong>COD:</strong> OC:05 &nbsp;\\&nbsp; <strong>REVISÃO:</strong> ANUAL &nbsp;\\&nbsp; <strong>VERSÃO:</strong> 01
+              </td>
+            </tr>
+          </table>
+
+          <div style="color:#d32f2f; font-weight:bold; font-size:11pt; text-align:center; text-transform:uppercase; margin:4px 0 6px 0; letter-spacing:0.5px;">
+            ORDEM E REGISTRO DE TRATAMENTO PÓS-COLHEITA
+          </div>
+
+          <div style="width:100%; margin-bottom:6px; font-size:7.5pt; line-height:1.6;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+              <div><strong>NOME DA EMPRESA:</strong> &nbsp;&nbsp; <u>DINA DINAMARCA INDUSTRIAL AGRÍCOLA LTDA</u></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+              <div style="width:35%"><strong>PARCELA:</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>10</strong></div>
+              <div style="width:65%"><strong>PRODUTO/ VARIEDADE:</strong> &nbsp;&nbsp;&nbsp;&nbsp; <span style="color:#d32f2f; font-weight:bold">JADEAL, GOLDEX, GRAND PRIX, ASTURIA, GOLDMINE</span></div>
+            </div>
+            <div style="margin-bottom:2px;">
+              <strong>CULTURA:</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span style="color:#d32f2f; font-weight:bold">Melão</span>
+            </div>
+            <div>
+              Tratamento realizado conforme recomendação do responsável técnico. Local: Packing House, pós embalagem.
+            </div>
+          </div>
+
+          <!-- TABELA CONTÍNUA -->
+          <table style="width:100%; border-collapse:collapse; margin-bottom:6px;">
+            <thead>
+              <tr>
+                <th rowspan="2" style="border:1px solid #000; padding:2px 4px; font-size:7pt; background:#fff; font-weight:bold; text-align:center; width:8%;">Data da<br/>Aplicação</th>
+                <th rowspan="2" style="border:1px solid #000; padding:2px 4px; font-size:7pt; background:#fff; font-weight:bold; text-align:center; width:8%;">Quantidade<br/>de Carroções</th>
+                <th colspan="2" style="border:1px solid #000; padding:2px 4px; font-size:7pt; background:#fff; font-weight:bold; text-align:center; width:32%;">Produto Utilizado</th>
+                <th colspan="2" style="border:1px solid #000; padding:2px 4px; font-size:7pt; background:#fff; font-weight:bold; text-align:center; width:18%;">Quantidade Utilizada</th>
+                <th rowspan="2" style="border:1px solid #000; padding:2px 4px; font-size:7pt; background:#fff; font-weight:bold; text-align:center; width:7%;">Carência<br/>(dias)</th>
+                <th rowspan="2" style="border:1px solid #000; padding:2px 4px; font-size:7pt; background:#fff; font-weight:bold; text-align:center; width:17%;">Justificativa.<br/>Controle</th>
+                <th rowspan="2" style="border:1px solid #000; padding:2px 4px; font-size:7pt; background:#fff; font-weight:bold; text-align:center; width:10%;">Nº dos<br/>aplicadores</th>
+              </tr>
+              <tr>
+                <th style="border:1px solid #000; padding:2px 4px; font-size:7pt; background:#fff; font-weight:bold; text-align:center; width:14%;">Nome Comercial</th>
+                <th style="border:1px solid #000; padding:2px 4px; font-size:7pt; background:#fff; font-weight:bold; text-align:center; width:18%;">Ingrediente ativo</th>
+                <th style="border:1px solid #000; padding:2px 4px; font-size:7pt; background:#fff; font-weight:bold; text-align:center; width:9%;">(mL de Produto)</th>
+                <th style="border:1px solid #000; padding:2px 4px; font-size:7pt; background:#fff; font-weight:bold; text-align:center; width:9%;">(L de Água)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+
+          <!-- RECOMENDAÇÃO TÉCNICA -->
+          <table style="width:100%; border:1.5px solid #000; border-collapse:collapse; margin-bottom:6px;">
+            <tr>
+              <td style="width:40%; border:1px solid #000; padding:4px 8px; font-size:7.5pt; vertical-align:top; line-height:1.4;">
+                <strong>Recomendação Técnica:</strong><br/>
+                <strong>- Melão/Melancia:</strong> Graduate A+: 4 mL de produto comercial para 01 Litro de água
+              </td>
+              <td style="width:60%; border:1px solid #000; padding:4px 8px; font-size:7.5pt; vertical-align:top; line-height:1.4;">
+                <strong>Local de aplicação:</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Pendúnculo do fruto<br/>
+                <strong>Método de aplicação:</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Pincelamento<br/>
+                <strong>Maquinário utilizado:</strong> &nbsp;&nbsp;&nbsp;&nbsp; Garrafas plásticas com esponja na extremidade.
+              </td>
+            </tr>
+          </table>
+
+          <!-- ASSINATURAS -->
+          <div style="width:100%; border:1px solid #000; padding:4px 8px; font-size:7.5pt; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="width:48%"><strong>Nome do Manipulador:</strong> &nbsp;&nbsp; ELENILSON ALVES DE SOUSA</div>
+            <div style="width:48%"><strong>Assinatura:</strong> __________________________________________________</div>
+          </div>
+          <div style="width:100%; border:1px solid #000; padding:4px 8px; font-size:7.5pt; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="width:48%"><strong>Nome do Responsável Técnico:</strong> &nbsp;&nbsp; VALERIANO DANTAS/FRANCISCO CANINDÉ</div>
+            <div style="width:48%"><strong>Assinatura:</strong> __________________________________________________</div>
+          </div>
+
+          <!-- APLICADORES E SOBRAS -->
+          <div style="width:100%; display:flex; gap:10px; margin-top:4px;">
+            <div style="width:45%">
+              <div style="font-weight:bold; font-size:7pt; margin-bottom:2px">Identificação dos Aplicadores</div>
+              <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                  <tr>
+                    <th style="border:1px solid #000; padding:2px 6px; font-size:7pt; text-align:center; width:25%">Nº</th>
+                    <th style="border:1px solid #000; padding:2px 6px; font-size:7pt; text-align:center; width:75%">Nome do Aplicador</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="border:1px solid #000; padding:2px 6px; font-size:7pt; text-align:center">1</td>
+                    <td style="border:1px solid #000; padding:2px 6px; font-size:7pt; text-align:center">ANTONIO KERGINILDO</td>
+                  </tr>
+                  <tr>
+                    <td style="border:1px solid #000; padding:2px 6px; font-size:7pt; text-align:center">2</td>
+                    <td style="border:1px solid #000; padding:2px 6px; font-size:7pt; text-align:center">ERICO VICTOR</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div style="width:55%; border:1px solid #000; padding:8px; font-size:7.5pt; display:flex; align-items:center; justify-content:center; text-align:center;">
+              <strong>SOBRAS DE MISTURA, GUARDAR EM LOCAL SEGURO, ADEQUADO E IDENTIFICADO.</strong>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Inicialização
+    window.addEventListener('DOMContentLoaded', () => {
+      renderCurrentDoc();
+    });
+  </script>
+</body>
+</html>
