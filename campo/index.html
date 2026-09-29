@@ -2068,7 +2068,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   <div class="form-field">
   <label class="field-label">N° IDIARN (auto)</label>
   <div style="display:flex;gap:4px;align-items:center">
-  <input id="idiarnNumero" type="number" placeholder="—" style="font-size:14px;font-weight:800;color:var(--orange)" readonly>
+  <input id="idiarnNumero" type="number" placeholder="—" style="font-size:14px;font-weight:800;color:var(--orange)">
   <button onclick="reloadIdiarnNumber()" style="flex-shrink:0;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:6px;cursor:pointer;color:var(--muted)"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i></button>
   </div>
   </div>
@@ -4307,70 +4307,88 @@ let varieties = [];
   }
 
   async function reloadIdiarnNumber() {
-  const ciclo = ($('idiarnCiclo') || {}).value || '';
-  if (!ciclo) { 
-  if ($('idiarnNumero')) $('idiarnNumero').value = '';
-  return;
-  }
-  try {
-  const { data } = await sb.from('caderno_campo_idiarn')
-  .select('numero_idiarn')
-  .eq('tenant_id', tenantId)
-  .eq('safra_ciclo', ciclo)
-  .order('numero_idiarn', { ascending: false })
-  .limit(1);
-  
-  const last = data && data[0] ? data[0].numero_idiarn : 0;
-  const next = (last >= 100) ? 1 : (last + 1);
-  if ($('idiarnNumero')) $('idiarnNumero').value = next;
-  } catch(e) {
-  console.warn('Não foi possível buscar próximo número IDIARN:', e);
-  }
+    const ciclo = ($('idiarnCiclo') || {}).value || '';
+    try {
+      let query = sb.from('caderno_campo_idiarn')
+        .select('numero_idiarn')
+        .eq('tenant_id', tenantId)
+        .order('numero_idiarn', { ascending: false })
+        .limit(1);
+      
+      if (ciclo) {
+        query = query.eq('safra_ciclo', ciclo);
+      }
+      
+      const { data } = await query;
+      
+      const last = data && data[0] ? (parseInt(data[0].numero_idiarn, 10) || 0) : 0;
+      let next = 1;
+      if (last > 0) {
+        if (last >= 100) {
+          next = 1;
+        } else {
+          next = last + 1;
+        }
+      }
+      if ($('idiarnNumero')) $('idiarnNumero').value = next;
+    } catch(e) {
+      console.warn('Não foi possível buscar próximo número IDIARN:', e);
+    }
   }
 
   async function onIdiarnParcelChange() {
-  const pId = $('idiarnParcelSelect').value;
-  if (!pId) {
-  $('idiarnArea').value = '';
-  $('idiarnVariedade').value = '';
-  const chipsEl = $('idiarnOpChips');
-  if (chipsEl) chipsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);font-style:italic">Selecione uma parcela para carregar as aplicações...</div>';
-  const mipSec = $('idiarnMipSection');
-  if (mipSec) mipSec.style.display = 'none';
-  idiarnSelectedProducts = new Set();
-  autoGenerateIdiarnDoc();
-  return;
-  }
-  
-  const pObj = parcelas.find(p => p.id == pId);
-  if (!pObj) return;
-  
-  // Auto-fill area and variety from infoParcelasData cache
-  const info = (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code);
-  $('idiarnArea').value = info ? (info.area || '') : '';
-  $('idiarnVariedade').value = info ? (info.variedade || '') : '';
-  if (info && (info.safra_ciclo || info.ano)) {
-  $('idiarnCiclo').value = info.safra_ciclo || info.ano;
-  } else if (!$('idiarnCiclo').value) {
-  $('idiarnCiclo').value = '2026/2027';
-  }
-  
-  // Auto-generate document name
-  autoGenerateIdiarnDoc();
+    const pId = $('idiarnParcelSelect').value;
+    if (!pId) {
+      $('idiarnArea').value = '';
+      $('idiarnVariedade').value = '';
+      const chipsEl = $('idiarnOpChips');
+      if (chipsEl) chipsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);font-style:italic">Selecione uma parcela para carregar as aplicações...</div>';
+      const mipSec = $('idiarnMipSection');
+      if (mipSec) mipSec.style.display = 'none';
+      idiarnSelectedProducts = new Set();
+      await autoGenerateIdiarnDoc();
+      return;
+    }
+    
+    const pObj = parcelas.find(p => p.id == pId);
+    if (!pObj) return;
+    
+    // Auto-fill area and variety from infoParcelasData cache
+    const info = (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code);
+    $('idiarnArea').value = info ? (info.area || '') : '';
+    $('idiarnVariedade').value = info ? (info.variedade || '') : '';
+    if (info && (info.safra_ciclo || info.ano)) {
+      $('idiarnCiclo').value = info.safra_ciclo || info.ano;
+    } else if (!$('idiarnCiclo').value) {
+      $('idiarnCiclo').value = '2026/2027';
+    }
+    
+    // Auto-generate document name
+    await autoGenerateIdiarnDoc();
 
-  // Fetch OPs and MIPs from the last 7 days for this parcel
-  await loadIdiarnAutoProducts(pId, pObj.code);
+    // Fetch OPs and MIPs from the last 7 days for this parcel
+    await loadIdiarnAutoProducts(pId, pObj.code);
   }
 
-  function autoGenerateIdiarnDoc() {
-  const pSel = $('idiarnParcelSelect');
-  const numEl = $('idiarnNumero');
-  const docEl = $('idiarnDocumento');
-  const pCode = pSel && pSel.options[pSel.selectedIndex] ? pSel.options[pSel.selectedIndex].text : '';
-  const num = numEl ? numEl.value : '1';
-  if (pCode && docEl && !docEl.value) {
-  docEl.value = `IDIARN ${num} - ${pCode} - VISITA 1`;
-  }
+  async function autoGenerateIdiarnDoc() {
+    const pSel = $('idiarnParcelSelect');
+    const numEl = $('idiarnNumero');
+    const docEl = $('idiarnDocumento');
+    const pCode = pSel && pSel.options[pSel.selectedIndex] ? pSel.options[pSel.selectedIndex].text : '';
+    const num = numEl ? numEl.value : '50';
+    if (pCode && docEl) {
+      let visitNum = 1;
+      if (typeof isOnline !== 'undefined' && isOnline && tenantId) {
+        try {
+          const { count } = await sb.from('caderno_campo_idiarn')
+            .select('id', { count: 'exact', head: true })
+            .eq('tenant_id', tenantId)
+            .eq('parcela', pCode);
+          if (typeof count === 'number') visitNum = count + 1;
+        } catch(e){}
+      }
+      docEl.value = `IDIARN ${num} - ${pCode} - VISITA ${visitNum}`;
+    }
   }
 
   async function loadIdiarnAutoProducts(parcelId, parcelCode) {

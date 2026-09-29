@@ -21371,14 +21371,24 @@ async function reloadNewIdiarnNumber() {
         });
       }
     }
-    const nextNum = maxNum > 0 ? (maxNum + 1) : 1;
+    // O livro IDIARN tem páginas de 1 a 100 no ciclo/livro.
+    // Quando chega a 100 (ou se 0), a nova página inicia em 1. Se maxNum está entre 1 e 99, avança +1.
+    let nextNum = 1;
+    if (maxNum > 0) {
+      if (maxNum >= 100) {
+        nextNum = 1;
+      } else {
+        nextNum = maxNum + 1;
+      }
+    }
     if ($('newIdiarnNumero')) $('newIdiarnNumero').value = nextNum;
     return nextNum;
   } catch(e) {
     console.warn('Erro ao calcular próximo número IDIARN:', e);
-    const fallback = (_currentIdiarnVisitas && _currentIdiarnVisitas.length > 0)
-      ? Math.max(0, ..._currentIdiarnVisitas.map(v => parseInt(v.numero_idiarn, 10) || 0)) + 1
-      : 1;
+    const maxNum = (_currentIdiarnVisitas && _currentIdiarnVisitas.length > 0)
+      ? Math.max(0, ..._currentIdiarnVisitas.map(v => parseInt(v.numero_idiarn, 10) || 0))
+      : 0;
+    const fallback = (maxNum >= 100) ? 1 : maxNum + 1;
     if ($('newIdiarnNumero')) $('newIdiarnNumero').value = fallback;
     return fallback;
   }
@@ -21406,9 +21416,20 @@ async function onNewIdiarnParcelChange() {
   if (ip.idiarn) $('newIdiarnCodUp').value = ip.idiarn;
   if (ip.fornecedor || ip.origem) $('newIdiarnOrigemMuda').value = ip.fornecedor || ip.origem || 'TOPPLANT';
   
-  const num = $('newIdiarnNumero')?.value || '1';
-  const prevVisits = (_currentIdiarnVisitas || []).filter(v => (v.parcela || '').trim().toUpperCase() === parcelCode.trim().toUpperCase());
-  const visitIndex = prevVisits.length + 1;
+  const num = $('newIdiarnNumero')?.value || '50';
+  let prevVisitsCount = (_currentIdiarnVisitas || []).filter(v => (v.parcela || '').trim().toUpperCase() === parcelCode.trim().toUpperCase()).length;
+  if (tenantId) {
+    try {
+      const { count } = await sb.from('caderno_campo_idiarn')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .eq('parcela', parcelCode);
+      if (typeof count === 'number' && count > prevVisitsCount) {
+        prevVisitsCount = count;
+      }
+    } catch(e){}
+  }
+  const visitIndex = prevVisitsCount + 1;
   $('newIdiarnDocumento').value = `IDIARN ${num} - ${parcelCode} - VISITA ${visitIndex}`;
 
   // Carregar pulverizações (O.Ps) desta parcela
@@ -21636,10 +21657,15 @@ function collectIdiarnFormData() {
   const ip = getParcelaCompleteInfo(pId, _infoParcelas);
   const pCode = ip ? (ip.parcela2 || ip.parcela) : 'PARCELA';
 
+  const docStr = $('newIdiarnDocumento')?.value || '';
+  const matchVisita = docStr.match(/VISITA\s+(\d+)/i);
+  let visitaParcela = matchVisita ? parseInt(matchVisita[1], 10) : 1;
+
   return {
     pId: pId,
     pCode: pCode,
-    numeroLivro: $('newIdiarnNumero')?.value || '1',
+    numeroLivro: $('newIdiarnNumero')?.value || '50',
+    visitaParcela: visitaParcela,
     dataVisita: $('newIdiarnDate')?.value || today(),
     safraCiclo: $('newIdiarnCiclo')?.value || '2026/2027',
     codUp: $('newIdiarnCodUp')?.value || '24.0803.5814.26.0067',
@@ -22407,8 +22433,22 @@ async function printOfficialIdiarnBook(dataOrParcela) {
   };
 
   const pCode = doc.pCode || doc.parcela || '262 M';
-  const rawNumLivro = doc.numeroLivro || doc.numero_idiarn || '49';
+  const rawNumLivro = doc.numeroLivro || doc.numero_idiarn || '50';
   const numeroLivro = String(rawNumLivro).padStart(3, '0');
+  
+  // Extrair número da visita da parcela
+  let visitaParcela = doc.visitaParcela || doc.visita_parcela || doc.visita_num;
+  if (!visitaParcela && (doc.documento || doc.documento_nome)) {
+    const matchV = (doc.documento || doc.documento_nome).match(/VISITA\s+(\d+)/i);
+    if (matchV) visitaParcela = parseInt(matchV[1], 10);
+  }
+  if (!visitaParcela && typeof dataOrParcela === 'string') {
+    const pVisits = (_currentIdiarnVisitas || []).filter(v => (v.parcela || '').trim().toUpperCase() === dataOrParcela.trim().toUpperCase());
+    visitaParcela = pVisits.length || 1;
+  }
+  if (!visitaParcela) visitaParcela = 1;
+  const visitaParcelaFmt = String(visitaParcela).padStart(2, '0');
+
   const dataVisita = doc.dataVisita || doc.data_aplicacao || today();
   const dataVisitaFmt = formatVisitaDate(dataVisita);
   const rtNome = doc.rtNome || 'IVANOSCA MARTINS DE OLIVEIRA CUNHA';
@@ -22629,8 +22669,8 @@ table.main-idiarn td, table.main-idiarn th { border: 1px solid #000; padding: 2p
         <span class="lbl">NOME:</span><br>
         <span class="val">${rtNome}</span>
       </td>
-      <td style="width:12%; text-align:center; vertical-align:middle; font-size:11pt; font-weight:bold">
-        02
+      <td style="width:12%; text-align:center; vertical-align:middle; font-size:11pt; font-weight:bold" title="Visita da Parcela">
+        ${visitaParcelaFmt}
       </td>
     </tr>
     <tr>
