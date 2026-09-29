@@ -20387,15 +20387,14 @@ function addNewOpItem() {
       }
     }
 
-    // 2. Trava de Duplicados por Praga/Alvo na mesma calda (apenas para defensivos químicos da mesma praga)
-    if (targetAlvo) {
-      const alreadyHasAlvo = _newOpItems.some(item => {
-        const itemCleanAlvo = (item.alvo || '').trim().toUpperCase();
-        const itemIsFol = item.is_foliar || itemCleanAlvo.includes('ADUBO') || itemCleanAlvo.includes('FOLIAR') || itemCleanAlvo.includes('NUTRI');
-        return !itemIsFol && itemCleanAlvo === targetAlvo.trim().toUpperCase();
+    // 2. Trava para evitar adicionar o MESMO produto duplicado na mesma calda
+    if (def && def.produto) {
+      const alreadyHasSameProduct = _newOpItems.some(item => {
+        if (def.id && item.produto_id && item.produto_id === def.id) return true;
+        return (item.produto_nome || '').trim().toUpperCase() === (def.produto || '').trim().toUpperCase();
       });
-      if (alreadyHasAlvo) {
-        alert(`Trava de Auditoria: Você não pode aplicar dois defensivos químicos para a mesma praga/alvo (${targetAlvo}) na mesma calda!`);
+      if (alreadyHasSameProduct) {
+        alert(`O produto "${def.produto}" já foi adicionado a esta calda!`);
         return;
       }
     }

@@ -7704,11 +7704,14 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
   const alvo = isFoliar ? 'ADUBO FOLIAR' : (document.getElementById('opAddAlvo').value || def.alvo || '');
   const carencia = parseInt(document.getElementById('opAddCarencia').value) || def.carencia_dias || 0;
   
-  // Validação 1: Duplicados por Praga/Alvo (apenas para defensivos)
-  if (!isFoliar && alvo) {
-    const alreadyHasAlvo = opItems.some(item => !item.isFoliar && (item.alvo || '').trim().toUpperCase() === alvo.trim().toUpperCase());
-    if (alreadyHasAlvo) {
-      alert(`Você não pode aplicar dois defensivos para a mesma praga/alvo (${alvo}) na mesma calda!`);
+  // Validação 1: Duplicado do MESMO produto na mesma calda
+  if (def && def.produto) {
+    const alreadyHasSameProduct = opItems.some(item => {
+      if (def.id && item.produto_id && item.produto_id === def.id) return true;
+      return (item.produto_nome || '').trim().toUpperCase() === (def.produto || '').trim().toUpperCase();
+    });
+    if (alreadyHasSameProduct) {
+      alert(`O produto "${def.produto}" já foi adicionado a esta calda!`);
       return;
     }
   }
