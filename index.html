@@ -4799,6 +4799,8 @@ function updateThemeUI(theme) {
 const SUPA_URL = 'https://yiigaohjvvieeooxsban.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpaWdhb2hqdnZpZWVvb3hzYmFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MTY1NzksImV4cCI6MjA5MDE5MjU3OX0.CjzcyltkTXHsi0zO7IL-sb5Psy7yMTAnJ7GRQ4maFK8';
 const COLS = ['#2f8f5b', '#4f7cac', '#d9a441', '#8f86d9', '#d9685f', '#3ea5a5', '#c98b5a', '#6b7f75', '#7bbf8e', '#a8b5ad'];
+const esc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const escJs = v => esc(String(v ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,' '));
 const BRL = v => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v||0);
 const TOPTS = {backgroundColor:'#1e293b',padding:10,cornerRadius:8,titleColor:'#fff',bodyColor:'#94a3b8'};
 const MEDALS = ['','',''];
@@ -5553,18 +5555,18 @@ async function loadEmps(){
   if(tbody) {
   tbody.innerHTML=_employees.map(e=>`
   <tr>
-  <td><code style="background:rgba(255,255,255,.05);padding:2px 6px;border-radius:5px;font-size:12px">${e.barcode||'—'}</code></td>
+  <td><code style="background:rgba(255,255,255,.05);padding:2px 6px;border-radius:5px;font-size:12px">${esc(e.barcode||'—')}</code></td>
   <td>
   <div style="display:flex;align-items:center;gap:10px">
-  <div class="avatar-ring" style="position:relative">${safePhotoUrl(e.photo_path) ? `<img src="${safePhotoUrl(e.photo_path)}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : ''}${e.name[0]}</div>
-  <div style="font-weight:700">${e.name}</div>
+  <div class="avatar-ring" style="position:relative">${safePhotoUrl(e.photo_path) ? `<img src="${safePhotoUrl(e.photo_path)}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : ''}${esc(e.name[0])}</div>
+  <div style="font-weight:700">${esc(e.name)}</div>
   </div>
   </td>
-  <td><span class="badge" style="background:rgba(255,255,255,.1)">${e.sector||'—'}</span></td>
-  <td><span class="badge ${e.role.toLowerCase()}">${e.role}</span></td>
+  <td><span class="badge" style="background:rgba(255,255,255,.1)">${esc(e.sector||'—')}</span></td>
+  <td><span class="badge ${esc(e.role.toLowerCase())}">${esc(e.role)}</span></td>
   <td>${e.active?'<span class="badge green">Ativo</span>':'<span class="badge red">Inativo</span>'}</td>
   <td>
-  <button class="sec" style="padding:4px 9px" onclick="openEditEmpModal('${e.id}', '${e.name}', '${e.role}', '${e.sector||''}', '${e.whatsapp||''}', '${e.barcode}', '${e.photo_path||''}')"> Editar</button>
+  <button class="sec" style="padding:4px 9px" onclick="openEditEmpModal('${e.id}', '${escJs(e.name)}', '${escJs(e.role)}', '${escJs(e.sector||'')}', '${escJs(e.whatsapp||'')}', '${escJs(e.barcode||'')}', '${escJs(e.photo_path||'')}')"> Editar</button>
   <button class="sec" style="padding:4px 9px;margin-left:4px" onclick="toggleEmpActive('${e.id}',${e.active})">${e.active?'Ativar':'Desativar'}</button>
   </td>
   </tr>
@@ -6091,7 +6093,7 @@ async function loadEmpSelectAll(){
   const sel=$(id); if(!sel)return;
   const cur=sel.value;
   sel.innerHTML='<option value="">Todos</option>';
-  _emps.forEach(e=>sel.insertAdjacentHTML('beforeend',`<option value="${e.id}">${e.name} (${e.role})</option>`));
+  _emps.forEach(e=>sel.insertAdjacentHTML('beforeend',`<option value="${e.id}">${esc(e.name)} (${esc(e.role)})</option>`));
   sel.value=cur;
   });
 }
