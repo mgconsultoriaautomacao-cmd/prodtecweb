@@ -6797,10 +6797,10 @@ async function loadBulk() {
   $('bulkTable').querySelector('tbody').innerHTML = (data||[]).map(b => `
   <tr>
   <td>${b.date}</td>
-  <td>${b.parcels?.code || '—'}</td>
+  <td>${esc(b.parcels?.code || '—')}</td>
   <td>${b.fruit_type === 'MELANCIA' ? 'Melancia' : 'Melão'}</td>
-  <td>${b.customer_name || '—'}</td>
-  <td>${b.invoice_num || '—'}</td>
+  <td>${esc(b.customer_name || '—')}</td>
+  <td>${esc(b.invoice_num || '—')}</td>
   <td><span class="badge ${b.is_waste?'danger':'packer'}">${b.weight_kg} kg</span></td>
   <td>${b.is_waste ? '—' : BRL(b.total_value)}</td>
   <td>
@@ -6829,7 +6829,7 @@ async function loadBulk() {
   bulkParcelEl.innerHTML = '<option value="">— Selecionar Parcela —</option>' + (_infoParcelas || []).map(p => {
   const pCode = p.parcela2 || p.parcela || p.letra;
   const varStr = p.variedade ? ` (${p.variedade})` : '';
-  return `<option value="${p.id}">${pCode}${varStr}</option>`;
+  return `<option value="${p.id}">${esc(pCode)}${esc(varStr)}</option>`;
   }).join('');
   bulkParcelEl.value = current;
   }
@@ -6839,7 +6839,7 @@ async function loadBulk() {
   const current = massParcelEl.value;
   massParcelEl.innerHTML = '<option value="">Todas</option>' + (_infoParcelas || []).map(p => {
   const pCode = p.parcela2 || p.parcela || p.letra;
-  return `<option value="${p.id}">${pCode}</option>`;
+  return `<option value="${p.id}">${esc(pCode)}</option>`;
   }).join('');
   massParcelEl.value = current;
   }
@@ -6847,7 +6847,7 @@ async function loadBulk() {
   const bVar = $('bulkVariety');
   if(bVar) {
   const current = bVar.value;
-  bVar.innerHTML = '<option value="">— Selecionar —</option>' + (varieties||[]).map(v=>`<option value="${v.id}">${v.name}</option>`).join('');
+  bVar.innerHTML = '<option value="">— Selecionar —</option>' + (varieties||[]).map(v=>`<option value="${v.id}">${esc(v.name)}</option>`).join('');
   bVar.value = current;
   }
 }
