@@ -14392,11 +14392,11 @@ function renderInfoParcelasTable(list) {
   return `
   <tr style="border-bottom: 1px solid var(--border); font-size:13px">
   <td style="padding:10px 8px">
-  <strong>${item.parcela2 || item.parcela || '—'}</strong>
+  <strong>${esc(item.parcela2 || item.parcela || '—')}</strong>
   </td>
   <td style="padding:10px 8px">
-  <span class="badge" style="background:rgba(59,130,246,0.1); color:var(--blue); font-size:10px">${item.cultura || '—'}</span>
-  <div style="font-weight:600; margin-top:2px">${item.variedade || '—'}</div>
+  <span class="badge" style="background:rgba(59,130,246,0.1); color:var(--blue); font-size:10px">${esc(item.cultura || '—')}</span>
+  <div style="font-weight:600; margin-top:2px">${esc(item.variedade || '—')}</div>
   </td>
   <td style="padding:10px 8px">
   ${(item.area || '—') + ' ha'}<br/>
@@ -14405,8 +14405,8 @@ function renderInfoParcelasTable(list) {
   <td style="padding:10px 8px">${item.plantio || '—'}</td>
   <td style="padding:10px 8px; color:var(--yellow); font-weight:600">${item.previsao_colheita || '—'}</td>
   <td style="padding:10px 8px">
-  <div style="font-size:11px">${item.fornecedor || '—'}</div>
-  <small style="color:var(--muted)">Lote: ${item.lote || '—'}</small>
+  <div style="font-size:11px">${esc(item.fornecedor || '—')}</div>
+  <small style="color:var(--muted)">Lote: ${esc(item.lote || '—')}</small>
   </td>
   <td style="padding:10px 8px; text-align:right; white-space:nowrap">
   <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoCapa('${item.id}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Capa (PC01)</button>
@@ -15136,11 +15136,11 @@ function renderWebPlantiosTable(data) {
   return `
   <tr style="border-bottom:1px solid var(--border); opacity:${isAtivo ? 1 : 0.6}">
   <td style="padding:12px; text-align:center"><input type="checkbox" class="chkPlantioCapa" value="${p.id}" style="width:16px; height:16px; cursor:pointer"/></td>
-  <td style="padding:12px; font-weight:800; color:var(--text)">${p.parcela2 || p.parcela || '—'}</td>
+  <td style="padding:12px; font-weight:800; color:var(--text)">${esc(p.parcela2 || p.parcela || '—')}</td>
   <td style="padding:12px">${cultBadge(p.cultura)}</td>
   <td style="padding:12px">
   <div style="display:flex; flex-wrap:wrap; gap:4px">
-  ${vars.map(v => `<span style="font-size:11px; background:rgba(16,185,129,0.08); color:var(--green); border:1px solid rgba(16,185,129,0.2); padding:2px 7px; border-radius:6px; font-weight:600">${v}</span>`).join('')}
+  ${vars.map(v => `<span style="font-size:11px; background:rgba(16,185,129,0.08); color:var(--green); border:1px solid rgba(16,185,129,0.2); padding:2px 7px; border-radius:6px; font-weight:600">${esc(v)}</span>`).join('')}
   </div>
   </td>
   <td style="padding:12px; text-align:center; font-weight:700">${p.area ? p.area + ' ha' : '—'}</td>
@@ -15150,8 +15150,8 @@ function renderWebPlantiosTable(data) {
   ${diasBadge}
   </td>
   <td style="padding:12px; text-align:center; font-size:11px; color:var(--muted)">
-  ${p.idiarn ? `<div>IDIARN: <strong>${p.idiarn}</strong></div>` : ''}
-  ${p.termo ? `<div>Termo: <strong>${p.termo}</strong></div>` : ''}
+  ${p.idiarn ? `<div>IDIARN: <strong>${esc(p.idiarn)}</strong></div>` : ''}
+  ${p.termo ? `<div>Termo: <strong>${esc(p.termo)}</strong></div>` : ''}
   ${!p.idiarn && !p.termo ? '—' : ''}
   </td>
   <td style="padding:12px; text-align:center">
@@ -16474,7 +16474,7 @@ function renderCcMipTable(list) {
     if (excedentes.length > 0) {
       statusText = 'Recomenda Controle';
       statusColor = 'rgba(239, 68, 68, 0.15); color: var(--red)';
-      pragasBadges = excedentes.map(e => `<span class="badge" style="background:rgba(239,68,68,0.2); color:var(--red); font-size:10px; margin-right:3px">${e}</span>`).join('');
+      pragasBadges = excedentes.map(e => `<span class="badge" style="background:rgba(239,68,68,0.2); color:var(--red); font-size:10px; margin-right:3px">${esc(e)}</span>`).join('');
     } else {
       pragasBadges = '<span style="color:var(--muted); font-size:11px">Todas sob controle (EMBRAPA)</span>';
     }
@@ -16482,10 +16482,10 @@ function renderCcMipTable(list) {
     return `
     <tr style="border-bottom:1px solid var(--border); font-size:13px">
       <td style="padding:12px 10px; font-weight:700">${formattedDate}</td>
-      <td style="padding:12px 10px; font-weight:800; color:var(--green)">${item.parcela || '—'}</td>
-      <td style="padding:12px 10px">${item.variedade || '—'}</td>
+      <td style="padding:12px 10px; font-weight:800; color:var(--green)">${esc(item.parcela || '—')}</td>
+      <td style="padding:12px 10px">${esc(item.variedade || '—')}</td>
       <td style="padding:12px 10px">${pragasBadges}</td>
-      <td style="padding:12px 10px; font-size:11px; color:var(--muted)">${item.responsavel_mip || item.tecnico || 'David Ferreira'}</td>
+      <td style="padding:12px 10px; font-size:11px; color:var(--muted)">${esc(item.responsavel_mip || item.tecnico || 'David Ferreira')}</td>
       <td style="padding:12px 10px; text-align:center">
         <span class="badge" style="background:${statusColor}; font-size:11px">${statusText}</span>
       </td>
