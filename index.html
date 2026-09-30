@@ -23708,16 +23708,16 @@ function renderEstoqueDefensivosTable(list) {
       : '<span class="pill" style="background:rgba(16,185,129,0.15);color:var(--green);font-weight:bold"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;margin-right:4px"></span> Disponível</span>';
     
     const catBadge = '<span class="badge" style="background:rgba(59,130,246,0.15); color:var(--blue); font-size:10px; font-weight:800; border:1px solid rgba(59,130,246,0.3)">🛡️ DEFENSIVO</span>';
-    const safeProd = item.produto.replace(/'/g, "\\'");
+    const safeProd = escJs(item.produto);
 
     return `
     <tr style="border-bottom:1px solid var(--border); font-size:13px; transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
-      <td style="padding:12px 10px; font-weight:800; color:#fff">${item.produto}</td>
-      <td style="padding:12px 10px">${catBadge} <span style="font-size:11px; color:var(--muted); margin-left:6px">${item.ingrediente || '—'}</span></td>
+      <td style="padding:12px 10px; font-weight:800; color:#fff">${esc(item.produto)}</td>
+      <td style="padding:12px 10px">${catBadge} <span style="font-size:11px; color:var(--muted); margin-left:6px">${esc(item.ingrediente || '—')}</span></td>
       <td style="padding:12px 10px; text-align:center; color:var(--green); font-weight:700">+ ${item.entradas.toFixed(2)}</td>
       <td style="padding:12px 10px; text-align:center; color:var(--orange); font-weight:700">- ${item.saidas.toFixed(2)}</td>
       <td style="padding:12px 10px; text-align:center; font-weight:900; font-size:14px; color:${saldo<=0?'var(--red)':'#fff'}">${saldo.toFixed(2)}</td>
-      <td style="padding:12px 10px; text-align:center; color:var(--muted)">${item.unidade}</td>
+      <td style="padding:12px 10px; text-align:center; color:var(--muted)">${esc(item.unidade)}</td>
       <td style="padding:12px 10px; text-align:center">${statusPill}</td>
       <td style="padding:12px 10px; text-align:center; white-space:nowrap">
         <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:4px; color:var(--green); border-color:rgba(16,185,129,0.3)" onclick="openManualStockModal('${safeProd}', 'DEFENSIVOS')" title="Dar nova entrada deste defensivo">+ Entrada</button>
@@ -23782,16 +23782,16 @@ function renderEstoqueFoliaresTable(list) {
       : '<span class="pill" style="background:rgba(16,185,129,0.15);color:var(--green);font-weight:bold"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;margin-right:4px"></span> Disponível</span>';
     
     const catBadge = '<span class="badge" style="background:rgba(16,185,129,0.15); color:var(--green); font-size:10px; font-weight:800; border:1px solid rgba(16,185,129,0.3)">🌿 FOLIAR</span>';
-    const safeProd = item.produto.replace(/'/g, "\\'");
+    const safeProd = escJs(item.produto);
 
     return `
     <tr style="border-bottom:1px solid var(--border); font-size:13px; transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
-      <td style="padding:12px 10px; font-weight:800; color:#fff">${item.produto}</td>
-      <td style="padding:12px 10px">${catBadge} <span style="font-size:11px; color:var(--muted); margin-left:6px">${item.ingrediente || 'Garantias Nutricionais'}</span></td>
+      <td style="padding:12px 10px; font-weight:800; color:#fff">${esc(item.produto)}</td>
+      <td style="padding:12px 10px">${catBadge} <span style="font-size:11px; color:var(--muted); margin-left:6px">${esc(item.ingrediente || 'Garantias Nutricionais')}</span></td>
       <td style="padding:12px 10px; text-align:center; color:var(--green); font-weight:700">+ ${item.entradas.toFixed(2)}</td>
       <td style="padding:12px 10px; text-align:center; color:var(--orange); font-weight:700">- ${item.saidas.toFixed(2)}</td>
       <td style="padding:12px 10px; text-align:center; font-weight:900; font-size:14px; color:${saldo<=0?'var(--red)':'#fff'}">${saldo.toFixed(2)}</td>
-      <td style="padding:12px 10px; text-align:center; color:var(--muted)">${item.unidade}</td>
+      <td style="padding:12px 10px; text-align:center; color:var(--muted)">${esc(item.unidade)}</td>
       <td style="padding:12px 10px; text-align:center">${statusPill}</td>
       <td style="padding:12px 10px; text-align:center; white-space:nowrap">
         <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:4px; color:var(--green); border-color:rgba(16,185,129,0.3)" onclick="openManualStockModal('${safeProd}', 'FOLIARES')" title="Dar nova entrada deste foliar">+ Entrada</button>
