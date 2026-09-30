@@ -1,0 +1,75 @@
+/* PRODTECH — theme.css
+   Camada de aparência. Só sobrescreve estilos; não altera HTML, IDs, classes nem JavaScript.
+   Carregar por ÚLTIMO (antes de </body>). Para desfazer: remover a linha <link> do index.html. */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+:root, html[data-theme="dark"] {
+  --bg: #0e1311;  --card: #151b18;  --text: #e7ece8;  --muted: #93a29a;
+  --border: #26302b;
+  --blue: #4cc38a;  --green: #3aa872;  --accent: #4cc38a;   /* "blue" é o verde de destaque no código */
+  --red: #e5675f;  --yellow: #d9a441;  --purple: #8f86d9;  --orange: #d98450;
+  --btn-bg: #1f7a4d;  --btn-bg-hover: #26905a;
+  --r: 8px;  --glass: none;
+  --sidebar-bg: #111714;  --drawer-bg: #111714;
+  --table-header-bg: #1a221e;  --input-bg: #0e1311;
+  --card-item-bg: #1a221e;  --row-hover-bg: #1a221e;
+  --btn-sec-bg: #1a221e;  --bar-bg: #222b26;
+  --modal-bg: #151b18;  --modal-text: #e7ece8;
+  --shadow-color: rgba(0,0,0,.35);
+}
+html[data-theme="light"] {
+  --bg: #f4f6f4;  --card: #ffffff;  --text: #17201b;  --muted: #5b6a62;
+  --border: #dbe2dd;
+  --blue: #1f7a4d;  --green: #1f7a4d;  --accent: #1f7a4d;
+  --red: #c2413a;  --yellow: #b7791f;  --purple: #6d5fc7;  --orange: #c2672f;
+  --btn-bg: #1f7a4d;  --btn-bg-hover: #18653f;
+  --sidebar-bg: #ffffff;  --drawer-bg: #ffffff;
+  --table-header-bg: #eef2ef;  --input-bg: #ffffff;
+  --card-item-bg: #f4f6f4;  --row-hover-bg: #f4f7f5;
+  --btn-sec-bg: #eef2ef;  --bar-bg: #e3e9e5;
+  --modal-bg: #ffffff;  --modal-text: #17201b;
+  --shadow-color: rgba(23,32,27,.08);
+}
+
+/* Tipografia */
+html body { font-family: 'IBM Plex Sans', 'Inter', system-ui, sans-serif; background-image: none; }
+html body table, html body .kval, html body .kpi-value-pbi, html body input[type="number"] { font-variant-numeric: tabular-nums; }
+
+/* Estrutura: sem vidro, sem brilho, cantos menores */
+.sidebar { backdrop-filter: none; -webkit-backdrop-filter: none; border-right: 1px solid var(--border); }
+.auth-card { border-radius: 12px; box-shadow: 0 8px 30px var(--shadow-color); }
+.card, .kcard, .rcard, .pbi-card, .card-list-item { border-radius: var(--r); box-shadow: none; backdrop-filter: none; }
+.kcard { padding: 20px; }
+.kcard::after { display: none; }
+.kcard:hover, .rcard:hover { transform: none; }
+.card-list-item:hover { background: var(--row-hover-bg); }
+
+/* Títulos e rótulos: sem caixa alta, sem espaçamento forçado */
+.ptitle { font-size: 22px; font-weight: 600; letter-spacing: -.2px; margin-bottom: 24px; }
+.brand { font-weight: 600; letter-spacing: -.3px; }
+.klabel, thead th { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 500; color: var(--muted); }
+.kval { font-size: 28px; font-weight: 600; letter-spacing: -.3px; }
+thead th { padding: 10px 14px; }
+tbody td { padding: 10px 14px; font-size: 13px; }
+tbody tr:hover { background: var(--row-hover-bg); }
+.table-container { border-radius: var(--r); border: 1px solid var(--border); }
+
+/* Menu lateral */
+.nav { border-radius: 6px; font-weight: 500; padding: 9px 12px; }
+.nav:hover { background: var(--btn-sec-bg); color: var(--text); }
+.nav.active { background: var(--btn-sec-bg); color: var(--text); border-left: 0; border-radius: 6px; font-weight: 600; box-shadow: inset 2px 0 0 var(--blue); }
+.nav.active .nav-icon svg { color: var(--blue); }
+
+/* Botões (só os sem classe; .sec, .danger e .red mantêm o comportamento original) */
+button { border-radius: 6px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+button:not([class]) { background: var(--btn-bg); background-image: none; color: #fff; border: 0; box-shadow: none; }
+button:not([class]):hover { background: var(--btn-bg-hover); transform: none; box-shadow: none; }
+button.sec { background: var(--btn-sec-bg); border-color: var(--border); }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, .nav:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+/* Campos */
+input, select, textarea { border-radius: 6px; background: var(--input-bg); border: 1px solid var(--border); }
+input:focus, select:focus, textarea:focus { border-color: var(--blue); box-shadow: none; }
+
+/* Movimento reduzido para quem prefere */
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
