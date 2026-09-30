@@ -9406,16 +9406,16 @@ function renderRomaneioItems() {
   let cxInfo = '';
   if(it.tipo_caixa || it.peso_caixa || it.caixas_pallet) {
   cxInfo = `<div style="grid-column: 1 / -1; font-size:11px; color:var(--muted); margin-top:4px">
-  ${it.tipo_caixa ? `Caixa: ${it.tipo_caixa} | ` : ''}
+  ${it.tipo_caixa ? `Caixa: ${esc(it.tipo_caixa)} | ` : ''}
   ${it.peso_caixa ? `Peso: ${it.peso_caixa}kg | ` : ''}
   ${it.caixas_pallet ? `${it.caixas_pallet} cx/pallet` : ''}
   </div>`;
   }
   return `
   <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap:10px; background:rgba(0,0,0,0.2); padding:8px 12px; border-radius:8px; align-items:center; font-size:13px">
-  <div><b>${it.variedade}</b></div>
-  <div style="color:var(--muted2)">Lote: ${it.lote}</div>
-  <div style="color:var(--blue)">Cal: ${it.calibre || '—'}</div>
+  <div><b>${esc(it.variedade)}</b></div>
+  <div style="color:var(--muted2)">Lote: ${esc(it.lote)}</div>
+  <div style="color:var(--blue)">Cal: ${esc(it.calibre || '—')}</div>
   <div>${it.pallets} Pallets</div>
   <div style="color:var(--green); font-weight:bold">${(it.total_quilos||0).toFixed(2)} kg</div>
   <button type="button" onclick="_romaneioItems.splice(${idx},1); renderRomaneioItems();" style="background:none; border:none; color:var(--red); font-size:18px; cursor:pointer">×</button>
@@ -9447,15 +9447,15 @@ async function loadRomaneios() {
   tbody.insertAdjacentHTML('beforeend', `
   <tr>
   <td>${new Date(r.data_expedicao + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
-  <td><b>${r.cliente}</b></td>
-  <td>${r.variedade} ${r.calibre ? `<span style="color:var(--blue);font-weight:700"> (Cal. ${r.calibre})</span>` : ''}</td>
+  <td><b>${esc(r.cliente)}</b></td>
+  <td>${esc(r.variedade)} ${r.calibre ? `<span style="color:var(--blue);font-weight:700"> (Cal. ${esc(r.calibre)})</span>` : ''}</td>
   <td>${r.quantidade_pallets}</td>
   <td>${r.total_quilos} kg</td>
-  <td><span class="badge packer">${r.lote}</span></td>
-  <td>${r.fazenda}</td>
+  <td><span class="badge packer">${esc(r.lote)}</span></td>
+  <td>${esc(r.fazenda)}</td>
   <td style="text-align:right; display:flex; gap:6px; justify-content:flex-end;">
-  <button class="sec" onclick="printRomaneioLabel('${r.id}', \`${r.variedade}\`, \`${r.fazenda}\`, '${r.lote}', '${r.quantidade_pallets}', \`${r.tipo_caixa||''}\`, '${r.peso_caixa||''}', '${r.caixas_pallet||''}', '${r.data_expedicao}')" title="Gerar Etiqueta de Pallet 35x60"> Pallet</button>
-  <button class="btn" onclick="printBoxLabels('${r.id}', \`${r.variedade}\`, \`${r.fazenda}\`, '${r.lote}', '${r.quantidade_pallets}', '${r.caixas_pallet||54}', '${r.calibre||''}', '${r.tipo_caixa||''}', '${r.peso_caixa||13}', '${r.data_expedicao}')" title="Imprimir etiquetas individuais de caixa" style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:#10b981;font-size:11px;"> Caixas</button>
+  <button class="sec" onclick="printRomaneioLabel('${r.id}', '${escJs(r.variedade)}', '${escJs(r.fazenda)}', '${escJs(r.lote)}', '${r.quantidade_pallets}', '${escJs(r.tipo_caixa||'')}', '${r.peso_caixa||''}', '${r.caixas_pallet||''}', '${r.data_expedicao}')" title="Gerar Etiqueta de Pallet 35x60"> Pallet</button>
+  <button class="btn" onclick="printBoxLabels('${r.id}', '${escJs(r.variedade)}', '${escJs(r.fazenda)}', '${escJs(r.lote)}', '${r.quantidade_pallets}', '${r.caixas_pallet||54}', '${escJs(r.calibre||'')}', '${escJs(r.tipo_caixa||'')}', '${r.peso_caixa||13}', '${r.data_expedicao}')" title="Imprimir etiquetas individuais de caixa" style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:#10b981;font-size:11px;"> Caixas</button>
   <button class="btn" onclick="printRomaneioReport('${r.id}')" title="Gerar Romaneio de Expedição em PDF" style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.4);color:#3b82f6;font-size:11px;"> PDF</button>
   </td>
   </tr>
