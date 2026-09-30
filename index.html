@@ -7949,14 +7949,14 @@ async function refreshQuality() {
   return `<tr>
   <td>${new Date(q.ts).toLocaleString('pt-BR')}</td>
   <td>
-  <div class="clickable-emp" style="display:flex;align-items:center;gap:10px" onclick="openEmpDrawer('${empName}')">
-  <div class="avatar-ring">${safePhotoUrl(emp?.photo_path) ? `<img src="${safePhotoUrl(emp.photo_path)}" onerror="this.remove()">` : empName[0]}</div>
-  <b>${empName}</b>
+  <div class="clickable-emp" style="display:flex;align-items:center;gap:10px" onclick="openEmpDrawer('${escJs(empName)}')">
+  <div class="avatar-ring">${safePhotoUrl(emp?.photo_path) ? `<img src="${safePhotoUrl(emp.photo_path)}" onerror="this.remove()">` : esc(empName[0])}</div>
+  <b>${esc(empName)}</b>
   </div>
   </td>
-  <td>${q.issue_type}</td>
+  <td>${esc(q.issue_type)}</td>
   <td style="font-weight:800;color:var(--red)">${q.penalty_boxes} cx</td>
-  <td>${q.inspector_name||'--'}</td>
+  <td>${esc(q.inspector_name||'--')}</td>
   </tr>`;
   }).join('') || '<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--muted)">Nenhum registro.</td></tr>';
   
@@ -7985,10 +7985,10 @@ async function refreshQuality() {
   const emp = _employees.find(e => e.name === name);
   const photo = safePhotoUrl(emp?.photo_path);
   return `
-  <div class="pbi-card clickable-emp" onclick="openEmpDrawer('${name}')" style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(239,68,68,0.03);border-radius:12px;margin-bottom:8px;border:1px solid rgba(239,68,68,0.08)">
+  <div class="pbi-card clickable-emp" onclick="openEmpDrawer('${escJs(name)}')" style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(239,68,68,0.03);border-radius:12px;margin-bottom:8px;border:1px solid rgba(239,68,68,0.08)">
   <div style="display:flex; align-items:center; gap:10px">
-  <div class="avatar-ring" style="width:32px; height:32px; font-size:12px">${photo ? `<img src="${photo}" onerror="this.remove()">` : name[0]}</div>
-  <div style="font-weight:700;font-size:13px">${name}</div>
+  <div class="avatar-ring" style="width:32px; height:32px; font-size:12px">${photo ? `<img src="${photo}" onerror="this.remove()">` : esc(name[0])}</div>
+  <div style="font-weight:700;font-size:13px">${esc(name)}</div>
   </div>
   <div style="color:var(--red);font-weight:800; font-size:15px">${val} <span style="font-size:10px;font-weight:400">cx desc.</span></div>
   </div>
