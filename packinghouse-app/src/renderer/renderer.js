@@ -875,9 +875,9 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       const links = await window.api.parcelPairsList({ parcelId: pid });
       linkList.innerHTML = links.map(l => `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(255,255,255,0.03);margin-bottom:4px;border-radius:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--bg2);margin-bottom:4px;border-radius:6px;border:1px solid var(--border);">
           <span>${esc(l.fruitName)} &rarr; <strong>${esc(l.varietyName)}</strong></span>
-          <button type="button" class="linkDel" data-f="${l.fruitId}" data-v="${l.varietyId}">Remover</button>
+          <button type="button" class="linkDel secondary" data-f="${l.fruitId}" data-v="${l.varietyId}">Excluir</button>
         </div>
       `).join('') || '<div class="muted">Nenhum vínculo para esta parcela.</div>';
 
@@ -894,18 +894,18 @@ window.addEventListener('DOMContentLoaded', () => {
     async function refreshMappings() {
       const mappings = await window.api.barcodeMappingsList();
       mapList.innerHTML = mappings.map(m => `
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
           <div>
-            <code style="background:rgba(255,255,255,.1);padding:2px 6px;border-radius:4px;">${esc(m.barcode)}</code> &rarr; 
+            <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">${esc(m.barcode)}</code> &rarr; 
             <strong>${esc(m.employeeName)}</strong> (${esc(m.weightName)})
           </div>
-          <button type="button" class="mapDelete" data-barcode="${esc(m.barcode)}">Remover</button>
+          <button type="button" class="mapDelete secondary" data-barcode="${esc(m.barcode)}">Excluir</button>
         </div>
       `).join('') || '<div class="muted">Nenhum mapeamento.</div>';
 
       mapList.querySelectorAll('.mapDelete').forEach(btn => {
         btn.onclick = async () => {
-          if (confirm('Remover este mapeamento?')) {
+          if (confirm('Excluir este mapeamento?')) {
             await window.api.barcodeMappingsDelete({ barcode: btn.dataset.barcode });
             await refreshMappings();
           }
@@ -2011,19 +2011,19 @@ window.toggleCvViewer = function() {
           <span style="color:#ffc107;">■</span> Zona de frutas &nbsp; <span style="color:#f97316;">■</span> Zona da etiqueta/OCR
         </div>
         <div style="display:flex; gap:8px; justify-content:flex-end;">
-          <button id="cvRoiReset" style="background:#374151; color:#94a3b8; border:none; border-radius:6px; padding:5px 12px; font-size:11px; cursor:pointer; font-weight:600;">Resetar</button>
-          <button id="cvRoiSave" style="background:#ffc107; color:#000; border:none; border-radius:6px; padding:5px 14px; font-size:11px; cursor:pointer; font-weight:800;">✓ Salvar Zonas</button>
+          <button id="cvRoiReset" style="background:#26302b; color:#93a29a; border:none; border-radius:6px; padding:5px 12px; font-size:11px; cursor:pointer; font-weight:500;">Resetar</button>
+          <button id="cvRoiSave" style="background:var(--btn-bg); color:#fff; border:none; border-radius:6px; padding:5px 14px; font-size:11px; cursor:pointer; font-weight:500;">Salvar Zonas</button>
         </div>
       </div>
-      <div style="padding: 8px 10px; background: #1e293b; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid rgba(255,255,255,0.05);">
-        <span style="color: #94a3b8; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px;"><i data-lucide="video" style="width:14px;height:14px;"></i> CANAL:</span>
-        <select id="cvCameraSelect" onchange="changeCvCamera(this.value)" style="background: #0f172a; color: #fff; border: 1px solid var(--blue); border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; outline: none; flex:1;">
+      <div style="padding: 8px 10px; background: #111714; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--border);">
+        <span style="color: var(--muted); font-size: 11px; font-weight: 500; display: flex; align-items: center; gap: 4px;"><i data-lucide="video" style="width:14px;height:14px;"></i> Canal:</span>
+        <select id="cvCameraSelect" onchange="changeCvCamera(this.value)" style="background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; outline: none; flex:1;">
           <option value="0">Câmera Principal (0)</option>
           <option value="1">Câmera Auxiliar (1)</option>
           <option value="2">Câmera Auxiliar (2)</option>
           <option value="3">Câmera Auxiliar (3)</option>
         </select>
-        <button id="cvRoiToggleBtn" onclick="toggleCvRoiEditor()" title="Configurar Zonas de Leitura" style="background:#1e3a5f; border:1px solid #ffc107; color:#ffc107; border-radius:6px; padding:4px 9px; font-size:11px; cursor:pointer; font-weight:700; display:flex; align-items:center; gap:4px; white-space:nowrap;">
+        <button id="cvRoiToggleBtn" onclick="toggleCvRoiEditor()" title="Configurar Zonas de Leitura" style="background:var(--btn-sec-bg); border:1px solid var(--border); color:var(--text); border-radius:6px; padding:4px 9px; font-size:11px; cursor:pointer; font-weight:500; display:flex; align-items:center; gap:4px; white-space:nowrap;">
           <i data-lucide="crop" style="width:12px;height:12px;"></i> Zonas
         </button>
       </div>
@@ -2053,7 +2053,7 @@ window.toggleCvViewer = function() {
           img.style.display = 'block';
         };
         img.onerror = () => {
-          loading.innerHTML = '<span style="color:#ef4444; font-weight:bold; display:flex; align-items:center; gap:4px; justify-content:center;"><i data-lucide="x-circle" style="width:18px;height:18px;"></i> ERRO DE CONEXÃO</span><br><br><span style="font-size:11px;">O serviço de visão (Python) não está respondendo.</span><br><br><button onclick="window.api.cvInstallDependencies().then(r=>alert(r.message))" style="background:#3b82f6; color:#fff; border:none; padding:8px 14px; border-radius:6px; font-weight:700; font-size:11px; cursor:pointer;">⚙️ Instalar / Configurar Python e Módulos (Automático)</button>';
+          loading.innerHTML = '<span style="color:#e5675f; font-weight:bold; display:flex; align-items:center; gap:4px; justify-content:center;"><i data-lucide="x-circle" style="width:18px;height:18px;"></i> Erro de Conexão</span><br><br><span style="font-size:11px;">O serviço de visão (Python) não está respondendo.</span><br><br><button onclick="window.api.cvInstallDependencies().then(r=>alert(r.message))" style="background:var(--btn-bg); color:#fff; border:none; padding:8px 14px; border-radius:6px; font-weight:500; font-size:11px; cursor:pointer;">Instalar / Configurar Python e Módulos (Automático)</button>';
           loading.style.display = 'block';
           img.style.display = 'none';
           if (window.lucide) window.lucide.createIcons();
@@ -2254,14 +2254,14 @@ window.toggleCvRoiEditor = async function() {
           });
           if (res.ok) {
             localStorage.setItem('cv_rois', JSON.stringify(cvRois));
-            saveBtn.textContent = '✓ Salvo!';
-            saveBtn.style.background = '#22c55e';
-            setTimeout(() => { saveBtn.textContent = '✓ Salvar Zonas'; saveBtn.style.background = '#ffc107'; }, 1800);
+            saveBtn.textContent = 'Salvo!';
+            saveBtn.style.background = 'var(--btn-bg)';
+            setTimeout(() => { saveBtn.textContent = 'Salvar Zonas'; saveBtn.style.background = 'var(--btn-bg)'; }, 1800);
           }
         } catch (err) {
-          saveBtn.textContent = '✗ Erro de conexão';
-          saveBtn.style.background = '#ef4444';
-          setTimeout(() => { saveBtn.textContent = '✓ Salvar Zonas'; saveBtn.style.background = '#ffc107'; }, 2000);
+          saveBtn.textContent = 'Erro de conexão';
+          saveBtn.style.background = 'var(--red)';
+          setTimeout(() => { saveBtn.textContent = 'Salvar Zonas'; saveBtn.style.background = 'var(--btn-bg)'; }, 2000);
         }
       };
     }
@@ -2321,12 +2321,12 @@ if (window.api && window.api.onUpdateStatus) {
     }
 
     if (data.status === 'available') {
-      banner.innerHTML = `<span>🚀 <strong>Nova versão ${data.version} disponível!</strong> Baixando em segundo plano...</span>`;
+      banner.innerHTML = `<span><strong>Nova versão ${data.version} disponível!</strong> Baixando em segundo plano...</span>`;
       banner.style.display = 'flex';
     } else if (data.status === 'downloaded') {
       banner.innerHTML = `
-        <span>🎉 <strong>Atualização v${data.version} pronta!</strong></span>
-        <button id="btnRestartUpdate" style="background:#3b82f6; color:#fff; border:none; padding:6px 14px; border-radius:6px; font-weight:800; cursor:pointer;">Reiniciar e Aplicar</button>
+        <span><strong>Atualização v${data.version} pronta!</strong></span>
+        <button id="btnRestartUpdate" style="background:var(--btn-bg); color:#fff; border:none; padding:6px 14px; border-radius:6px; font-weight:600; cursor:pointer;">Reiniciar e Aplicar</button>
       `;
       banner.style.display = 'flex';
       const btn = banner.querySelector('#btnRestartUpdate');
