@@ -4,15 +4,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self' http://localhost:5000 https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' file: data: http://localhost:5000 https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' http://localhost:5000 https:;">
+    content="default-src 'self' http://localhost:5000; img-src 'self' file: data: http://localhost:5000 https:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000 https:;">
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Core Agro | Controle de Produção</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap"
-    rel="stylesheet">
   <link rel="stylesheet" href="./styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="./chart.min.js"></script>
   <script src="./lucide.min.js"></script>
 </head>
 
@@ -36,6 +32,10 @@
     </nav>
 
     <div class="meta">
+      <div id="syncBadge" class="sync-badge" title="Status da sincronização em segundo plano">
+        <span id="syncDot" class="sync-dot"></span>
+        <span id="syncText">Sincronizado</span>
+      </div>
       <button id="btnUnlock"
         style="display:none; background:transparent; border:none; cursor:pointer; font-size:18px; padding: 0 5px;"
         title="Desbloquear Admin">🔒</button>

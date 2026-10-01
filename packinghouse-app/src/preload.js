@@ -59,6 +59,7 @@ contextBridge.exposeInMainWorld('api', {
   syncNow: () => ipcRenderer.invoke('sync:now'),
   pickImage: () => ipcRenderer.invoke('file:pickImage'),
   onSyncAuthError: (callback) => ipcRenderer.on('sync:auth-error', (_, data) => callback(data)),
+  onSyncStatus: (callback) => ipcRenderer.on('sync:status', (_, data) => callback(data)),
   onUpdateStatus: (callback) => ipcRenderer.on('update:status', (_, data) => callback(data)),
   updateCheck: () => ipcRenderer.invoke('update:check'),
   updateRestartAndInstall: () => ipcRenderer.invoke('update:restartAndInstall')

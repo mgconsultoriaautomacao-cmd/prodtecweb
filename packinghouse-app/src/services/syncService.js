@@ -740,6 +740,7 @@ async function syncFromSupabase(db) {
 
   } catch (e) {
     console.error('Sync critical failure:', e);
+    throw e;
   } finally {
     console.log('Sync [down]: Finished cycle.');
   }

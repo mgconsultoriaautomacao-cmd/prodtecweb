@@ -272,11 +272,11 @@ window.addEventListener('DOMContentLoaded', () => {
       try {
         const loginRes = await window.api.authLogin({ email, password });
         if (loginRes.ok) {
-          status.textContent = 'Sincronizando dados...';
-          await window.api.syncNow().catch(console.error);
           overlay.style.display = 'none';
           await initShell();
           route();
+          // Sincronização em segundo plano sem bloquear a entrada do usuário
+          window.api.syncNow().catch(console.error);
         } else {
           status.textContent = loginRes.error || 'Erro ao entrar.';
           console.error("[Login] Falha:", loginRes.error);
@@ -286,7 +286,7 @@ window.addEventListener('DOMContentLoaded', () => {
         console.error("[Login] Exceção:", err);
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Entrar e Sincronizar';
+        btn.textContent = 'Entrar';
       }
     };
 
@@ -333,6 +333,29 @@ window.addEventListener('DOMContentLoaded', () => {
     tenantSub.textContent = cfg.tenant_logo_path ? 'Logo configurada' : 'Inteligência no Campo';
     document.body.dataset.theme = cfg.theme || 'dark';
     document.body.dataset.culture = cfg.culture_type || 'MAMAO';
+
+    if (typeof window.api?.onSyncStatus === 'function' && !window._syncStatusHooked) {
+      window._syncStatusHooked = true;
+      window.api.onSyncStatus(({ state, error, lastSync, nextRetry }) => {
+        const badge = document.getElementById('syncBadge');
+        const text = document.getElementById('syncText');
+        if (!badge || !text) return;
+
+        badge.classList.remove('syncing', 'offline', 'error');
+        if (state === 'syncing') {
+          badge.classList.add('syncing');
+          text.textContent = 'Sincronizando...';
+        } else if (state === 'synced') {
+          text.textContent = 'Sincronizado';
+        } else if (state === 'offline') {
+          badge.classList.add('offline');
+          text.textContent = 'Offline (local)';
+        } else if (state === 'error') {
+          badge.classList.add('error');
+          text.textContent = 'Erro de sincronização';
+        }
+      });
+    }
   }
 
   async function initPainel() {

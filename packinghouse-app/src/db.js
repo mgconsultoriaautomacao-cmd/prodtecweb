@@ -92,6 +92,9 @@ function initDb() {
   _db = db;
 
   db.serialize(() => {
+    db.run(`PRAGMA journal_mode = WAL`);
+    db.run(`PRAGMA synchronous = NORMAL`);
+
     db.run(`
       create table if not exists config (
         key text primary key,
@@ -269,6 +272,13 @@ function initDb() {
     db.run(`create unique index if not exists idx_varieties_remote_id on varieties(remote_id)`, (err) => {});
     db.run(`create unique index if not exists idx_box_weights_remote_id on box_weights(remote_id)`, (err) => {});
 
+    // Índices de alta performance nas colunas mais consultadas
+    db.run(`create index if not exists idx_scan_events_ts on scan_events(ts)`, (err) => {});
+    db.run(`create index if not exists idx_scan_events_employee_id on scan_events(employee_id)`, (err) => {});
+    db.run(`create index if not exists idx_scan_events_station_id on scan_events(station_id)`, (err) => {});
+    db.run(`create index if not exists idx_scan_events_synced on scan_events(synced)`, (err) => {});
+    db.run(`create index if not exists idx_quality_audits_synced on quality_audits(synced)`, (err) => {});
+    db.run(`create index if not exists idx_hourly_stats_station_role on hourly_stats(station_id, role, hour_start)`, (err) => {});
 
     db.run(`
       create table if not exists barcode_mappings (
