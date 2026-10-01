@@ -677,12 +677,8 @@
 <nav class="sidebar">
   <div class="brand" style="display:flex; justify-content:space-between; align-items:center; width:100%">
   <div style="display:flex; align-items:center; gap:8px">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:24px; height:24px; color:var(--blue); flex-shrink:0;">
-  <path d="M12 22C12 22 20 18 20 12V4L12 2L4 4V12C4 18 12 22 12 22Z" stroke="var(--blue)"/>
-  <path d="M12 8v8" stroke="var(--green)"/>
-  <path d="M9 12h6" stroke="var(--green)" stroke-width="1.75"/>
-  </svg>
-  <span>PRODTECH</span>
+  <img src="assets/logo_core_agro.png" alt="CORE AGRO" style="width:32px; height:32px; object-fit:contain; border-radius:50%; filter:drop-shadow(0 0 6px rgba(16,185,129,0.5)); flex-shrink:0;" />
+  <span style="font-family:'Outfit', sans-serif; font-weight:800; font-size:17px; letter-spacing:0.8px; background:linear-gradient(135deg, #ffffff 0%, #10b981 100%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;">CORE AGRO</span>
   </div>
   <button class="sidebar-collapse-btn" onclick="toggleSidebar()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text); cursor:pointer; padding:6px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center;" title="Recolher Menu">
   <i data-lucide="chevron-left" style="width:14px; height:14px"></i>
@@ -1019,9 +1015,12 @@
   </div>
   <input type="hidden" id="editEmpPhotoUrl">
   </div>
-  <div style="display:flex; gap:10px; justify-content:flex-end">
-  <button class="sec" onclick="document.getElementById('empModal').style.display='none'">Cancelar</button>
-  <button onclick="saveEmpEdit(event)" style="background:var(--blue); font-weight:800">Salvar Alterações</button> </div>
+  <div style="display:flex; gap:10px; justify-content:space-between; align-items:center; margin-top:16px;">
+  <button type="button" onclick="deleteEmployee($('editEmpId').value, $('editEmpName').value)" style="background:rgba(239,68,68,0.2); border:1px solid #ef4444; color:#ef4444; font-weight:700; padding:8px 14px; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;" title="Excluir Colaborador"><i data-lucide="trash-2" style="width:14px; height:14px"></i> Excluir</button>
+  <div style="display:flex; gap:10px;">
+  <button type="button" class="sec" onclick="document.getElementById('empModal').style.display='none'">Cancelar</button>
+  <button type="button" onclick="saveEmpEdit(event)" style="background:var(--blue); font-weight:800">Salvar Alterações</button> </div>
+  </div>
   </div>
   </div>
 
@@ -1087,19 +1086,6 @@
   <button class="sec" onclick="exportDashPDF()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-text" style="width:14px; height:14px"></i> PDF</button>
   </div>
 
-  <!-- AGRÍCOLA BOM JESUS APPSHEET & RH LAUNCHER BANNER -->
-  <div style="background:linear-gradient(135deg, rgba(16,185,129,0.1), rgba(59,130,246,0.1)); border:1px solid rgba(16,185,129,0.3); border-radius:14px; padding:14px 20px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-  <div style="display:flex; align-items:center; gap:14px">
-  <div style="width:42px; height:42px; border-radius:12px; background:linear-gradient(135deg,#10b981,#059669); display:flex; align-items:center; justify-content:center; color:#fff; font-size:20px; box-shadow:0 4px 14px rgba(16,185,129,0.3)"></div>
-  <div>
-  <h4 style="margin:0; font-size:14px; font-weight:800; color:var(--text)">Módulo Agrícola Enterprise 360° & RH</h4>
-  <p style="margin:2px 0 0; font-size:12px; color:var(--muted)">Acesse a base relacional completa: RH, Estoque, Abastecimento, Parcelas, Pulverizações e Auditorias em uma página exclusiva.</p>
-  </div>
-  </div>
-  <button class="btn btn-green" onclick="window.open('/bomjesus.html', '_blank')" style="padding:10px 20px; font-weight:800; display:inline-flex; align-items:center; gap:8px; cursor:pointer; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:10px;">
-  Abrir Módulo em Nova Janela <i data-lucide="external-link" style="width:16px;height:16px"></i>
-  </button>
-  </div>
   <div class="cgrid">
   <div class="card"><div class="title"><i data-lucide="trending-up"></i> Produção por Hora</div><div class="ch"><canvas id="chartProdHora"></canvas></div></div>
   <div class="card"><div class="title"><i data-lucide="box"></i> Distribuição por Peso</div>
@@ -4249,37 +4235,37 @@
   /* ── ESTOQUE 3D STYLES ── */
   #e3d-root { display:grid; grid-template-columns:1fr 340px; gap:24px; min-height:80vh; }
   @media(max-width:1440px){ #e3d-root{ grid-template-columns:1fr 280px; gap:16px; } }
-  @media(max-width:1200px){ #e3d-root{ grid-template-columns:1fr; } } /* Switch to 1 column below 1200px */
+  @media(max-width:1200px){ #e3d-root{ grid-template-columns:1fr; } }
 
   #e3d-zones-wrap {
-  display: flex; 
-  gap: 24px; 
-  min-height: 600px; 
-  padding: 24px; 
-  background: linear-gradient(135deg, #020810 0%, #0a1628 40%, #060d1c 100%); 
-  border-radius: 20px; 
-  border: 1px solid rgba(59,130,246,0.2); 
-  box-shadow: 0 0 60px rgba(59,130,246,0.08);
-  flex-wrap: wrap; /* Allows stacking on smaller screens */
+  display: flex;
+  gap: 24px;
+  min-height: 600px;
+  padding: 24px;
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 24px var(--shadow-color);
+  flex-wrap: wrap;
   }
-  
+
   .e3d-zone {
-  flex: 1; 
-  min-width: 300px; /* Forces stacking if screen is too narrow */
-  display: flex; 
-  flex-direction: column; 
-  background: rgba(0,0,0,0.25); 
-  border-radius: 16px; 
+  flex: 1;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-radius: 12px;
   padding: 20px;
-  box-shadow: inset 0 0 20px rgba(0,0,0,0.4);
+  border: 1px solid var(--border);
   transition: all 0.3s ease;
   }
-  
+
   #e3d-grid-packing, #e3d-grid-cold {
-  display: grid; 
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
-  grid-auto-rows: minmax(110px, auto); 
-  gap: 12px; 
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  grid-auto-rows: minmax(110px, auto);
+  gap: 12px;
   flex: 1;
   }
 
@@ -4290,14 +4276,14 @@
   }
 
   /* AI Camera panel */
-  #e3d-camera-card { background:rgba(15,23,42,.9); border-radius:16px; border:1px solid rgba(59,130,246,.15); padding:20px; margin-bottom:16px; }
-  #e3d-camera-feed { width:100%; aspect-ratio:4/3; background:#000; border-radius:12px; overflow:hidden; border:1px solid rgba(59,130,246,.2); position:relative; display:flex; align-items:center; justify-content:center; }
+  #e3d-camera-card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); padding: 20px; margin-bottom: 16px; }
+  #e3d-camera-feed { width:100%; aspect-ratio:4/3; background: var(--bg); border-radius: 10px; overflow:hidden; border: 1px solid var(--border); position:relative; display:flex; align-items:center; justify-content:center; }
   #e3d-camera-feed img { width:100%; height:100%; object-fit:cover; display:none; }
-  #e3d-cam-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#334155; font-size:13px; font-weight:600; height:100%; }
+  #e3d-cam-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color: var(--muted); font-size:13px; font-weight:600; height:100%; }
   #e3d-cam-placeholder svg { width:40px; height:40px; opacity:.3; }
   .e3d-ai-badge {
   position:absolute; top:10px; right:10px; padding:3px 10px; border-radius:99px;
-  font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:1px;
+  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;
   }
   .e3d-ai-badge.sim { background:rgba(245,158,11,.15); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
   .e3d-ai-badge.live { background:rgba(16,185,129,.15); color:#10b981; border:1px solid rgba(16,185,129,.3); animation:blink 2s infinite; }
@@ -4305,51 +4291,51 @@
   /* Count cards */
   #e3d-count-area { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
   .e3d-count-card {
-  background:rgba(15,23,42,.95); border-radius:12px; border:1px solid rgba(255,255,255,.05);
-  padding:14px; text-align:center;
+  background: var(--card); border-radius: 10px; border: 1px solid var(--border);
+  padding: 14px; text-align: center;
   }
-  .e3d-count-num { font-size:28px; font-weight:900; line-height:1; margin-bottom:4px; }
-  .e3d-count-lbl { font-size:10px; color:#64748b; text-transform:uppercase; letter-spacing:1px; font-weight:700; }
+  .e3d-count-num { font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+  .e3d-count-lbl { font-size: 11px; color: var(--muted); font-weight: 600; }
 
-  /* Config card */
+  /* Config & Queue panels */
   #e3d-cfg-card {
-  background:rgba(15,23,42,.9); border-radius:16px; border:1px solid rgba(255,255,255,.06);
-  padding:20px; margin-bottom:16px;
+  background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+  padding: 20px; margin-bottom: 16px;
   }
-  #e3d-cfg-card .cfg-title { font-size:12px; font-weight:800; color:var(--blue); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+  #e3d-cfg-card .cfg-title { font-size: 12px; font-weight: 700; color: var(--blue); letter-spacing: 0.3px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+
+  #e3d-queue { background: var(--card); border-radius: 12px; border: 1px solid var(--border); padding: 16px; }
+  #e3d-queue .q-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+  .e3d-queue-item {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+  background: var(--card-item-bg); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px;
+  }
+  .e3d-queue-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; background: var(--btn-sec-bg); }
+  .e3d-queue-info { flex: 1; min-width: 0; }
+  .e3d-queue-name { font-size: 13px; font-weight: 600; }
+  .e3d-queue-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .e3d-queue-progress { width: 100%; height: 4px; background: var(--bar-bg); border-radius: 99px; overflow: hidden; margin-top: 6px; }
+  .e3d-queue-fill { height: 100%; border-radius: 99px; transition: width .5s ease; background: var(--blue); }
 
   /* Pallet detail modal */
   #e3d-pallet-modal {
-  display:none; position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:3000;
-  align-items:center; justify-content:center; backdrop-filter:blur(6px);
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 3000;
+  align-items: center; justify-content: center;
   }
-  #e3d-pallet-modal.open { display:flex; }
+  #e3d-pallet-modal.open { display: flex; }
   #e3d-pallet-inner {
-  background:linear-gradient(135deg, #0f1c33 0%, #0a1220 100%);
-  border:1px solid rgba(59,130,246,.25); border-radius:24px; padding:32px;
-  width:520px; max-width:95%; box-shadow:0 40px 100px rgba(0,0,0,.8);
-  animation: slideUp .3s ease;
+  background: var(--modal-bg);
+  border: 1px solid var(--border); border-radius: 16px; padding: 28px;
+  width: 520px; max-width: 95%; box-shadow: 0 24px 60px var(--shadow-color);
+  animation: slideUp .25s ease;
+  color: var(--modal-text);
   }
-  @keyframes slideUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
-  #e3d-pallet-inner h3 { font-size:18px; font-weight:900; margin-bottom:20px; display:flex; align-items:center; gap:10px; }
-
-  /* Queue list */
-  #e3d-queue { background:rgba(15,23,42,.9); border-radius:16px; border:1px solid rgba(255,255,255,.06); padding:20px; }
-  #e3d-queue .q-title { font-size:12px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px; }
-  .e3d-queue-item {
-  display:flex; align-items:center; gap:12px; padding:10px 12px;
-  background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.05); border-radius:10px; margin-bottom:8px;
-  }
-  .e3d-queue-icon { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
-  .e3d-queue-info { flex:1; min-width:0; }
-  .e3d-queue-name { font-size:13px; font-weight:700; }
-  .e3d-queue-meta { font-size:11px; color:#64748b; margin-top:2px; }
-  .e3d-queue-progress { width:100%; height:5px; background:rgba(255,255,255,.06); border-radius:99px; overflow:hidden; margin-top:6px; }
-  .e3d-queue-fill { height:100%; border-radius:99px; transition:width .5s ease; background:linear-gradient(90deg,#3b82f6,#10b981); }
+  @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  #e3d-pallet-inner h3 { font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
 
   /* progress ring */
-  .e3d-pbar { position:absolute; bottom:20px; right:20px; }
-  .e3d-pbar-ring { transform:rotate(-90deg); }
+  .e3d-pbar { position: absolute; bottom: 20px; right: 20px; }
+  .e3d-pbar-ring { transform: rotate(-90deg); }
 
   /* ── Visual 3D de Pallet Empilhado ─────────────────────────── */
   .pallet-3d-wrap {
@@ -4389,21 +4375,21 @@
   position: absolute; top: 0; left: 0; right: 0; height: 4px;
   background: rgba(255,255,255,0.15); border-radius: 2px 2px 0 0;
   }
+
   /* ── Card do Pallet: Layout sem sobreposição ─────────────── */
   .pallet-card {
   width: 100%; height: 100%;
   display: flex; flex-direction: column;
-  gap: 0; overflow: hidden; border-radius: 10px;
+  gap: 0; overflow: hidden; border-radius: 8px;
   }
-  /* Zona de informações (topo) */
   .pallet-card-header {
   flex-shrink: 0;
   padding: 6px 7px 5px;
-  background: rgba(0,0,0,0.35);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
   }
   .pallet-card-num {
-  font-size: 14px; font-weight: 900; color: #fff;
+  font-size: 14px; font-weight: 700; color: var(--text);
   line-height: 1; letter-spacing: -0.5px;
   display: flex; align-items: center; justify-content: space-between;
   }
@@ -4411,7 +4397,7 @@
   width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
   }
   .pallet-card-variety {
-  font-size: 11px; font-weight: 800; color: #f8fafc;
+  font-size: 11px; font-weight: 700; color: var(--text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   margin-top: 2px;
   }
@@ -4420,13 +4406,12 @@
   margin-top: 3px; flex-wrap: wrap;
   }
   .pallet-card-chip {
-  font-size: 9.5px; font-weight: 800;
+  font-size: 9.5px; font-weight: 700;
   padding: 2px 6px; border-radius: 4px;
-  background: rgba(255,255,255,0.12);
-  color: #cbd5e1;
+  background: var(--btn-sec-bg);
+  color: var(--muted);
   }
-  .pallet-card-chip.accent { background: rgba(6,182,212,0.25); color: #38bdf8; font-family: monospace; font-weight: 900; }
-  /* Zona da pilha 3D (rodapé) */
+  .pallet-card-chip.accent { background: transparent; color: var(--blue); font-family: monospace; font-weight: 700; }
   .pallet-card-stack {
   flex: 1;
   display: flex; flex-direction: column;
@@ -4434,108 +4419,83 @@
   padding: 4px 6px 6px;
   position: relative;
   }
-  /* Badge de caixas (canto sup. direito do card inteiro) */
+
+  /* Badge de caixas */
   .pallet-cx-badge {
   position: absolute; top: -11px; right: -9px;
-  font-size: 11px; font-weight: 900; padding: 3px 8px; border-radius: 10px; color: #fff;
-  z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.7);
+  font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 10px; color: #fff;
+  z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.5);
   }
-  /* Badge de idade (canto sup. esquerdo do card inteiro) */
+  /* Badge de idade */
   .pallet-age-badge {
   position: absolute; top: -11px; left: -9px;
   display: flex; align-items: center; gap: 4px;
-  background: #0f172a; border-radius: 8px;
-  font-size: 11px; font-weight: 900; color: #fff;
+  background: var(--card); border-radius: 6px;
+  font-size: 11px; font-weight: 700; color: var(--text);
   padding: 3px 8px; z-index: 10;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.7);
-  border: 1.5px solid var(--border-color, #10b981);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  border: 1px solid var(--border);
   }
   .pallet-error-badge {
   position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
-  background: #ef4444; color: #fff; font-size: 9px; font-weight: 900;
+  background: #ef4444; color: #fff; font-size: 9px; font-weight: 700;
   padding: 2px 7px; border-radius: 8px; z-index: 12; white-space: nowrap;
   box-shadow: 0 2px 6px rgba(239,68,68,0.5); animation: blink 1.5s infinite;
   }
-  .pallet-stack {
-  width: 85%;
-  display: flex; flex-direction: column;
-  gap: 2px; align-items: center;
-  }
-  .pallet-row {
-  width: 100%; display: flex; gap: 2px;
-  }
-  .pallet-box {
-  flex: 1; height: 12px; border-radius: 2px;
-  position: relative;
-  box-shadow: inset 0 -2px 4px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4);
-  }
-  .pallet-box::after {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: rgba(255,255,255,0.18); border-radius: 2px 2px 0 0;
-  }
-  .pallet-base {
-  width: 85%; height: 6px;
-  background: linear-gradient(90deg, #78350f, #92400e, #78350f);
-  border-radius: 2px;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.6);
-  position: relative; margin-top: 2px;
-  }
-  .pallet-base::before {
-  content: '';
-  position: absolute; top: -3px; left: 10%; width: 80%; height: 3px;
-  background: #a16207; border-radius: 1px;
-  }
-  /* Barra de progresso no rodapé da pilha */
-  .pallet-card-bar {
-  width: 85%; height: 3px; border-radius: 2px;
-  background: rgba(255,255,255,0.08); margin-top: 5px; overflow: hidden;
-  }
-  .pallet-card-bar-fill {
-  height: 100%; border-radius: 2px; transition: width 0.5s ease;
-  }
 
+  /* Pilha dentro do card */
+  .pallet-stack { width: 85%; display: flex; flex-direction: column; gap: 2px; align-items: center; }
+  .pallet-row { width: 100%; display: flex; gap: 2px; }
+  .pallet-box { flex: 1; height: 12px; border-radius: 2px; position: relative; box-shadow: inset 0 -2px 4px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4); }
+  .pallet-box::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: rgba(255,255,255,0.18); border-radius: 2px 2px 0 0; }
+  .pallet-base { width: 85%; height: 6px; background: linear-gradient(90deg, #78350f, #92400e, #78350f); border-radius: 2px; box-shadow: 0 3px 6px rgba(0,0,0,0.6); position: relative; margin-top: 2px; }
+  .pallet-base::before { content: ''; position: absolute; top: -3px; left: 10%; width: 80%; height: 3px; background: #a16207; border-radius: 1px; }
+
+  /* Barra de progresso no rodapé */
+  .pallet-card-bar { width: 85%; height: 3px; border-radius: 2px; background: var(--bar-bg); margin-top: 5px; overflow: hidden; }
+  .pallet-card-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
 
   /* ── Modo Seleção em Lote ─────────────────────────────────── */
-  .slot-selectable:hover { cursor: pointer; filter: brightness(1.3); }
+  .slot-selectable:hover { cursor: pointer; filter: brightness(1.15); }
   .slot-selected {
-  outline: 2.5px solid #22d3ee !important;
-  box-shadow: 0 0 20px rgba(34,211,238,0.5), inset 0 0 20px rgba(34,211,238,0.1) !important;
+  outline: 2.5px solid var(--blue) !important;
+  box-shadow: 0 0 14px rgba(76,195,138,0.35), inset 0 0 14px rgba(76,195,138,0.08) !important;
   }
-  .slot-selected .selection-check {
-  display: flex !important;
-  }
+  .slot-selected .selection-check { display: flex !important; }
   .selection-check {
   display: none;
   position: absolute; top: 4px; right: 4px;
   width: 20px; height: 20px; border-radius: 50%;
-  background: #22d3ee; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 900; color: #000; z-index: 20;
+  background: var(--blue); align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff; z-index: 20;
   box-shadow: 0 2px 6px rgba(0,0,0,0.5);
   }
   #e3d-selection-banner {
   display: none; align-items: center; justify-content: space-between;
-  gap: 12px; padding: 10px 16px; border-radius: 10px;
-  background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.3);
+  gap: 12px; padding: 10px 16px; border-radius: 8px;
+  background: rgba(76,195,138,0.08); border: 1px solid rgba(76,195,138,0.25);
   margin-bottom: 12px; flex-wrap: wrap;
   }
   #e3d-selection-banner.visible { display: flex; }
   #e3d-batch-panel {
-  display: none; background: rgba(15,23,42,0.95);
-  border: 1px solid rgba(34,211,238,0.3); border-radius: 14px; padding: 16px;
+  display: none; background: var(--card);
+  border: 1px solid var(--border); border-radius: 12px; padding: 16px;
   }
   #e3d-batch-panel.visible { display: block; }
   .batch-field { margin-bottom: 10px; }
-  .batch-field label { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px; }
-  .batch-field input, .batch-field select { width: 100%; padding: 7px 10px; border-radius: 7px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 12px; }
+  .batch-field label { font-size: 11px; color: var(--muted); font-weight: 600; display: block; margin-bottom: 4px; }
+  .batch-field input, .batch-field select { width: 100%; padding: 7px 10px; border-radius: 6px; background: var(--input-bg); border: 1px solid var(--border); color: var(--text); font-size: 12px; }
 
   /* ── Botão modo seleção ──────────────────────────────────── */
+  #e3d-select-mode-btn { background: var(--btn-sec-bg); border: 1px solid var(--border); color: var(--muted); }
   #e3d-select-mode-btn.active {
-  background: rgba(34,211,238,0.15) !important;
-  border-color: #22d3ee !important;
-  color: #22d3ee !important;
+  background: rgba(76,195,138,0.12) !important;
+  border-color: var(--blue) !important;
+  color: var(--blue) !important;
   }
   </style>
+
+
 
   <h1 class="ptitle"><i data-lucide="warehouse"></i> Estoque Virtual 3D</h1>
   <p style="color:var(--muted);font-size:13px;margin-bottom:24px">
@@ -4826,6 +4786,42 @@ function getTenantLogoHtml(maxHeight = 45, maxWidth = 130) {
   return `<img src="${logoUrl}" style="max-height:${maxHeight}px; max-width:${maxWidth}px; object-fit:contain;" alt="Logo" onerror="this.src='logo.png'"/>`;
 }
 
+function updateTenantBadge() {
+  const badge = $('tenantBadge');
+  if (!badge) return;
+  const tName = (window.tenantConfig && window.tenantConfig.name) || tenantName || 'Empresa';
+  const logoUrl = (window.tenantConfig && window.tenantConfig.logo_url) ||
+                  window._tenantLogoBase64 ||
+                  localStorage.getItem('tenant_logo_url');
+  
+  if (logoUrl) {
+    badge.innerHTML = `
+      <div style="display:flex; align-items:center; gap:9px; width:100%;">
+        <div style="width:34px; height:34px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; padding:2px;">
+          <img src="${logoUrl}" alt="${esc(tName)}" style="max-width:100%; max-height:100%; object-fit:contain;" onerror="this.onerror=null; this.parentElement.innerHTML='<i data-lucide=\\'building\\' style=\\'width:16px;height:16px;color:var(--blue);\\'></i>'; if(window.lucide) lucide.createIcons();"/>
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:9px; text-transform:uppercase; color:var(--muted); font-weight:700; letter-spacing:0.5px; line-height:1.1;">Empresa</div>
+          <div style="font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;" title="${esc(tName)}">${esc(tName)}</div>
+        </div>
+      </div>
+    `;
+  } else {
+    badge.innerHTML = `
+      <div style="display:flex; align-items:center; gap:9px; width:100%;">
+        <div style="width:34px; height:34px; border-radius:8px; background:rgba(255,255,255,0.04); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+          <i data-lucide="building" style="width:16px; height:16px; color:var(--blue);"></i>
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:9px; text-transform:uppercase; color:var(--muted); font-weight:700; letter-spacing:0.5px; line-height:1.1;">Empresa</div>
+          <div style="font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;" title="${esc(tName)}">${esc(tName)}</div>
+        </div>
+      </div>
+    `;
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
 function mkChart(id, cfg) {
   const canvas = document.getElementById(id);
   if (!canvas) return;
@@ -5016,7 +5012,7 @@ async function afterLogin(user){
   tenantConfig = tenant || {};
   window.tenantConfig = tenantConfig;
   if (tenantConfig && tenantConfig.logo_url) localStorage.setItem('tenant_logo_url', tenantConfig.logo_url);
-  $('tenantBadge').textContent = tenantName;
+  updateTenantBadge();
 
   const isGlobalAdmin = ['mgconsultoriaautomacao@gmail.com', 'admin@prodtech.com'].includes(user.email);
   if(isGlobalAdmin) {
@@ -5067,7 +5063,9 @@ async function switchTenant(id) {
   tenantName = t.name;
   tenantConfig = t;
   window.tenantConfig = tenantConfig;
-  $('tenantBadge').textContent = tenantName;
+  if (tenantConfig && tenantConfig.logo_url) localStorage.setItem('tenant_logo_url', tenantConfig.logo_url);
+  else localStorage.removeItem('tenant_logo_url');
+  updateTenantBadge();
   showTab('dash', document.querySelector('.nav'));
   await Promise.all([loadEmpSelectAll(), loadWeightSelectAll()]);
   refreshDash();
@@ -5568,11 +5566,29 @@ async function loadEmps(){
   <td>
   <button class="sec" style="padding:4px 9px" onclick="openEditEmpModal('${e.id}', '${escJs(e.name)}', '${escJs(e.role)}', '${escJs(e.sector||'')}', '${escJs(e.whatsapp||'')}', '${escJs(e.barcode||'')}', '${escJs(e.photo_path||'')}')"> Editar</button>
   <button class="sec" style="padding:4px 9px;margin-left:4px" onclick="toggleEmpActive('${e.id}',${e.active})">${e.active?'Ativar':'Desativar'}</button>
+  <button style="padding:4px 9px;margin-left:4px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;cursor:pointer;border-radius:6px;" onclick="deleteEmployee('${e.id}', '${escJs(e.name)}')"> Excluir</button>
   </td>
   </tr>
   `).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:28px">Nenhum funcionário encontrado.</td></tr>';
   }
   } catch(e) { console.error(e); }
+}
+
+async function deleteEmployee(id, name) {
+  if (!id) return;
+  if (!confirm(`Tem certeza que deseja excluir o colaborador "${name || 'selecionado'}"?\nEsta ação removerá o cadastro permanentemente.`)) return;
+  try {
+    const { error } = await sb.from('employees').delete().eq('id', id).eq('tenant_id', tenantId);
+    if (error) throw error;
+    toast(` Colaborador "${name || ''}" excluído com sucesso!`, 'ok');
+    if ($('empModal')) $('empModal').style.display = 'none';
+    await loadEmps();
+    await loadEmpSelectAll();
+    if ($('tab-dash').classList.contains('active')) refreshDash();
+  } catch(err) {
+    console.error('Erro ao excluir colaborador:', err);
+    alert('Erro ao excluir colaborador: ' + (err.message || err));
+  }
 }
 
 async function loadWeights(){
@@ -8297,20 +8313,23 @@ async function loadSettings(){
 
   // Logo Preview load
   if (data.logo_url) {
-  if ($('cfgLogoPreview')) {
-  $('cfgLogoPreview').src = data.logo_url;
-  $('cfgLogoPreview').style.display = 'block';
-  }
-  if ($('cfgLogoPlaceholder')) $('cfgLogoPlaceholder').style.display = 'none';
-  window._tenantLogoBase64 = data.logo_url;
+    if ($('cfgLogoPreview')) {
+      $('cfgLogoPreview').src = data.logo_url;
+      $('cfgLogoPreview').style.display = 'block';
+    }
+    if ($('cfgLogoPlaceholder')) $('cfgLogoPlaceholder').style.display = 'none';
+    window._tenantLogoBase64 = data.logo_url;
+    localStorage.setItem('tenant_logo_url', data.logo_url);
   } else {
-  if ($('cfgLogoPreview')) {
-  $('cfgLogoPreview').src = '';
-  $('cfgLogoPreview').style.display = 'none';
+    if ($('cfgLogoPreview')) {
+      $('cfgLogoPreview').src = '';
+      $('cfgLogoPreview').style.display = 'none';
+    }
+    if ($('cfgLogoPlaceholder')) $('cfgLogoPlaceholder').style.display = 'block';
+    window._tenantLogoBase64 = null;
+    localStorage.removeItem('tenant_logo_url');
   }
-  if ($('cfgLogoPlaceholder')) $('cfgLogoPlaceholder').style.display = 'block';
-  window._tenantLogoBase64 = null;
-  }
+  updateTenantBadge();
 
   // Work Hours
   if($('cfgWorkStart')) $('cfgWorkStart').value=data.work_start_time||'07:00';
@@ -8322,9 +8341,9 @@ async function loadSettings(){
   const {data: allTenants} = await sb.from('tenants').select('*').order('name');
   window._allTenants = allTenants || [];
   if (allTenants && allTenants.length) {
-  const opts = allTenants.map(t => `<option value="${t.id}" ${t.id === tenantId ? 'selected' : ''}>${t.name}</option>`).join('');
-  if ($('newUsrTenant')) $('newUsrTenant').innerHTML = opts;
-  if ($('editUsrTenant')) $('editUsrTenant').innerHTML = opts;
+    const opts = allTenants.map(t => `<option value="${t.id}" ${t.id === tenantId ? 'selected' : ''}>${t.name}</option>`).join('');
+    if ($('newUsrTenant')) $('newUsrTenant').innerHTML = opts;
+    if ($('editUsrTenant')) $('editUsrTenant').innerHTML = opts;
   }
 
   // Carregar lista de usuários com dados da empresa vinculada
@@ -8339,18 +8358,21 @@ function uploadTenantLogo(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
   if (file.size > 800 * 1024) {
-  alert("A logo deve ter no máximo 800 KB para salvamento direto.");
-  return;
+    alert("A logo deve ter no máximo 800 KB para salvamento direto.");
+    return;
   }
   const reader = new FileReader();
   reader.onload = function(e) {
-  const base64 = e.target.result;
-  if ($('cfgLogoPreview')) {
-  $('cfgLogoPreview').src = base64;
-  $('cfgLogoPreview').style.display = 'block';
-  }
-  if ($('cfgLogoPlaceholder')) $('cfgLogoPlaceholder').style.display = 'none';
-  window._tenantLogoBase64 = base64;
+    const base64 = e.target.result;
+    if ($('cfgLogoPreview')) {
+      $('cfgLogoPreview').src = base64;
+      $('cfgLogoPreview').style.display = 'block';
+    }
+    if ($('cfgLogoPlaceholder')) $('cfgLogoPlaceholder').style.display = 'none';
+    window._tenantLogoBase64 = base64;
+    localStorage.setItem('tenant_logo_url', base64);
+    if (window.tenantConfig) window.tenantConfig.logo_url = base64;
+    updateTenantBadge();
   };
   reader.readAsDataURL(file);
 }
@@ -12643,6 +12665,9 @@ function printPastaCampoOrdemPulv(itemStr) {
   }
   
   const itemsCalda = item.caderno_campo_op_itens || [];
+  const areaVal = parseFloat(areaHa) || 1.0;
+  const volCaldaLtHa = parseFloat(item.volume_calda) || 500;
+  const volCaldaTanque = item.volume_tanque ? parseFloat(item.volume_tanque) : Math.round(volCaldaLtHa * areaVal);
 
   // Separation between Defensivos e Adubos Foliares
   const defsOnly = itemsCalda.filter(i => {
@@ -12694,9 +12719,6 @@ function printPastaCampoOrdemPulv(itemStr) {
   }
 
   const doseRealVal = parseFloat(p.dosagem_real) || parseFloat(p.dosagem_corrigida) || 0;
-  const areaVal = parseFloat(areaHa) || 1.0;
-  const volCaldaLtHa = parseFloat(item.volume_calda) || 500;
-  const volCaldaTanque = item.volume_tanque ? parseFloat(item.volume_tanque) : Math.round(volCaldaLtHa * areaVal);
   const unitStr = (p.unidade || match?.unidade_dose || match?.unidade || 'L/ha').trim();
   const isPor100L = unitStr.toLowerCase().includes('100l');
   
@@ -13096,6 +13118,13 @@ function printPastaCampoOrdemPulv(itemStr) {
   </div>
 
   </div>
+  ${'<' + 'script>'}
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+      }, 400);
+    };
+  ${'<' + '/script>'}
   </body>
   </html>
   `;
@@ -13103,6 +13132,12 @@ function printPastaCampoOrdemPulv(itemStr) {
   printWin.document.open();
   printWin.document.write(html);
   printWin.document.close();
+  setTimeout(function() {
+    try {
+      printWin.focus();
+      printWin.print();
+    } catch(e) {}
+  }, 600);
 }
 
 function printPastaCampoAutColheita(itemStr) {
@@ -21437,11 +21472,16 @@ async function onNewIdiarnParcelChange() {
   if (opSelect) opSelect.innerHTML = '<option value="">⏳ Buscando pulverizações da parcela...</option>';
 
   try {
-    const { data: ops, error: opErr } = await sb.from('caderno_campo_op')
-      .select('*, caderno_campo_op_itens(*)')
-      .eq('tenant_id', tenantId)
-      .or(`parcel_id.eq.${pId},parcela.eq.${parcelCode}`)
-      .order('data_aplicacao', { ascending: false });
+    const isUUIDStr = str => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+    let opQuery = sb.from('caderno_campo_op').select('*, caderno_campo_op_itens(*)').eq('tenant_id', tenantId);
+    
+    if (isUUIDStr(pId)) {
+      opQuery = opQuery.or(`parcel_id.eq.${pId},parcela.eq.${parcelCode}`);
+    } else {
+      opQuery = opQuery.or(`parcela.eq.${parcelCode},parcela.eq.${pId}`);
+    }
+
+    const { data: ops, error: opErr } = await opQuery.order('data_aplicacao', { ascending: false });
 
     _currentIdiarnOps = ops || [];
 
@@ -22317,6 +22357,68 @@ async function printOfficialIdiarnBook(dataOrParcela) {
   if (typeof dataOrParcela === 'object' && dataOrParcela !== null) {
     // Se recebeu um objeto completo (do formulário ou snapshot da visita)
     doc = { ...dataOrParcela };
+
+    // Se o objeto veio do banco de dados (caderno_campo_idiarn) e não possui a lista de defensivos/pragas preenchida:
+    if ((!doc.defensivos || doc.defensivos.length === 0) && (doc.parcela || doc.pCode)) {
+      const pCode = doc.parcela || doc.pCode;
+      try {
+        const [mRes, opRes] = await Promise.all([
+          sb.from('caderno_campo_coletas_moscas').select('*').eq('tenant_id', tenantId).eq('parcela', pCode).order('data_coleta_atual', { ascending: false }).limit(3),
+          sb.from('caderno_campo_op').select('*, caderno_campo_op_itens(*)').eq('tenant_id', tenantId).eq('parcela', pCode).order('data_aplicacao', { ascending: false }).limit(5)
+        ]);
+        const coletas = mRes.data || [];
+        const ops = opRes.data || [];
+        const latestOp = ops[0] || null;
+        const latestCoex = coletas[0] || null;
+        
+        if (latestOp && latestOp.caderno_campo_op_itens) {
+          const dtOp = latestOp.data_aplicacao ? latestOp.data_aplicacao.split('-').reverse().join('/') : (doc.data_aplicacao ? doc.data_aplicacao.split('-').reverse().join('/') : '—');
+          const recDefault = latestOp.op_cod ? ('REC-' + latestOp.op_cod.replace(/[^A-Za-z0-9]/g, '').toUpperCase()) : (latestOp.id ? ('REC-' + latestOp.id.substring(0,6).toUpperCase()) : 'REC-AGRO');
+
+          const agroList = [];
+          const pragasMap = new Map();
+          latestOp.caderno_campo_op_itens.forEach(item => {
+            const doseTxt = item.dosagem_real ? `${item.dosagem_real} ${item.unidade || 'L/ha'}` : (item.dose ? `${item.dose} ${item.unidade || ''}` : '1.0 L/ha');
+            agroList.push({
+              produto: item.produto_nome || 'Defensivo Fitossanitário',
+              dose: doseTxt,
+              data: dtOp,
+              carencia: item.carencia_dias != null ? `${item.carencia_dias} dias` : '7 dias',
+              receituario: item.receituario || recDefault
+            });
+
+            const rawAlvo = (item.alvo || '').toUpperCase().trim();
+            if (rawAlvo && !rawAlvo.includes('ADUBAÇÃO') && !rawAlvo.includes('FOLIAR')) {
+              let matched = null;
+              for (const [key, obj] of Object.entries(PRAGAS_MAPA_CIENTIFICO)) {
+                if (rawAlvo.includes(key)) { matched = obj; break; }
+              }
+              if (matched && !pragasMap.has(matched.cientifico)) {
+                pragasMap.set(matched.cientifico, { cientifico: matched.cientifico, comum: matched.comum, incidencia: 'BAIXA' });
+              }
+            }
+          });
+          doc.defensivos = agroList;
+          if (!doc.pragas || doc.pragas.length === 0) {
+            doc.pragas = Array.from(pragasMap.values());
+          }
+        }
+        if (!doc.coex && latestCoex) {
+          doc.coex = {
+            armadilha: latestCoex.armadilha_codigo || '—',
+            instalacao: latestCoex.data_instalacao || '—',
+            coletaAnt: latestCoex.data_coleta_anterior || '—',
+            coletaAtual: latestCoex.data_coleta_atual || '—',
+            capGrandis: latestCoex.capturas_grandis || 0,
+            capSpp: latestCoex.capturas_spp || 0,
+            madGrandis: latestCoex.indice_mad_grandis != null ? parseFloat(latestCoex.indice_mad_grandis).toFixed(4) : '0',
+            madSpp: latestCoex.indice_mad_spp != null ? parseFloat(latestCoex.indice_mad_spp).toFixed(4) : '0'
+          };
+        }
+      } catch(err) {
+        console.warn('Erro ao enriquecer dados de visita IDIARN:', err);
+      }
+    }
   } else {
     // Se recebeu apenas o código da parcela (string)
     const parcelaCode = dataOrParcela;
@@ -23829,7 +23931,7 @@ function renderEstoqueSaldosTable(list) {
   <div id="drAvatar" class="avatar-ring" style="width:140px; height:140px; margin:0 auto; font-size:48px; border-width:4px; box-shadow:0 10px 40px rgba(0,0,0,.4)"></div>
   </div>
 
-  <div class="section"><div class="section-title"> KPIs de Desempenho (Power BI)</div></div>
+  <div class="section"><div class="section-title"><i data-lucide="bar-chart-2"></i> Relatório & KPIs de Desempenho</div></div>
   
   <div class="pbi-card" style="margin-bottom:20px">
   <div style="display:flex; justify-content:space-between; align-items:end">
@@ -24158,5 +24260,6 @@ function renderEstoqueSaldosTable(list) {
 </div>
 
 <link rel="stylesheet" href="theme.css">
+<script src="estoque3d.js" defer></script>
 </body>
 </html>
