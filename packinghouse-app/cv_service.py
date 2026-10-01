@@ -9,6 +9,13 @@ import os
 import sys
 import unicodedata
 
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 def remove_accents(input_str):
     if not input_str:
         return ""
@@ -107,8 +114,9 @@ def analyze_box_ocr(frame, registered_boxes=None):
                 output = res.stdout
                 used_engine = "MAC_VISION"
             except Exception as e:
-                print(f"⚠️ Erro ao executar OCR nativo    # 3. Processa a saída para achar modelo/marca e peso com tolerância a ruído OCR
-    detected_weights = []
+                print(f"⚠️ Erro ao executar OCR nativo: {e}")
+
+    # 3. Processa a saída para achar modelo/marca e peso com tolerância a ruído OCR
     # Procura por pesos explícitos (ex: "13KG", "15 KG", etc.)
     for w in [18, 16, 15, 13, 12, 10, 5]:
         if f"{w}KG" in output_upper or f"{w} KG" in output_upper or f" {w} KG" in output_upper:
