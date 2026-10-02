@@ -54,6 +54,11 @@
 7. **Segurança na Publicação (`.vercelignore`):**
    - Criado `.vercelignore` para ignorar `check_schema.js`, `check_syntax.js`, `field_migration.sql`, `MELHORIAS.md`, `.git`, `scratch/` e `test_assets/`.
    - Removida a chave hardcoded do `check_schema.js`, passando a ler de `process.env.SUPABASE_KEY`.
+8. **📍 Geolocalização GPS no MIP (Manejo Integrado de Pragas - Etapa 1):**
+   - Integrada a API de Geolocation (`navigator.geolocation`) no PWA (`campo/index.html`).
+   - Adicionado indicador visual e botão *"📍 Obter GPS"* na ficha de amostragem MIP.
+   - Gravadas automaticamente as coordenadas `latitude`, `longitude`, `accuracy` e o array `ponto_coords` para cada um dos 10 pontos de amostragem.
+   - Atualizado o script `campo/field_migration.sql` com colunas idempotentes `latitude`, `longitude`, `accuracy` e `ponto_coords` (JSONB) na tabela `caderno_campo_mip`.
 
 ---
 
