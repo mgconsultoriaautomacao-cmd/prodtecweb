@@ -7629,10 +7629,21 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
     };
   
   try {
-  const hasParcel = (dbParcels || []).some(p => p.id === record.parcel_id);
-  const cleanRecord = { ...record, parcel_id: hasParcel ? record.parcel_id : null };
-  const { error } = await sb.from('caderno_campo_mip').insert(cleanRecord);
-  if (error) throw error;
+    const hasParcel = (dbParcels || []).some(p => p.id === record.parcel_id);
+    const cleanRecord = { ...record, parcel_id: hasParcel ? record.parcel_id : null };
+    let { error } = await sb.from('caderno_campo_mip').insert(cleanRecord);
+    if (error) {
+      console.warn('Tentando fallback do esquema Supabase no MIP:', error);
+      const fallbackRecord = { ...cleanRecord };
+      delete fallbackRecord.latitude;
+      delete fallbackRecord.longitude;
+      delete fallbackRecord.accuracy;
+      delete fallbackRecord.ponto_coords;
+      delete fallbackRecord.responsavel;
+      const retry = await sb.from('caderno_campo_mip').insert(fallbackRecord);
+      error = retry.error;
+    }
+    if (error) throw error;
   
   toast(' Amostragem MIP salva com sucesso!', 'ok');
   
@@ -10215,7 +10226,23 @@ async function pushMip(record) {
   const hasParcel = (dbParcels || []).some(p => p.id === record.parcel_id);
   const cleanRecord = { ...record, parcel_id: hasParcel ? record.parcel_id : null };
   delete cleanRecord.synced;
-  const { data, error } = await sb.from('caderno_campo_mip').insert([cleanRecord]).select('*');
+  let { data, error } = await sb.from('caderno_campo_mip').insert([cleanRecord]).select('*');
+  if (error) {
+    console.warn('Tentando fallback no pushMip:', error);
+    const fallbackRecord = { ...cleanRecord };
+    delete fallbackRecord.latitude;
+    delete fallbackRecord.longitude;
+    delete fallbackRecord.accuracy;
+    delete fallbackRecord.ponto_coords;
+    delete fallbackRecord.responsavel;
+    const retry = await sb.from('caderno_campo_mip').insert([fallbackRecord]).select('*');
+    if (!retry.error) return retry.data;
+
+    fallbackRecord.parcel_id = null;
+    const retry2 = await sb.from('caderno_campo_mip').insert([fallbackRecord]).select('*');
+    data = retry2.data;
+    error = retry2.error;
+  }
   if (error) throw error;
   return data;
 }
