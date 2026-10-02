@@ -20446,7 +20446,7 @@ function addNewOpItem() {
       return;
     }
 
-    // 4. Prazo de Carência (+1 dia de segurança) vs Previsão de Colheita
+    // 4. Prazo de Carência vs Previsão de Colheita (com 1 dia de intervalo de segurança no cálculo)
     if (!isCustom && ip && ip.previsao_colheita && def.carencia_dias > 0 && opDateStr) {
       const appDt = new Date(opDateStr + 'T12:00:00');
       appDt.setDate(appDt.getDate() + parseInt(def.carencia_dias) + 1);
@@ -20455,7 +20455,7 @@ function addNewOpItem() {
       if (liberacaoIso > ip.previsao_colheita) {
         const liberacaoBr = appDt.toLocaleDateString('pt-BR');
         const prevColhBr = ip.previsao_colheita.split('-').reverse().join('/');
-        alert(`CARÊNCIA INVÁLIDA — A carência para ${def.produto} é de ${def.carencia_dias} dias (+1 dia de segurança = ${parseInt(def.carencia_dias) + 1} dias), mas a colheita está prevista para ${prevColhBr}. A colheita ficaria bloqueada até ${liberacaoBr}, gerando inconformidade de auditoria!`);
+        alert(`CARÊNCIA INVÁLIDA — A carência para ${def.produto} é de ${def.carencia_dias} dias, mas a colheita está prevista para ${prevColhBr}. A liberação ocorre a partir de ${liberacaoBr}, gerando inconformidade de auditoria!`);
         return;
       }
     }
