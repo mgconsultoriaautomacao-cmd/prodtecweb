@@ -1517,6 +1517,16 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 
   <!-- Cabeçalho de Seleção -->
   <div class="card" style="margin-bottom:16px; padding:16px; display:flex; flex-direction:column; gap:12px">
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+    <div class="form-field">
+      <label class="field-label">Data da Vistoria</label>
+      <input id="mipDateInput" type="date" style="font-size:14px">
+    </div>
+    <div class="form-field">
+      <label class="field-label">Técnico / Pragueiro</label>
+      <input id="mipTecnicoInput" type="text" placeholder="Nome do inspetor..." style="font-size:14px">
+    </div>
+  </div>
   <div class="form-field">
   <label class="field-label">Parcela</label>
   <select id="mipParcelSelect" onchange="onMipParcelChange()" style="font-size:14px"></select>
@@ -2253,6 +2263,12 @@ function showScreen(name) {
   if (name === 'bulk') setTimeout(initBulkSig, 300);
   if (name === 'phSign') setTimeout(initPhSig, 300);
   if (name === 'closure') setTimeout(initQualitySig, 300);
+  if (name === 'mip') {
+    loadMipSelects();
+    if ($('mipDateInput')) $('mipDateInput').value = today();
+    if ($('mipTecnicoInput')) $('mipTecnicoInput').value = window.currentInspector || (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'David Ferreira';
+    captureMipGps(false);
+  }
   if (name === 'stops') loadStops();
   if (name === 'fieldOp') loadFieldOpSelects();
   if (name === 'infoParcelas') renderInfoParcelas();
@@ -7419,6 +7435,8 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
   async function saveMipRecord() {
     const pId = document.getElementById('mipParcelSelect').value;
     const praga = document.getElementById('mipAlvoSelect').value;
+    const dateVal = document.getElementById('mipDateInput')?.value || today();
+    const tecnicoVal = document.getElementById('mipTecnicoInput')?.value?.trim() || (window.currentInspector || (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'David Ferreira');
     
     if (!pId) {
       alert('Por favor, selecione uma parcela!');
@@ -7434,6 +7452,7 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
       gps: currentMipGps,
       ponto_coords: mipPointCoords,
       pragas_json: { [praga]: { media: avg, pontos: mipValues } },
+      tecnico: tecnicoVal,
       observacoes: 'Registrado via PWA campo'
     });
 
@@ -7442,7 +7461,7 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
       parcel_id: pId, // UUID from parcels table (correct)
       parcela: pObj ? pObj.code : '',
       variedade: info ? info.variedade : (pObj ? pObj.code : ''),
-      data_vistoria: today(),
+      data_vistoria: dateVal,
       praga: praga,
       ponto1: mipValues[0],
       ponto2: mipValues[1],
@@ -7459,7 +7478,8 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
       longitude: currentMipGps.lng,
       accuracy: currentMipGps.accuracy,
       ponto_coords: mipPointCoords,
-      tecnico: (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'David Ferreira',
+      responsavel: tecnicoVal,
+      tecnico: tecnicoVal,
       observacoes: packedObs
     };
   
