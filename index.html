@@ -16514,6 +16514,11 @@ function renderCcMipTable(list) {
       pragasBadges = '<span style="color:var(--muted); font-size:11px">Todas sob controle (EMBRAPA)</span>';
     }
 
+    const hasGps = (item.latitude && item.longitude) || (item.observacoes && item.observacoes.includes('latitude')) || (item.observacoes && item.observacoes.includes('ponto_coords'));
+    const gpsBtn = hasGps 
+      ? `<button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:3px" onclick="openMipGpsMap('${itemStr}')"><i data-lucide="map-pin" style="width:12px; height:12px; color:var(--blue)"></i> Ver Mapa GPS</button>`
+      : '';
+
     return `
     <tr style="border-bottom:1px solid var(--border); font-size:13px">
       <td style="padding:12px 10px; font-weight:700">${formattedDate}</td>
@@ -16525,12 +16530,102 @@ function renderCcMipTable(list) {
         <span class="badge" style="background:${statusColor}; font-size:11px">${statusText}</span>
       </td>
       <td style="padding:12px 10px; text-align:center; white-space:nowrap">
+        ${gpsBtn}
         <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoMip('${itemStr}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Ficha EMBRAPA</button>
         <button class="danger" style="padding:4px 8px; font-size:11px" onclick="deleteMipRecord('${item.id}')">Excluir</button>
       </td>
     </tr>
     `;
   }).join('');
+  if (window.lucide) lucide.createIcons();
+}
+
+function openMipGpsMap(itemStr) {
+  const item = typeof itemStr === 'string' ? JSON.parse(decodeURIComponent(itemStr)) : itemStr;
+  
+  let obsObj = {};
+  try {
+    if (item.observacoes && item.observacoes.startsWith('{')) {
+      obsObj = JSON.parse(item.observacoes);
+    }
+  } catch (e) {}
+
+  const lat = item.latitude || (obsObj.gps && obsObj.gps.lat) || null;
+  const lng = item.longitude || (obsObj.gps && obsObj.gps.lng) || null;
+  const acc = item.accuracy || (obsObj.gps && obsObj.gps.accuracy) || '—';
+  const pontoCoords = item.ponto_coords || (obsObj.ponto_coords) || [];
+
+  let modal = document.getElementById('mipGpsMapModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'mipGpsMapModal';
+    modal.className = 'modal';
+    modal.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center; padding:16px;';
+    document.body.appendChild(modal);
+  }
+
+  const formattedDate = item.data_vistoria ? item.data_vistoria.split('-').reverse().join('/') : '—';
+  const gmapsUrl = lat && lng ? `https://www.google.com/maps?q=${lat},${lng}` : '#';
+  const osmUrl = lat && lng ? `https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.005},${lat-0.005},${lng+0.005},${lat+0.005}&layer=mapnik&marker=${lat},${lng}` : '';
+
+  let pointsHtml = '';
+  for (let i = 0; i < 10; i++) {
+    const ptVal = item[`ponto${i+1}`] !== undefined ? item[`ponto${i+1}`] : 0;
+    const ptGps = pontoCoords[i] && pontoCoords[i].lat ? `${pontoCoords[i].lat.toFixed(4)}, ${pontoCoords[i].lng.toFixed(4)}` : (lat && lng ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : 'Sem GPS');
+    pointsHtml += `
+      <div style="background:var(--card-item-bg); border:1px solid var(--border); border-radius:6px; padding:8px; text-align:center;">
+        <div style="font-size:10px; color:var(--muted)">Ponto ${i+1}</div>
+        <div style="font-size:16px; font-weight:800; color:var(--text); margin:2px 0">${ptVal}</div>
+        <div style="font-size:9px; color:var(--muted); font-family:monospace">${ptGps}</div>
+      </div>
+    `;
+  }
+
+  modal.innerHTML = `
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:24px; border-radius:12px; width:780px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 16px 40px rgba(0,0,0,0.4);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px">
+        <div>
+          <h3 style="font-size:18px; font-weight:700; margin:0; display:flex; align-items:center; gap:8px">
+            <i data-lucide="map-pin" style="color:var(--blue)"></i> Geolocalização MIP — Parcela ${esc(item.parcela || '—')}
+          </h3>
+          <div style="font-size:12px; color:var(--muted); margin-top:2px">
+            Vistoria em ${formattedDate} | Variedade: ${esc(item.variedade || '—')} | Técnico: ${esc(item.responsavel_mip || item.tecnico || '—')}
+          </div>
+        </div>
+        <button onclick="document.getElementById('mipGpsMapModal').style.display='none'" style="background:transparent; border:none; color:var(--muted); font-size:20px; cursor:pointer; padding:4px">&times;</button>
+      </div>
+
+      <!-- Sumário GPS -->
+      <div style="background:var(--card-item-bg); border:1px solid var(--border); border-radius:8px; padding:12px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+        <div>
+          <div style="font-size:11px; color:var(--muted); text-transform:uppercase">Coordenadas Centrais (GPS)</div>
+          <div style="font-size:14px; font-weight:700; font-family:monospace; color:var(--text)">
+            ${lat && lng ? `${lat}, ${lng} (Precisão ±${acc}m)` : 'Coordenadas não capturadas'}
+          </div>
+        </div>
+        ${lat && lng ? `<a href="${gmapsUrl}" target="_blank" class="btn sec" style="font-size:12px; text-decoration:none; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="external-link" style="width:14px;height:14px"></i> Abrir no Google Maps</a>` : ''}
+      </div>
+
+      ${lat && lng && osmUrl ? `
+      <!-- Mapa OpenStreetMap Iframe -->
+      <div style="margin-bottom:16px; border-radius:8px; overflow:hidden; border:1px solid var(--border); height:260px">
+        <iframe width="100%" height="100%" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="${osmUrl}"></iframe>
+      </div>
+      ` : ''}
+
+      <!-- Pontos de Amostragem 1..10 -->
+      <div style="font-weight:700; font-size:13px; margin-bottom:8px">Pontos de Amostragem (Contagem e GPS)</div>
+      <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin-bottom:16px">
+        ${pointsHtml}
+      </div>
+
+      <div style="display:flex; justify-content:flex-end">
+        <button class="btn sec" onclick="document.getElementById('mipGpsMapModal').style.display='none'">Fechar</button>
+      </div>
+    </div>
+  `;
+
+  modal.style.display = 'flex';
   if (window.lucide) lucide.createIcons();
 }
 
