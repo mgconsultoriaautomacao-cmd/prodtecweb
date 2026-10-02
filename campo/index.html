@@ -7634,13 +7634,31 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
     let { error } = await sb.from('caderno_campo_mip').insert(cleanRecord);
     if (error) {
       console.warn('Tentando fallback do esquema Supabase no MIP:', error);
-      const fallbackRecord = { ...cleanRecord };
-      delete fallbackRecord.latitude;
-      delete fallbackRecord.longitude;
-      delete fallbackRecord.accuracy;
-      delete fallbackRecord.ponto_coords;
-      delete fallbackRecord.responsavel;
-      const retry = await sb.from('caderno_campo_mip').insert(fallbackRecord);
+      const baseRecord = {
+        tenant_id: cleanRecord.tenant_id,
+        parcel_id: cleanRecord.parcel_id,
+        parcela: cleanRecord.parcela,
+        variedade: cleanRecord.variedade,
+        data_vistoria: cleanRecord.data_vistoria,
+        praga: cleanRecord.praga,
+        ponto1: cleanRecord.ponto1 || 0,
+        ponto2: cleanRecord.ponto2 || 0,
+        ponto3: cleanRecord.ponto3 || 0,
+        ponto4: cleanRecord.ponto4 || 0,
+        ponto5: cleanRecord.ponto5 || 0,
+        ponto6: cleanRecord.ponto6 || 0,
+        ponto7: cleanRecord.ponto7 || 0,
+        ponto8: cleanRecord.ponto8 || 0,
+        ponto9: cleanRecord.ponto9 || 0,
+        ponto10: cleanRecord.ponto10 || 0,
+        media: cleanRecord.media || 0,
+        observacoes: cleanRecord.observacoes
+      };
+      let retry = await sb.from('caderno_campo_mip').insert(baseRecord);
+      if (retry.error && baseRecord.parcel_id) {
+        baseRecord.parcel_id = null;
+        retry = await sb.from('caderno_campo_mip').insert(baseRecord);
+      }
       error = retry.error;
     }
     if (error) throw error;
@@ -10229,17 +10247,31 @@ async function pushMip(record) {
   let { data, error } = await sb.from('caderno_campo_mip').insert([cleanRecord]).select('*');
   if (error) {
     console.warn('Tentando fallback no pushMip:', error);
-    const fallbackRecord = { ...cleanRecord };
-    delete fallbackRecord.latitude;
-    delete fallbackRecord.longitude;
-    delete fallbackRecord.accuracy;
-    delete fallbackRecord.ponto_coords;
-    delete fallbackRecord.responsavel;
-    const retry = await sb.from('caderno_campo_mip').insert([fallbackRecord]).select('*');
+    const baseRecord = {
+      tenant_id: cleanRecord.tenant_id,
+      parcel_id: cleanRecord.parcel_id,
+      parcela: cleanRecord.parcela,
+      variedade: cleanRecord.variedade,
+      data_vistoria: cleanRecord.data_vistoria,
+      praga: cleanRecord.praga,
+      ponto1: cleanRecord.ponto1 || 0,
+      ponto2: cleanRecord.ponto2 || 0,
+      ponto3: cleanRecord.ponto3 || 0,
+      ponto4: cleanRecord.ponto4 || 0,
+      ponto5: cleanRecord.ponto5 || 0,
+      ponto6: cleanRecord.ponto6 || 0,
+      ponto7: cleanRecord.ponto7 || 0,
+      ponto8: cleanRecord.ponto8 || 0,
+      ponto9: cleanRecord.ponto9 || 0,
+      ponto10: cleanRecord.ponto10 || 0,
+      media: cleanRecord.media || 0,
+      observacoes: cleanRecord.observacoes
+    };
+    const retry = await sb.from('caderno_campo_mip').insert([baseRecord]).select('*');
     if (!retry.error) return retry.data;
 
-    fallbackRecord.parcel_id = null;
-    const retry2 = await sb.from('caderno_campo_mip').insert([fallbackRecord]).select('*');
+    baseRecord.parcel_id = null;
+    const retry2 = await sb.from('caderno_campo_mip').insert([baseRecord]).select('*');
     data = retry2.data;
     error = retry2.error;
   }
