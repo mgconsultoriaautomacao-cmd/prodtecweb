@@ -4418,6 +4418,11 @@ let varieties = [];
   
   (ops || []).forEach(op => {
   (op.caderno_campo_op_itens || []).forEach(item => {
+  const isFoliar = (typeof getProductGroup === 'function' && getProductGroup(item.produto_nome || item) === 'FOLIARES') ||
+                   (item.tipo && String(item.tipo).toUpperCase().includes('FOLIAR')) ||
+                   (item.alvo && (String(item.alvo).toUpperCase().includes('ADUBAÇÃO') || String(item.alvo).toUpperCase().includes('FOLIAR')));
+  if (isFoliar) return;
+
   const key = item.produto_nome;
   if (!opProducts.has(key)) {
   opProducts.set(key, { alvo: item.alvo || '', datas: [] });
@@ -4433,6 +4438,11 @@ let varieties = [];
   );
   cached.forEach(op => {
   (op.caderno_campo_op_itens || []).forEach(item => {
+  const isFoliar = (typeof getProductGroup === 'function' && getProductGroup(item.produto_nome || item) === 'FOLIARES') ||
+                   (item.tipo && String(item.tipo).toUpperCase().includes('FOLIAR')) ||
+                   (item.alvo && (String(item.alvo).toUpperCase().includes('ADUBAÇÃO') || String(item.alvo).toUpperCase().includes('FOLIAR')));
+  if (isFoliar) return;
+
   const key = item.produto_nome;
   if (!opProducts.has(key)) opProducts.set(key, { alvo: item.alvo || '', datas: [] });
   opProducts.get(key).datas.push(op.data_aplicacao);

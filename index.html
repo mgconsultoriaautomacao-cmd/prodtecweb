@@ -21548,11 +21548,16 @@ function onNewIdiarnOpChange() {
   // 2. Extrai defensivos aplicados e mapeia alvos para pragas
   const items = op.caderno_campo_op_itens || [];
   const dtFormatada = op.data_aplicacao ? op.data_aplicacao.split('-').reverse().join('/') : today().split('-').reverse().join('/');
-  const recDefault = op.op_cod ? ('REC-' + op.op_cod.replace(/[^A-Za-z0-9]/g, '').toUpperCase()) : (op.id ? ('REC-' + op.id.substring(0, 6).toUpperCase()) : 'REC-AGRO');
 
   const pragasEncontradasMap = new Map();
 
   items.forEach(it => {
+    // Filtrar: não incluir foliares no IDIARN, apenas defensivos
+    const isFoliar = (typeof getProductGroup === 'function' && getProductGroup(it.produto_nome || it) === 'FOLIARES') ||
+                     (it.tipo && String(it.tipo).toUpperCase().includes('FOLIAR')) ||
+                     (it.alvo && (String(it.alvo).toUpperCase().includes('ADUBAÇÃO') || String(it.alvo).toUpperCase().includes('FOLIAR')));
+    if (isFoliar) return;
+
     // Adiciona defensivo
     const doseTxt = it.dosagem_real ? `${it.dosagem_real} ${it.unidade || 'L/ha'}` : (it.dose ? `${it.dose} ${it.unidade || ''}` : '1.0 L/ha');
     const carenciaTxt = it.carencia_dias != null ? `${it.carencia_dias} dias` : '7 dias';
@@ -21562,12 +21567,12 @@ function onNewIdiarnOpChange() {
       dose: doseTxt,
       data: dtFormatada,
       carencia: carenciaTxt,
-      receituario: it.receituario || recDefault
+      receituario: '' // Deixar vazio no IDARN
     });
 
     // Mapeia alvo para praga/nome científico
     const rawAlvo = (it.alvo || '').toUpperCase().trim();
-    if (rawAlvo && !rawAlvo.includes('ADUBAÇÃO') && !rawAlvo.includes('FOLIAR')) {
+    if (rawAlvo) {
       let matched = null;
       for (const [key, obj] of Object.entries(PRAGAS_MAPA_CIENTIFICO)) {
         if (rawAlvo.includes(key)) {
@@ -21688,7 +21693,7 @@ function addNewIdiarnManualProductRow() {
     dose: '1.0 L/ha',
     data: today().split('-').reverse().join('/'),
     carencia: '7 dias',
-    receituario: 'REC-' + new Date().getFullYear()
+    receituario: ''
   });
   renderIdiarnAgroTable();
 }
@@ -22373,22 +22378,26 @@ async function printOfficialIdiarnBook(dataOrParcela) {
         
         if (latestOp && latestOp.caderno_campo_op_itens) {
           const dtOp = latestOp.data_aplicacao ? latestOp.data_aplicacao.split('-').reverse().join('/') : (doc.data_aplicacao ? doc.data_aplicacao.split('-').reverse().join('/') : '—');
-          const recDefault = latestOp.op_cod ? ('REC-' + latestOp.op_cod.replace(/[^A-Za-z0-9]/g, '').toUpperCase()) : (latestOp.id ? ('REC-' + latestOp.id.substring(0,6).toUpperCase()) : 'REC-AGRO');
 
           const agroList = [];
           const pragasMap = new Map();
           latestOp.caderno_campo_op_itens.forEach(item => {
+            const isFoliar = (typeof getProductGroup === 'function' && getProductGroup(item.produto_nome || item) === 'FOLIARES') ||
+                             (item.tipo && String(item.tipo).toUpperCase().includes('FOLIAR')) ||
+                             (item.alvo && (String(item.alvo).toUpperCase().includes('ADUBAÇÃO') || String(item.alvo).toUpperCase().includes('FOLIAR')));
+            if (isFoliar) return;
+
             const doseTxt = item.dosagem_real ? `${item.dosagem_real} ${item.unidade || 'L/ha'}` : (item.dose ? `${item.dose} ${item.unidade || ''}` : '1.0 L/ha');
             agroList.push({
               produto: item.produto_nome || 'Defensivo Fitossanitário',
               dose: doseTxt,
               data: dtOp,
               carencia: item.carencia_dias != null ? `${item.carencia_dias} dias` : '7 dias',
-              receituario: item.receituario || recDefault
+              receituario: '' // Vazio no IDARN
             });
 
             const rawAlvo = (item.alvo || '').toUpperCase().trim();
-            if (rawAlvo && !rawAlvo.includes('ADUBAÇÃO') && !rawAlvo.includes('FOLIAR')) {
+            if (rawAlvo) {
               let matched = null;
               for (const [key, obj] of Object.entries(PRAGAS_MAPA_CIENTIFICO)) {
                 if (rawAlvo.includes(key)) { matched = obj; break; }
@@ -22445,20 +22454,24 @@ async function printOfficialIdiarnBook(dataOrParcela) {
 
     if (latestOp && latestOp.caderno_campo_op_itens) {
       const dtOp = latestOp.data_aplicacao ? latestOp.data_aplicacao.split('-').reverse().join('/') : '—';
-      const recDefault = latestOp.op_cod ? ('REC-' + latestOp.op_cod.replace(/[^A-Za-z0-9]/g, '').toUpperCase()) : (latestOp.id ? ('REC-' + latestOp.id.substring(0,6).toUpperCase()) : 'REC-AGRO');
 
       latestOp.caderno_campo_op_itens.forEach(item => {
+        const isFoliar = (typeof getProductGroup === 'function' && getProductGroup(item.produto_nome || item) === 'FOLIARES') ||
+                         (item.tipo && String(item.tipo).toUpperCase().includes('FOLIAR')) ||
+                         (item.alvo && (String(item.alvo).toUpperCase().includes('ADUBAÇÃO') || String(item.alvo).toUpperCase().includes('FOLIAR')));
+        if (isFoliar) return;
+
         const doseTxt = item.dosagem_real ? `${item.dosagem_real} ${item.unidade || 'L/ha'}` : (item.dose ? `${item.dose} ${item.unidade || ''}` : '1.0 L/ha');
         agroList.push({
           produto: item.produto_nome || 'Defensivo Fitossanitário',
           dose: doseTxt,
           data: dtOp,
           carencia: item.carencia_dias != null ? `${item.carencia_dias} dias` : '7 dias',
-          receituario: item.receituario || recDefault
+          receituario: '' // Vazio no IDARN
         });
 
         const rawAlvo = (item.alvo || '').toUpperCase().trim();
-        if (rawAlvo && !rawAlvo.includes('ADUBAÇÃO') && !rawAlvo.includes('FOLIAR')) {
+        if (rawAlvo) {
           let matched = null;
           for (const [key, obj] of Object.entries(PRAGAS_MAPA_CIENTIFICO)) {
             if (rawAlvo.includes(key)) { matched = obj; break; }
@@ -22607,7 +22620,10 @@ async function printOfficialIdiarnBook(dataOrParcela) {
   }
 
   // Agrotóxicos (Tratamento Fitossanitário Realizado - 5 linhas)
-  const agroList = Array.isArray(doc.defensivos) ? doc.defensivos : [];
+  const rawAgroList = Array.isArray(doc.defensivos) ? doc.defensivos : [];
+  const agroList = rawAgroList.filter(d => {
+    return !(typeof getProductGroup === 'function' && getProductGroup(d.produto || d) === 'FOLIARES');
+  });
   let agroRowsHtml = '';
   agroList.forEach(d => {
     agroRowsHtml += `
@@ -22616,7 +22632,7 @@ async function printOfficialIdiarnBook(dataOrParcela) {
       <td style="text-align:center">${d.dose || '—'}</td>
       <td style="text-align:center">${formatDt(d.data || dataVisita)}</td>
       <td style="text-align:center">${d.carencia || '—'}</td>
-      <td style="text-align:center">${d.receituario || '—'}</td>
+      <td style="text-align:center">${d.receituario ? d.receituario : '&nbsp;'}</td>
     </tr>`;
   });
   const agroVazias = Math.max(0, 5 - agroList.length);
