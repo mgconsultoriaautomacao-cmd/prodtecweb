@@ -64,6 +64,10 @@
    - Adicionado botão *"📍 Ver Mapa GPS"* na tabela de vistorias MIP do painel Web (`index.html`).
    - Criado o modal `#mipGpsMapModal` com exibição de coordenadas centrais, precisão em metros, link direto para o Google Maps e mapa OpenStreetMap integrado.
    - Exibição detalhada da contagem de pragas e coordenadas individuais por ponto de amostragem (Pt 1 a Pt 10).
+10. **🐛 Lançamento Multi-Praga no PWA (MIP Completo EMBRAPA):**
+   - Atualizado o PWA (`campo/index.html`) para permitir lançar **múltiplas pragas e doenças na mesma vistoria MIP** antes de salvar, exatamente como na versão Web.
+   - Adicionada a barra interativa de chips `#mipRecordedChips`, permitindo navegar entre alvos lançados e visualizar médias acumuladas.
+   - Empacotados todos os alvos em `pragas_json` e `doencas_json` ao salvar a ficha MIP.
 
 ---
 
