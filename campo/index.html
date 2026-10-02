@@ -2197,6 +2197,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 <div id="toast"></div>
 
 <script>
+const esc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
 // ═══════════════════════════════════════════
 // THEME CONTROL
 // ═══════════════════════════════════════════
@@ -2286,7 +2288,7 @@ function showScreen(name) {
   if (name === 'phSign') setTimeout(initPhSig, 300);
   if (name === 'closure') setTimeout(initQualitySig, 300);
   if (name === 'mip') {
-    loadMipSelects();
+    rebuildAllParcelaSelects();
     if ($('mipDateInput')) $('mipDateInput').value = today();
     if ($('mipTecnicoInput')) $('mipTecnicoInput').value = window.currentInspector || (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'David Ferreira';
     captureMipGps(false);
