@@ -1540,6 +1540,15 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 
   <!-- Área de Lançamento por Pontos -->
   <div class="card" style="margin-bottom:16px; padding:16px">
+  <!-- Badge e Indicador de Geolocalização GPS -->
+  <div id="mipGpsArea" style="display:flex; align-items:center; justify-content:space-between; background:var(--card-item-bg); padding:10px 14px; border-radius:8px; border:1px solid var(--border); margin-bottom:12px; font-size:12px;">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <i data-lucide="map-pin" style="width:16px; height:16px; color:var(--btn-bg);"></i>
+      <span id="mipGpsStatus" style="font-weight:600; color:var(--text);">GPS: Aguardando sinal...</span>
+    </div>
+    <button class="btn btn-sec" onclick="captureMipGps(true)" style="padding:4px 10px; min-height:36px; font-size:12px; font-weight:600;">📍 Obter GPS</button>
+  </div>
+
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
   <div style="font-weight:700; font-size:12px; text-transform:uppercase; color:var(--muted)">Lançamento por Ponto</div>
   <div style="font-size:14px; font-weight:800; color:var(--green)">Média: <span id="mipAverageVal">0.00</span></div>
@@ -7321,80 +7330,138 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
   renderMipPoints();
   }
 
-  function renderMipPoints() {
-  const grid = document.getElementById('mipPointsGrid');
-  if (!grid) return;
-  grid.innerHTML = '';
-  
-  for (let i = 0; i < 10; i++) {
-  const activeClass = i === mipSelPoint ? 'border-color:var(--green); background:var(--green-dim);' : '';
-  grid.insertAdjacentHTML('beforeend', `
-  <button class="btn btn-sec" onclick="selectMipPoint(${i})" style="padding:4px; height:48px; font-size:11px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; ${activeClass}">
-  <span style="font-size:9px;color:var(--muted)">Pt ${i+1}</span>
-  <span style="font-weight:800;font-size:13px">${mipValues[i]}</span>
-  </button>
-  `);
+  let currentMipGps = { lat: null, lng: null, accuracy: null, timestamp: null };
+  let mipPointCoords = Array(10).fill(null);
+
+  function captureMipGps(manualTrigger = false) {
+    const statusEl = document.getElementById('mipGpsStatus');
+    if (statusEl) statusEl.textContent = '📍 Buscando sinal GPS...';
+
+    if (!navigator.geolocation) {
+      if (statusEl) statusEl.textContent = '❌ GPS não suportado neste navegador';
+      if (manualTrigger) toast('Geolocalização não é suportada por este navegador.', 'err');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = parseFloat(pos.coords.latitude.toFixed(6));
+        const lng = parseFloat(pos.coords.longitude.toFixed(6));
+        const acc = Math.round(pos.coords.accuracy);
+        currentMipGps = { lat, lng, accuracy: acc, timestamp: new Date().toISOString() };
+        
+        // Link coords to currently selected sampling point
+        mipPointCoords[mipSelPoint] = { point: mipSelPoint + 1, lat, lng, accuracy: acc, time: new Date().toLocaleTimeString('pt-BR') };
+
+        if (statusEl) {
+          statusEl.innerHTML = `<span style="color:var(--btn-bg);font-weight:700">GPS OK</span> (${lat.toFixed(4)}, ${lng.toFixed(4)} ±${acc}m)`;
+        }
+        if (manualTrigger) toast(`GPS registrado: ${lat}, ${lng} (±${acc}m)`, 'ok');
+      },
+      (err) => {
+        console.warn('Erro ao obter GPS:', err);
+        let errMsg = 'Sinal GPS indisponível';
+        if (err.code === 1) errMsg = 'Permissão de GPS negada';
+        else if (err.code === 2) errMsg = 'Posição GPS indisponível';
+        else if (err.code === 3) errMsg = 'Tempo esgotado ao buscar GPS';
+
+        if (statusEl) statusEl.textContent = `⚠️ ${errMsg}`;
+        if (manualTrigger) toast(errMsg, 'err');
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+    );
   }
-  
-  document.getElementById('mipSelPointLabel').textContent = mipSelPoint + 1;
-  document.getElementById('mipPointValLabel').textContent = mipValues[mipSelPoint];
-  
-  const avg = mipValues.reduce((a, b) => a + b, 0) / 10.0;
-  document.getElementById('mipAverageVal').textContent = avg.toFixed(2);
+
+  function renderMipPoints() {
+    const grid = document.getElementById('mipPointsGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    
+    for (let i = 0; i < 10; i++) {
+      const activeClass = i === mipSelPoint ? 'border-color:var(--green); background:var(--green-dim);' : '';
+      const hasGps = mipPointCoords[i] ? '📍' : '';
+      grid.insertAdjacentHTML('beforeend', `
+        <button class="btn btn-sec" onclick="selectMipPoint(${i})" style="padding:4px; height:48px; font-size:11px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; ${activeClass}">
+          <span style="font-size:9px;color:var(--muted)">Pt ${i+1} ${hasGps}</span>
+          <span style="font-weight:800;font-size:13px">${mipValues[i]}</span>
+        </button>
+      `);
+    }
+    
+    document.getElementById('mipSelPointLabel').textContent = mipSelPoint + 1;
+    document.getElementById('mipPointValLabel').textContent = mipValues[mipSelPoint];
+    
+    const avg = mipValues.reduce((a, b) => a + b, 0) / 10.0;
+    document.getElementById('mipAverageVal').textContent = avg.toFixed(2);
   }
 
   function selectMipPoint(idx) {
-  mipSelPoint = idx;
-  renderMipPoints();
+    mipSelPoint = idx;
+    renderMipPoints();
+    if (!mipPointCoords[idx]) {
+      captureMipGps(false);
+    }
   }
 
   function adjustMipVal(delta) {
-  const alvo = document.getElementById('mipAlvoSelect').value;
-  let val = mipValues[mipSelPoint] + delta;
-  if (val < 0) val = 0;
-  
-  if (alvo.includes('PRESENCA') && val > 1) {
-  val = 1;
-  }
-  
-  mipValues[mipSelPoint] = val;
-  renderMipPoints();
+    const alvo = document.getElementById('mipAlvoSelect').value;
+    let val = mipValues[mipSelPoint] + delta;
+    if (val < 0) val = 0;
+    
+    if (alvo.includes('PRESENCA') && val > 1) {
+      val = 1;
+    }
+    
+    mipValues[mipSelPoint] = val;
+    renderMipPoints();
   }
 
   async function saveMipRecord() {
-  const pId = document.getElementById('mipParcelSelect').value;
-  const praga = document.getElementById('mipAlvoSelect').value;
-  
-  if (!pId) {
-  alert('Por favor, selecione uma parcela!');
-  return;
-  }
-  
-  const pObj = parcelas.find(x => x.id == pId);
-  const info = pObj ? (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code) : null;
-  const avg = mipValues.reduce((a, b) => a + b, 0) / 10.0;
-  
-  const record = {
-  tenant_id: tenantId,
-  parcel_id: pId, // UUID from parcels table (correct)
-  parcela: pObj ? pObj.code : '',
-  variedade: info ? info.variedade : (pObj ? pObj.code : ''),
-  data_vistoria: today(),
-  praga: praga,
-  ponto1: mipValues[0],
-  ponto2: mipValues[1],
-  ponto3: mipValues[2],
-  ponto4: mipValues[3],
-  ponto5: mipValues[4],
-  ponto6: mipValues[5],
-  ponto7: mipValues[6],
-  ponto8: mipValues[7],
-  ponto9: mipValues[8],
-  ponto10: mipValues[9],
-  media: avg,
-  tecnico: (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'David Ferreira',
-  observacoes: 'Registrado via PWA campo'
-  };
+    const pId = document.getElementById('mipParcelSelect').value;
+    const praga = document.getElementById('mipAlvoSelect').value;
+    
+    if (!pId) {
+      alert('Por favor, selecione uma parcela!');
+      return;
+    }
+    
+    const pObj = parcelas.find(x => x.id == pId);
+    const info = pObj ? (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code) : null;
+    const avg = mipValues.reduce((a, b) => a + b, 0) / 10.0;
+    
+    const packedObs = JSON.stringify({
+      source: 'PWA_CAMPO',
+      gps: currentMipGps,
+      ponto_coords: mipPointCoords,
+      pragas_json: { [praga]: { media: avg, pontos: mipValues } },
+      observacoes: 'Registrado via PWA campo'
+    });
+
+    const record = {
+      tenant_id: tenantId,
+      parcel_id: pId, // UUID from parcels table (correct)
+      parcela: pObj ? pObj.code : '',
+      variedade: info ? info.variedade : (pObj ? pObj.code : ''),
+      data_vistoria: today(),
+      praga: praga,
+      ponto1: mipValues[0],
+      ponto2: mipValues[1],
+      ponto3: mipValues[2],
+      ponto4: mipValues[3],
+      ponto5: mipValues[4],
+      ponto6: mipValues[5],
+      ponto7: mipValues[6],
+      ponto8: mipValues[7],
+      ponto9: mipValues[8],
+      ponto10: mipValues[9],
+      media: avg,
+      latitude: currentMipGps.lat,
+      longitude: currentMipGps.lng,
+      accuracy: currentMipGps.accuracy,
+      ponto_coords: mipPointCoords,
+      tecnico: (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'David Ferreira',
+      observacoes: packedObs
+    };
   
   try {
   const hasParcel = (dbParcels || []).some(p => p.id === record.parcel_id);
