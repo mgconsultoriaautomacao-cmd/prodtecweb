@@ -7739,7 +7739,7 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
     const diffTime = harvestDateObj - appDateObj;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     if (diffDays >= 0 && diffDays <= carencia) {
-      alert(`⚠️ CARÊNCIA INVÁLIDA — A carência para ${def.produto} é de ${carencia} dias (+1 dia de intervalo de segurança = ${carencia + 1} dias), mas a colheita está prevista para daqui a ${diffDays} dias (${ip.previsao_colheita.split('-').reverse().join('/')}). Você estaria colhendo dentro do intervalo de carência de segurança!`);
+      alert(`⚠️ CARÊNCIA INVÁLIDA — A carência para ${def.produto} é de ${carencia} dias, mas a colheita está prevista para daqui a ${diffDays} dias (${ip.previsao_colheita.split('-').reverse().join('/')}). Você estaria colhendo dentro do período de carência!`);
       return;
     }
   }
