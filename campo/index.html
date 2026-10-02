@@ -1538,13 +1538,35 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   <div class="form-field">
   <label class="field-label">Praga / Alvo de Amostragem</label>
   <select id="mipAlvoSelect" onchange="onMipAlvoChange()" style="font-size:14px">
-  <option value="MOSCA_BRANCA_ADULTO">Mosca Branca (Adulto)</option>
-  <option value="MOSCA_BRANCA_NINFA">Mosca Branca (Ninfa)</option>
-  <option value="MINADORA_LAGARTA">Minadora (Lagarta)</option>
-  <option value="TRIPS_ADULTO">Trips (Adulto)</option>
-  <option value="DIAFANIA_LAGARTA">Diafânia (Lagarta)</option>
-  <option value="OÍDIO_PRESENCA">Oídio (Presença/Ausência)</option>
+    <optgroup label="Pragas">
+      <option value="mosca_branca_adulto">Mosca Branca (Adulto)</option>
+      <option value="mosca_branca_ninfa">Mosca Branca (Ninfa)</option>
+      <option value="minadora_larva">Minadora (Larva viva)</option>
+      <option value="minadora_adulto">Minadora (Adulto)</option>
+      <option value="pulgao_c_asa">Pulgão (c/ asa)</option>
+      <option value="pulgao_s_asa">Pulgão (s/ asa)</option>
+      <option value="diafania_lagarta">Diafânia (Lagarta)</option>
+      <option value="mede_palmo_lagarta">Mede-palmo (Lagarta)</option>
+      <option value="trips_adulto">Trips (Adulto)</option>
+    </optgroup>
+    <optgroup label="Doenças & Fungos">
+      <option value="oidio">Oídio (Presença/Ausência)</option>
+      <option value="cancro_gomoso">Cancro Gomoso</option>
+      <option value="cancro_seco">Cancro Seco</option>
+      <option value="mildio">Míldio</option>
+      <option value="monosporascus">Monosporascus</option>
+      <option value="bacterias">Bactérias</option>
+      <option value="viroses">Viroses</option>
+    </optgroup>
   </select>
+  </div>
+
+  <!-- Bar de Alvos Registrados nesta Vistoria (Multi-Praga) -->
+  <div id="mipSessionTargetsArea" style="margin-top:4px">
+    <div style="font-size:11px; font-weight:700; color:var(--muted); margin-bottom:4px">Alvos Lançados Nesta Vistoria:</div>
+    <div id="mipRecordedChips" style="display:flex; flex-wrap:wrap; gap:6px">
+      <span style="font-size:11px; color:var(--muted); font-style:italic">Selecione e lance pontos acima.</span>
+    </div>
   </div>
   </div>
 
@@ -7338,12 +7360,95 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
   }
   }
 
+  let mipSessionData = {}; // { [targetKey]: { points: [10], coords: [10], avg: 0 } }
+  let lastMipTargetKey = 'mosca_branca_adulto';
+
+  function getMipTargetLabel(key) {
+    const labels = {
+      'mosca_branca_adulto': 'Mosca Branca (Adulto)',
+      'mosca_branca_ninfa': 'Mosca Branca (Ninfa)',
+      'minadora_larva': 'Minadora (Larva)',
+      'minadora_adulto': 'Minadora (Adulto)',
+      'pulgao_c_asa': 'Pulgão (c/ asa)',
+      'pulgao_s_asa': 'Pulgão (s/ asa)',
+      'diafania_lagarta': 'Diafânia (Lagarta)',
+      'mede_palmo_lagarta': 'Mede-palmo (Lagarta)',
+      'trips_adulto': 'Trips (Adulto)',
+      'oidio': 'Oídio',
+      'cancro_gomoso': 'Cancro Gomoso',
+      'cancro_seco': 'Cancro Seco',
+      'mildio': 'Míldio',
+      'monosporascus': 'Monosporascus',
+      'bacterias': 'Bactérias',
+      'viroses': 'Viroses'
+    };
+    return labels[key] || String(key || '').replace(/_/g, ' ').toUpperCase();
+  }
+
+  function flushCurrentMipTargetToSession() {
+    const currentTarget = $('mipAlvoSelect')?.value || lastMipTargetKey;
+    const avg = mipValues.reduce((a, b) => a + b, 0) / 10.0;
+    const hasData = mipValues.some(v => v > 0);
+    if (hasData || mipSessionData[currentTarget]) {
+      mipSessionData[currentTarget] = {
+        points: [...mipValues],
+        coords: [...mipPointCoords],
+        avg: parseFloat(avg.toFixed(2))
+      };
+    }
+    renderMipRecordedChips();
+  }
+
   function onMipAlvoChange() {
-  const alvo = document.getElementById('mipAlvoSelect').value;
-  mipValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-  mipSelPoint = 0;
-  
-  renderMipPoints();
+    flushCurrentMipTargetToSession();
+    const newTarget = $('mipAlvoSelect').value;
+    lastMipTargetKey = newTarget;
+
+    if (mipSessionData[newTarget]) {
+      mipValues = [...mipSessionData[newTarget].points];
+      mipPointCoords = [...mipSessionData[newTarget].coords];
+    } else {
+      mipValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+      mipPointCoords = Array(10).fill(null);
+    }
+    mipSelPoint = 0;
+    renderMipPoints();
+    renderMipRecordedChips();
+  }
+
+  function selectMipRecordedChip(targetKey) {
+    flushCurrentMipTargetToSession();
+    const select = $('mipAlvoSelect');
+    if (select) {
+      select.value = targetKey;
+      onMipAlvoChange();
+    }
+  }
+
+  function renderMipRecordedChips() {
+    const container = $('mipRecordedChips');
+    if (!container) return;
+    
+    const currentTarget = $('mipAlvoSelect')?.value;
+    const recordedKeys = Object.keys(mipSessionData).filter(k => {
+      const item = mipSessionData[k];
+      return item && (item.points.some(v => v > 0) || k === currentTarget);
+    });
+
+    if (recordedKeys.length === 0) {
+      container.innerHTML = `<span style="font-size:11px; color:var(--muted); font-style:italic">Selecione e lance pontos acima.</span>`;
+      return;
+    }
+
+    container.innerHTML = recordedKeys.map(k => {
+      const item = mipSessionData[k] || { avg: 0, points: mipValues };
+      const isSelected = k === currentTarget;
+      const chipClass = isSelected ? 'background:var(--btn-bg); color:#fff;' : 'background:var(--card-item-bg); color:var(--text); border:1px solid var(--border);';
+      const label = getMipTargetLabel(k);
+      return `<button type="button" onclick="selectMipRecordedChip('${k}')" style="font-size:11px; font-weight:600; padding:3px 8px; border-radius:12px; border:none; cursor:pointer; min-height:28px; display:inline-flex; align-items:center; gap:4px; ${chipClass}">
+        ✓ ${esc(label)}: ${item.avg.toFixed(2)}
+      </button>`;
+    }).join('');
   }
 
   let currentMipGps = { lat: null, lng: null, accuracy: null, timestamp: null };
@@ -7430,11 +7535,13 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
     
     mipValues[mipSelPoint] = val;
     renderMipPoints();
+    flushCurrentMipTargetToSession();
   }
 
   async function saveMipRecord() {
+    flushCurrentMipTargetToSession();
+
     const pId = document.getElementById('mipParcelSelect').value;
-    const praga = document.getElementById('mipAlvoSelect').value;
     const dateVal = document.getElementById('mipDateInput')?.value || today();
     const tecnicoVal = document.getElementById('mipTecnicoInput')?.value?.trim() || (window.currentInspector || (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'David Ferreira');
     
@@ -7445,13 +7552,49 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
     
     const pObj = parcelas.find(x => x.id == pId);
     const info = pObj ? (Array.isArray(infoParcelasData) ? infoParcelasData : []).find(i => i.parcela2 === pObj.code || i.parcela === pObj.code) : null;
-    const avg = mipValues.reduce((a, b) => a + b, 0) / 10.0;
     
+    const pragasData = {};
+    const doencasData = {};
+    const excedentes = [];
+    let maxMedia = 0;
+    let primaryTargetKey = $('mipAlvoSelect')?.value || 'mosca_branca_adulto';
+    let primaryPoints = [0,0,0,0,0,0,0,0,0,0];
+
+    const keys = Object.keys(mipSessionData);
+    if (keys.length === 0) {
+      const currentAvg = mipValues.reduce((a, b) => a + b, 0) / 10.0;
+      mipSessionData[primaryTargetKey] = { points: [...mipValues], coords: [...mipPointCoords], avg: currentAvg };
+    }
+
+    Object.keys(mipSessionData).forEach(k => {
+      const item = mipSessionData[k];
+      if (!item) return;
+      const pts = item.points || [0,0,0,0,0,0,0,0,0,0];
+      const avg = parseFloat(item.avg || 0);
+
+      if (avg >= maxMedia) {
+        maxMedia = avg;
+        primaryTargetKey = k;
+        primaryPoints = pts;
+      }
+
+      if (['oidio','cancro_gomoso','cancro_seco','mildio','monosporascus','bacterias','viroses'].includes(k)) {
+        doencasData[k] = { name: getMipTargetLabel(k), pontos: pts, total: pts.filter(v => v > 0).length, acima_limiar: pts.some(v => v > 0) };
+        if (pts.some(v => v > 0)) excedentes.push(`Doença: ${getMipTargetLabel(k)}`);
+      } else {
+        pragasData[k] = { praga: getMipTargetLabel(k), pontos: pts, total: pts.reduce((a,b)=>a+b,0), media: avg, acima_limiar: avg > 0 };
+        if (avg > 0) excedentes.push(`${getMipTargetLabel(k)} (${avg.toFixed(1)})`);
+      }
+    });
+
+    const summaryPraga = excedentes.length > 0 ? `MIP: ${excedentes.join(', ')}` : 'Vistoria MIP Completa (Sob Controle)';
+
     const packedObs = JSON.stringify({
       source: 'PWA_CAMPO',
       gps: currentMipGps,
       ponto_coords: mipPointCoords,
-      pragas_json: { [praga]: { media: avg, pontos: mipValues } },
+      pragas_json: pragasData,
+      doencas_json: doencasData,
       tecnico: tecnicoVal,
       observacoes: 'Registrado via PWA campo'
     });
@@ -7462,18 +7605,18 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
       parcela: pObj ? pObj.code : '',
       variedade: info ? info.variedade : (pObj ? pObj.code : ''),
       data_vistoria: dateVal,
-      praga: praga,
-      ponto1: mipValues[0],
-      ponto2: mipValues[1],
-      ponto3: mipValues[2],
-      ponto4: mipValues[3],
-      ponto5: mipValues[4],
-      ponto6: mipValues[5],
-      ponto7: mipValues[6],
-      ponto8: mipValues[7],
-      ponto9: mipValues[8],
-      ponto10: mipValues[9],
-      media: avg,
+      praga: summaryPraga,
+      ponto1: primaryPoints[0] || 0,
+      ponto2: primaryPoints[1] || 0,
+      ponto3: primaryPoints[2] || 0,
+      ponto4: primaryPoints[3] || 0,
+      ponto5: primaryPoints[4] || 0,
+      ponto6: primaryPoints[5] || 0,
+      ponto7: primaryPoints[6] || 0,
+      ponto8: primaryPoints[7] || 0,
+      ponto9: primaryPoints[8] || 0,
+      ponto10: primaryPoints[9] || 0,
+      media: maxMedia,
       latitude: currentMipGps.lat,
       longitude: currentMipGps.lng,
       accuracy: currentMipGps.accuracy,
@@ -7496,9 +7639,11 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
   renderMipHistory();
   
   showScreen('home');
+  mipSessionData = {};
   mipValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
   mipSelPoint = 0;
   renderMipPoints();
+  renderMipRecordedChips();
   } catch(err) {
   console.error(err);
   
@@ -7511,9 +7656,11 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
   
   toast('Salvo offline — sincronizará quando online', 'ok');
   showScreen('home');
+  mipSessionData = {};
   mipValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
   mipSelPoint = 0;
   renderMipPoints();
+  renderMipRecordedChips();
   }
   }
 
