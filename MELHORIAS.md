@@ -59,6 +59,11 @@
    - Adicionado indicador visual e botão *"📍 Obter GPS"* na ficha de amostragem MIP.
    - Gravadas automaticamente as coordenadas `latitude`, `longitude`, `accuracy` e o array `ponto_coords` para cada um dos 10 pontos de amostragem.
    - Atualizado o script `campo/field_migration.sql` com colunas idempotentes `latitude`, `longitude`, `accuracy` e `ponto_coords` (JSONB) na tabela `caderno_campo_mip`.
+9. **🗺️ Visualização Geográfica no Painel Web (Etapa 2):**
+   - Alinhados os formulários MIP, IDIARN, Fertirrigação e Operações entre o PWA e a versão Web (incluindo campos de data personalizada e técnico/pragueiro).
+   - Adicionado botão *"📍 Ver Mapa GPS"* na tabela de vistorias MIP do painel Web (`index.html`).
+   - Criado o modal `#mipGpsMapModal` com exibição de coordenadas centrais, precisão em metros, link direto para o Google Maps e mapa OpenStreetMap integrado.
+   - Exibição detalhada da contagem de pragas e coordenadas individuais por ponto de amostragem (Pt 1 a Pt 10).
 
 ---
 
