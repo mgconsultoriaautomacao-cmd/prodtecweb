@@ -148,3 +148,13 @@ CREATE POLICY "cc_fert_itens_tenant_all" ON caderno_campo_fertirrigacao_itens
     )
   );
 
+-- ================================================================
+-- 7. SUPORTE A GEOLOCALIZAÇÃO GPS NO MIP (CADERNO DE CAMPO)
+-- ================================================================
+ALTER TABLE caderno_campo_mip
+  ADD COLUMN IF NOT EXISTS latitude     NUMERIC,
+  ADD COLUMN IF NOT EXISTS longitude    NUMERIC,
+  ADD COLUMN IF NOT EXISTS accuracy     NUMERIC,
+  ADD COLUMN IF NOT EXISTS ponto_coords JSONB;
+
+

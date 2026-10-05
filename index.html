@@ -14,16 +14,21 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22C12 22 20 18 20 12V4L12 2L4 4V12C4 18 12 22 12 22Z'/%3E%3Cpath d='M12 8v8' stroke='%2310b981'/%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="logo.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="vendor/supabase.js"></script>
+  <script src="vendor/lucide.min.js"></script>
+  <script src="vendor/html5-qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
   <script src="campo/infoParcelasData.js"></script>
+  <script src="campo/parcelasCoords.js"></script>
   <script src="assets/idiarn_logos_b64.js"></script>
+  <!-- Leaflet & Heatmap for High-Precision NOC GIS Mapping -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
   <style>
   :root, html[data-theme="dark"] {
   --bg: #030712;
@@ -1745,6 +1750,7 @@
   <button class="btn on" id="ccTabPlantiosBtn" onclick="showCcTab('plantios')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="sprout" style="width:14px;height:14px"></i> Plantios & Parcelas</button>
   <button class="btn sec" id="ccTabColheitasBtn" onclick="showCcTab('colheitas')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="shopping-bag" style="width:14px;height:14px"></i> Colheitas por Parcela</button>
   <button class="btn sec" id="ccTabMipBtn" onclick="showCcTab('mip')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="bug" style="width:14px;height:14px"></i> Monitoramento MIP</button>
+  <button class="btn sec" id="ccTabNocBtn" onclick="showCcTab('noc')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; border:1px solid #10b981; color:#10b981; background:rgba(16,185,129,0.08); font-weight:700"><i data-lucide="radar" style="width:14px;height:14px"></i> NOC Fitossanitário</button>
   <button class="btn sec" id="ccTabOpBtn" onclick="showCcTab('op')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="file-text" style="width:14px;height:14px"></i> Aplicação O.P</button>
   <button class="btn sec" id="ccTabDefregBtn" onclick="showCcTab('defreg')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="shield" style="width:14px;height:14px; color:#60a5fa"></i> Estoque Defensivos</button>
   <button class="btn sec" id="ccTabFoliaresBtn" onclick="showCcTab('foliares')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="sprout" style="width:14px;height:14px; color:#4ade80"></i> Estoque Foliares</button>
@@ -1883,8 +1889,11 @@
   <!-- ABA 1: AMOSTRAGEM MIP -->
   <div id="ccTabMip" class="tab-pane-cc" style="display:none">
   <div class="card" style="margin-bottom:24px">
-  <div class="title" style="display:flex; justify-content:space-between; align-items:center"><div style="display:flex; align-items:center; gap:6px"><i data-lucide="bug" class="btn-i"></i> Vistorias Realizadas no Campo (MIP)</div>
-  <button onclick="openNewMipModal()" class="green" style="font-size:11px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="plus-circle" style="width:14px; height:14px"></i> + Nova Vistoria MIP</button>
+  <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px"><div style="display:flex; align-items:center; gap:6px"><i data-lucide="bug" class="btn-i"></i> Vistorias Realizadas no Campo (MIP)</div>
+  <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+    <button onclick="showCcTab('noc')" class="btn sec" style="font-size:11px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; border:1px solid #10b981; color:#10b981; font-weight:700"><i data-lucide="radar" style="width:14px; height:14px"></i> Central NOC & Mapa de Calor</button>
+    <button onclick="openNewMipModal()" class="green" style="font-size:11px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="plus-circle" style="width:14px; height:14px"></i> + Nova Vistoria MIP</button>
+  </div>
   </div>
   <p style="color:var(--muted); font-size:12px; margin-bottom:15px">Consulte as infestações coletadas por parcela (Planilha de 12 Alvos). Linhas em destaque vermelho indicam limiar de dano atingido.</p>
   <div style="overflow-x:auto">
@@ -1906,6 +1915,279 @@
   </table>
   </div>
   </div>
+  </div>
+
+  <!-- ABA NOC: CENTRAL DE MONITORAMENTO FITOSSANITÁRIO & EFICIÊNCIA DE DEFENSIVOS -->
+  <div id="ccTabNoc" class="tab-pane-cc" style="display:none">
+    
+    <!-- TOP STATUS BAR: MISSION CONTROL -->
+    <div class="noc-status-bar">
+      <div class="noc-status-bar-left">
+        <div id="nocStatusIndicator" class="noc-live-indicator"><span class="noc-live-dot"></span> AO VIVO</div>
+        <div id="nocStatusClock" class="noc-clock">--:--:-- (UTC-03:00)</div>
+        <div id="nocStatusSync" class="noc-sync-info">Última sincronização: aguardando...</div>
+      </div>
+      <div class="noc-status-bar-right">
+        <div id="nocFilterSummary" class="noc-filter-summary">Janela: <b>15 dias</b> · Alvo: <b>Geral</b></div>
+        <button type="button" id="nocTvModeBtn" class="noc-tv-btn" onclick="toggleNocTvMode()">
+          <i data-lucide="tv" style="width:13px;height:13px"></i> Modo TV
+        </button>
+      </div>
+    </div>
+
+    <!-- Top KPI Cards -->
+    <div class="noc-kpi-grid">
+      <div class="card noc-kpi-card" style="border-left:3px solid var(--blue)">
+        <div class="noc-kpi-header">
+          <div class="noc-kpi-label">Parcelas Monitoradas</div>
+          <i data-lucide="radar" class="noc-kpi-icon" style="color:var(--blue)"></i>
+        </div>
+        <div id="nocKpiTotalParcelas" style="color:var(--text)">0</div>
+        <div class="noc-kpi-sub" id="nocKpiVistoriasSub">0 vistorias no período</div>
+      </div>
+
+      <div class="card noc-kpi-card" id="nocKpiAlertasCriticosCard" style="border-left:3px solid var(--red)">
+        <div class="noc-kpi-header">
+          <div class="noc-kpi-label" style="color:var(--red) !important">Parcelas em Alerta Crítico</div>
+          <i data-lucide="alert-triangle" class="noc-kpi-icon" style="color:var(--red)"></i>
+        </div>
+        <div id="nocKpiAlertasCriticos" style="color:var(--red)">0</div>
+        <div class="noc-kpi-sub">Limiar de Ação EMBRAPA atingido</div>
+      </div>
+
+      <div class="card noc-kpi-card" style="border-left:3px solid var(--yellow)">
+        <div class="noc-kpi-header">
+          <div class="noc-kpi-label" style="color:var(--yellow) !important">Praga Predominante</div>
+          <i data-lucide="bug" class="noc-kpi-icon" style="color:var(--yellow)"></i>
+        </div>
+        <div id="nocKpiPragaDominante" style="color:var(--yellow); white-space:nowrap; overflow:hidden; text-overflow:ellipsis">—</div>
+        <div class="noc-kpi-sub" id="nocKpiPragaSub">Maior pressão detectada</div>
+      </div>
+
+      <div class="card noc-kpi-card" style="border-left:3px solid var(--green)">
+        <div class="noc-kpi-header">
+          <div class="noc-kpi-label" style="color:var(--green) !important">Eficiência Geral dos Defensivos</div>
+          <i data-lucide="shield-check" class="noc-kpi-icon" style="color:var(--green)"></i>
+        </div>
+        <div id="nocKpiEficaciaGeral" style="color:var(--green)">— %</div>
+        <div class="noc-kpi-sub" id="nocKpiEficaciaSub">Redução pós-aplicação (MIP x OP)</div>
+      </div>
+    </div>
+
+    <!-- NOC Control Toolbar -->
+    <div class="card noc-toolbar" style="padding:14px 18px; margin-bottom:16px; border:1px solid var(--border)">
+      <div class="noc-toolbar-header">
+        <div class="noc-toolbar-title">
+          <span style="display:inline-flex; width:8px; height:8px; border-radius:50%; background:#10b981; animation:nocBlink 2s infinite"></span>
+          <span>NOC FITOSSANITÁRIO — VISÃO GEOESPACIAL</span>
+        </div>
+        <div class="noc-toolbar-actions" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap">
+          <div class="noc-block-btn-group" id="nocBlockButtonGroup">
+            <button type="button" id="nocBlockEastBtn" class="noc-block-btn active" onclick="setNocBlockFilter('east')">Bloco Leste</button>
+            <button type="button" id="nocBlockWestBtn" class="noc-block-btn" onclick="setNocBlockFilter('west')">Bloco Oeste</button>
+            <button type="button" id="nocBlockAllBtn" class="noc-block-btn" onclick="setNocBlockFilter('all')">Todos</button>
+          </div>
+          <button class="btn on" onclick="centerNocMapAll()" style="font-size:11px; padding:5px 10px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="maximize" style="width:13px;height:13px"></i> Ajustar Vista Geral</button>
+          <button class="btn on" onclick="toggleNocFullscreen()" style="font-size:11px; padding:5px 10px; display:inline-flex; align-items:center; gap:4px; background:var(--blue)"><i data-lucide="monitor" style="width:13px;height:13px"></i> Tela Cheia</button>
+          <button class="btn sec" onclick="loadNocData()" style="font-size:11px; padding:5px 10px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="refresh-cw" style="width:13px;height:13px"></i> Atualizar Dados</button>
+        </div>
+      </div>
+
+      <div class="noc-select-grid">
+        <div>
+          <label class="noc-field-label">Alvo Fitossanitário (Praga/Doença)</label>
+          <select id="nocFilterPraga" onchange="renderNocMapAndLayers()" style="width:100%">
+            <option value="ALL">Todas as Pragas (Visão Geral de Risco)</option>
+            <option value="mosca_branca">Mosca Branca (Adulto/Ninfa)</option>
+            <option value="minadora">Minadora (Larva/Adulto)</option>
+            <option value="pulgao">Pulgão (s/asa / c/asa)</option>
+            <option value="diafania">Diafânia (Lagarta/Ovo)</option>
+            <option value="mede_palmo">Mede-palmo (Lagarta)</option>
+            <option value="trips">Trips (Adulto)</option>
+            <option value="oidio">Oídio</option>
+            <option value="cancro">Cancro Gomoso / Seco</option>
+            <option value="mildio">Míldio / Fungos</option>
+            <option value="viroses">Viroses</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="noc-field-label">Filtrar por Parcela</label>
+          <select id="nocFilterParcela" onchange="renderNocMapAndLayers()" style="width:100%">
+            <option value="ALL">Todas as Parcelas</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="noc-field-label">Janela Temporal</label>
+          <select id="nocFilterPeriodo" onchange="loadNocData()" style="width:100%">
+            <option value="7">Últimos 7 dias</option>
+            <option value="15" selected>Últimos 15 dias</option>
+            <option value="30">Últimos 30 dias</option>
+            <option value="90">Últimos 90 dias</option>
+            <option value="ALL">Safra Completa (Histórico Total)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="noc-field-label">Camada Base</label>
+          <select id="nocTileLayerSelect" onchange="switchNocBaseTileLayer(this.value)" style="width:100%">
+            <option value="esri">Satélite ESRI World Imagery (Alta Res.)</option>
+            <option value="topo">Topográfico (Relevo OpenTopoMap)</option>
+            <option value="osm">OpenStreetMap Padrão</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Drone URL Input (hidden/kept for compatibility) -->
+      <div id="nocDroneUrlRow" style="display:none !important; margin-top:10px; padding:10px; background:rgba(16,185,129,0.06); border:1px dashed #10b981; border-radius:6px">
+        <label style="font-size:11px; color:#10b981; font-weight:700; display:block; margin-bottom:4px">URL do Ortomosaico de Drone:</label>
+        <div style="display:flex; gap:8px">
+          <input type="text" id="nocDroneTileUrl" placeholder="https://exemplo.com/tiles/{z}/{x}/{y}.png" style="flex:1" />
+          <button class="btn on" onclick="applyNocDroneLayer()" style="font-size:11px; padding:6px 14px">Carregar</button>
+        </div>
+      </div>
+
+      <!-- Toggles for layers (Chips) -->
+      <div class="noc-layer-chips">
+        <label class="noc-chip active" id="nocChipPoints">
+          <input type="checkbox" id="nocTogglePoints" checked onchange="renderNocMapAndLayers(); window.syncNocToggleChips && window.syncNocToggleChips()">
+          <span class="noc-chip-dot"></span>
+          <span>Pontos de Amostragem (P1..P10/P20)</span>
+        </label>
+        <label class="noc-chip active" id="nocChipHeatmap">
+          <input type="checkbox" id="nocToggleHeatmap" checked onchange="renderNocMapAndLayers(); window.syncNocToggleChips && window.syncNocToggleChips()">
+          <span class="noc-chip-dot"></span>
+          <span>Mapa de calor das vistorias</span>
+        </label>
+        <label class="noc-chip active" id="nocChipParcels">
+          <input type="checkbox" id="nocToggleParcels" checked onchange="renderNocMapAndLayers(); window.syncNocToggleChips && window.syncNocToggleChips()">
+          <span class="noc-chip-dot"></span>
+          <span>Polígonos das Parcelas</span>
+        </label>
+        <label class="noc-chip" id="nocChipElevation">
+          <input type="checkbox" id="nocToggleElevation" onchange="renderNocMapAndLayers(); window.syncNocToggleChips && window.syncNocToggleChips()">
+          <span class="noc-chip-dot" style="background:#06b6d4"></span>
+          <span>Relevo (Topografia DEM)</span>
+        </label>
+        <label class="noc-chip active" id="nocChipRisk">
+          <input type="checkbox" id="nocToggleRisk" checked onchange="window.syncNocToggleChips && window.syncNocToggleChips()">
+          <span class="noc-chip-dot"></span>
+          <span>Risco Agroclimático (Open-Meteo)</span>
+        </label>
+        <div class="noc-legend">
+          <span class="noc-legend-item"><span class="noc-legend-dot" style="background:#10b981"></span> Sob Controle</span>
+          <span class="noc-legend-item"><span class="noc-legend-dot" style="background:#f59e0b"></span> Atenção</span>
+          <span class="noc-legend-item"><span class="noc-legend-dot" style="background:#ef4444"></span> Limiar Atingido</span>
+        </div>
+      </div>
+
+      <!-- Nota fixa Copernicus DEM na barra de legenda -->
+      <div id="nocElevationLegendContainer" style="display:none; margin-top:8px; padding:6px 12px; background:rgba(6,182,212,0.08); border:1px solid rgba(6,182,212,0.25); border-radius:6px; font-size:11px">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
+          <div style="display:flex; align-items:center; gap:8px">
+            <span style="font-weight:700; color:#38bdf8">Gradiente Altimétrico:</span>
+            <span style="display:inline-flex; align-items:center; gap:4px"><span style="display:inline-block; width:10px; height:10px; border-radius:2px; background:#0284c7"></span> Baixada (&lt; média)</span>
+            <span style="display:inline-flex; align-items:center; gap:4px"><span style="display:inline-block; width:10px; height:10px; border-radius:2px; background:#10b981"></span> Média</span>
+            <span style="display:inline-flex; align-items:center; gap:4px"><span style="display:inline-block; width:10px; height:10px; border-radius:2px; background:#ea580c"></span> Topo (&gt; média)</span>
+          </div>
+          <span id="nocElevationStatsText" style="color:var(--noc-muted)">Média da Fazenda: — m</span>
+        </div>
+        <div class="noc-copernicus-note">
+          ℹ️ Elevação Copernicus DEM (~90 m). Indica a tendência do terreno, não microrrelevo dentro da parcela.
+        </div>
+      </div>
+    </div>
+
+    <!-- NOC Main Split: Map (70%) + Ranking Sidebar (30%) -->
+    <div class="noc-main-split" style="display:grid; grid-template-columns: 2.2fr 1fr; gap:16px; margin-bottom:20px; align-items:start">
+      
+      <!-- Leaflet Map Container -->
+      <div class="card" id="nocMapCardContainer" style="padding:0; overflow:hidden; border:1px solid var(--border); position:relative; min-height:700px; height:100%; display:flex; flex-direction:column; margin-bottom:0; background:#0b1329">
+        <!-- Aviso discreto de parcelas sem coordenada -->
+        <div id="nocMissingCoordsNotice" class="noc-missing-coords-banner" style="display:none" onclick="showMissingCoordsModal()"></div>
+
+        <div id="nocLeafletMap" style="width:100%; flex:1; min-height:700px; z-index:1; background:#0b1329"></div>
+        
+        <!-- Live HUD at bottom of map -->
+        <div class="noc-hud">
+          <span id="nocHudCoords">Lat: —, Lng: —</span>
+          <span class="noc-hud-divider">|</span>
+          <span id="nocHudZoom">Zoom: —</span>
+          <span class="noc-hud-divider">|</span>
+          <span id="nocHudAlt" style="display:none; color:var(--noc-accent); font-weight:700">ALT: — m</span>
+          <span class="noc-hud-divider">|</span>
+          <span id="nocHudPrecision" style="color:#10b981">Visão de fazenda</span>
+        </div>
+      </div>
+
+      <!-- Right Column: Ranking & Live Alertas -->
+      <div class="card noc-sidebar-card" style="padding:16px; border:1px solid var(--border); margin-bottom:0">
+        <div style="font-weight:800; font-size:14px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center">
+          <span style="display:flex; align-items:center; gap:6px"><i data-lucide="alert-triangle" style="width:16px;height:16px; color:var(--red)"></i> Ranking de Pressão</span>
+          <span id="nocAlertCountBadge" class="badge" style="background:rgba(239,68,68,0.2); color:var(--red); font-size:11px">0 críticas</span>
+        </div>
+        <p style="font-size:11px; color:var(--muted); margin-bottom:12px">Parcelas ordenadas pela severidade fitossanitária no período. Clique para localizar no mapa.</p>
+        
+        <div id="nocRankingList" style="display:flex; flex-direction:column; gap:8px">
+          <div style="text-align:center; padding:20px; color:var(--muted); font-size:12px">Carregando vistorias...</div>
+        </div>
+
+        <!-- Card Fatores de Risco Agroclimático -->
+        <div id="nocRiskFactorsCard" class="noc-risk-card" style="display:none"></div>
+
+        <!-- Mini-Painel de Validação Risco vs Infestação -->
+        <div id="nocValidationPanel" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <!-- NOC Bottom Section: Eficiência dos Defensivos (MIP x O.P) -->
+    <div class="card" style="padding:20px; border:1px solid var(--border); margin-bottom:24px">
+      <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px">
+        <div style="display:flex; align-items:center; gap:8px">
+          <i data-lucide="shield-check" class="btn-i" style="color:var(--green)"></i>
+          <span style="font-size:16px; font-weight:800">AUDITORIA DE EFICIÊNCIA DE DEFENSIVOS (CRUZAMENTO O.P × MIP)</span>
+        </div>
+        <span class="badge" style="background:rgba(16,185,129,0.15); color:var(--green); font-size:11px; padding:4px 10px">Análise Populacional Pré vs. Pós Aplicação</span>
+      </div>
+
+      <p style="font-size:12px; color:var(--muted); margin-bottom:16px">
+        O sistema correlaciona automaticamente as ordens de pulverização (O.P) com as vistorias de campo (MIP) realizadas antes e depois de cada aplicação, mensurando o percentual real de redução da praga e apontando perda de eficácia ou resistência.
+      </p>
+
+      <!-- Grid: Chart on Left (60%), Product Efficiency Table on Right (40%) -->
+      <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap:16px; align-items:start">
+        <div style="background:var(--card-item-bg); padding:16px; border-radius:8px; border:1px solid var(--border)">
+          <div style="font-size:12px; font-weight:700; margin-bottom:10px; color:var(--text); display:flex; justify-content:space-between">
+            <span>Curva de Infestação ao Longo do Tempo vs. Aplicações (O.P)</span>
+            <span id="nocChartParcelaLabel" style="color:var(--green); font-weight:800">Todas as Parcelas</span>
+          </div>
+          <div style="height:260px; position:relative">
+            <canvas id="nocEfficiencyChart"></canvas>
+          </div>
+        </div>
+
+        <div style="background:var(--card-item-bg); padding:16px; border-radius:8px; border:1px solid var(--border); max-height:310px; overflow-y:auto">
+          <div style="font-size:12px; font-weight:700; margin-bottom:10px; color:var(--text)">
+            Eficácia por Produto / Defensivo Aplicado
+          </div>
+          <table style="width:100%; border-collapse:collapse; font-size:11px">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border); text-align:left; color:var(--muted)">
+                <th style="padding:6px">Produto / Alvo</th>
+                <th style="padding:6px; text-align:center">Aplicações</th>
+                <th style="padding:6px; text-align:center">Redução Média</th>
+                <th style="padding:6px; text-align:center">Status</th>
+              </tr>
+            </thead>
+            <tbody id="nocProductsEfficacyTbody">
+              <tr><td colspan="4" style="text-align:center; padding:15px; color:var(--muted)">Calculando eficácia...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- ABA 2: APLICAÇÃO DE DEFENSIVOS (O.P) -->
@@ -12467,8 +12749,48 @@ const _opReportIcons = {
   "night": "data:image/jpeg;base64,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"
 };
 
+function cleanObservationText(rawObs) {
+  if (!rawObs) return '';
+  if (typeof rawObs !== 'string') return String(rawObs);
+  let trimmed = rawObs.trim();
+  if (!trimmed) return '';
 
+  const start = trimmed.indexOf('{');
+  const end = trimmed.lastIndexOf('}');
+  if (start !== -1) {
+    if (end > start) {
+      try {
+        const jsonStr = trimmed.substring(start, end + 1);
+        const parsed = JSON.parse(jsonStr);
+        const innerObs = parsed.observacoes || parsed.obs_texto || parsed.obs || '';
+        const textBefore = trimmed.substring(0, start).replace(/^(obs|observa[cç][oõ]es)[\s:]*/i, '').trim();
+        const textAfter = trimmed.substring(end + 1).replace(/^(obs|observa[cç][oõ]es)[\s:]*/i, '').trim();
+        const extra = [textBefore, textAfter].filter(Boolean).join(' ').trim();
+        if (innerObs && typeof innerObs === 'string' && !innerObs.includes('pragas_json') && !innerObs.trim().startsWith('{')) {
+          return extra ? `${extra} — ${innerObs}` : innerObs;
+        }
+        return extra || '';
+      } catch(e) {
+        const textBefore = trimmed.substring(0, start).replace(/^(obs|observa[cç][oõ]es)[\s:]*/i, '').trim();
+        const textAfter = trimmed.substring(end + 1).replace(/^(obs|observa[cç][oõ]es)[\s:]*/i, '').trim();
+        const extra = [textBefore, textAfter].filter(Boolean).join(' ').trim();
+        return extra || '';
+      }
+    } else {
+      const textBefore = trimmed.substring(0, start).replace(/^(obs|observa[cç][oõ]es)[\s:]*/i, '').trim();
+      return textBefore || '';
+    }
+  }
 
+  if (/pragas_json|doencas_json|ponto_coords|limiarTipo|limiarTexto|pontos_atacados/i.test(trimmed)) {
+    return '';
+  }
+
+  const cleaned = trimmed.replace(/^(obs|observa[cç][oõ]es)[\s:]*/i, '').trim();
+  if (cleaned.startsWith('{') && cleaned.endsWith('}')) return '';
+  return cleaned;
+}
+window.cleanObservationText = cleanObservationText;
 
 function normalizeParcelCode(val) {
   if (!val) return '';
@@ -14974,7 +15296,7 @@ let webInfoParcelasData = [];
 let webVariedadeRowCount = 0;
 
 function showCcTab(tab) {
-  ['plantios','colheitas','mip','op','defreg','foliares','calagem','fert','tratos','mudas','pos','idiarn'].forEach(t => {
+  ['plantios','colheitas','mip','noc','op','defreg','foliares','calagem','fert','tratos','mudas','pos','idiarn'].forEach(t => {
   const pane = $(`ccTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
   const btn = $(`ccTab${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
   if (pane) pane.style.display = (tab === t) ? 'block' : 'none';
@@ -14988,6 +15310,8 @@ function showCcTab(tab) {
     loadColheitasTable();
   } else if (tab === 'mip') {
     loadMipTable();
+  } else if (tab === 'noc') {
+    loadNocDashboard();
   } else if (tab === 'op') {
     loadOpTable();
   } else if (tab === 'pos') {
@@ -15022,17 +15346,23 @@ async function loadMipTable() {
       .order('data_vistoria', { ascending: false });
     if (!mipError && mipData) {
       const unpacked = mipData.map(item => {
-        if (item.observacoes && typeof item.observacoes === 'string' && item.observacoes.startsWith('{')) {
-          try {
-            const parsed = JSON.parse(item.observacoes);
-            if (parsed.pragas_json) item.pragas_json = parsed.pragas_json;
-            if (parsed.doencas_json) item.doencas_json = parsed.doencas_json;
-            if (parsed.ervas_daninhas_pct !== undefined) item.ervas_daninhas_pct = parsed.ervas_daninhas_pct;
-            if (parsed.nematoide_obs) item.nematoide_obs = parsed.nematoide_obs;
-            if (parsed.dap) item.dap = parsed.dap;
-            if (parsed.tecnico) item.tecnico = parsed.tecnico;
-            if (parsed.observacoes !== undefined) item.obs_texto = parsed.observacoes;
-          } catch(e) {}
+        if (item.observacoes && typeof item.observacoes === 'string') {
+          const start = item.observacoes.indexOf('{');
+          const end = item.observacoes.lastIndexOf('}');
+          if (start !== -1 && end > start) {
+            try {
+              const parsed = JSON.parse(item.observacoes.substring(start, end + 1));
+              if (parsed.pragas_json) item.pragas_json = parsed.pragas_json;
+              if (parsed.doencas_json) item.doencas_json = parsed.doencas_json;
+              if (parsed.ponto_coords) item.ponto_coords = parsed.ponto_coords;
+              if (parsed.gps) item.gps_obj = parsed.gps;
+              if (parsed.ervas_daninhas_pct !== undefined) item.ervas_daninhas_pct = parsed.ervas_daninhas_pct;
+              if (parsed.nematoide_obs) item.nematoide_obs = parsed.nematoide_obs;
+              if (parsed.dap) item.dap = parsed.dap;
+              if (parsed.tecnico) item.tecnico = parsed.tecnico;
+              if (parsed.observacoes !== undefined) item.obs_texto = parsed.observacoes;
+            } catch(e) {}
+          }
         }
         return item;
       });
@@ -15959,7 +16289,7 @@ function printPastaCampoMip(itemStr) {
 
   <div style="border:1px solid #000; padding:8px; margin-bottom:12px">
   <strong>OBSERVAÇÕES DO PRAGUEIRO / AUDITORIA:</strong><br/>
-  ${item.observacoes || 'Nenhuma observação registrada na amostragem.'}
+  ${cleanObservationText(item.obs_texto || item.observacoes) || 'Nenhuma observação registrada na amostragem.'}
   </div>
 
   <div class="signatures-grid" style="grid-template-columns: 1fr 1fr 1fr;">
@@ -16514,6 +16844,11 @@ function renderCcMipTable(list) {
       pragasBadges = '<span style="color:var(--muted); font-size:11px">Todas sob controle (EMBRAPA)</span>';
     }
 
+    const hasGps = (item.latitude && item.longitude) || (item.observacoes && item.observacoes.includes('latitude')) || (item.observacoes && item.observacoes.includes('ponto_coords'));
+    const gpsBtn = hasGps 
+      ? `<button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:3px" onclick="openMipGpsMap('${itemStr}')"><i data-lucide="map-pin" style="width:12px; height:12px; color:var(--blue)"></i> Ver Mapa GPS</button>`
+      : '';
+
     return `
     <tr style="border-bottom:1px solid var(--border); font-size:13px">
       <td style="padding:12px 10px; font-weight:700">${formattedDate}</td>
@@ -16525,12 +16860,106 @@ function renderCcMipTable(list) {
         <span class="badge" style="background:${statusColor}; font-size:11px">${statusText}</span>
       </td>
       <td style="padding:12px 10px; text-align:center; white-space:nowrap">
+        ${gpsBtn}
         <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoMip('${itemStr}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Ficha EMBRAPA</button>
         <button class="danger" style="padding:4px 8px; font-size:11px" onclick="deleteMipRecord('${item.id}')">Excluir</button>
       </td>
     </tr>
     `;
   }).join('');
+  if (window.lucide) lucide.createIcons();
+}
+
+function openMipGpsMap(itemStr) {
+  const item = typeof itemStr === 'string' ? JSON.parse(decodeURIComponent(itemStr)) : itemStr;
+  
+  let obsObj = {};
+  try {
+    if (item.observacoes && typeof item.observacoes === 'string') {
+      const start = item.observacoes.indexOf('{');
+      const end = item.observacoes.lastIndexOf('}');
+      if (start !== -1 && end > start) {
+        obsObj = JSON.parse(item.observacoes.substring(start, end + 1));
+      }
+    }
+  } catch (e) {}
+
+  const lat = item.latitude || (obsObj.gps && obsObj.gps.lat) || null;
+  const lng = item.longitude || (obsObj.gps && obsObj.gps.lng) || null;
+  const acc = item.accuracy || (obsObj.gps && obsObj.gps.accuracy) || null;
+  const pontoCoords = item.ponto_coords || (obsObj.ponto_coords) || [];
+
+  let modal = document.getElementById('mipGpsMapModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'mipGpsMapModal';
+    modal.className = 'modal';
+    modal.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center; padding:16px;';
+    document.body.appendChild(modal);
+  }
+
+  const formattedDate = item.data_vistoria ? item.data_vistoria.split('-').reverse().join('/') : '—';
+  const gmapsUrl = lat && lng ? `https://www.google.com/maps?q=${lat},${lng}` : '#';
+  const osmUrl = lat && lng ? `https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.005},${lat-0.005},${lng+0.005},${lat+0.005}&layer=mapnik&marker=${lat},${lng}` : '';
+
+  let pointsHtml = '';
+  for (let i = 0; i < 10; i++) {
+    const ptVal = item[`ponto${i+1}`] !== undefined ? item[`ponto${i+1}`] : 0;
+    const ptGps = pontoCoords[i] && pontoCoords[i].lat ? `${pontoCoords[i].lat.toFixed(4)}, ${pontoCoords[i].lng.toFixed(4)}` : (lat && lng ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : 'Sem GPS');
+    pointsHtml += `
+      <div style="background:var(--card-item-bg); border:1px solid var(--border); border-radius:6px; padding:8px; text-align:center;">
+        <div style="font-size:10px; color:var(--muted)">Ponto ${i+1}</div>
+        <div style="font-size:16px; font-weight:800; color:var(--text); margin:2px 0">${ptVal}</div>
+        <div style="font-size:9px; color:var(--muted); font-family:monospace">${ptGps}</div>
+      </div>
+    `;
+  }
+
+  modal.innerHTML = `
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:24px; border-radius:12px; width:780px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 16px 40px rgba(0,0,0,0.4);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px">
+        <div>
+          <h3 style="font-size:18px; font-weight:700; margin:0; display:flex; align-items:center; gap:8px">
+            <i data-lucide="map-pin" style="color:var(--blue)"></i> Geolocalização MIP — Parcela ${esc(item.parcela || '—')}
+          </h3>
+          <div style="font-size:12px; color:var(--muted); margin-top:2px">
+            Vistoria em ${formattedDate} | Variedade: ${esc(item.variedade || '—')} | Técnico: ${esc(item.responsavel_mip || item.tecnico || obsObj.tecnico || '—')}
+          </div>
+        </div>
+        <button onclick="document.getElementById('mipGpsMapModal').style.display='none'" style="background:transparent; border:none; color:var(--muted); font-size:20px; cursor:pointer; padding:4px">&times;</button>
+      </div>
+
+      <!-- Sumário GPS -->
+      <div style="background:var(--card-item-bg); border:1px solid var(--border); border-radius:8px; padding:12px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+        <div>
+          <div style="font-size:11px; color:var(--muted); text-transform:uppercase">Coordenadas Centrais (GPS)</div>
+          <div style="font-size:14px; font-weight:700; font-family:monospace; color:var(--text)">
+            ${lat && lng ? `${lat}, ${lng} (${(acc && !isNaN(acc)) ? (parseFloat(acc) >= 1000 ? `±${(parseFloat(acc)/1000).toFixed(0)} km · Sinal Rede/Torre` : `±${Math.round(parseFloat(acc))} m`) : 'Precisão não informada'})` : 'Coordenadas não capturadas'}
+          </div>
+        </div>
+        ${lat && lng ? `<a href="${gmapsUrl}" target="_blank" class="btn sec" style="font-size:12px; text-decoration:none; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="external-link" style="width:14px;height:14px"></i> Abrir no Google Maps</a>` : ''}
+      </div>
+
+      ${lat && lng && osmUrl ? `
+      <!-- Mapa OpenStreetMap Iframe -->
+      <div style="margin-bottom:16px; border-radius:8px; overflow:hidden; border:1px solid var(--border); height:260px">
+        <iframe width="100%" height="100%" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="${osmUrl}"></iframe>
+      </div>
+      ` : ''}
+
+      <!-- Pontos de Amostragem 1..10 -->
+      <div style="font-weight:700; font-size:13px; margin-bottom:8px">Pontos de Amostragem (Contagem e GPS)</div>
+      <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin-bottom:16px">
+        ${pointsHtml}
+      </div>
+
+      <div style="display:flex; justify-content:flex-end">
+        <button class="btn sec" onclick="document.getElementById('mipGpsMapModal').style.display='none'">Fechar</button>
+      </div>
+    </div>
+  `;
+
+  modal.style.display = 'flex';
   if (window.lucide) lucide.createIcons();
 }
 
@@ -16717,6 +17146,1152 @@ function printPastaCampoMip(itemStr) {
   printWin.document.open();
   printWin.document.write(html);
   printWin.document.close();
+}
+
+// ═════════════════════════════════════════════════════════════════
+// NOC FITOSSANITÁRIO — SISTEMA DE OPERAÇÕES GEOESPACIAIS & EFICIÊNCIA
+// ═════════════════════════════════════════════════════════════════
+
+let nocMap = null;
+let nocBaseLayers = {};
+let nocCurrentBaseLayer = null;
+let nocMarkerGroup = null;
+let nocHeatLayer = null;
+let nocParcelsGroup = null;
+let nocEfficiencyChartInstance = null;
+let nocMips = [];
+let nocOps = [];
+let nocParcelsData = [];
+let nocDroneCustomLayer = null;
+
+// Âncora padrão da fazenda (Mossoró / RN - Chapada do Apodi) para fallback de centro inicial
+const NOC_DEFAULT_FARM_ANCHOR = { lat: -5.015, lng: -37.405 };
+
+// Bloco ativo e controle geoespacial
+let nocActiveBlock = 'east'; // 'east' | 'west' | 'all'
+let _nocCurrentRenderLatLngs = [];
+let _nocMissingCoordsList = [];
+
+// Cache de elevação e relevo
+let nocElevationData = null;
+let nocFarmMeanElevation = 0;
+let nocElevIsLoading = false;
+
+function nocParcelNum(v) {
+  if (v === undefined || v === null) return '';
+  const norm = typeof normalizeParcelCode === 'function' ? normalizeParcelCode(String(v)) : String(v).trim().toUpperCase();
+  const m = norm.match(/^\d+/);
+  if (m) {
+    const raw = m[0];
+    const stripped = String(parseInt(raw, 10));
+    if (window.PARCELAS_COORDS && window.PARCELAS_COORDS[stripped]) return stripped;
+    return raw;
+  }
+  return norm;
+}
+window.nocParcelNum = nocParcelNum;
+
+function nocParcelCoords(p) {
+  if (!p) return null;
+  let code = '';
+  if (typeof p === 'object') {
+    code = p.parcela2 || p.parcela || p.code || p.id || '';
+  } else {
+    code = String(p);
+  }
+  const chave = nocParcelNum(code);
+  if (window.PARCELAS_COORDS && window.PARCELAS_COORDS[chave]) {
+    const pt = window.PARCELAS_COORDS[chave];
+    if (typeof pt.lat === 'number' && typeof pt.lng === 'number') {
+      return { lat: pt.lat, lng: pt.lng };
+    }
+  }
+  // Fallback: p.latitude / p.longitude se válidos
+  if (typeof p === 'object' && p !== null) {
+    const latRaw = typeof p.latitude === 'string' ? p.latitude.replace(',', '.') : p.latitude;
+    const lngRaw = typeof p.longitude === 'string' ? (p.longitude || p.lng || p.lon || '').replace(',', '.') : (p.longitude || p.lng || p.lon);
+    const lat = parseFloat(latRaw);
+    const lng = parseFloat(lngRaw);
+    if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && (lat !== 0 || lng !== 0)) {
+      return { lat, lng };
+    }
+  }
+  return null;
+}
+window.nocParcelCoords = nocParcelCoords;
+
+function toggleNocFullscreen() {
+  const container = document.getElementById('nocMapCardContainer');
+  if (!container) return;
+  
+  if (!document.fullscreenElement) {
+    if (container.requestFullscreen) {
+      container.requestFullscreen();
+    } else if (container.webkitRequestFullscreen) {
+      container.webkitRequestFullscreen();
+    } else if (container.msRequestFullscreen) {
+      container.msRequestFullscreen();
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
+    }
+  }
+}
+
+document.addEventListener('fullscreenchange', () => {
+  if (nocMap) {
+    setTimeout(() => {
+      nocMap.invalidateSize();
+    }, 300);
+  }
+});
+
+function setNocBlockFilter(blockType) {
+  nocActiveBlock = blockType;
+  ['nocBlockEastBtn', 'nocBlockWestBtn', 'nocBlockAllBtn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.classList.remove('active');
+  });
+  if (blockType === 'east') document.getElementById('nocBlockEastBtn')?.classList.add('active');
+  else if (blockType === 'west') document.getElementById('nocBlockWestBtn')?.classList.add('active');
+  else document.getElementById('nocBlockAllBtn')?.classList.add('active');
+
+  centerNocMapAll();
+}
+window.setNocBlockFilter = setNocBlockFilter;
+
+function updateMissingCoordsNotice(missingList) {
+  _nocMissingCoordsList = missingList || [];
+  const banner = document.getElementById('nocMissingCoordsNotice');
+  if (!banner) return;
+  if (_nocMissingCoordsList.length === 0) {
+    banner.style.display = 'none';
+    return;
+  }
+  const preview = _nocMissingCoordsList.slice(0, 5).join(', ') + (_nocMissingCoordsList.length > 5 ? '…' : '');
+  banner.style.display = 'flex';
+  banner.innerHTML = `⚠️ ${_nocMissingCoordsList.length} parcelas sem coordenada: ${preview} <span style="text-decoration:underline; font-size:10px; margin-left:4px">(ver todas)</span>`;
+}
+
+function showMissingCoordsModal() {
+  if (_nocMissingCoordsList.length === 0) return;
+  alert(`Parcelas sem coordenada cadastrada (${_nocMissingCoordsList.length}):\n${_nocMissingCoordsList.join(', ')}\n\nPara exibi-las no mapa, cadastre a Latitude e Longitude na planilha INFO_PARCELAS.`);
+}
+window.showMissingCoordsModal = showMissingCoordsModal;
+
+async function loadNocElevationData(parcelsCoordsMap) {
+  try {
+    const cached = localStorage.getItem('noc_elev_v1');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.data && Object.keys(parsed.data).length > 0) {
+          nocElevationData = parsed.data;
+          nocFarmMeanElevation = parsed.mean || 0;
+          return nocElevationData;
+        }
+      } catch(e) {}
+    }
+
+    if (nocElevIsLoading) return nocElevationData;
+    nocElevIsLoading = true;
+
+    const pKeys = Object.keys(parcelsCoordsMap);
+    if (pKeys.length === 0) return null;
+
+    const pointsList = [];
+    const dLat = 120 / 111320;
+
+    pKeys.forEach(k => {
+      const pt = parcelsCoordsMap[k];
+      const radLat = (pt.lat * Math.PI) / 180;
+      const cosLat = Math.max(0.1, Math.cos(radLat));
+      const dLng = 120 / (111320 * cosLat);
+
+      pointsList.push({ k, t: 'C', lat: pt.lat, lng: pt.lng });
+      pointsList.push({ k, t: 'N', lat: pt.lat + dLat, lng: pt.lng });
+      pointsList.push({ k, t: 'S', lat: pt.lat - dLat, lng: pt.lng });
+      pointsList.push({ k, t: 'E', lat: pt.lat, lng: pt.lng + dLng });
+      pointsList.push({ k, t: 'W', lat: pt.lat, lng: pt.lng - dLng });
+    });
+
+    const elevResults = new Array(pointsList.length).fill(null);
+    const batchSize = 90;
+
+    for (let i = 0; i < pointsList.length; i += batchSize) {
+      const batch = pointsList.slice(i, i + batchSize);
+      const lats = batch.map(p => p.lat.toFixed(6)).join(',');
+      const lngs = batch.map(p => p.lng.toFixed(6)).join(',');
+      try {
+        const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lngs}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json && Array.isArray(json.elevation)) {
+            json.elevation.forEach((val, bIdx) => {
+              elevResults[i + bIdx] = val;
+            });
+          }
+        }
+      } catch(err) {
+        console.warn('Falha na requisição de elevação do lote:', err);
+      }
+    }
+
+    const dataByParcel = {};
+    let totalElevSum = 0;
+    let validElevCount = 0;
+
+    pKeys.forEach(k => {
+      dataByParcel[k] = { elev: 0, slope: 0, diffVsMean: 0 };
+    });
+
+    pointsList.forEach((pt, idx) => {
+      const val = elevResults[idx];
+      if (val !== null && !isNaN(val)) {
+        if (!dataByParcel[pt.k]) dataByParcel[pt.k] = {};
+        dataByParcel[pt.k][pt.t] = val;
+      }
+    });
+
+    pKeys.forEach(k => {
+      const obj = dataByParcel[k];
+      const cElev = obj.C !== undefined ? obj.C : 0;
+      obj.elev = parseFloat(cElev.toFixed(1));
+      if (cElev > 0) {
+        totalElevSum += cElev;
+        validElevCount++;
+      }
+      const n = obj.N !== undefined ? obj.N : cElev;
+      const s = obj.S !== undefined ? obj.S : cElev;
+      const e = obj.E !== undefined ? obj.E : cElev;
+      const w = obj.W !== undefined ? obj.W : cElev;
+      const slope = Math.max(Math.abs(n - s) / 240, Math.abs(e - w) / 240) * 100;
+      obj.slope = parseFloat(slope.toFixed(1));
+    });
+
+    const mean = validElevCount > 0 ? (totalElevSum / validElevCount) : 0;
+    nocFarmMeanElevation = parseFloat(mean.toFixed(1));
+
+    pKeys.forEach(k => {
+      const obj = dataByParcel[k];
+      obj.diffVsMean = parseFloat((obj.elev - nocFarmMeanElevation).toFixed(1));
+    });
+
+    nocElevationData = dataByParcel;
+
+    try {
+      localStorage.setItem('noc_elev_v1', JSON.stringify({
+        timestamp: Date.now(),
+        mean: nocFarmMeanElevation,
+        data: nocElevationData
+      }));
+    } catch(e) {}
+
+    return nocElevationData;
+  } catch(e) {
+    console.warn('Erro ao carregar dados altimétricos:', e);
+    return null;
+  } finally {
+    nocElevIsLoading = false;
+  }
+}
+
+function getNocElevationColor(diffVsMean, minDiff, maxDiff) {
+  let ratio = 0.5;
+  const range = maxDiff - minDiff;
+  if (range > 0) {
+    ratio = Math.max(0, Math.min(1, (diffVsMean - minDiff) / range));
+  }
+  if (ratio < 0.25) return '#0284c7';
+  if (ratio < 0.5) return '#10b981';
+  if (ratio < 0.75) return '#84cc16';
+  return '#ea580c';
+}
+
+async function loadNocDashboard() {
+  initNocLeafletMap();
+  populateNocParcelSelect();
+  await loadNocData();
+}
+
+function initNocLeafletMap() {
+  const mapEl = document.getElementById('nocLeafletMap');
+  if (!mapEl) return;
+
+  if (nocMap) {
+    setTimeout(() => {
+      nocMap.invalidateSize();
+      centerNocMapAll();
+    }, 200);
+    return;
+  }
+
+  if (typeof L === 'undefined') {
+    mapEl.innerHTML = `<div style="padding:40px; text-align:center; color:var(--muted)">Biblioteca Leaflet carregando... Por favor, aguarde alguns instantes.</div>`;
+    return;
+  }
+
+  nocMap = L.map('nocLeafletMap', {
+    center: [NOC_DEFAULT_FARM_ANCHOR.lat, NOC_DEFAULT_FARM_ANCHOR.lng],
+    zoom: 15,
+    maxZoom: 22,
+    zoomControl: true
+  });
+
+  nocBaseLayers = {
+    esri: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 22,
+      maxNativeZoom: 19,
+      attribution: 'Esri World Imagery'
+    }),
+    topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+      maxZoom: 22,
+      maxNativeZoom: 17,
+      subdomains: 'abc',
+      attribution: 'OpenTopoMap (CC-BY-SA)'
+    }),
+    osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 22,
+      maxNativeZoom: 19,
+      attribution: 'OpenStreetMap'
+    })
+  };
+
+  nocCurrentBaseLayer = nocBaseLayers.esri.addTo(nocMap);
+
+  L.control.scale({ imperial: false, metric: true, position: 'bottomright' }).addTo(nocMap);
+
+  nocMarkerGroup = L.layerGroup().addTo(nocMap);
+  nocParcelsGroup = L.layerGroup().addTo(nocMap);
+
+  nocMap.on('mousemove', function(e) {
+    const coordsEl = document.getElementById('nocHudCoords');
+    if (coordsEl && e.latlng) {
+      coordsEl.textContent = `Lat: ${e.latlng.lat.toFixed(6)}, Lng: ${e.latlng.lng.toFixed(6)}`;
+    }
+  });
+
+  nocMap.on('zoomend', function() {
+    const z = nocMap.getZoom();
+    const zoomEl = document.getElementById('nocHudZoom');
+    const precEl = document.getElementById('nocHudPrecision');
+    if (zoomEl) zoomEl.textContent = `Zoom: ${z}`;
+    if (precEl) {
+      if (z >= 18) {
+        precEl.innerHTML = `<span style="color:#10b981">Imagem de satélite (≈0,5–1 m/pixel)</span>`;
+      } else if (z >= 15) {
+        precEl.innerHTML = `<span style="color:#38bdf8">Visão de fazenda</span>`;
+      } else {
+        precEl.innerHTML = `<span style="color:#94a3b8">Visão regional</span>`;
+      }
+    }
+  });
+
+  setTimeout(() => {
+    nocMap.invalidateSize();
+  }, 250);
+}
+
+function switchNocBaseTileLayer(type) {
+  if (!nocMap) return;
+  if (!nocBaseLayers[type]) return;
+
+  if (nocCurrentBaseLayer) {
+    nocMap.removeLayer(nocCurrentBaseLayer);
+  }
+  if (nocDroneCustomLayer) {
+    nocMap.removeLayer(nocDroneCustomLayer);
+    nocDroneCustomLayer = null;
+  }
+
+  nocCurrentBaseLayer = nocBaseLayers[type].addTo(nocMap);
+}
+
+function applyNocDroneLayer() {
+  const url = document.getElementById('nocDroneTileUrl')?.value?.trim();
+  if (!url) {
+    toast('Informe a URL dos tiles XYZ do Ortomosaico de Drone.', 'err');
+    return;
+  }
+  try {
+    if (nocCurrentBaseLayer) nocMap.removeLayer(nocCurrentBaseLayer);
+    if (nocDroneCustomLayer) nocMap.removeLayer(nocDroneCustomLayer);
+    nocDroneCustomLayer = L.tileLayer(url, {
+      maxZoom: 24,
+      maxNativeZoom: 22,
+      attribution: 'Ortomosaico Drone Local'
+    }).addTo(nocMap);
+    toast('Camada de drone carregada no mapa!', 'ok');
+  } catch(e) {
+    toast('Erro ao carregar tiles de drone: ' + e.message, 'err');
+  }
+}
+
+function populateNocParcelSelect() {
+  const sel = document.getElementById('nocFilterParcela');
+  if (!sel) return;
+  const currVal = sel.value;
+  sel.innerHTML = '<option value="ALL">Todas as Parcelas</option>';
+
+  const list = (window.webInfoParcelasData && window.webInfoParcelasData.length > 0) 
+    ? window.webInfoParcelasData 
+    : (_infoParcelas || []);
+  
+  const numsSet = new Set();
+  list.forEach(p => {
+    const num = nocParcelNum(p.parcela2 || p.parcela || p.code || p.id);
+    if (num) numsSet.add(num);
+  });
+  if (window.PARCELAS_COORDS) {
+    Object.keys(window.PARCELAS_COORDS).forEach(k => numsSet.add(k));
+  }
+
+  const sortedNums = Array.from(numsSet).sort((a, b) => {
+    const na = parseInt(a, 10);
+    const nb = parseInt(b, 10);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    return a.localeCompare(b, undefined, { numeric: true });
+  });
+
+  sortedNums.forEach(num => {
+    sel.insertAdjacentHTML('beforeend', `<option value="${esc(num)}">Parcela ${esc(num)}</option>`);
+  });
+  if (currVal && sortedNums.includes(currVal)) sel.value = currVal;
+}
+
+async function loadNocData() {
+  const rankList = document.getElementById('nocRankingList');
+  if (rankList) rankList.innerHTML = `<div style="text-align:center; padding:20px; color:var(--muted)">Sincronizando vistorias MIP e Ordens de Pulverização...</div>`;
+
+  try {
+    // 1. Carregar vistorias MIP
+    const { data: mData, error: mErr } = await sb.from('caderno_campo_mip')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('data_vistoria', { ascending: false });
+    
+    if (!mErr && mData) {
+      nocMips = mData.map(item => {
+        if (item.observacoes && typeof item.observacoes === 'string') {
+          const start = item.observacoes.indexOf('{');
+          const end = item.observacoes.lastIndexOf('}');
+          if (start !== -1 && end > start) {
+            try {
+              const p = JSON.parse(item.observacoes.substring(start, end + 1));
+              if (p.pragas_json) item.pragas_json = p.pragas_json;
+              if (p.doencas_json) item.doencas_json = p.doencas_json;
+              if (p.ponto_coords) item.ponto_coords = p.ponto_coords;
+              if (p.gps) item.gps_obj = p.gps;
+              if (p.tecnico) item.tecnico = p.tecnico;
+              if (p.observacoes) item.obs_texto = p.observacoes;
+            } catch(e) {}
+          }
+        }
+        return item;
+      });
+    } else {
+      nocMips = [];
+    }
+
+    // 2. Carregar Ordens de Pulverização (O.P)
+    const { data: oData, error: oErr } = await sb.from('caderno_campo_op')
+      .select('*, caderno_campo_op_itens(*)')
+      .eq('tenant_id', tenantId)
+      .order('data_aplicacao', { ascending: false });
+    
+    nocOps = (!oErr && oData) ? oData : [];
+
+  } catch(e) {
+    console.error('Erro ao carregar dados do NOC:', e);
+    toast('Falha ao sincronizar dados do NOC.', 'err');
+  }
+
+  // Filtrar pelo período selecionado
+  const periodVal = document.getElementById('nocFilterPeriodo')?.value || '15';
+  let filteredMips = [...nocMips];
+  let filteredOps = [...nocOps];
+
+  if (periodVal !== 'ALL') {
+    const days = parseInt(periodVal, 10);
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const cutoffStr = cutoffDate.toISOString().split('T')[0];
+
+    filteredMips = filteredMips.filter(m => (m.data_vistoria || '') >= cutoffStr);
+    filteredOps = filteredOps.filter(o => (o.data_aplicacao || '') >= cutoffStr);
+  }
+
+  // Processar KPIs e Ranking
+  computeNocKpisAndRanking(filteredMips, filteredOps);
+
+  // Renderizar mapa e camadas
+  await renderNocMapAndLayers(filteredMips);
+
+  // Renderizar auditoria de eficiência dos defensivos
+  renderNocEfficiencyAnalysis(filteredMips, filteredOps);
+}
+
+function computeNocKpisAndRanking(mips, ops) {
+  // Parcelas monitoradas por NÚMERO
+  const monitoredParcels = [...new Set(mips.map(m => nocParcelNum(m.parcela)).filter(Boolean))];
+  const totalParcelsEl = document.getElementById('nocKpiTotalParcelas');
+  const vistoriasSubEl = document.getElementById('nocKpiVistoriasSub');
+  if (totalParcelsEl) totalParcelsEl.textContent = monitoredParcels.length;
+  if (vistoriasSubEl) vistoriasSubEl.textContent = `${mips.length} vistorias no período`;
+
+  // Mapear severidade por número de parcela
+  const parcelSummary = {};
+  const pragaCountMap = {};
+
+  mips.forEach(m => {
+    const pNum = nocParcelNum(m.parcela) || 'Sem Parcela';
+    if (!parcelSummary[pNum]) {
+      parcelSummary[pNum] = {
+        code: pNum,
+        variedade: m.variedade || '—',
+        vistorias: 0,
+        critica: false,
+        pragasCriticas: new Set(),
+        maxMedia: 0,
+        ultimaData: m.data_vistoria,
+        latestMip: m
+      };
+    }
+    const ps = parcelSummary[pNum];
+    ps.vistorias++;
+
+    if (m.pragas_json && typeof m.pragas_json === 'object') {
+      Object.keys(m.pragas_json).forEach(k => {
+        const info = m.pragas_json[k];
+        if (info) {
+          const avg = parseFloat(info.media || 0);
+          if (avg > ps.maxMedia) ps.maxMedia = avg;
+          if (info.acima_limiar) {
+            ps.critica = true;
+            ps.pragasCriticas.add(info.praga || k);
+            pragaCountMap[info.praga || k] = (pragaCountMap[info.praga || k] || 0) + 1;
+          }
+        }
+      });
+    }
+
+    if (m.doencas_json && typeof m.doencas_json === 'object') {
+      Object.keys(m.doencas_json).forEach(k => {
+        const d = m.doencas_json[k];
+        if (d && d.acima_limiar) {
+          ps.critica = true;
+          ps.pragasCriticas.add(d.name || k);
+          pragaCountMap[d.name || k] = (pragaCountMap[d.name || k] || 0) + 1;
+        }
+      });
+    }
+  });
+
+  const parcelList = Object.values(parcelSummary).sort((a, b) => {
+    if (a.critica && !b.critica) return -1;
+    if (!a.critica && b.critica) return 1;
+    return b.maxMedia - a.maxMedia;
+  });
+
+  const criticasCount = parcelList.filter(p => p.critica).length;
+  const critEl = document.getElementById('nocKpiAlertasCriticos');
+  const alertBadge = document.getElementById('nocAlertCountBadge');
+  if (critEl) critEl.textContent = criticasCount;
+  if (alertBadge) alertBadge.textContent = `${criticasCount} críticas`;
+
+  let dominantPest = 'Sob Controle';
+  let maxPestCount = 0;
+  Object.keys(pragaCountMap).forEach(pName => {
+    if (pragaCountMap[pName] > maxPestCount) {
+      maxPestCount = pragaCountMap[pName];
+      dominantPest = pName;
+    }
+  });
+  const domEl = document.getElementById('nocKpiPragaDominante');
+  const domSubEl = document.getElementById('nocKpiPragaSub');
+  if (domEl) domEl.textContent = dominantPest;
+  if (domSubEl) domSubEl.textContent = maxPestCount > 0 ? `${maxPestCount} focos acima do limiar` : 'Nenhum limiar estourado';
+
+  const rankEl = document.getElementById('nocRankingList');
+  if (rankEl) {
+    if (parcelList.length === 0) {
+      rankEl.innerHTML = `<div style="text-align:center; padding:20px; color:var(--muted); font-size:12px">Nenhuma vistoria encontrada no período.</div>`;
+    } else {
+      rankEl.innerHTML = parcelList.map(p => {
+        const badgeColor = p.critica ? 'background:rgba(239,68,68,0.2); color:var(--red); border:1px solid rgba(239,68,68,0.4);' : 'background:rgba(16,185,129,0.15); color:var(--green);';
+        const statusLabel = p.critica ? 'ALERTA / AÇÃO' : 'Sob Controle';
+        const pragasBadges = [...p.pragasCriticas].slice(0, 3).map(name => 
+          `<span style="background:rgba(239,68,68,0.2); color:var(--red); font-size:9px; padding:2px 5px; border-radius:4px; font-weight:700">${esc(name)}</span>`
+        ).join(' ');
+
+        return `
+          <div style="background:var(--card-item-bg); border:1px solid var(--border); border-radius:8px; padding:10px; display:flex; flex-direction:column; gap:6px; transition:border-color 0.2s" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+              <span style="font-weight:800; font-size:13px; color:var(--text)">Parcela ${esc(p.code)}</span>
+              <span style="font-size:10px; font-weight:700; padding:2px 6px; border-radius:99px; ${badgeColor}">${statusLabel}</span>
+            </div>
+            <div style="font-size:11px; color:var(--muted); display:flex; justify-content:space-between">
+              <span>Var: ${esc(p.variedade)}</span>
+              <span>Última: ${p.ultimaData ? p.ultimaData.split('-').reverse().join('/') : '—'}</span>
+            </div>
+            ${pragasBadges ? `<div style="display:flex; gap:4px; flex-wrap:wrap">${pragasBadges}</div>` : ''}
+            <div style="display:flex; justify-content:flex-end; margin-top:2px">
+              <button class="btn sec" onclick="flyToParcel('${esc(p.code)}')" style="font-size:10px; padding:3px 8px; display:inline-flex; align-items:center; gap:3px">
+                <i data-lucide="map-pin" style="width:11px;height:11px; color:var(--blue)"></i> Localizar no Mapa
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+}
+
+async function renderNocMapAndLayers(mipsInput) {
+  if (!nocMap) return;
+
+  const mips = mipsInput || nocMips;
+  const selPraga = document.getElementById('nocFilterPraga')?.value || 'ALL';
+  const selParcel = document.getElementById('nocFilterParcela')?.value || 'ALL';
+  const showPoints = document.getElementById('nocTogglePoints')?.checked !== false;
+  const showHeatmap = document.getElementById('nocToggleHeatmap')?.checked !== false;
+  const showParcels = document.getElementById('nocToggleParcels')?.checked !== false;
+  const showElevation = document.getElementById('nocToggleElevation')?.checked === true;
+
+  const elevLegendBox = document.getElementById('nocElevationLegendContainer');
+  if (elevLegendBox) elevLegendBox.style.display = showElevation ? 'block' : 'none';
+
+  nocMarkerGroup.clearLayers();
+  nocParcelsGroup.clearLayers();
+  if (nocHeatLayer) {
+    nocMap.removeLayer(nocHeatLayer);
+    nocHeatLayer = null;
+  }
+
+  const heatPoints = [];
+  const allLatLngs = [];
+  const parcelAnchorMap = {};
+  const parcelsCoordsToFetch = {};
+  const missingCoordsNums = [];
+
+  const parcels = (window.webInfoParcelasData && window.webInfoParcelasData.length > 0)
+    ? window.webInfoParcelasData
+    : (_infoParcelas || []);
+  
+  const parcelsByNum = {};
+  parcels.forEach(p => {
+    const num = nocParcelNum(p.parcela2 || p.parcela || p.code || p.id);
+    if (!num) return;
+    if (!parcelsByNum[num]) parcelsByNum[num] = [];
+    parcelsByNum[num].push(p);
+  });
+
+  if (window.PARCELAS_COORDS) {
+    Object.keys(window.PARCELAS_COORDS).forEach(num => {
+      if (!parcelsByNum[num]) {
+        parcelsByNum[num] = [{ parcela: num, parcela2: num, ativo: true }];
+      }
+    });
+  }
+
+  Object.keys(parcelsByNum).forEach(num => {
+    const items = parcelsByNum[num];
+    let coords = null;
+    for (let it of items) {
+      const c = nocParcelCoords(it);
+      if (c) {
+        coords = c;
+        break;
+      }
+    }
+    if (!coords && window.PARCELAS_COORDS && window.PARCELAS_COORDS[num]) {
+      coords = window.PARCELAS_COORDS[num];
+    }
+
+    if (!coords) {
+      missingCoordsNums.push(num);
+      return;
+    }
+
+    const activeCycle = items.find(x => x.ativo !== false) || items[items.length - 1];
+    const totalArea = items.reduce((acc, x) => acc + (parseFloat(x.area || x.area_ha || 0) || 0), 0) || parseFloat(activeCycle.area || activeCycle.area_ha || 0);
+    const cycleCodes = [...new Set(items.map(x => x.parcela2 || x.id || (x.parcela + (x.letra || ''))).filter(Boolean))];
+    const block = coords.lng < -37.50 ? 'west' : 'east';
+
+    parcelAnchorMap[num] = {
+      num,
+      lat: coords.lat,
+      lng: coords.lng,
+      activeCycle,
+      cycles: cycleCodes.length > 0 ? cycleCodes : [num],
+      area: totalArea,
+      block
+    };
+
+    parcelsCoordsToFetch[num] = coords;
+  });
+
+  updateMissingCoordsNotice(missingCoordsNums.sort((a, b) => {
+    const na = parseInt(a, 10);
+    const nb = parseInt(b, 10);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    return a.localeCompare(b, undefined, { numeric: true });
+  }));
+
+  if (showElevation && Object.keys(parcelsCoordsToFetch).length > 0) {
+    await loadNocElevationData(parcelsCoordsToFetch);
+    const statsEl = document.getElementById('nocElevationStatsText');
+    if (statsEl) statsEl.textContent = `Média da Fazenda: ${nocFarmMeanElevation.toFixed(0)} m`;
+  }
+
+  let minDiff = 0;
+  let maxDiff = 0;
+  if (nocElevationData) {
+    const diffs = Object.values(nocElevationData).map(x => x.diffVsMean || 0);
+    if (diffs.length > 0) {
+      minDiff = Math.min(...diffs);
+      maxDiff = Math.max(...diffs);
+    }
+  }
+
+  Object.keys(parcelAnchorMap).forEach(num => {
+    const p = parcelAnchorMap[num];
+    if (showParcels && (selParcel === 'ALL' || selParcel === num)) {
+      const areaHa = p.area;
+      let halfH = 0.0014;
+      let halfW = 0.0016;
+
+      if (areaHa && areaHa > 0) {
+        const sideM = Math.sqrt(areaHa * 10000);
+        const halfSideM = sideM / 2;
+        halfH = halfSideM / 111320;
+        const radLat = (p.lat * Math.PI) / 180;
+        const cosLat = Math.max(0.1, Math.cos(radLat));
+        halfW = halfSideM / (111320 * cosLat);
+      }
+
+      const bounds = [
+        [p.lat - halfH, p.lng - halfW],
+        [p.lat + halfH, p.lng + halfW]
+      ];
+
+      const elevObj = (nocElevationData && nocElevationData[num]) ? nocElevationData[num] : { elev: 0, slope: 0, diffVsMean: 0 };
+      let polyColor = '#10b981';
+      let polyFillColor = '#10b981';
+      let polyOpacity = 0.08;
+
+      if (showElevation && nocElevationData && nocElevationData[num]) {
+        polyColor = getNocElevationColor(elevObj.diffVsMean, minDiff, maxDiff);
+        polyFillColor = polyColor;
+        polyOpacity = 0.35;
+      }
+
+      const poly = L.rectangle(bounds, {
+        color: polyColor,
+        weight: showElevation ? 2 : 1.5,
+        fillColor: polyFillColor,
+        fillOpacity: polyOpacity,
+        dashArray: showElevation ? null : '3, 4'
+      });
+
+      let tooltipHtml = `<b>Parcela ${esc(num)}</b><br><span style="font-size:10px">${esc(p.activeCycle.variedade || '')} (${p.area ? p.area.toFixed(2) : '—'} ha)</span><br><span style="font-size:10px; color:#94a3b8">Ciclos: ${esc(p.cycles.join(', '))}</span>`;
+      
+      if (showElevation && nocElevationData && nocElevationData[num]) {
+        const diffSign = elevObj.diffVsMean >= 0 ? '+' : '';
+        tooltipHtml += `<br><div style="margin-top:4px; font-weight:700; color:#38bdf8">Alt. ${elevObj.elev} m (${diffSign}${elevObj.diffVsMean.toFixed(1)} m vs. média) · declividade ${elevObj.slope.toFixed(1)}%</div>`;
+        if (elevObj.diffVsMean < 0) {
+          tooltipHtml += `<div style="font-size:10px; color:#f59e0b; font-weight:700">⚠️ Ponto baixo (possível acúmulo de umidade)</div>`;
+        }
+      }
+
+      poly.bindTooltip(tooltipHtml, { permanent: false, direction: 'center' });
+
+      poly.on('mouseover', function() {
+        const hudAlt = document.getElementById('nocHudAlt');
+        if (hudAlt && elevObj.elev > 0) {
+          hudAlt.textContent = `Parcela ${num} • Alt: ${elevObj.elev} m (${elevObj.diffVsMean >= 0 ? '+' : ''}${elevObj.diffVsMean.toFixed(1)} m)`;
+          hudAlt.style.display = 'inline';
+        }
+      });
+      poly.on('mouseout', function() {
+        const hudAlt = document.getElementById('nocHudAlt');
+        if (hudAlt) hudAlt.style.display = 'none';
+      });
+
+      poly.addTo(nocParcelsGroup);
+      allLatLngs.push([p.lat, p.lng]);
+    }
+  });
+
+  mips.forEach((m, mIdx) => {
+    const pNum = nocParcelNum(m.parcela);
+    if (selParcel !== 'ALL' && pNum !== selParcel) return;
+
+    const anchor = parcelAnchorMap[pNum];
+    
+    let baseLat = parseFloat(m.latitude);
+    let baseLng = parseFloat(m.longitude);
+
+    if (isNaN(baseLat) || isNaN(baseLng) || baseLat === 0 || baseLng === 0) {
+      if (anchor) {
+        baseLat = anchor.lat;
+        baseLng = anchor.lng;
+      } else {
+        return;
+      }
+    }
+
+    const accuracy = m.accuracy || (m.gps_obj && m.gps_obj.accuracy) || 3;
+    const pCoords = m.ponto_coords || {};
+
+    for (let ptIdx = 0; ptIdx < 10; ptIdx++) {
+      const ptNum = ptIdx + 1;
+      const specificPtCoord = pCoords[ptIdx];
+
+      let ptLat = (specificPtCoord && specificPtCoord.lat) ? specificPtCoord.lat : (baseLat + ((ptIdx % 5 - 2) * 0.00045));
+      let ptLng = (specificPtCoord && specificPtCoord.lng) ? specificPtCoord.lng : (baseLng + ((Math.floor(ptIdx / 5) - 0.5) * 0.00045));
+      let ptAcc = (specificPtCoord && specificPtCoord.accuracy) ? specificPtCoord.accuracy : accuracy;
+
+      let ptVal = 0;
+      let targetName = 'Geral';
+      let limiarVal = 1;
+      let isAcimaLimiar = false;
+
+      if (selPraga === 'ALL') {
+        ptVal = m[`ponto${ptNum}`] !== undefined ? m[`ponto${ptNum}`] : 0;
+        targetName = m.praga || 'Vistoria MIP';
+        isAcimaLimiar = ptVal >= 2;
+      } else {
+        if (m.pragas_json && typeof m.pragas_json === 'object') {
+          const matchKey = Object.keys(m.pragas_json).find(k => k.toLowerCase().includes(selPraga.toLowerCase()));
+          if (matchKey && m.pragas_json[matchKey]) {
+            const pObj = m.pragas_json[matchKey];
+            const ptsArr = pObj.pontos || [];
+            ptVal = ptsArr[ptIdx] !== undefined ? ptsArr[ptIdx] : 0;
+            targetName = pObj.praga || matchKey;
+            limiarVal = pObj.limiar || 2;
+            isAcimaLimiar = ptVal >= limiarVal;
+          }
+        }
+      }
+
+      if (ptVal > 0) {
+        const intensity = Math.min(1.0, (ptVal / (limiarVal * 2.0)));
+        heatPoints.push([ptLat, ptLng, Math.max(0.2, intensity)]);
+      }
+
+      if (showPoints) {
+        let markerColor = '#10b981';
+        let radius = 6;
+
+        if (ptVal > 0 && !isAcimaLimiar) {
+          markerColor = '#f59e0b';
+          radius = 7;
+        } else if (isAcimaLimiar) {
+          markerColor = '#ef4444';
+          radius = 9;
+        }
+
+        const marker = L.circleMarker([ptLat, ptLng], {
+          radius: radius,
+          fillColor: markerColor,
+          color: '#ffffff',
+          weight: 1.5,
+          opacity: 1,
+          fillOpacity: 0.85
+        });
+
+        const formattedDate = m.data_vistoria ? m.data_vistoria.split('-').reverse().join('/') : '—';
+        const cleanObs = cleanObservationText(m.obs_texto || m.observacoes);
+        const popupContent = `
+          <div style="font-family:Inter,sans-serif; min-width:240px; font-size:12px">
+            <div style="font-weight:800; font-size:14px; color:${markerColor}; margin-bottom:4px; display:flex; justify-content:space-between">
+              <span>Parcela ${esc(pNum || m.parcela || '—')}</span>
+              <span style="font-size:11px; padding:1px 6px; border-radius:4px; background:${markerColor}; color:#fff">Pt ${ptNum}</span>
+            </div>
+            <div style="font-size:11px; color:#64748b; margin-bottom:6px">Vistoria em ${formattedDate} | Var: ${esc(m.variedade || '—')}</div>
+            <div style="font-size:11px; color:#64748b; margin-bottom:6px">Monitor: <b>${esc(m.monitor || m.usuario || 'Não informado')}</b></div>
+            <div style="background:rgba(255,255,255,0.06); padding:8px; border-radius:6px; margin-bottom:8px">
+              <div style="display:flex; justify-content:space-between"><span>Alvo:</span> <b>${esc(targetName)}</b></div>
+              <div style="display:flex; justify-content:space-between; margin-top:2px"><span>Contagem (Grau/Qtd):</span> <b style="font-size:14px; color:${markerColor}">${ptVal}</b></div>
+              <div style="display:flex; justify-content:space-between; margin-top:2px"><span>Status:</span> <b>${isAcimaLimiar ? 'Alerta Crítico / Ação Necessária' : 'Monitoramento Padrão'}</b></div>
+            </div>
+            ${m.fase_cultura ? `<div style="font-size:10px; color:#64748b; margin-bottom:4px">Fase Fenológica: <b>${esc(m.fase_cultura)}</b></div>` : ''}
+            ${cleanObs ? `<div style="font-size:10px; color:#64748b; background:var(--bg); padding:4px 6px; border-radius:4px; margin-bottom:6px">Obs: ${esc(cleanObs)}</div>` : ''}
+            <div style="font-size:10px; color:#64748b; font-family:monospace; margin-top:6px">
+              GPS: ${ptLat.toFixed(6)}, ${ptLng.toFixed(6)} (±${ptAcc}m)
+            </div>
+          </div>
+        `;
+
+        marker.bindPopup(popupContent);
+        marker.addTo(nocMarkerGroup);
+        allLatLngs.push([ptLat, ptLng]);
+      }
+    }
+  });
+
+  if (showHeatmap && heatPoints.length > 0 && typeof L.heatLayer === 'function') {
+    nocHeatLayer = L.heatLayer(heatPoints, {
+      radius: 35,
+      blur: 25,
+      maxZoom: 19,
+      gradient: {
+        0.2: '#10b981',
+        0.4: '#eab308',
+        0.7: '#f97316',
+        1.0: '#ef4444'
+      }
+    }).addTo(nocMap);
+  }
+
+  _nocCurrentRenderLatLngs = allLatLngs;
+
+  if (!nocMap._userPanned && allLatLngs.length > 0 && !nocMap._initialBlockSet) {
+    const eastPts = allLatLngs.filter(pt => pt[1] >= -37.50);
+    const westPts = allLatLngs.filter(pt => pt[1] < -37.50);
+    nocActiveBlock = (eastPts.length >= westPts.length) ? 'east' : 'west';
+    setNocBlockFilter(nocActiveBlock);
+    nocMap._initialBlockSet = true;
+    centerNocMapAll();
+  }
+}
+
+function centerNocMapAll() {
+  if (!nocMap) return;
+  nocMap._userPanned = false;
+
+  let pointsToFit = _nocCurrentRenderLatLngs || [];
+  if (pointsToFit.length > 0) {
+    if (nocActiveBlock === 'east') {
+      const east = pointsToFit.filter(pt => pt[1] >= -37.50);
+      if (east.length > 0) pointsToFit = east;
+    } else if (nocActiveBlock === 'west') {
+      const west = pointsToFit.filter(pt => pt[1] < -37.50);
+      if (west.length > 0) pointsToFit = west;
+    }
+  }
+
+  if (pointsToFit.length > 0) {
+    try {
+      nocMap.fitBounds(pointsToFit, { padding: [40, 40], maxZoom: 18 });
+    } catch(e) {}
+  } else {
+    nocMap.setView([NOC_DEFAULT_FARM_ANCHOR.lat, NOC_DEFAULT_FARM_ANCHOR.lng], 16);
+  }
+}
+
+function flyToParcel(parcelCode) {
+  if (!nocMap) return;
+  const pNum = nocParcelNum(parcelCode);
+  const selParcel = document.getElementById('nocFilterParcela');
+  if (selParcel) selParcel.value = pNum;
+  renderNocMapAndLayers();
+
+  const coords = nocParcelCoords(pNum);
+  if (coords && coords.lat && coords.lng) {
+    nocMap.flyTo([coords.lat, coords.lng], 18, { duration: 1.2 });
+    return;
+  }
+
+  const targetMips = nocMips.filter(m => nocParcelNum(m.parcela) === pNum);
+  const mipWithGps = targetMips.find(m => parseFloat(m.latitude) && parseFloat(m.longitude));
+  if (mipWithGps) {
+    nocMap.flyTo([parseFloat(mipWithGps.latitude), parseFloat(mipWithGps.longitude)], 18, { duration: 1.2 });
+  } else {
+    centerNocMapAll();
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════
+// AUDITORIA DE EFICIÊNCIA DE DEFENSIVOS (CRUZAMENTO O.P × MIP)
+// ═════════════════════════════════════════════════════════════════
+
+function renderNocEfficiencyAnalysis(mips, ops) {
+  const prodTbody = document.getElementById('nocProductsEfficacyTbody');
+  const chartCanvas = document.getElementById('nocEfficiencyChart');
+  const selParcel = document.getElementById('nocFilterParcela')?.value || 'ALL';
+  const chartParcelLabel = document.getElementById('nocChartParcelaLabel');
+  if (chartParcelLabel) chartParcelLabel.textContent = selParcel === 'ALL' ? 'Todas as Parcelas' : `Parcela ${selParcel}`;
+
+  const productStats = {};
+  let totalReductions = [];
+
+  ops.forEach(op => {
+    const pNum = nocParcelNum(op.parcela);
+    if (selParcel !== 'ALL' && pNum !== selParcel) return;
+    const opDateStr = op.data_aplicacao;
+    if (!opDateStr) return;
+
+    const opTime = new Date(opDateStr).getTime();
+
+    // Vistorias pré-aplicação (1 a 7 dias antes da O.P)
+    const preMips = mips.filter(m => {
+      if (nocParcelNum(m.parcela) !== pNum || !m.data_vistoria) return false;
+      const mTime = new Date(m.data_vistoria).getTime();
+      const diffDays = (opTime - mTime) / (1000 * 60 * 60 * 24);
+      return diffDays >= 0 && diffDays <= 7;
+    });
+
+    // Vistorias pós-aplicação (2 a 10 dias após a O.P)
+    const postMips = mips.filter(m => {
+      if (nocParcelNum(m.parcela) !== pNum || !m.data_vistoria) return false;
+      const mTime = new Date(m.data_vistoria).getTime();
+      const diffDays = (mTime - opTime) / (1000 * 60 * 60 * 24);
+      return diffDays >= 2 && diffDays <= 10;
+    });
+
+    if (preMips.length > 0 && postMips.length > 0) {
+      const preAvg = preMips.reduce((acc, m) => acc + (parseFloat(m.media) || 0), 0) / preMips.length;
+      const postAvg = postMips.reduce((acc, m) => acc + (parseFloat(m.media) || 0), 0) / postMips.length;
+
+      let reductionPct = 0;
+      if (preAvg > 0) {
+        reductionPct = ((preAvg - postAvg) / preAvg) * 100.0;
+        reductionPct = Math.max(-100, Math.min(100, reductionPct));
+        totalReductions.push(reductionPct);
+      }
+
+      const items = op.caderno_campo_op_itens || [];
+      items.forEach(it => {
+        const prodName = it.produto_nome || 'Defensivo sem nome';
+        if (!productStats[prodName]) {
+          productStats[prodName] = { name: prodName, alvo: it.alvo || '—', applications: 0, reductions: [] };
+        }
+        productStats[prodName].applications++;
+        if (preAvg > 0) productStats[prodName].reductions.push(reductionPct);
+      });
+    }
+  });
+
+  const kpiEficacia = document.getElementById('nocKpiEficaciaGeral');
+  const kpiEficaciaSub = document.getElementById('nocKpiEficaciaSub');
+  if (kpiEficacia) {
+    if (totalReductions.length > 0) {
+      const avgRed = totalReductions.reduce((a,b)=>a+b,0) / totalReductions.length;
+      kpiEficacia.textContent = `${avgRed.toFixed(1)}%`;
+      if (avgRed >= 75) {
+        kpiEficacia.style.color = 'var(--green)';
+        if (kpiEficaciaSub) kpiEficaciaSub.textContent = 'Alta eficácia média de supressão';
+      } else if (avgRed >= 50) {
+        kpiEficacia.style.color = 'var(--yellow)';
+        if (kpiEficaciaSub) kpiEficaciaSub.textContent = 'Eficácia moderada (atenção à dose)';
+      } else {
+        kpiEficacia.style.color = 'var(--red)';
+        if (kpiEficaciaSub) kpiEficaciaSub.textContent = 'Baixa eficácia / Alerta de resistência';
+      }
+    } else {
+      kpiEficacia.textContent = '— %';
+      if (kpiEficaciaSub) kpiEficaciaSub.textContent = 'Aguardando pares MIP pré/pós';
+    }
+  }
+
+  if (prodTbody) {
+    const pKeys = Object.keys(productStats);
+    if (pKeys.length === 0) {
+      prodTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:18px; color:var(--muted)">Nenhum defensivo correlacionado com vistorias pré/pós no período.</td></tr>`;
+    } else {
+      prodTbody.innerHTML = pKeys.map(k => {
+        const p = productStats[k];
+        const avg = p.reductions.length > 0 ? (p.reductions.reduce((a,b)=>a+b,0) / p.reductions.length) : 0;
+        let badgeColor = 'background:rgba(16,185,129,0.15); color:var(--green);';
+        let badgeLabel = 'Alta Eficácia';
+
+        if (avg < 50) {
+          badgeColor = 'background:rgba(239,68,68,0.2); color:var(--red);';
+          badgeLabel = 'Baixo Controle';
+        } else if (avg < 75) {
+          badgeColor = 'background:rgba(245,158,11,0.2); color:var(--yellow);';
+          badgeLabel = 'Moderado';
+        }
+
+        return `
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:6px; font-weight:700">${esc(p.name)}<br><span style="font-size:10px; color:var(--muted)">Alvo: ${esc(p.alvo)}</span></td>
+            <td style="padding:6px; text-align:center">${p.applications}</td>
+            <td style="padding:6px; text-align:center; font-weight:800">${avg > 0 ? `${avg.toFixed(1)}%` : '—'}</td>
+            <td style="padding:6px; text-align:center"><span class="badge" style="${badgeColor}; font-size:10px">${badgeLabel}</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+  }
+
+  if (chartCanvas && typeof Chart !== 'undefined') {
+    const sortedMips = [...mips]
+      .filter(m => selParcel === 'ALL' || nocParcelNum(m.parcela) === selParcel)
+      .sort((a,b) => (a.data_vistoria || '').localeCompare(b.data_vistoria || ''));
+
+    const datesMap = {};
+    sortedMips.forEach(m => {
+      const dt = m.data_vistoria;
+      if (!dt) return;
+      if (!datesMap[dt]) datesMap[dt] = [];
+      datesMap[dt].push(parseFloat(m.media) || 0);
+    });
+
+    const labels = Object.keys(datesMap).sort();
+    const dataPoints = labels.map(dt => {
+      const vals = datesMap[dt];
+      return parseFloat((vals.reduce((a,b)=>a+b,0) / vals.length).toFixed(2));
+    });
+
+    const opDates = new Set(ops.filter(o => selParcel === 'ALL' || nocParcelNum(o.parcela) === selParcel).map(o => o.data_aplicacao).filter(Boolean));
+
+    if (nocEfficiencyChartInstance) {
+      nocEfficiencyChartInstance.destroy();
+      nocEfficiencyChartInstance = null;
+    }
+
+    const ctx = chartCanvas.getContext('2d');
+    nocEfficiencyChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels.map(l => l.split('-').reverse().slice(0, 2).join('/')),
+        datasets: [
+          {
+            label: 'Pressão Fitossanitária (Média MIP)',
+            data: dataPoints,
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            fill: true,
+            tension: 0.3,
+            borderWidth: 2,
+            pointBackgroundColor: labels.map(l => opDates.has(l) ? '#ef4444' : '#10b981'),
+            pointRadius: labels.map(l => opDates.has(l) ? 6 : 4)
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              afterLabel: function(ctx) {
+                const rawDate = labels[ctx.dataIndex];
+                if (opDates.has(rawDate)) {
+                  return '🚜 Aplicação O.P Registrada nesta data!';
+                }
+                return '';
+              }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { font: { size: 10 }, color: '#94a3b8' } },
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { font: { size: 10 }, color: '#94a3b8' }, beginAtZero: true }
+        }
+      }
+    });
+  }
 }
 
 function renderCcOpTable(list) {
@@ -24276,6 +25851,11 @@ function renderEstoqueSaldosTable(list) {
 </div>
 
 <link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="dashboard-bi.css">
+<link rel="stylesheet" href="noc.css">
 <script src="estoque3d.js" defer></script>
+<script src="dashboard-bi.js" defer></script>
+<script src="noc-ui.js" defer></script>
+<script src="noc-risk.js" defer></script>
 </body>
 </html>

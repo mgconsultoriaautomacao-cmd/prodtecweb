@@ -1,0 +1,151 @@
+/* PRODTECH — campo-theme.css
+   Identidade visual sóbria e confiável para PWA ProdTech Campo (uso a céu aberto).
+   Sobrescreve estilos inline mantendo ids, classes e lógica JS intocados. */
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('../assets/fonts/ibm-plex-sans-latin.woff2') format('woff2');
+}
+
+:root, html[data-theme="light"] {
+  --bg: #f4f6f4;
+  --card: #ffffff;
+  --card2: #ffffff;
+  --text: #17201b;
+  --muted: #5b6a62;
+  --muted2: #414e47;
+  --border: #dbe2dd;
+  --border2: #c4ceb7;
+  --green: #1f7a4d;
+  --green-dim: rgba(31, 122, 77, 0.1);
+  --blue: #1f7a4d;
+  --blue-dim: rgba(31, 122, 77, 0.1);
+  --red: #c2413a;
+  --red-dim: rgba(194, 65, 58, 0.1);
+  --yellow: #b7791f;
+  --orange: #c2672f;
+  --btn-bg: #1f7a4d;
+  --btn-bg-hover: #18653f;
+  --input-bg: #ffffff;
+  --r: 8px;
+  --shadow-color: rgba(23, 32, 27, 0.06);
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  --bg: #0e1311;
+  --card: #151b18;
+  --card2: #19221e;
+  --text: #e7ece8;
+  --muted: #93a29a;
+  --muted2: #b5c3bc;
+  --border: #26302b;
+  --border2: #34423b;
+  --green: #4cc38a;
+  --green-dim: rgba(76, 195, 138, 0.12);
+  --blue: #4cc38a;
+  --blue-dim: rgba(76, 195, 138, 0.12);
+  --red: #e5675f;
+  --red-dim: rgba(229, 103, 95, 0.12);
+  --yellow: #d9a441;
+  --orange: #d98450;
+  --btn-bg: #1f7a4d;
+  --btn-bg-hover: #26905a;
+  --input-bg: #0e1311;
+  --r: 8px;
+  --shadow-color: rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+
+/* Tipografia global */
+html, body {
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif !important;
+  background-color: var(--bg) !important;
+  background-image: none !important;
+  color: var(--text) !important;
+}
+
+input, select, textarea, button, table {
+  font-family: inherit !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Remoção total de degradês, vidros, sombras coloridas e glows */
+*, *::before, *::after {
+  background-image: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* Alvos de toque (mínimo 48px) e leitura a céu aberto */
+button, input, select, textarea, .btn, .nav-tab, .emp-item, .item-card, .list-item, .action-btn {
+  min-height: 48px;
+  font-size: 14px !important;
+}
+
+/* Campos de formulário com rótulo acima e inputmode apropriado */
+input[type="text"], input[type="number"], input[type="date"], input[type="time"], select, textarea {
+  background-color: var(--input-bg) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+  padding: 10px 14px !important;
+  min-height: 48px !important;
+  width: 100%;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--btn-bg) !important;
+  outline: 2px solid var(--btn-bg) !important;
+  outline-offset: 1px;
+}
+
+/* Botões com hierarquia visual clara */
+.btn-primary, button:not([class*="sec"]):not([class*="danger"]):not([class*="ghost"]) {
+  background-color: var(--btn-bg) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 6px !important;
+  font-weight: 600 !important;
+  min-height: 48px !important;
+}
+
+button.sec, .btn-secondary {
+  background-color: transparent !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+  border-radius: 6px !important;
+}
+
+button:hover {
+  opacity: 0.94;
+}
+
+/* Indicador Online/Offline discreto */
+#netStatus, .net-status {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  border-radius: 4px !important;
+  padding: 4px 8px !important;
+  border: 1px solid var(--border) !important;
+}
+
+/* Cards e Seções do PWA */
+.card, .sec-card, .module-card, .emp-item, .history-card {
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  padding: 14px 16px !important;
+  margin-bottom: 10px !important;
+}
+
+/* Funcionário selecionado */
+.emp-item.on {
+  border-color: var(--btn-bg) !important;
+  background-color: var(--green-dim) !important;
+}

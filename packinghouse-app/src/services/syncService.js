@@ -221,7 +221,7 @@ async function syncToSupabase(db) {
   }
 
   // 3. Helper for Administrative Data
-  async function uploadDict(localTable, remoteTable, getSql, mapRow, matchField, remoteIdField = 'id', onConflictParam = 'on_conflict=barcode') {
+  async function uploadDict(localTable, remoteTable, getSql, mapRow, matchField, remoteIdField = 'id', onConflictParam = 'on_conflict=name') {
     const unsynced = await new Promise((resolve) => {
       db.all(getSql, (err, rows) => resolve(rows || []));
     });
@@ -282,7 +282,9 @@ async function syncToSupabase(db) {
     'fruits', 'fruits',
     `select * from fruits where synced = 0 limit 100`,
     f => ({ ...(f.remote_id ? { id: f.remote_id } : {}), tenant_id: tenantId, name: f.name, active: Boolean(f.active) }),
-    'name'
+    'name',
+    'id',
+    'on_conflict=name'
   );
 
   // Upload Varieties
@@ -290,7 +292,9 @@ async function syncToSupabase(db) {
     'varieties', 'varieties',
     `select * from varieties where synced = 0 limit 100`,
     v => ({ ...(v.remote_id ? { id: v.remote_id } : {}), tenant_id: tenantId, name: v.name, active: Boolean(v.active) }),
-    'name'
+    'name',
+    'id',
+    'on_conflict=name'
   );
 
   // Upload Parcels
@@ -306,7 +310,9 @@ async function syncToSupabase(db) {
     'box_weights', 'box_weights',
     `select * from box_weights where synced = 0 limit 100`,
     w => ({ ...(w.remote_id ? { id: w.remote_id } : {}), tenant_id: tenantId, name: w.name, weight_kg: w.weight_kg, active: Boolean(w.active) }),
-    'name'
+    'name',
+    'id',
+    'on_conflict=name'
   );
 
   // Upload Barcode Mappings
@@ -740,6 +746,7 @@ async function syncFromSupabase(db) {
 
   } catch (e) {
     console.error('Sync critical failure:', e);
+    throw e;
   } finally {
     console.log('Sync [down]: Finished cycle.');
   }

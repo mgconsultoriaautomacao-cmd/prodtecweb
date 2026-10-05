@@ -27,8 +27,28 @@ try {
   console.error('[main.js] Critical error requiring service modules:', e.stack || e.message);
 }
 
-app.disableHardwareAcceleration();
-console.log('App: Hardware acceleration disabled.');
+// ── Aceleração de Hardware Opcional ──
+function shouldDisableHardwareAcceleration() {
+  if (process.argv.includes('--disable-gpu-compat') || process.argv.includes('--disable-gpu')) {
+    return true;
+  }
+  try {
+    const fs = require('fs');
+    const flagFile = path.join(app.getPath('userData'), 'disable_gpu');
+    if (fs.existsSync(flagFile)) {
+      const val = fs.readFileSync(flagFile, 'utf8').trim();
+      if (val === '1' || val === 'true') return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+if (shouldDisableHardwareAcceleration()) {
+  app.disableHardwareAcceleration();
+  console.log('App: Hardware acceleration disabled (compat mode).');
+} else {
+  console.log('App: Hardware acceleration enabled (default).');
+}
 
 function createWindow() {
   console.log('App: Creating window...');
@@ -37,6 +57,7 @@ function createWindow() {
     height: 900,
     minWidth: 1200,
     minHeight: 760,
+    show: false,
     backgroundColor: '#0f172a',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -48,6 +69,12 @@ function createWindow() {
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   console.log('App: index.html loaded.');
 
+  mainWindow.once('ready-to-show', () => {
+    console.log('App: Window ready to show.');
+    mainWindow.show();
+    startCvService();
+  });
+
   mainWindow.on('closed', () => {
     console.log('App: Window closed.');
     mainWindow = null;
@@ -56,7 +83,20 @@ function createWindow() {
 
 function registerIpc() {
   ipcMain.handle('config:getAll', () => service.configGetAll());
-  ipcMain.handle('config:set', (_, payload) => service.configSet(payload));
+  ipcMain.handle('config:set', (_, payload) => {
+    if (payload && payload.disable_gpu !== undefined) {
+      try {
+        const fs = require('fs');
+        const flagFile = path.join(app.getPath('userData'), 'disable_gpu');
+        if (payload.disable_gpu === '1' || payload.disable_gpu === 1) {
+          fs.writeFileSync(flagFile, '1');
+        } else {
+          if (fs.existsSync(flagFile)) fs.unlinkSync(flagFile);
+        }
+      } catch (e) {}
+    }
+    return service.configSet(payload);
+  });
   ipcMain.handle('auth:login', (_, payload) => service.authLogin(payload));
   ipcMain.handle('auth:check', () => service.authCheck());
   ipcMain.handle('db:reset', () => service.dbReset());
@@ -147,9 +187,7 @@ function registerIpc() {
   });
 
   ipcMain.handle('sync:now', async () => {
-    await syncToSupabase(db);
-    await syncFromSupabase(db);
-    return { ok: true };
+    return await runSyncCycle();
   });
 
   ipcMain.handle('file:pickImage', async () => {
@@ -216,20 +254,11 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 
-  // Background sync every 20 seconds
-  setInterval(() => {
-    syncToSupabase(db).catch(console.error);
-    syncFromSupabase(db).catch(console.error);
-  }, 20000);
+  // ── Sync Coordinator (sem sobreposição, com backoff e eventos) ──
+  global.forceSync = () => runSyncCycle();
 
-  // Expose global forceSync for other services
-  global.forceSync = async () => {
-    await syncToSupabase(db);
-    await syncFromSupabase(db);
-  };
-
-  // Immediate sync on startup
-  setTimeout(() => global.forceSync().catch(console.error), 10000);
+  // Inicia agendamento inicial após 10 segundos
+  setTimeout(() => runSyncCycle().catch(console.error), 10000);
 
   // Configuração do Auto-Updater (Atualização Automática)
   try {
@@ -262,7 +291,60 @@ app.whenReady().then(() => {
     console.log('App: Auto-updater skipped in dev mode:', e.message);
   }
 
-  // Start CV Service (Python)
+});
+
+// ── Sincronização Inteligente (sem sobreposição, com backoff e eventos) ──
+let isSyncing = false;
+let syncTimer = null;
+const BASE_SYNC_INTERVAL = 20000;
+const MAX_BACKOFF = 120000;
+let backoffDelay = BASE_SYNC_INTERVAL;
+
+async function runSyncCycle() {
+  if (isSyncing) {
+    console.log('Sync: Ciclo anterior ainda em andamento. Ignorando sobreposição.');
+    return { ok: true, alreadyRunning: true };
+  }
+  isSyncing = true;
+  try {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('sync:status', { state: 'syncing' });
+    }
+    if (syncToSupabase && db) await syncToSupabase(db);
+    if (syncFromSupabase && db) await syncFromSupabase(db);
+
+    backoffDelay = BASE_SYNC_INTERVAL;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('sync:status', { state: 'synced', lastSync: Date.now() });
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error('Sync: Falha no ciclo de sincronização:', err.message || err);
+    backoffDelay = Math.min(backoffDelay * 2, MAX_BACKOFF);
+    console.log(`Sync: Backoff ativado. Próxima tentativa em ${backoffDelay / 1000}s`);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('sync:status', { state: 'offline', error: err.message, nextRetry: backoffDelay });
+    }
+    return { ok: false, error: err.message };
+  } finally {
+    isSyncing = false;
+    scheduleNextSync(backoffDelay);
+  }
+}
+
+function scheduleNextSync(delay = BASE_SYNC_INTERVAL) {
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(runSyncCycle, delay);
+}
+
+// ── Serviço de Visão Computacional (Python) — Inicialização não-bloqueante ──
+let pyProcess = null;
+let cvStarted = false;
+
+function startCvService() {
+  if (cvStarted) return;
+  cvStarted = true;
+
   try {
     const { spawn, exec } = require('child_process');
     const fs = require('fs');
@@ -271,7 +353,7 @@ app.whenReady().then(() => {
       : path.join(__dirname, '..', 'cv_service.py');
     
     function findPythonExecutable() {
-      // ── Prioridade 1: Python embutido (bundled runtime) — Windows empacotado ──
+      // Prioridade 1: Python embutido (bundled runtime)
       if (app.isPackaged && process.platform === 'win32') {
         const bundledPython = path.join(process.resourcesPath, 'python-runtime', 'python.exe');
         if (fs.existsSync(bundledPython)) {
@@ -311,7 +393,6 @@ app.whenReady().then(() => {
         }
       }
       
-      // Busca em caminhos padrão de instalação do Python no Windows
       if (process.platform === 'win32') {
         const sysRoot = process.env.SystemRoot || 'C:\\Windows';
         const winPyPaths = [
@@ -360,8 +441,7 @@ app.whenReady().then(() => {
       }
     }
 
-    // Usamos '-u' para Python unbuffered stdout/stderr
-    const pyProcess = spawn(pyExec, pyArgs, { cwd: pyDir });
+    pyProcess = spawn(pyExec, pyArgs, { cwd: pyDir });
 
     pyProcess.stdout.on('data', (data) => console.log(`CV: ${data}`));
     pyProcess.stderr.on('data', (data) => {
@@ -390,12 +470,12 @@ app.whenReady().then(() => {
     
     app.on('will-quit', () => {
       console.log('App: Killing CV Service...');
-      try { pyProcess.kill(); } catch (e) {}
+      try { if (pyProcess) pyProcess.kill(); } catch (e) {}
     });
   } catch (err) {
     console.error('App: Exception starting CV Service:', err);
   }
-});
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

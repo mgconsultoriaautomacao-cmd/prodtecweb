@@ -247,23 +247,19 @@ window.addEventListener('DOMContentLoaded', () => {
     const overlay = $('loginOverlay');
     if (!overlay) return;
 
-    const res = await window.api.authCheck();
-    if (res.ok) {
-      overlay.style.display = 'none';
-      return true;
-    }
-
-    overlay.style.display = 'flex';
     const emailInp = $('loginEmail');
     const passInp = $('loginPass');
     const btn = $('btnLoginAction');
     const status = $('loginStatus');
 
-    btn.onclick = async () => {
+    const doLogin = async () => {
       console.log("[Login] Tentando entrar com:", emailInp.value);
       const email = emailInp.value.trim();
       const password = passInp.value.trim();
-      if (!email || !password) return;
+      if (!email || !password) {
+        status.textContent = 'Por favor, preencha o e-mail e a senha.';
+        return;
+      }
 
       btn.disabled = true;
       btn.textContent = 'Autenticando...';
@@ -272,23 +268,27 @@ window.addEventListener('DOMContentLoaded', () => {
       try {
         const loginRes = await window.api.authLogin({ email, password });
         if (loginRes.ok) {
-          status.textContent = 'Sincronizando dados...';
-          await window.api.syncNow().catch(console.error);
           overlay.style.display = 'none';
           await initShell();
           route();
+          // Sincronização em segundo plano sem bloquear a entrada do usuário
+          window.api.syncNow().catch(console.error);
         } else {
-          status.textContent = loginRes.error || 'Erro ao entrar.';
+          status.textContent = loginRes.error || 'E-mail ou senha incorretos.';
           console.error("[Login] Falha:", loginRes.error);
         }
       } catch (err) {
-        status.textContent = 'Erro de conexão.';
+        status.textContent = 'Erro ao conectar ao servidor: ' + (err.message || err);
         console.error("[Login] Exceção:", err);
       } finally {
         btn.disabled = false;
         btn.textContent = 'Entrar e Sincronizar';
       }
     };
+
+    btn.onclick = doLogin;
+    passInp.onkeydown = (e) => { if (e.key === 'Enter') doLogin(); };
+    emailInp.onkeydown = (e) => { if (e.key === 'Enter') passInp.focus(); };
 
     // Botão de Emergência para Reset
     let resetBtn = $('btnLoginReset');
@@ -307,7 +307,14 @@ window.addEventListener('DOMContentLoaded', () => {
        }
     };
 
-    return false;
+    const res = await window.api.authCheck();
+    if (res.ok) {
+      overlay.style.display = 'none';
+      return true;
+    } else {
+      overlay.style.display = 'flex';
+      return false;
+    }
   }
 
   async function initShell() {
@@ -333,6 +340,29 @@ window.addEventListener('DOMContentLoaded', () => {
     tenantSub.textContent = cfg.tenant_logo_path ? 'Logo configurada' : 'Inteligência no Campo';
     document.body.dataset.theme = cfg.theme || 'dark';
     document.body.dataset.culture = cfg.culture_type || 'MAMAO';
+
+    if (typeof window.api?.onSyncStatus === 'function' && !window._syncStatusHooked) {
+      window._syncStatusHooked = true;
+      window.api.onSyncStatus(({ state, error, lastSync, nextRetry }) => {
+        const badge = document.getElementById('syncBadge');
+        const text = document.getElementById('syncText');
+        if (!badge || !text) return;
+
+        badge.classList.remove('syncing', 'offline', 'error');
+        if (state === 'syncing') {
+          badge.classList.add('syncing');
+          text.textContent = 'Sincronizando...';
+        } else if (state === 'synced') {
+          text.textContent = 'Sincronizado';
+        } else if (state === 'offline') {
+          badge.classList.add('offline');
+          text.textContent = 'Offline (local)';
+        } else if (state === 'error') {
+          badge.classList.add('error');
+          text.textContent = 'Erro de sincronização';
+        }
+      });
+    }
   }
 
   async function initPainel() {
@@ -492,6 +522,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
       try {
         let caliberDetected = null;
+        let cvRes = null; // precisa existir fora do try abaixo (antes era const interno -> sempre undefined)
         const cfg = await window.api.configGetAll();
         
         if (cfg.cv_enabled && roleSelect.value !== 'EMPILHADOR') {
@@ -512,9 +543,8 @@ window.addEventListener('DOMContentLoaded', () => {
                 activeFruitName = txt;
               }
             }
-            // Aguarda 300ms para estabilizar a foto da esteira e consultar a IA
-            await new Promise(r => setTimeout(r, 300));
-            const cvRes = await window.api.cvAnalyze(activeFruitName);
+            // Chama a análise imediatamente ao bipe (o buffer na memória já tem o melhor frame recente)
+            cvRes = await window.api.cvAnalyze(activeFruitName);
             const statusEl = document.getElementById('cvStatus');
             const caliberEl = document.getElementById('cvCaliber');
             const confidenceEl = document.getElementById('cvConfidence');
@@ -523,7 +553,13 @@ window.addEventListener('DOMContentLoaded', () => {
             const weightEl = document.getElementById('cvWeight');
 
             if (cvRes.ok) {
-              statusEl.textContent = '(Sucesso)';
+              // Validação cruzada calibre x tabela da caixa (OK / VERIFICAR / SEM_TABELA / SEM_CONTAGEM)
+              const v = cvRes.validation;
+              const ms = cvRes.analyze_ms != null ? ` · ${cvRes.analyze_ms}ms` : '';
+              statusEl.textContent = v && v !== 'SEM_TABELA' ? `(${v}${ms})` : `(Sucesso${ms})`;
+              statusEl.style.color = v === 'VERIFICAR' ? '#f59e0b' : (v === 'OK' ? '#22c55e' : '');
+              statusEl.title = (cvRes.warnings || []).join('\n') +
+                (cvRes.expected_min_kg ? `\nMín. esperado: ${cvRes.expected_min_kg} kg (${cvRes.min_fruit_kg} kg/fruta)` : '');
               caliberEl.textContent = cvRes.caliber;
               confidenceEl.textContent = Math.round(cvRes.confidence * 100) + '%';
               countEl.textContent = cvRes.count;
@@ -556,7 +592,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         let cvBoxModel = null;
         let cvWeight = null;
-        if (cfg.cv_enabled && roleSelect.value !== 'EMPILHADOR' && typeof cvRes !== 'undefined' && cvRes && cvRes.ok) {
+        if (cfg.cv_enabled && roleSelect.value !== 'EMPILHADOR' && cvRes && cvRes.ok) {
           cvBoxModel = cvRes.box_model;
           cvWeight = cvRes.detected_weight;
         }
@@ -852,9 +888,9 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       const links = await window.api.parcelPairsList({ parcelId: pid });
       linkList.innerHTML = links.map(l => `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(255,255,255,0.03);margin-bottom:4px;border-radius:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--bg2);margin-bottom:4px;border-radius:6px;border:1px solid var(--border);">
           <span>${esc(l.fruitName)} &rarr; <strong>${esc(l.varietyName)}</strong></span>
-          <button type="button" class="linkDel" data-f="${l.fruitId}" data-v="${l.varietyId}">Remover</button>
+          <button type="button" class="linkDel secondary" data-f="${l.fruitId}" data-v="${l.varietyId}">Excluir</button>
         </div>
       `).join('') || '<div class="muted">Nenhum vínculo para esta parcela.</div>';
 
@@ -871,18 +907,18 @@ window.addEventListener('DOMContentLoaded', () => {
     async function refreshMappings() {
       const mappings = await window.api.barcodeMappingsList();
       mapList.innerHTML = mappings.map(m => `
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
           <div>
-            <code style="background:rgba(255,255,255,.1);padding:2px 6px;border-radius:4px;">${esc(m.barcode)}</code> &rarr; 
+            <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;border:1px solid var(--border);">${esc(m.barcode)}</code> &rarr; 
             <strong>${esc(m.employeeName)}</strong> (${esc(m.weightName)})
           </div>
-          <button type="button" class="mapDelete" data-barcode="${esc(m.barcode)}">Remover</button>
+          <button type="button" class="mapDelete secondary" data-barcode="${esc(m.barcode)}">Excluir</button>
         </div>
       `).join('') || '<div class="muted">Nenhum mapeamento.</div>';
 
       mapList.querySelectorAll('.mapDelete').forEach(btn => {
         btn.onclick = async () => {
-          if (confirm('Remover este mapeamento?')) {
+          if (confirm('Excluir este mapeamento?')) {
             await window.api.barcodeMappingsDelete({ barcode: btn.dataset.barcode });
             await refreshMappings();
           }
@@ -1988,21 +2024,37 @@ window.toggleCvViewer = function() {
           <span style="color:#ffc107;">■</span> Zona de frutas &nbsp; <span style="color:#f97316;">■</span> Zona da etiqueta/OCR
         </div>
         <div style="display:flex; gap:8px; justify-content:flex-end;">
-          <button id="cvRoiReset" style="background:#374151; color:#94a3b8; border:none; border-radius:6px; padding:5px 12px; font-size:11px; cursor:pointer; font-weight:600;">Resetar</button>
-          <button id="cvRoiSave" style="background:#ffc107; color:#000; border:none; border-radius:6px; padding:5px 14px; font-size:11px; cursor:pointer; font-weight:800;">✓ Salvar Zonas</button>
+          <button id="cvRoiReset" style="background:#26302b; color:#93a29a; border:none; border-radius:6px; padding:5px 12px; font-size:11px; cursor:pointer; font-weight:500;">Resetar</button>
+          <button id="cvRoiSave" style="background:var(--btn-bg); color:#fff; border:none; border-radius:6px; padding:5px 14px; font-size:11px; cursor:pointer; font-weight:500;">Salvar Zonas</button>
         </div>
       </div>
-      <div style="padding: 8px 10px; background: #1e293b; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid rgba(255,255,255,0.05);">
-        <span style="color: #94a3b8; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px;"><i data-lucide="video" style="width:14px;height:14px;"></i> CANAL:</span>
-        <select id="cvCameraSelect" onchange="changeCvCamera(this.value)" style="background: #0f172a; color: #fff; border: 1px solid var(--blue); border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; outline: none; flex:1;">
+      <div style="padding: 8px 10px; background: #111714; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--border);">
+        <span style="color: var(--muted); font-size: 11px; font-weight: 500; display: flex; align-items: center; gap: 4px;"><i data-lucide="video" style="width:14px;height:14px;"></i> Canal:</span>
+        <select id="cvCameraSelect" onchange="changeCvCamera(this.value)" style="background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; outline: none; flex:1;">
           <option value="0">Câmera Principal (0)</option>
           <option value="1">Câmera Auxiliar (1)</option>
           <option value="2">Câmera Auxiliar (2)</option>
           <option value="3">Câmera Auxiliar (3)</option>
         </select>
-        <button id="cvRoiToggleBtn" onclick="toggleCvRoiEditor()" title="Configurar Zonas de Leitura" style="background:#1e3a5f; border:1px solid #ffc107; color:#ffc107; border-radius:6px; padding:4px 9px; font-size:11px; cursor:pointer; font-weight:700; display:flex; align-items:center; gap:4px; white-space:nowrap;">
+        <button id="cvRoiToggleBtn" onclick="toggleCvRoiEditor()" title="Configurar Zonas de Leitura" style="background:var(--btn-sec-bg); border:1px solid var(--border); color:var(--text); border-radius:6px; padding:4px 9px; font-size:11px; cursor:pointer; font-weight:500; display:flex; align-items:center; gap:4px; white-space:nowrap;">
           <i data-lucide="crop" style="width:12px;height:12px;"></i> Zonas
         </button>
+      </div>
+      <!-- Câmeras laterais (etiqueta/OCR). Topo = contagem de frutas -->
+      <div style="padding: 6px 10px 8px; background: #111714; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; color: var(--muted);">
+        <span>Lateral:</span>
+        <select id="cvSideSelect" onchange="changeCvSideCameras()" style="background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; font-size: 11px;">
+          <option value="">Nenhuma</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
+        </select>
+        <span>Lateral 2:</span>
+        <select id="cvSide2Select" onchange="changeCvSideCameras()" style="background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; font-size: 11px;">
+          <option value="">Nenhuma</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
+        </select>
+        <span style="margin-left:auto;">Ver:</span>
+        <select id="cvFeedSourceSelect" onchange="switchCvFeed(this.value)" style="background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; font-size: 11px;">
+          <option value="top">Topo (frutas)</option><option value="side">Lateral</option><option value="side2">Lateral 2</option>
+        </select>
+        <span id="cvCamMsg" style="width:100%; font-size:10px; color:#f59e0b;"></span>
       </div>
     `;
     document.body.appendChild(modal);
@@ -2024,13 +2076,16 @@ window.toggleCvViewer = function() {
     setTimeout(() => {
       // Sincroniza a câmera antes de abrir o stream
       window.changeCvCamera(savedIndex).then(() => {
-        img.src = 'http://localhost:5000/video_feed?t=' + Date.now();
+        window.loadCvSideCameras();
+        const feedSel = document.getElementById('cvFeedSourceSelect');
+        if (feedSel) feedSel.value = 'top';
+        img.src = 'http://127.0.0.1:5000/video_feed?cam=top&t=' + Date.now();
         img.onload = () => {
           loading.style.display = 'none';
           img.style.display = 'block';
         };
         img.onerror = () => {
-          loading.innerHTML = '<span style="color:#ef4444; font-weight:bold; display:flex; align-items:center; gap:4px; justify-content:center;"><i data-lucide="x-circle" style="width:18px;height:18px;"></i> ERRO DE CONEXÃO</span><br><br><span style="font-size:11px;">O serviço de visão (Python) não está respondendo.</span><br><br><button onclick="window.api.cvInstallDependencies().then(r=>alert(r.message))" style="background:#3b82f6; color:#fff; border:none; padding:8px 14px; border-radius:6px; font-weight:700; font-size:11px; cursor:pointer;">⚙️ Instalar / Configurar Python e Módulos (Automático)</button>';
+          loading.innerHTML = '<span style="color:#e5675f; font-weight:bold; display:flex; align-items:center; gap:4px; justify-content:center;"><i data-lucide="x-circle" style="width:18px;height:18px;"></i> Erro de Conexão</span><br><br><span style="font-size:11px;">O serviço de visão (Python) não está respondendo.</span><br><br><button onclick="window.api.cvInstallDependencies().then(r=>alert(r.message))" style="background:var(--btn-bg); color:#fff; border:none; padding:8px 14px; border-radius:6px; font-weight:500; font-size:11px; cursor:pointer;">Instalar / Configurar Python e Módulos (Automático)</button>';
           loading.style.display = 'block';
           img.style.display = 'none';
           if (window.lucide) window.lucide.createIcons();
@@ -2060,6 +2115,52 @@ window.changeCvCamera = async function(index) {
   } catch (err) {
     console.error(`[CV Visor] Erro de rede ao mudar de câmera:`, err.message);
   }
+};
+
+// ── Câmeras laterais (etiqueta/OCR) ──
+window.loadCvSideCameras = async function() {
+  try {
+    const res = await fetch('http://127.0.0.1:5000/cameras');
+    const d = await res.json();
+    const s1 = document.getElementById('cvSideSelect');
+    const s2 = document.getElementById('cvSide2Select');
+    if (s1) s1.value = d.side?.index ?? '';
+    if (s2) s2.value = d.side2?.index ?? '';
+    const msg = document.getElementById('cvCamMsg');
+    if (msg) {
+      const off = ['side', 'side2'].filter(k => d[k]?.index != null && !d[k]?.open);
+      msg.textContent = off.length ? `Câmera(s) sem sinal: ${off.join(', ')}` : (d.dual_mode ? '' : 'Modo 1 câmera (zonas de leitura ativas)');
+    }
+  } catch (err) {
+    console.error('[CV Visor] Falha ao ler câmeras:', err.message);
+  }
+};
+
+window.changeCvSideCameras = async function() {
+  const side = document.getElementById('cvSideSelect')?.value ?? '';
+  const side2 = document.getElementById('cvSide2Select')?.value ?? '';
+  const msg = document.getElementById('cvCamMsg');
+  try {
+    const res = await fetch('http://127.0.0.1:5000/set_cameras', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ side: side === '' ? null : parseInt(side), side2: side2 === '' ? null : parseInt(side2) })
+    });
+    const d = await res.json();
+    if (!res.ok || d.ok === false) {
+      if (msg) msg.textContent = d.message || 'Falha ao configurar câmeras';
+    } else {
+      if (msg) msg.textContent = 'Abrindo câmeras...';
+      setTimeout(window.loadCvSideCameras, 2500);
+    }
+  } catch (err) {
+    if (msg) msg.textContent = 'Serviço de visão não respondeu';
+  }
+};
+
+window.switchCvFeed = function(cam) {
+  const img = document.getElementById('cvFeedImg');
+  if (img) img.src = `http://127.0.0.1:5000/video_feed?cam=${encodeURIComponent(cam)}&t=${Date.now()}`;
 };
 
 // ═══════════════════════════════════════════
@@ -2231,14 +2332,14 @@ window.toggleCvRoiEditor = async function() {
           });
           if (res.ok) {
             localStorage.setItem('cv_rois', JSON.stringify(cvRois));
-            saveBtn.textContent = '✓ Salvo!';
-            saveBtn.style.background = '#22c55e';
-            setTimeout(() => { saveBtn.textContent = '✓ Salvar Zonas'; saveBtn.style.background = '#ffc107'; }, 1800);
+            saveBtn.textContent = 'Salvo!';
+            saveBtn.style.background = 'var(--btn-bg)';
+            setTimeout(() => { saveBtn.textContent = 'Salvar Zonas'; saveBtn.style.background = 'var(--btn-bg)'; }, 1800);
           }
         } catch (err) {
-          saveBtn.textContent = '✗ Erro de conexão';
-          saveBtn.style.background = '#ef4444';
-          setTimeout(() => { saveBtn.textContent = '✓ Salvar Zonas'; saveBtn.style.background = '#ffc107'; }, 2000);
+          saveBtn.textContent = 'Erro de conexão';
+          saveBtn.style.background = 'var(--red)';
+          setTimeout(() => { saveBtn.textContent = 'Salvar Zonas'; saveBtn.style.background = 'var(--btn-bg)'; }, 2000);
         }
       };
     }
@@ -2298,12 +2399,12 @@ if (window.api && window.api.onUpdateStatus) {
     }
 
     if (data.status === 'available') {
-      banner.innerHTML = `<span>🚀 <strong>Nova versão ${data.version} disponível!</strong> Baixando em segundo plano...</span>`;
+      banner.innerHTML = `<span><strong>Nova versão ${data.version} disponível!</strong> Baixando em segundo plano...</span>`;
       banner.style.display = 'flex';
     } else if (data.status === 'downloaded') {
       banner.innerHTML = `
-        <span>🎉 <strong>Atualização v${data.version} pronta!</strong></span>
-        <button id="btnRestartUpdate" style="background:#3b82f6; color:#fff; border:none; padding:6px 14px; border-radius:6px; font-weight:800; cursor:pointer;">Reiniciar e Aplicar</button>
+        <span><strong>Atualização v${data.version} pronta!</strong></span>
+        <button id="btnRestartUpdate" style="background:var(--btn-bg); color:#fff; border:none; padding:6px 14px; border-radius:6px; font-weight:600; cursor:pointer;">Reiniciar e Aplicar</button>
       `;
       banner.style.display = 'flex';
       const btn = banner.querySelector('#btnRestartUpdate');
