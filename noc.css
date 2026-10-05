@@ -1,0 +1,787 @@
+/* ══════════════════════════════════════════════════════════════════
+   PRODTECH NOC FITOSSANITÁRIO — MISSION CONTROL THEME (noc.css)
+   Padrão Sala de Controle Internacional (NOC / SOC / Grafana / Datadog)
+   Escopado estritamente em #ccTabNoc e body.noc-tv-mode
+   ══════════════════════════════════════════════════════════════════ */
+
+#ccTabNoc {
+  --noc-bg: #070b09;
+  --noc-card: #0a100d;
+  --noc-card-item: #101814;
+  --noc-card-hover: #15201a;
+  --noc-border: rgba(45, 212, 191, 0.16);
+  --noc-border-subtle: rgba(255, 255, 255, 0.08);
+  --noc-accent: #2dd4bf; /* Technical Cyan/Teal */
+  --noc-accent-subtle: rgba(45, 212, 191, 0.12);
+  --noc-green: #10b981;
+  --noc-green-bg: rgba(16, 185, 129, 0.12);
+  --noc-green-border: rgba(16, 185, 129, 0.35);
+  --noc-amber: #f59e0b;
+  --noc-amber-bg: rgba(245, 158, 11, 0.12);
+  --noc-amber-border: rgba(245, 158, 11, 0.35);
+  --noc-red: #ef4444;
+  --noc-red-bg: rgba(239, 68, 68, 0.15);
+  --noc-red-border: rgba(239, 68, 68, 0.4);
+  --noc-muted: #80968b;
+  --noc-text: #eef5f1;
+  --noc-mono: ui-monospace, "IBM Plex Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  font-family: 'IBM Plex Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  color: var(--noc-text);
+  letter-spacing: -0.01em;
+}
+
+html[data-theme="light"] #ccTabNoc {
+  --noc-bg: #f4f6f4;
+  --noc-card: #ffffff;
+  --noc-card-item: #f8faf9;
+  --noc-card-hover: #eef2ef;
+  --noc-border: #dbe2dd;
+  --noc-border-subtle: rgba(0, 0, 0, 0.08);
+  --noc-accent: #0d9488;
+  --noc-accent-subtle: rgba(13, 148, 136, 0.1);
+  --noc-green: #059669;
+  --noc-green-bg: rgba(5, 150, 105, 0.1);
+  --noc-green-border: rgba(5, 150, 105, 0.3);
+  --noc-amber: #d97706;
+  --noc-amber-bg: rgba(217, 119, 6, 0.1);
+  --noc-amber-border: rgba(217, 119, 6, 0.3);
+  --noc-red: #dc2626;
+  --noc-red-bg: rgba(220, 38, 38, 0.1);
+  --noc-red-border: rgba(220, 38, 38, 0.3);
+  --noc-muted: #5b6a62;
+  --noc-text: #17201b;
+}
+
+/* ─── Top Status Bar ────────────────────────────────────────────── */
+#ccTabNoc .noc-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: var(--noc-card);
+  border: 1px solid var(--noc-border);
+  border-radius: 6px;
+  padding: 8px 14px;
+  margin-bottom: 14px;
+  font-size: 11px;
+}
+
+#ccTabNoc .noc-status-bar-left,
+#ccTabNoc .noc-status-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+#ccTabNoc .noc-live-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--noc-mono);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--noc-green);
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--noc-green-bg);
+  border: 1px solid var(--noc-green-border);
+}
+
+#ccTabNoc .noc-live-indicator.stale {
+  color: var(--noc-amber);
+  background: var(--noc-amber-bg);
+  border-color: var(--noc-amber-border);
+}
+
+#ccTabNoc .noc-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+  animation: nocBlink 2s infinite ease-in-out;
+}
+
+@keyframes nocBlink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.85); }
+}
+
+#ccTabNoc .noc-clock {
+  font-family: var(--noc-mono);
+  font-weight: 600;
+  color: var(--noc-text);
+  font-variant-numeric: tabular-nums;
+  background: var(--noc-card-item);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--noc-border-subtle);
+}
+
+#ccTabNoc .noc-sync-info {
+  color: var(--noc-muted);
+  font-family: var(--noc-mono);
+  font-size: 11px;
+}
+
+#ccTabNoc .noc-filter-summary {
+  color: var(--noc-muted);
+  font-size: 11px;
+}
+#ccTabNoc .noc-filter-summary b {
+  color: var(--noc-accent);
+  font-weight: 600;
+}
+
+#ccTabNoc .noc-tv-btn {
+  background: var(--noc-card-item);
+  color: var(--noc-text);
+  border: 1px solid var(--noc-border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+#ccTabNoc .noc-tv-btn:hover {
+  background: var(--noc-accent-subtle);
+  border-color: var(--noc-accent);
+  color: var(--noc-accent);
+}
+
+/* ─── Top KPI Cards (Instrument Rack Look) ────────────────────────── */
+#ccTabNoc .noc-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+#ccTabNoc .card {
+  background: var(--noc-card) !important;
+  border: 1px solid var(--noc-border-subtle) !important;
+  border-radius: 6px !important;
+  position: relative;
+  box-shadow: none !important;
+}
+
+/* Corner ticks on main cards */
+#ccTabNoc .card::before,
+#ccTabNoc .card::after {
+  content: "";
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  pointer-events: none;
+  border-color: var(--noc-accent);
+  opacity: 0.35;
+}
+#ccTabNoc .card::before {
+  top: 0; left: 0;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+#ccTabNoc .card::after {
+  bottom: 0; right: 0;
+  border-bottom: 1px solid;
+  border-right: 1px solid;
+}
+
+/* KPI specific styles */
+#ccTabNoc .noc-kpi-card {
+  padding: 14px 16px !important;
+  margin-bottom: 0 !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-left-width: 3px !important;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#ccTabNoc .noc-kpi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+
+#ccTabNoc .noc-kpi-label {
+  font-size: 10.5px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  font-weight: 700 !important;
+  color: var(--noc-muted) !important;
+}
+
+#ccTabNoc .noc-kpi-icon {
+  width: 15px;
+  height: 15px;
+  opacity: 0.7;
+}
+
+#ccTabNoc #nocKpiTotalParcelas,
+#ccTabNoc #nocKpiAlertasCriticos,
+#ccTabNoc #nocKpiPragaDominante,
+#ccTabNoc #nocKpiEficaciaGeral {
+  font-family: var(--noc-mono) !important;
+  font-variant-numeric: tabular-nums !important;
+  font-size: 26px !important;
+  font-weight: 700 !important;
+  line-height: 1.1 !important;
+  margin-top: 6px !important;
+  letter-spacing: -0.5px !important;
+}
+
+#ccTabNoc #nocKpiPragaDominante {
+  font-size: 18px !important;
+}
+
+#ccTabNoc .noc-kpi-sub {
+  font-size: 11px !important;
+  color: var(--noc-muted) !important;
+  margin-top: 4px !important;
+}
+
+/* Glowing indicator for critical alerts if > 0 */
+#ccTabNoc .noc-kpi-card.has-critical {
+  border-color: var(--noc-red-border) !important;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.2) !important;
+}
+
+/* ─── Control Toolbar (Command Bar) ──────────────────────────────── */
+#ccTabNoc .noc-toolbar {
+  padding: 12px 14px !important;
+  margin-bottom: 14px !important;
+  border: 1px solid var(--noc-border) !important;
+}
+
+#ccTabNoc .noc-toolbar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--noc-border-subtle);
+}
+
+#ccTabNoc .noc-toolbar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--noc-text);
+}
+
+#ccTabNoc .noc-toolbar-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+#ccTabNoc .noc-btn {
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--noc-border);
+  background: var(--noc-card-item);
+  color: var(--noc-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+#ccTabNoc .noc-btn:hover {
+  border-color: var(--noc-accent);
+  color: var(--noc-accent);
+}
+#ccTabNoc .noc-btn.primary {
+  background: var(--noc-accent-subtle);
+  border-color: var(--noc-accent);
+  color: var(--noc-accent);
+}
+
+#ccTabNoc .noc-select-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+#ccTabNoc .noc-field-label {
+  font-size: 10.5px;
+  color: var(--noc-muted);
+  display: block;
+  margin-bottom: 3px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+#ccTabNoc select,
+#ccTabNoc input[type="text"] {
+  height: 32px;
+  background: var(--noc-card-item) !important;
+  border: 1px solid var(--noc-border-subtle) !important;
+  border-radius: 4px !important;
+  color: var(--noc-text) !important;
+  padding: 4px 8px !important;
+  font-size: 11.5px !important;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#ccTabNoc select:focus,
+#ccTabNoc input[type="text"]:focus {
+  outline: none;
+  border-color: var(--noc-accent) !important;
+  box-shadow: 0 0 0 2px var(--noc-accent-subtle) !important;
+}
+
+/* Layer Toggle Chips */
+#ccTabNoc .noc-layer-chips {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--noc-border-subtle);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+#ccTabNoc .noc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--noc-card-item);
+  border: 1px solid var(--noc-border-subtle);
+  color: var(--noc-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+#ccTabNoc .noc-chip:hover {
+  border-color: var(--noc-border);
+  color: var(--noc-text);
+}
+#ccTabNoc .noc-chip.active {
+  background: var(--noc-accent-subtle);
+  border-color: var(--noc-accent);
+  color: var(--noc-accent);
+  font-weight: 600;
+}
+#ccTabNoc .noc-chip input[type="checkbox"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+#ccTabNoc .noc-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+#ccTabNoc .noc-legend {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 10.5px;
+  font-family: var(--noc-mono);
+  color: var(--noc-muted);
+}
+#ccTabNoc .noc-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+#ccTabNoc .noc-legend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+/* ─── Leaflet Map Protagonist ────────────────────────────────────── */
+#ccTabNoc #nocMapCardContainer {
+  min-height: calc(100vh - 320px) !important;
+  height: calc(100vh - 320px) !important;
+  background: #060a08 radial-gradient(rgba(45, 212, 191, 0.08) 1px, transparent 1px) 0 0 / 22px 22px !important;
+  border: 1px solid var(--noc-border) !important;
+  border-radius: 6px !important;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 0 !important;
+}
+
+#ccTabNoc #nocLeafletMap {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  background: transparent !important;
+  z-index: 1;
+}
+
+/* Dark OSM tile filter (Dark-First) */
+html[data-theme="dark"] #ccTabNoc .leaflet-tile-pane .noc-osm-dark-tiles {
+  filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(90%);
+}
+
+/* Custom styled Leaflet Controls */
+#ccTabNoc .leaflet-bar {
+  border: 1px solid var(--noc-border) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+  border-radius: 6px !important;
+  overflow: hidden;
+}
+#ccTabNoc .leaflet-bar a {
+  background: var(--noc-card) !important;
+  color: var(--noc-accent) !important;
+  border-bottom: 1px solid var(--noc-border-subtle) !important;
+  width: 28px !important;
+  height: 28px !important;
+  line-height: 28px !important;
+}
+#ccTabNoc .leaflet-bar a:hover {
+  background: var(--noc-card-hover) !important;
+  color: #fff !important;
+}
+#ccTabNoc .leaflet-control-scale-line {
+  background: rgba(7, 11, 9, 0.88) !important;
+  color: var(--noc-accent) !important;
+  border: 1px solid var(--noc-border) !important;
+  font-family: var(--noc-mono) !important;
+  font-size: 10px !important;
+  padding: 2px 6px !important;
+  border-radius: 3px !important;
+}
+
+/* Live HUD */
+#ccTabNoc .noc-hud {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 999;
+  background: rgba(7, 11, 9, 0.92);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--noc-border);
+  font-size: 10.5px;
+  font-family: var(--noc-mono);
+  color: var(--noc-text);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+#ccTabNoc .noc-hud-divider {
+  color: var(--noc-border);
+}
+
+/* Popups & Tooltips */
+#ccTabNoc .leaflet-popup-content-wrapper {
+  background: var(--noc-card) !important;
+  color: var(--noc-text) !important;
+  border: 1px solid var(--noc-border) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
+  padding: 0 !important;
+}
+#ccTabNoc .leaflet-popup-content {
+  margin: 12px !important;
+  line-height: 1.4 !important;
+}
+#ccTabNoc .leaflet-popup-tip {
+  background: var(--noc-card) !important;
+  border: 1px solid var(--noc-border) !important;
+}
+#ccTabNoc .leaflet-tooltip {
+  background: var(--noc-card) !important;
+  color: var(--noc-text) !important;
+  border: 1px solid var(--noc-border) !important;
+  border-radius: 4px !important;
+  font-family: var(--noc-mono) !important;
+  font-size: 10px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+}
+
+/* ─── Ranking Sidebar (Alert Feed Look) ──────────────────────────── */
+#ccTabNoc .noc-sidebar-card {
+  border: 1px solid var(--noc-border) !important;
+  min-height: calc(100vh - 320px) !important;
+  max-height: calc(100vh - 320px) !important;
+  overflow-y: auto !important;
+  margin-bottom: 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+
+#ccTabNoc .noc-sidebar-card::-webkit-scrollbar {
+  width: 5px;
+}
+#ccTabNoc .noc-sidebar-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+#ccTabNoc .noc-sidebar-card::-webkit-scrollbar-thumb {
+  background: var(--noc-border);
+  border-radius: 3px;
+}
+
+#ccTabNoc .noc-ranking-item {
+  background: var(--noc-card-item);
+  border: 1px solid var(--noc-border-subtle);
+  border-radius: 4px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+#ccTabNoc .noc-ranking-item:hover {
+  background: var(--noc-card-hover);
+  border-color: var(--noc-accent);
+  transform: translateX(2px);
+}
+#ccTabNoc .noc-ranking-item.critical {
+  border-left: 3px solid var(--noc-red);
+}
+#ccTabNoc .noc-ranking-item.warning {
+  border-left: 3px solid var(--noc-amber);
+}
+#ccTabNoc .noc-ranking-item.ok {
+  border-left: 3px solid var(--noc-green);
+}
+
+/* ─── Eficiência de Defensivos ───────────────────────────────────── */
+#ccTabNoc .noc-eff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+#ccTabNoc .noc-eff-table th {
+  padding: 6px 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--noc-muted);
+  border-bottom: 1px solid var(--noc-border);
+  font-weight: 700;
+}
+#ccTabNoc .noc-eff-table td {
+  padding: 7px 8px;
+  height: 32px;
+  border-bottom: 1px solid var(--noc-border-subtle);
+  vertical-align: middle;
+}
+#ccTabNoc .noc-eff-table td.mono-num {
+  font-family: var(--noc-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  font-weight: 600;
+}
+
+/* ─── TV Mode / Fullscreen (Telão & Sala de Controle) ────────────── */
+body.noc-tv-mode {
+  overflow: hidden !important;
+}
+
+body.noc-tv-mode #ccTabNoc {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
+  background: var(--noc-bg) !important;
+  padding: 16px !important;
+  overflow-y: auto !important;
+  height: 100vh !important;
+  width: 100vw !important;
+}
+
+body.noc-tv-mode #ccTabNoc #nocMapCardContainer {
+  min-height: calc(100vh - 220px) !important;
+  height: calc(100vh - 220px) !important;
+}
+
+body.noc-tv-mode #ccTabNoc .noc-sidebar-card {
+  min-height: calc(100vh - 220px) !important;
+  max-height: calc(100vh - 220px) !important;
+}
+
+body.noc-tv-mode #ccTabNoc .noc-kpi-label {
+  font-size: 12px !important;
+}
+body.noc-tv-mode #ccTabNoc #nocKpiTotalParcelas,
+body.noc-tv-mode #ccTabNoc #nocKpiAlertasCriticos,
+body.noc-tv-mode #ccTabNoc #nocKpiEficaciaGeral {
+  font-size: 32px !important;
+}
+
+/* ─── Agroclimatic Risk UI Additions ────────────────────────────── */
+#ccTabNoc .noc-risk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--noc-mono);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+#ccTabNoc .noc-risk-card {
+  background: var(--noc-card-item);
+  border: 1px solid var(--noc-border-subtle);
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 10px;
+}
+
+#ccTabNoc .noc-risk-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 6px 0;
+}
+#ccTabNoc .noc-risk-bar-fill {
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+@media (max-width: 900px) {
+  #ccTabNoc .noc-main-split {
+    grid-template-columns: 1fr !important;
+  }
+  #ccTabNoc #nocMapCardContainer {
+    min-height: 480px !important;
+    height: 480px !important;
+  }
+  #ccTabNoc .noc-sidebar-card {
+    min-height: auto !important;
+    max-height: 400px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #ccTabNoc * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── NOC Georreferenciamento por Número & Blocos & Relevo ─────── */
+#ccTabNoc .noc-block-btn-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(10, 16, 13, 0.9);
+  border: 1px solid var(--noc-border);
+  border-radius: 6px;
+  padding: 2px;
+}
+
+#ccTabNoc .noc-block-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--noc-muted);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#ccTabNoc .noc-block-btn:hover {
+  color: var(--noc-text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+#ccTabNoc .noc-block-btn.active {
+  background: var(--noc-accent-subtle);
+  color: var(--noc-accent);
+  border-color: var(--noc-accent);
+  font-weight: 700;
+}
+
+#ccTabNoc .noc-missing-coords-banner {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(245, 158, 11, 0.7);
+  color: #f59e0b;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 90%;
+  transition: transform 0.2s ease;
+}
+
+#ccTabNoc .noc-missing-coords-banner:hover {
+  transform: translateY(-1px);
+  border-color: #f59e0b;
+  background: rgba(24, 34, 58, 0.98);
+}
+
+#ccTabNoc .noc-elevation-legend-box {
+  background: rgba(10, 16, 13, 0.85);
+  border: 1px solid var(--noc-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-top: 8px;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#ccTabNoc .noc-elevation-gradient-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #0284c7, #10b981, #84cc16, #eab308, #ea580c);
+  width: 100%;
+}
+
+#ccTabNoc .noc-copernicus-note {
+  font-size: 10px;
+  color: var(--noc-muted);
+  font-style: italic;
+  margin-top: 2px;
+}
+

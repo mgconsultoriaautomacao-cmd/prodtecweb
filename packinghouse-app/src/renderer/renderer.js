@@ -247,23 +247,19 @@ window.addEventListener('DOMContentLoaded', () => {
     const overlay = $('loginOverlay');
     if (!overlay) return;
 
-    const res = await window.api.authCheck();
-    if (res.ok) {
-      overlay.style.display = 'none';
-      return true;
-    }
-
-    overlay.style.display = 'flex';
     const emailInp = $('loginEmail');
     const passInp = $('loginPass');
     const btn = $('btnLoginAction');
     const status = $('loginStatus');
 
-    btn.onclick = async () => {
+    const doLogin = async () => {
       console.log("[Login] Tentando entrar com:", emailInp.value);
       const email = emailInp.value.trim();
       const password = passInp.value.trim();
-      if (!email || !password) return;
+      if (!email || !password) {
+        status.textContent = 'Por favor, preencha o e-mail e a senha.';
+        return;
+      }
 
       btn.disabled = true;
       btn.textContent = 'Autenticando...';
@@ -278,17 +274,21 @@ window.addEventListener('DOMContentLoaded', () => {
           // Sincronização em segundo plano sem bloquear a entrada do usuário
           window.api.syncNow().catch(console.error);
         } else {
-          status.textContent = loginRes.error || 'Erro ao entrar.';
+          status.textContent = loginRes.error || 'E-mail ou senha incorretos.';
           console.error("[Login] Falha:", loginRes.error);
         }
       } catch (err) {
-        status.textContent = 'Erro de conexão.';
+        status.textContent = 'Erro ao conectar ao servidor: ' + (err.message || err);
         console.error("[Login] Exceção:", err);
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Entrar';
+        btn.textContent = 'Entrar e Sincronizar';
       }
     };
+
+    btn.onclick = doLogin;
+    passInp.onkeydown = (e) => { if (e.key === 'Enter') doLogin(); };
+    emailInp.onkeydown = (e) => { if (e.key === 'Enter') passInp.focus(); };
 
     // Botão de Emergência para Reset
     let resetBtn = $('btnLoginReset');
@@ -307,7 +307,14 @@ window.addEventListener('DOMContentLoaded', () => {
        }
     };
 
-    return false;
+    const res = await window.api.authCheck();
+    if (res.ok) {
+      overlay.style.display = 'none';
+      return true;
+    } else {
+      overlay.style.display = 'flex';
+      return false;
+    }
   }
 
   async function initShell() {
@@ -515,6 +522,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
       try {
         let caliberDetected = null;
+        let cvRes = null; // precisa existir fora do try abaixo (antes era const interno -> sempre undefined)
         const cfg = await window.api.configGetAll();
         
         if (cfg.cv_enabled && roleSelect.value !== 'EMPILHADOR') {
@@ -535,9 +543,8 @@ window.addEventListener('DOMContentLoaded', () => {
                 activeFruitName = txt;
               }
             }
-            // Aguarda 300ms para estabilizar a foto da esteira e consultar a IA
-            await new Promise(r => setTimeout(r, 300));
-            const cvRes = await window.api.cvAnalyze(activeFruitName);
+            // Chama a análise imediatamente ao bipe (o buffer na memória já tem o melhor frame recente)
+            cvRes = await window.api.cvAnalyze(activeFruitName);
             const statusEl = document.getElementById('cvStatus');
             const caliberEl = document.getElementById('cvCaliber');
             const confidenceEl = document.getElementById('cvConfidence');
@@ -546,7 +553,13 @@ window.addEventListener('DOMContentLoaded', () => {
             const weightEl = document.getElementById('cvWeight');
 
             if (cvRes.ok) {
-              statusEl.textContent = '(Sucesso)';
+              // Validação cruzada calibre x tabela da caixa (OK / VERIFICAR / SEM_TABELA / SEM_CONTAGEM)
+              const v = cvRes.validation;
+              const ms = cvRes.analyze_ms != null ? ` · ${cvRes.analyze_ms}ms` : '';
+              statusEl.textContent = v && v !== 'SEM_TABELA' ? `(${v}${ms})` : `(Sucesso${ms})`;
+              statusEl.style.color = v === 'VERIFICAR' ? '#f59e0b' : (v === 'OK' ? '#22c55e' : '');
+              statusEl.title = (cvRes.warnings || []).join('\n') +
+                (cvRes.expected_min_kg ? `\nMín. esperado: ${cvRes.expected_min_kg} kg (${cvRes.min_fruit_kg} kg/fruta)` : '');
               caliberEl.textContent = cvRes.caliber;
               confidenceEl.textContent = Math.round(cvRes.confidence * 100) + '%';
               countEl.textContent = cvRes.count;
@@ -579,7 +592,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         let cvBoxModel = null;
         let cvWeight = null;
-        if (cfg.cv_enabled && roleSelect.value !== 'EMPILHADOR' && typeof cvRes !== 'undefined' && cvRes && cvRes.ok) {
+        if (cfg.cv_enabled && roleSelect.value !== 'EMPILHADOR' && cvRes && cvRes.ok) {
           cvBoxModel = cvRes.box_model;
           cvWeight = cvRes.detected_weight;
         }
@@ -2027,6 +2040,22 @@ window.toggleCvViewer = function() {
           <i data-lucide="crop" style="width:12px;height:12px;"></i> Zonas
         </button>
       </div>
+      <!-- Câmeras laterais (etiqueta/OCR). Topo = contagem de frutas -->
+      <div style="padding: 6px 10px 8px; background: #111714; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; color: var(--muted);">
+        <span>Lateral:</span>
+        <select id="cvSideSelect" onchange="changeCvSideCameras()" style="background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; font-size: 11px;">
+          <option value="">Nenhuma</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
+        </select>
+        <span>Lateral 2:</span>
+        <select id="cvSide2Select" onchange="changeCvSideCameras()" style="background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; font-size: 11px;">
+          <option value="">Nenhuma</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
+        </select>
+        <span style="margin-left:auto;">Ver:</span>
+        <select id="cvFeedSourceSelect" onchange="switchCvFeed(this.value)" style="background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; font-size: 11px;">
+          <option value="top">Topo (frutas)</option><option value="side">Lateral</option><option value="side2">Lateral 2</option>
+        </select>
+        <span id="cvCamMsg" style="width:100%; font-size:10px; color:#f59e0b;"></span>
+      </div>
     `;
     document.body.appendChild(modal);
     if (window.lucide) window.lucide.createIcons();
@@ -2047,7 +2076,10 @@ window.toggleCvViewer = function() {
     setTimeout(() => {
       // Sincroniza a câmera antes de abrir o stream
       window.changeCvCamera(savedIndex).then(() => {
-        img.src = 'http://localhost:5000/video_feed?t=' + Date.now();
+        window.loadCvSideCameras();
+        const feedSel = document.getElementById('cvFeedSourceSelect');
+        if (feedSel) feedSel.value = 'top';
+        img.src = 'http://127.0.0.1:5000/video_feed?cam=top&t=' + Date.now();
         img.onload = () => {
           loading.style.display = 'none';
           img.style.display = 'block';
@@ -2083,6 +2115,52 @@ window.changeCvCamera = async function(index) {
   } catch (err) {
     console.error(`[CV Visor] Erro de rede ao mudar de câmera:`, err.message);
   }
+};
+
+// ── Câmeras laterais (etiqueta/OCR) ──
+window.loadCvSideCameras = async function() {
+  try {
+    const res = await fetch('http://127.0.0.1:5000/cameras');
+    const d = await res.json();
+    const s1 = document.getElementById('cvSideSelect');
+    const s2 = document.getElementById('cvSide2Select');
+    if (s1) s1.value = d.side?.index ?? '';
+    if (s2) s2.value = d.side2?.index ?? '';
+    const msg = document.getElementById('cvCamMsg');
+    if (msg) {
+      const off = ['side', 'side2'].filter(k => d[k]?.index != null && !d[k]?.open);
+      msg.textContent = off.length ? `Câmera(s) sem sinal: ${off.join(', ')}` : (d.dual_mode ? '' : 'Modo 1 câmera (zonas de leitura ativas)');
+    }
+  } catch (err) {
+    console.error('[CV Visor] Falha ao ler câmeras:', err.message);
+  }
+};
+
+window.changeCvSideCameras = async function() {
+  const side = document.getElementById('cvSideSelect')?.value ?? '';
+  const side2 = document.getElementById('cvSide2Select')?.value ?? '';
+  const msg = document.getElementById('cvCamMsg');
+  try {
+    const res = await fetch('http://127.0.0.1:5000/set_cameras', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ side: side === '' ? null : parseInt(side), side2: side2 === '' ? null : parseInt(side2) })
+    });
+    const d = await res.json();
+    if (!res.ok || d.ok === false) {
+      if (msg) msg.textContent = d.message || 'Falha ao configurar câmeras';
+    } else {
+      if (msg) msg.textContent = 'Abrindo câmeras...';
+      setTimeout(window.loadCvSideCameras, 2500);
+    }
+  } catch (err) {
+    if (msg) msg.textContent = 'Serviço de visão não respondeu';
+  }
+};
+
+window.switchCvFeed = function(cam) {
+  const img = document.getElementById('cvFeedImg');
+  if (img) img.src = `http://127.0.0.1:5000/video_feed?cam=${encodeURIComponent(cam)}&t=${Date.now()}`;
 };
 
 // ═══════════════════════════════════════════

@@ -7,7 +7,13 @@ import time
 import subprocess
 import os
 import sys
+import re
+import json
+import logging
 import unicodedata
+from collections import deque, Counter
+
+os.environ.setdefault("OPENCV_LOG_LEVEL", "SILENT")
 
 if hasattr(sys.stdout, 'reconfigure'):
     try:
@@ -15,6 +21,12 @@ if hasattr(sys.stdout, 'reconfigure'):
         sys.stderr.reconfigure(encoding='utf-8', errors='replace')
     except Exception:
         pass
+
+try:
+    if hasattr(cv2, 'setLogLevel'):
+        cv2.setLogLevel(cv2.LOG_LEVEL_SILENT)
+except Exception:
+    pass
 
 def remove_accents(input_str):
     if not input_str:
@@ -39,6 +51,41 @@ lock = threading.Lock()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OCR_PATH = os.path.join(BASE_DIR, "scratch", "ocr")
 TEMP_FRAME_PATH = os.path.join(BASE_DIR, "scratch", "current_frame.jpg")
+CONFIG_PATH = os.path.join(BASE_DIR, "cv_config.json")
+
+# ─── Tabelas de calibre por modelo de caixa ─────────────────────────────────────
+# SIZE (calibre) = nº de frutas na caixa. "min_fruit_kg" = peso mínimo por fruta
+# impresso na tabela da caixa (região 1 do mapeamento). "min_box_kg" = MIN. NET
+# WEIGHT / BOX (região 2). A chave é procurada dentro do nome do modelo lido.
+DEFAULT_BOX_SPECS = {
+    "SAMBA": {
+        "min_box_kg": 16.0,
+        "min_fruit_kg": {"3": 6.00, "4": 4.50, "5": 3.60, "6": 2.70, "7": 2.05, "8": 1.80}
+    }
+}
+
+# Configuração persistente (câmeras laterais, janela de análise, tabelas)
+cv_config = {
+    "side_camera": None,      # índice da câmera lateral (etiqueta) ou None
+    "side2_camera": None,     # índice da câmera lateral oposta (opcional)
+    "analyze_window_s": 0.6,  # quanto tempo "para trás" buscar o melhor frame no scan (0,5s–0,8s)
+    "box_specs": DEFAULT_BOX_SPECS,
+}
+
+def load_cv_config():
+    try:
+        if os.path.exists(CONFIG_PATH):
+            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                cv_config.update(json.load(f) or {})
+    except Exception as e:
+        print(f"⚠️ Falha ao ler {CONFIG_PATH}: {e}")
+
+def save_cv_config():
+    try:
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(cv_config, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"⚠️ Falha ao salvar {CONFIG_PATH}: {e}")
 
 # ─── ROI (Regiões de Interesse) ──────────────────────────────────────────────
 # Coordenadas normalizadas (0.0 = topo/esquerda, 1.0 = baixo/direita) referentes
@@ -69,37 +116,164 @@ def crop_roi(frame, roi):
     y1 = min(h, y0 + int(roi["h"] * h))
     return frame[y0:y1, x0:x1], (x0, y0)
 
-def analyze_box_ocr(frame, registered_boxes=None):
+# ─── Buffer circular de frames ───────────────────────────────────────────────
+# A caixa passa pela câmera em 0,5–1s. Guardamos os frames recentes com nitidez
+# para analisar a caixa que acabou de passar no instante do bipe.
+frame_buffer = deque(maxlen=45)       # (timestamp, frame, nitidez)
+ANALYZE_WINDOW_S = 0.6                # janela de busca do melhor frame no /analyze (0,6s)
+OCR_TTL_SECONDS = 1.0                 # leitura de etiqueta expira em 1.0s (evita misturar caixas rápidas)
+ocr_history = deque(maxlen=10)        # (timestamp, modelo, peso, pesos)
+annotated_frame = None                # frame anotado exibido no visor por alguns instantes
+annotated_until = 0.0
+NI = "NÃO IDENTIF."
+
+# Câmeras auxiliares (laterais) — cada uma com seu próprio buffer
+aux_cams = {
+    role: {"index": None, "frame": None, "buffer": deque(maxlen=90), "open": False}
+    for role in ("side", "side2")
+}
+
+def aux_indices_in_use():
+    return {c["index"] for c in aux_cams.values() if c["index"] is not None}
+
+def frame_sharpness(frame):
+    """Nitidez barata (variância do Laplaciano em versão reduzida)."""
+    small = cv2.resize(frame, (320, 240))
+    gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
+    return float(cv2.Laplacian(gray, cv2.CV_64F).var())
+
+def _source_buffer(source):
+    if source == "top":
+        return frame_buffer, current_frame
+    cam = aux_cams[source]
+    return cam["buffer"], cam["frame"]
+
+def pick_best_frame(window_s=None, source="top"):
+    """Retorna o frame mais nítido da câmera `source` dentro da janela recente."""
+    if window_s is None:
+        window_s = float(cv_config.get("analyze_window_s", ANALYZE_WINDOW_S))
+    now = time.time()
+    with lock:
+        buf, fallback = _source_buffer(source)
+        candidates = [c for c in buf if now - c[0] <= window_s]
+    if not candidates:
+        return fallback
+    return max(candidates, key=lambda c: c[2])[1]
+
+def dual_mode():
+    """True quando há pelo menos uma câmera lateral ativa (etiqueta separada da contagem)."""
+    return any(c["open"] for c in aux_cams.values())
+
+def find_box_spec(box_model):
+    name = remove_accents(str(box_model or "")).upper()
+    for key, spec in (cv_config.get("box_specs") or {}).items():
+        if remove_accents(key).upper() in name:
+            return key, spec
+    return None, None
+
+def validate_caliber(count, box_model, detected_weight):
+    """Cruza a contagem (câmera topo) com a tabela de calibres da caixa (câmera lateral)."""
+    key, spec = find_box_spec(box_model)
+    result = {"validation": "SEM_TABELA", "min_fruit_kg": None, "expected_min_kg": None,
+              "allowed_calibers": [], "warnings": []}
+    if not spec:
+        return result
+    table = spec.get("min_fruit_kg") or {}
+    result["allowed_calibers"] = sorted(int(k) for k in table.keys())
+    min_box = spec.get("min_box_kg")
+    if detected_weight and min_box and abs(float(detected_weight) - float(min_box)) > 0.5:
+        result["warnings"].append(f"PESO_DIVERGENTE: etiqueta {detected_weight}kg x tabela {min_box}kg")
+    if not count:
+        result["validation"] = "SEM_CONTAGEM"
+        return result
+    per_fruit = table.get(str(count))
+    if per_fruit is None:
+        result["validation"] = "VERIFICAR"
+        result["warnings"].append(f"Calibre {count} fora da tabela {key} {result['allowed_calibers']}")
+        return result
+    result["validation"] = "OK"
+    result["min_fruit_kg"] = float(per_fruit)
+    result["expected_min_kg"] = round(count * float(per_fruit), 2)
+    return result
+
+def current_box_reading():
+    """Votação por maioria entre leituras OCR recentes (evita valor velho de outra caixa)."""
+    now = time.time()
+    with lock:
+        recent = [r for r in ocr_history if now - r[0] <= OCR_TTL_SECONDS]
+    if not recent:
+        return NI, 0, [], None
+    model = Counter(r[1] for r in recent).most_common(1)[0][0]
+    latest = max((r for r in recent if r[1] == model), key=lambda r: r[0])
+    return model, latest[2], list(latest[3]), int((now - latest[0]) * 1000)
+
+def is_solid_green_frame(frame):
+    """Detecta tela verde sólida (câmera virtual / driver com erro)."""
+    if frame is None:
+        return False
+    small = cv2.resize(frame, (64, 48)).astype(np.float32)
+    b, g, r = small[:, :, 0].mean(), small[:, :, 1].mean(), small[:, :, 2].mean()
+    return small.std() < 15 and g > 100 and g > r + 40 and g > b + 40
+
+_tesseract_ready = None
+TESS_CONFIG = "--oem 1 --psm 11"  # texto esparso (etiqueta de caixa tem blocos espalhados)
+# Captura "16,0kg", "16.0 KG", "16 KG", "13KG"...
+WEIGHT_RE = re.compile(r'(?<!\d)(\d{1,2})(?:\s*[.,]\s*\d{1,2})?\s*K\s*G')
+
+def _ensure_tesseract():
+    """Resolve o executável do Tesseract uma única vez (antes era a cada ciclo)."""
+    global _tesseract_ready
+    if _tesseract_ready is not None:
+        return _tesseract_ready
+    if not HAS_PYTESSERACT:
+        _tesseract_ready = False
+        return False
+    if sys.platform == "win32":
+        for p in [
+            r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+            r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+            os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs", "Tesseract-OCR", "tesseract.exe"),
+        ]:
+            if os.path.exists(p):
+                pytesseract.pytesseract.tesseract_cmd = p
+                break
+    _tesseract_ready = True
+    return True
+
+def preprocess_for_ocr(img):
+    """Cinza + ampliação + binarização Otsu: Tesseract fica mais rápido e preciso."""
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    w = gray.shape[1]
+    if 0 < w < 1200:
+        s = 1200.0 / w
+        gray = cv2.resize(gray, None, fx=s, fy=s, interpolation=cv2.INTER_CUBIC)
+    gray = cv2.GaussianBlur(gray, (3, 3), 0)
+    _, th = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    if np.mean(th) < 127:  # Tesseract prefere texto escuro em fundo claro
+        th = cv2.bitwise_not(th)
+    return th
+
+def analyze_box_ocr(frame, registered_boxes=None, use_roi=None):
     output = ""
     used_engine = "NONE"
 
-    # Aplica ROI de etiqueta antes do OCR para evitar poluição de outras caixas ao fundo
+    # Aplica ROI de etiqueta antes do OCR (só no modo câmera única; a lateral usa o quadro todo)
     ocr_frame = frame
-    if roi_enabled:
+    if roi_enabled if use_roi is None else use_roi:
         ocr_frame, _ = crop_roi(frame, roi_label)
 
     # Verifica se o frame está nítido o suficiente para tentar OCR (evita motion blur)
     if is_frame_blurry(ocr_frame):
-        print("⏭️ [OCR] Frame borrado (motion blur). Pulando OCR neste ciclo.")
-        return "NÃO IDENTIF.", 0, []
+        return NI, 0, []
 
     # 1. Tenta usar o Pytesseract (Windows / Raspberry Pi / Mac com Tesseract instalado)
-    if HAS_PYTESSERACT:
+    if _ensure_tesseract():
         try:
-            if sys.platform == "win32":
-                possible_tesseract_paths = [
-                    r"C:\Program Files\Tesseract-OCR\tesseract.exe",
-                    r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
-                    os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs", "Tesseract-OCR", "tesseract.exe")
-                ]
-                for p in possible_tesseract_paths:
-                    if os.path.exists(p):
-                        pytesseract.pytesseract.tesseract_cmd = p
-                        break
-
-            img_rgb = cv2.cvtColor(ocr_frame, cv2.COLOR_BGR2RGB)
-            output = pytesseract.image_to_string(img_rgb)
+            prepped = preprocess_for_ocr(ocr_frame)
+            output = pytesseract.image_to_string(prepped, config=TESS_CONFIG, timeout=2)
             used_engine = "TESSERACT"
+        except RuntimeError:
+            print("⚠️ [OCR] Tesseract excedeu 2s. Ciclo descartado.")
         except Exception as e:
             print(f"⚠️ Pytesseract falhou (verifique se o executável do Tesseract-OCR está instalado): {e}")
 
@@ -117,9 +291,13 @@ def analyze_box_ocr(frame, registered_boxes=None):
                 print(f"⚠️ Erro ao executar OCR nativo: {e}")
 
     # 3. Processa a saída para achar modelo/marca e peso com tolerância a ruído OCR
-    # Procura por pesos explícitos (ex: "13KG", "15 KG", etc.)
-    for w in [18, 16, 15, 13, 12, 10, 5]:
-        if f"{w}KG" in output_upper or f"{w} KG" in output_upper or f" {w} KG" in output_upper:
+    # Procura por pesos explícitos (ex: "13KG", "15 KG", "16,0kg")
+    # (antes output_upper/detected_weights não existiam -> NameError em TODO ciclo de OCR)
+    output_upper = (output or "").upper()
+    detected_weights = []
+    for m in WEIGHT_RE.finditer(output_upper):
+        w = int(m.group(1))
+        if 3 <= w <= 30 and w not in detected_weights:
             detected_weights.append(w)
             
     detected_weight = detected_weights[0] if detected_weights else 0
@@ -169,7 +347,7 @@ def analyze_box_ocr(frame, registered_boxes=None):
             
     return detected_model, detected_weight, detected_weights
 
-def count_fruits(frame, fruit_type):
+def count_fruits(frame, fruit_type, use_roi=None):
     """
     Identifica e conta melões/melancias usando filtragem HSV + Distance Transform / Watershed
     para separar frutos colados/encostados.
@@ -180,8 +358,8 @@ def count_fruits(frame, fruit_type):
     annotated_frame = frame.copy()
     fh, fw = frame.shape[:2]
 
-    # ── Aplica ROI de frutas ──────────────────────────────────────────────────
-    if roi_enabled:
+    # ── Aplica ROI de frutas (câmera única). Com câmera de topo dedicada usa o quadro todo ──
+    if roi_enabled if use_roi is None else use_roi:
         fruit_crop, (off_x, off_y) = crop_roi(frame, roi_fruits)
         rx0 = int(roi_fruits["x"] * fw)
         ry0 = int(roi_fruits["y"] * fh)
@@ -331,7 +509,7 @@ def video_loop():
                 # Se falhar, procura outros índices disponíveis
                 next_index_found = False
                 for idx in tried_indices:
-                    if idx != current_index:
+                    if idx != current_index and idx not in aux_indices_in_use():
                         print(f"🔄 Câmera no índice {current_index} falhou. Tentando índice alternativo {idx}...")
                         test_cap = open_camera(idx)
                         if test_cap.isOpened():
@@ -346,15 +524,16 @@ def video_loop():
                 
                 if not next_index_found:
                     if not camera_error_logged:
-                        print("❌ ERRO: Não foi possível abrir nenhuma câmera (índices 0, 1, 2, 3). Verifique conexões/permissões.")
+                        print("❌ Câmera não encontrada (índices 0, 1, 2, 3). Conecte a câmera USB.")
                         camera_error_logged = True
-                    time.sleep(2.0)
+                    time.sleep(5.0)
                     continue
             
             print(f"✅ Câmera no índice {current_index} aberta. Configurando resolução...")
             camera_error_logged = False
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # evita frames atrasados no buffer do driver
             
             # Se for uma seleção manual do usuário, NÃO fazemos o desvio automático por tela verde
             # (pois o usuário escolheu essa câmera especificamente e pode querer ver o visor dela mesmo assim)
@@ -367,7 +546,7 @@ def video_loop():
                     cap.release()
                     found_valid = False
                     for idx in tried_indices:
-                        if idx != current_index:
+                        if idx != current_index and idx not in aux_indices_in_use():
                             print(f"🔄 Testando índice alternativo {idx} contra tela verde...")
                             test_cap = open_camera(idx)
                             if test_cap.isOpened():
@@ -397,10 +576,69 @@ def video_loop():
             time.sleep(1.0)
             continue
             
+        ts = time.time()
+        sharp = frame_sharpness(frame)
         with lock:
-            current_frame = frame.copy()
-            
-        time.sleep(0.03) # Limita a ~30 fps para não usar muita CPU
+            current_frame = frame
+            frame_buffer.append((ts, frame, sharp))
+        # Sem sleep: cap.read() já bloqueia no ritmo da câmera. O sleep antigo
+        # deixava o driver acumular frames velhos (imagem atrasada).
+
+def aux_camera_loop(role):
+    """Loop de captura de uma câmera lateral. Abre somente o índice configurado (sem auto-troca)."""
+    cam = aux_cams[role]
+    cap = None
+    opened_index = None
+    err_logged = False
+    while True:
+        idx = cam["index"]
+        if idx != opened_index:
+            if cap is not None:
+                cap.release()
+                cap = None
+            opened_index = idx
+            err_logged = False
+            with lock:
+                cam["frame"] = None
+                cam["buffer"].clear()
+                cam["open"] = False
+        if idx is None:
+            time.sleep(0.5)
+            continue
+        if cap is None or not cap.isOpened():
+            cap = open_camera(idx)
+            if not cap.isOpened():
+                cap.release()
+                cap = None
+                with lock:
+                    cam["open"] = False
+                if not err_logged:
+                    print(f"❌ Câmera {role} (índice {idx}) não abriu. Tentando de novo a cada 2s...")
+                    err_logged = True
+                time.sleep(2.0)
+                continue
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)  # etiqueta precisa de mais resolução
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            err_logged = False
+            print(f"✅ Câmera {role} aberta no índice {idx}.")
+        ret, frame = cap.read()
+        if not ret:
+            print(f"⚠️ Falha ao capturar frame da câmera {role} (índice {idx}). Reabrindo...")
+            cap.release()
+            cap = None
+            time.sleep(0.5)
+            continue
+        ts = time.time()
+        sharp = frame_sharpness(frame)
+        with lock:
+            cam["frame"] = frame
+            cam["buffer"].append((ts, frame, sharp))
+            cam["open"] = True
+
+def apply_camera_config():
+    aux_cams["side"]["index"] = cv_config.get("side_camera")
+    aux_cams["side2"]["index"] = cv_config.get("side2_camera")
 
 global_registered_boxes = []
 last_box_model = "NÃO IDENTIF."
@@ -410,33 +648,38 @@ last_detected_weights = []
 def ocr_worker():
     global last_box_model, last_detected_weight, last_detected_weights, global_registered_boxes
     while True:
-        frame_copy = None
-        with lock:
-            if current_frame is not None:
-                frame_copy = current_frame.copy()
-            
-        if frame_copy is not None:
+        # Com câmera(s) lateral(is) ativa(s), o OCR lê delas (quadro inteiro).
+        # Sem lateral, cai para a câmera única com a ROI de etiqueta.
+        sources = [r for r in ("side", "side2") if aux_cams[r]["open"]] or ["top"]
+        for src in sources:
+            # Usa o frame mais nítido dos últimos 0,5s (evita borrão de movimento)
+            frame_copy = pick_best_frame(0.5, src)
+            if frame_copy is None:
+                continue
             try:
                 # OCR em background usa as caixas cadastradas recebidas do Electron
-                model, weight, weights = analyze_box_ocr(frame_copy, global_registered_boxes)
-                if model != "NÃO IDENTIF.":
+                model, weight, weights = analyze_box_ocr(
+                    frame_copy, global_registered_boxes,
+                    use_roi=(roi_enabled if src == "top" else False))
+                if model != NI:
                     with lock:
+                        ocr_history.append((time.time(), model, weight, weights, src))
                         last_box_model = model
                         last_detected_weight = weight
                         last_detected_weights = weights
             except Exception as e:
-                print(f"⚠️ Erro na thread de OCR: {e}")
-        # Roda OCR a cada 0.5s em segundo plano para capturas mais rápidas
-        time.sleep(0.5)
+                print(f"⚠️ Erro na thread de OCR ({src}): {e}")
+        # O próprio Tesseract já consome tempo; pausa curta para leitura contínua
+        time.sleep(0.05)
 
 @app.route('/status', methods=['GET'])
 def get_status():
-    global last_box_model, last_detected_weight
-    with lock:
-        return jsonify({
-            "box_model": last_box_model,
-            "detected_weight": last_detected_weight
-        })
+    model, weight, _, age_ms = current_box_reading()
+    return jsonify({
+        "box_model": model,
+        "detected_weight": weight,
+        "ocr_age_ms": age_ms
+    })
 
 @app.route('/set_camera', methods=['POST'])
 def set_camera():
@@ -446,12 +689,59 @@ def set_camera():
     if index is not None:
         try:
             target_camera_index = int(index)
+            if target_camera_index in aux_indices_in_use():
+                return jsonify({"ok": False, "message": f"Índice {target_camera_index} já está em uso por uma câmera lateral"}), 409
             camera_change_requested = True
             print(f"🔄 Solicitada mudança manual de câmera para o índice: {target_camera_index}")
             return jsonify({"ok": True, "message": f"Mudando para canal {target_camera_index}"})
         except ValueError:
             return jsonify({"ok": False, "message": "Índice de câmera inválido"}), 400
     return jsonify({"ok": False, "message": "Parâmetro 'index' em falta"}), 400
+
+@app.route('/cameras', methods=['GET'])
+def get_cameras():
+    """Estado das câmeras: topo (contagem) e laterais (etiqueta/OCR)."""
+    return jsonify({
+        "ok": True,
+        "top": {"index": target_camera_index, "open": current_frame is not None},
+        "side": {"index": aux_cams["side"]["index"], "open": aux_cams["side"]["open"]},
+        "side2": {"index": aux_cams["side2"]["index"], "open": aux_cams["side2"]["open"]},
+        "dual_mode": dual_mode(),
+        "analyze_window_s": cv_config.get("analyze_window_s", ANALYZE_WINDOW_S),
+    })
+
+@app.route('/set_cameras', methods=['POST'])
+def set_cameras():
+    """Define câmeras laterais. Corpo: {"side": int|null, "side2": int|null, "analyze_window_s": float}"""
+    data = request.get_json(silent=True) or {}
+    new_cfg = {}
+    for role, key in (("side", "side_camera"), ("side2", "side2_camera")):
+        if role in data:
+            v = data[role]
+            new_cfg[key] = None if v in (None, "", "none", -1, "-1") else int(v)
+    side = new_cfg.get("side_camera", cv_config.get("side_camera"))
+    side2 = new_cfg.get("side2_camera", cv_config.get("side2_camera"))
+    used = [i for i in (side, side2) if i is not None]
+    if len(used) != len(set(used)) or target_camera_index in used:
+        return jsonify({"ok": False, "message": "Cada câmera precisa de um índice diferente (topo, lateral, lateral 2)"}), 409
+    if "analyze_window_s" in data:
+        new_cfg["analyze_window_s"] = max(0.2, min(2.0, float(data["analyze_window_s"])))
+    cv_config.update(new_cfg)
+    save_cv_config()
+    apply_camera_config()
+    print(f"🎥 Câmeras laterais: side={side} side2={side2}")
+    return get_cameras()
+
+@app.route('/box_specs', methods=['GET', 'POST'])
+def box_specs():
+    """Lê/grava tabelas de calibre. POST: {"SAMBA": {"min_box_kg": 16, "min_fruit_kg": {"3": 6.0, ...}}}"""
+    if request.method == 'POST':
+        data = request.get_json(silent=True) or {}
+        if not isinstance(data, dict):
+            return jsonify({"ok": False, "message": "JSON inválido"}), 400
+        cv_config["box_specs"] = data
+        save_cv_config()
+    return jsonify({"ok": True, "box_specs": cv_config.get("box_specs")})
 
 @app.route('/get_roi', methods=['GET'])
 def get_roi():
@@ -503,7 +793,8 @@ def set_roi():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    global current_frame, global_registered_boxes
+    global global_registered_boxes, annotated_frame, annotated_until
+    t0 = time.time()
     data = request.get_json(silent=True) or {}
     fruit = str(data.get("fruit", "")).upper()
     registered_boxes = data.get("registered_boxes", [])
@@ -512,35 +803,26 @@ def analyze():
     if registered_boxes:
         global_registered_boxes = registered_boxes
 
-    frame_copy = None
-    with lock:
-        if current_frame is not None:
-            frame_copy = current_frame.copy()
-            
+    # Pega o frame MAIS NÍTIDO da janela recente da câmera de TOPO (a caixa pode já ter passado)
+    frame_copy = pick_best_frame(None, "top")
+    is_dual = dual_mode()
+    count = 0
     if frame_copy is not None:
         try:
-            # Conta as frutas e gera o frame anotado (MUITO RÁPIDO, ~20ms)
-            count, annotated_frame = count_fruits(frame_copy, fruit)
-            
-            # Atualiza o visor com o frame anotado
+            # Conta as frutas e gera o frame anotado (MUITO RÁPIDO, ~20ms).
+            # Com câmera lateral ativa, o topo é dedicado às frutas -> quadro inteiro.
+            count, annotated = count_fruits(frame_copy, fruit, use_roi=(roi_enabled and not is_dual))
+            # Mostra o frame anotado no visor por 1,5s SEM sobrescrever o frame da câmera
+            # (antes o OCR passava a ler o frame com desenhos por cima)
             with lock:
-                current_frame = annotated_frame.copy()
+                annotated_frame = annotated
+                annotated_until = time.time() + 0.8
         except Exception as e:
             print(f"⚠️ Falha durante a análise síncrona: {e}")
             count = 0
-            
-        # Usa os dados do OCR que foram lidos em background para responder instantaneamente
-        with lock:
-            box_model = last_box_model
-            detected_weight = last_detected_weight
-            detected_weights = list(last_detected_weights)
-    else:
-        # Fallback para o estado em cache
-        with lock:
-            count = 0
-            box_model = last_box_model
-            detected_weight = last_detected_weight
-            detected_weights = list(last_detected_weights)
+
+    # Leitura de caixa por votação nas últimas leituras OCR (expira em OCR_TTL_SECONDS)
+    box_model, detected_weight, detected_weights, ocr_age_ms = current_box_reading()
         
     # Lógica de peso condicional para caixas Samba
     if box_model == "Samba +Doce" or (box_model == "Samba Preta" and 16 in detected_weights and 15 in detected_weights):
@@ -551,7 +833,11 @@ def analyze():
     elif box_model == "Samba Preta" and not detected_weights:
         detected_weight = 13
         
-    print(f"✅ Análise instantânea disparada pelo leitor. Fruta: {fruit} | Retornando calibre: {count} | Caixa: {box_model} | Peso: {detected_weight}")
+    # Validação cruzada: contagem (topo) x tabela de calibres da caixa (lateral)
+    check = validate_caliber(count, box_model, detected_weight)
+
+    print(f"✅ Análise ({'2 câmeras' if is_dual else '1 câmera'}). Fruta: {fruit} | Calibre: {count} | "
+          f"Caixa: {box_model} | Peso: {detected_weight} | Validação: {check['validation']}")
     
     return jsonify({
         "ok": True,
@@ -559,16 +845,30 @@ def analyze():
         "count": count,
         "confidence": 0.95 if count > 0 else 0.0,
         "box_model": box_model,
-        "detected_weight": detected_weight
+        "detected_weight": detected_weight,
+        "validation": check["validation"],
+        "min_fruit_kg": check["min_fruit_kg"],
+        "expected_min_kg": check["expected_min_kg"],
+        "allowed_calibers": check["allowed_calibers"],
+        "warnings": check["warnings"],
+        "dual_mode": is_dual,
+        "ocr_age_ms": ocr_age_ms,
+        "analyze_ms": int((time.time() - t0) * 1000)
     })
 
-def generate_frames():
+def generate_frames(source="top"):
     while True:
         with lock:
-            frame = current_frame.copy() if current_frame is not None else None
-            box_model_draw = last_box_model
-            weight_draw = last_detected_weight
-            
+            if source == "top":
+                if annotated_frame is not None and time.time() < annotated_until:
+                    frame = annotated_frame.copy()
+                else:
+                    frame = current_frame.copy() if current_frame is not None else None
+            else:
+                f = aux_cams[source]["frame"]
+                frame = f.copy() if f is not None else None
+        box_model_draw, weight_draw, _, _ = current_box_reading()
+
         if frame is None:
             time.sleep(0.1)
             continue
@@ -597,7 +897,11 @@ def generate_frames():
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    """Stream MJPEG. ?cam=top (padrão, contagem) | side | side2 (etiqueta)."""
+    source = request.args.get("cam", "top")
+    if source not in ("top", "side", "side2"):
+        source = "top"
+    return Response(generate_frames(source), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 if __name__ == '__main__':
     print("\n" + "="*50)
@@ -606,6 +910,16 @@ if __name__ == '__main__':
     print("🎥 Stream visual em: http://localhost:5000/video_feed")
     print("="*50 + "\n")
     
+    # Silencia o log por requisição do Flask (enchia o stderr a cada leitura/frame)
+    logging.getLogger('werkzeug').setLevel(logging.ERROR)
+
+    # Carrega configuração de câmeras laterais e tabelas de calibre
+    load_cv_config()
+    apply_camera_config()
+    for role in ("side", "side2"):
+        threading.Thread(target=aux_camera_loop, args=(role,), daemon=True).start()
+    print(f"🎥 Laterais configuradas: side={cv_config.get('side_camera')} side2={cv_config.get('side2_camera')}")
+
     # Inicia a thread de OCR em segundo plano
     ocr_thread = threading.Thread(target=ocr_worker, daemon=True)
     ocr_thread.start()

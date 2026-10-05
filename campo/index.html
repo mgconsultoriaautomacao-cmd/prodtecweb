@@ -5204,6 +5204,23 @@ function printPastaCampoMip(itemStr) {
   const printWin = window.open('', '_blank', 'width=900,height=1200');
   if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
 
+  let cleanObs = '';
+  if (item.observacoes && typeof item.observacoes === 'string') {
+    const trimmed = item.observacoes.trim();
+    const start = trimmed.indexOf('{');
+    const end = trimmed.lastIndexOf('}');
+    if (start !== -1 && end > start) {
+      try {
+        const parsed = JSON.parse(trimmed.substring(start, end + 1));
+        cleanObs = parsed.observacoes || parsed.obs_texto || parsed.obs || '';
+      } catch(e) {}
+    } else if (!trimmed.startsWith('{')) {
+      cleanObs = trimmed.replace(/^Obs:\s*/i, '').trim();
+    }
+  } else if (item.obs_texto) {
+    cleanObs = item.obs_texto;
+  }
+
   const html = `
   <!DOCTYPE html>
   <html>
@@ -5300,7 +5317,7 @@ function printPastaCampoMip(itemStr) {
 
   <div style="border:1px solid #000; padding:8px; margin-bottom:12px">
   <strong>OBSERVAÇÕES DO PRAGUEIRO / AUDITORIA:</strong><br/>
-  ${item.observacoes || 'Nenhuma observação registrada na amostragem.'}
+  ${cleanObs || 'Nenhuma observação registrada na amostragem.'}
   </div>
 
   <div class="signatures-grid" style="grid-template-columns: 1fr 1fr 1fr;">
