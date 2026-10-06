@@ -174,7 +174,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 .toggle-opt:active{transform:scale(.97)}
 
 /* ── ISSUE TYPES GRID ── */
-.issue-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.issue-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:280px;overflow-y:auto;padding-right:4px;overscroll-behavior:contain}
+.issue-grid::-webkit-scrollbar{width:4px}
+.issue-grid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:4px}
 .issue-opt{padding:14px 12px;border-radius:12px;border:2px solid var(--border);background:var(--card2);text-align:center;cursor:pointer;transition:all .15s;color:var(--muted2)}
 .issue-opt .icon{font-size:28px;display:block;margin-bottom:6px}
 .issue-opt .label{font-size:12px;font-weight:600;line-height:1.3}
@@ -8583,9 +8585,13 @@ async function loadDefectTypes() {
 function renderDefectTypes() {
   const grid = $('issueGrid');
   if(!grid) return;
-  grid.innerHTML = defectTypes.slice(0, 6).map(d => `
-  <div class="issue-opt" data-id="${d.id}" onclick="selectIssue('${d.id}')">
-  <span class="icon">${d.icon}</span>
+  if (!defectTypes || defectTypes.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:20px;font-size:13px">Nenhum tipo de defeito cadastrado</div>';
+    return;
+  }
+  grid.innerHTML = defectTypes.map(d => `
+  <div class="issue-opt ${qState && qState.issue === d.id ? 'on' : ''}" data-id="${d.id}" onclick="selectIssue('${d.id}')">
+  <span class="icon">${d.icon || '⚠️'}</span>
   <div class="label">${d.name}</div>
   </div>
   `).join('');
