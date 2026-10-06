@@ -574,7 +574,7 @@ function createAppService(db) {
     return { ok: true };
   }
 
-  async function scanSubmit({ stationId = 'ST01', scannerId = 'SC01', role = 'EMBALADOR', rawBarcode, caliber = null, cvBoxModel = null, cvWeight = null }) {
+  async function scanSubmit({ stationId = 'ST01', scannerId = 'SC01', role = 'EMBALADOR', rawBarcode, caliber = null, cvBoxModel = null, cvWeight = null, cvUnidentified = false }) {
     const ts = nowMs();
     const st = normStation(stationId);
     const sc = String(scannerId || 'SC01');
@@ -719,6 +719,17 @@ function createAppService(db) {
       return { ok: false, error: 'Código não pertence à função ativa ou colaborador não encontrado.' };
     }
 
+    // Caixa sem identificação (sem câmera / IA offline / sem contagem): a contagem
+    // NÃO é interrompida. Ela entra no estoque como calibre 'N/I' e, se a câmera
+    // falhou e o código de barras não define o tipo de caixa, sem peso
+    // ("NÃO IDENTIFICADA"). O mapeamento é feito depois no sistema web.
+    let unidentified = false;
+    if (rl === 'EMBALADOR' && !caliber) {
+      caliber = 'N/I';
+      unidentified = true;
+      if (cvUnidentified && !mapping) weightId = null;
+    }
+
     await run(`
       insert into scan_events(ts, station_id, scanner_id, role, employee_id, raw_barcode, weight_id, parcel_id, fruit_id, variety_id, caliber)
       values(?,?,?,?,?,?,?,?,?,?,?)
@@ -757,7 +768,8 @@ function createAppService(db) {
       counted: !!emp,
       employee: emp || null,
       context: ctx,
-      usedWeightId: weightId
+      usedWeightId: weightId,
+      unidentified
     };
   }
 

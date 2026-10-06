@@ -1,4 +1,10 @@
+// Tempo máximo de espera pela IA/câmera. Se estourar, a caixa segue contada como
+// "NÃO IDENTIFICADA" (calibre N/I) e é mapeada depois no sistema web.
+const CV_TIMEOUT_MS = 2500;
+
 async function analyzeBox(fruit, registeredBoxes) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CV_TIMEOUT_MS);
   try {
     const res = await fetch('http://127.0.0.1:5000/analyze', {
       method: 'POST',
@@ -6,7 +12,8 @@ async function analyzeBox(fruit, registeredBoxes) {
       body: JSON.stringify({ 
         fruit: fruit || '',
         registered_boxes: registeredBoxes || []
-      })
+      }),
+      signal: controller.signal
     });
     if (!res.ok) throw new Error(`HTTP error ${res.status}`);
     const data = await res.json();
@@ -36,6 +43,8 @@ async function analyzeBox(fruit, registeredBoxes) {
       detected_weight: 0,
       status: 'error'
     };
+  } finally {
+    clearTimeout(timer);
   }
 }
 

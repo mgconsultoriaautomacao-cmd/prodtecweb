@@ -13775,6 +13775,38 @@ function e3dDeleteLabel(key) {
   }
 }
 
+// ── Caixas NÃO IDENTIFICADAS (sem câmera / IA offline) ──
+// Toda caixa bipada por EMBALADOR entra no estoque. Sem calibre identificado ela
+// vira calibre 'N/I' + tipo 'NÃO IDENTIFICADA' e é mapeada manualmente depois
+// (painel "Caixas Não Identificadas" — estoque-ni.js). Caixas excluídas do estoque
+// recebem calibre 'EXCLUIDO' no production_scans (continuam valendo na produção
+// do embalador, só saem do estoque).
+const E3D_NI_CAL = 'N/I';
+const E3D_NI_BOX = 'NÃO IDENTIFICADA';
+const E3D_EXCLUDED_CAL = 'EXCLUIDO';
+const E3D_NO_VARIETY = 'SEM VARIEDADE';
+function e3dIsNiCaliber(cal) {
+  const c = cal == null ? '' : String(cal).trim();
+  return !c || c === E3D_NI_CAL || /^(ERRO|N[ÃA]O IDENTIF)/i.test(c);
+}
+function e3dScanStockInfo(s) {
+  if (!s) return null;
+  if (String(s.role || '').toUpperCase() === 'EMPILHADOR') return null;
+  const rawCal = s.caliber == null ? '' : String(s.caliber).trim();
+  if (rawCal.toUpperCase() === E3D_EXCLUDED_CAL) return null;
+  const unidentified = e3dIsNiCaliber(rawCal);
+  const variety = String(s.variety_name || '').trim() || E3D_NO_VARIETY;
+  const parcel = String(s.parcel_code || '').trim() || '—';
+  const caliber = unidentified ? E3D_NI_CAL : rawCal;
+  const boxType = unidentified ? E3D_NI_BOX : (s.weight_name || 'Caixa');
+  return { caliber, variety, parcel, boxType, unidentified, key: `${variety}|${caliber}|${parcel}` };
+}
+function e3dPalletStockKey(p) {
+  if (!p || p.caliber == null || String(p.caliber).trim() === '') return null;
+  const variety = String(p.variety_name || '').trim() || E3D_NO_VARIETY;
+  return `${variety}|${String(p.caliber).trim()}|${String(p.parcel_code || '—').trim()}`;
+}
+
 let e3dLoading = false;
 async function e3dLoadGridState() {
   if (e3dLoading) return;
@@ -13862,31 +13894,26 @@ async function e3dLoadGridState() {
   // ── Reconcile with production_scans ──
   const todayIso = toISO(today());
   const [scansRes, palletsRes] = await Promise.all([
-  sb.from('production_scans').select('variety_name, caliber, parcel_code, weight_name').eq('tenant_id', tenantId).gte('ts', todayIso),
+  sb.from('production_scans').select('role, variety_name, caliber, parcel_code, weight_name').eq('tenant_id', tenantId).gte('ts', todayIso),
   sb.from('pallets').select('variety_name, caliber, parcel_code, box_count').eq('tenant_id', tenantId).gte('created_at', todayIso)
   ]);
 
   if (!scansRes.error && !palletsRes.error) {
   const scanGroups = {};
   for (const s of (scansRes.data || [])) {
-  if (!s.variety_name || !s.caliber) continue;
-  const caliberStr = String(s.caliber).trim();
-  const key = `${s.variety_name.trim()}|${caliberStr}|${(s.parcel_code || '—').trim()}`;
-  if (!scanGroups[key]) {
-  scanGroups[key] = { count: 0, variety_name: s.variety_name, caliber: s.caliber, parcel_code: s.parcel_code, weight_name: s.weight_name };
+  const info = e3dScanStockInfo(s);
+  if (!info) continue;
+  if (!scanGroups[info.key]) {
+  scanGroups[info.key] = { count: 0, variety_name: info.variety, caliber: info.caliber, parcel_code: info.parcel, weight_name: info.boxType };
   }
-  scanGroups[key].count++;
+  scanGroups[info.key].count++;
   }
 
   const palletGroups = {};
   for (const p of (palletsRes.data || [])) {
-  if (!p.variety_name || !p.caliber) continue;
-  const caliberStr = String(p.caliber).trim();
-  const key = `${p.variety_name.trim()}|${caliberStr}|${(p.parcel_code || '—').trim()}`;
-  if (!palletGroups[key]) {
-  palletGroups[key] = 0;
-  }
-  palletGroups[key] += p.box_count || 0;
+  const key = e3dPalletStockKey(p);
+  if (!key) continue;
+  palletGroups[key] = (palletGroups[key] || 0) + (p.box_count || 0);
   }
 
   let reconciledAny = false;
@@ -14561,12 +14588,21 @@ function e3dChangeActiveFruit() {
 
 async function e3dRegisterBox(caliber, variety, boxType, parcel, qty = 1) {
   const limit = e3dGetPalletLimit(variety, caliber, boxType);
+  // Grava box_count só quando troca de pallet / fecha / termina (antes era 1 UPDATE por caixa)
+  let pending = null;
+  const flush = async () => {
+  if (pending && pending.id) {
+  await sb.from('pallets').update({ box_count: pending.boxes }).eq('id', pending.id);
+  }
+  pending = null;
+  };
 
   for (let i = 0; i < qty; i++) {
   let formingIdx = e3d.grid.findIndex(s => s.status === E3D_STATUS.FORMING && s.boxType === variety && s.caliber === caliber && s.parcel === parcel);
 
   let isNew = false;
   if (formingIdx === -1) {
+  await flush();
   formingIdx = e3d.grid.findIndex(s => s.status === E3D_STATUS.EMPTY);
   if (formingIdx === -1) {
   toast(' Packing House lotado! Nenhum slot disponível.', 'danger');
@@ -14605,16 +14641,16 @@ async function e3dRegisterBox(caliber, variety, boxType, parcel, qty = 1) {
   box_count: slot.boxes
   }).select('id').single();
   if(!error && data) slot.id = data.id;
-  } else {
-  if (slot.id) {
-  await sb.from('pallets').update({ box_count: slot.boxes }).eq('id', slot.id);
-  }
+  } else if (slot.id) {
+  pending = slot;
   }
 
   if (slot.boxes >= limit) {
+  await flush();
   e3dClosePallet(formingIdx);
   }
   }
+  await flush();
 
   e3dSaveGridState();
   e3dUpdateKPIs();
@@ -14650,8 +14686,9 @@ function e3dSubscribeSupabase() {
   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'production_scans', filter: `tenant_id=eq.${tenantId}` }, payload => {
   console.log("[WMS Realtime] Nova caixa via App Local:", payload.new);
   const scan = payload.new;
-  if (scan && scan.variety_name && scan.caliber) {
-  e3dRegisterBox(scan.caliber, scan.variety_name, scan.weight_name || 'Caixa', scan.parcel_code || '—', 1);
+  const info = e3dScanStockInfo(scan);
+  if (info) {
+  e3dRegisterBox(info.caliber, info.variety, info.boxType, info.parcel, 1);
   }
   })
   .subscribe();
@@ -14688,7 +14725,7 @@ function e3dRenderQueue() {
   return `<div class="e3d-queue-item">
   <div class="e3d-queue-icon" style="background:rgba(59,130,246,.1)">${icons[slot.status] || '⬜'}</div>
   <div class="e3d-queue-info">
-  <div class="e3d-queue-name">Pallet P${String(slot.palletNum).padStart(2,'0')} — Cal.${slot.caliber || '?'}</div>
+  <div class="e3d-queue-name">Pallet P${String(slot.palletNum).padStart(2,'0')} — Cal.${slot.caliber || '?'}${slot.caliber === E3D_NI_CAL ? ' <span style="background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.35);border-radius:4px;padding:0 5px;font-size:9px;font-weight:800">NÃO IDENTIFICADA</span>' : ''}</div>
   <div class="e3d-queue-meta">${slot.boxes}/${limit} cx · ${slot.boxType} (${slot.parcel || '—'}) · ${statusText[slot.status] || slot.status}${labelText ? ' · ' + labelText : ''}</div>
   <div class="e3d-queue-progress"><div class="e3d-queue-fill" style="width:${pct}%"></div></div>
   </div>
@@ -25857,5 +25894,6 @@ function renderEstoqueSaldosTable(list) {
 <script src="dashboard-bi.js" defer></script>
 <script src="noc-ui.js" defer></script>
 <script src="noc-risk.js" defer></script>
+<script src="estoque-ni.js" defer></script>
 </body>
 </html>

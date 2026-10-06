@@ -524,8 +524,10 @@ window.addEventListener('DOMContentLoaded', () => {
         let caliberDetected = null;
         let cvRes = null; // precisa existir fora do try abaixo (antes era const interno -> sempre undefined)
         const cfg = await window.api.configGetAll();
+        // config é salvo como texto: 'false'/'0' NÃO podem ser tratados como ligado
+        const cvOn = cfg.cv_enabled === true || cfg.cv_enabled === 'true' || cfg.cv_enabled === '1' || cfg.cv_enabled === 1;
         
-        if (cfg.cv_enabled && roleSelect.value !== 'EMPILHADOR') {
+        if (cvOn && roleSelect.value !== 'EMPILHADOR') {
           const cvPanel = document.getElementById('cvResults');
           if (cvPanel) {
             cvPanel.style.display = 'block';
@@ -592,10 +594,13 @@ window.addEventListener('DOMContentLoaded', () => {
 
         let cvBoxModel = null;
         let cvWeight = null;
-        if (cfg.cv_enabled && roleSelect.value !== 'EMPILHADOR' && cvRes && cvRes.ok) {
+        if (cvOn && roleSelect.value !== 'EMPILHADOR' && cvRes && cvRes.ok) {
           cvBoxModel = cvRes.box_model;
           cvWeight = cvRes.detected_weight;
         }
+        // Câmera ligada mas sem resultado (offline, timeout, sem contagem): a caixa
+        // continua sendo contada, porém vai para o estoque como NÃO IDENTIFICADA (N/I)
+        const cvUnidentified = cvOn && roleSelect.value !== 'EMPILHADOR' && !caliberDetected;
 
         const res = await window.api.scanSubmit({
           stationId,
@@ -604,14 +609,16 @@ window.addEventListener('DOMContentLoaded', () => {
           rawBarcode,
           caliber: caliberDetected,
           cvBoxModel,
-          cvWeight
+          cvWeight,
+          cvUnidentified
         });
 
         if (res.ignored) {
           status.textContent = `Ignorado: leitura repetida da caixa (${rawBarcode})`;
         } else if (res.counted || res.ok) {
           // Note: if the backend only returned { ok: true } we still show counted.
-          status.textContent = `Contado: ${rawBarcode}${res.employee?.name ? ` - ${res.employee.name}` : ''}`;
+          const niTag = res.unidentified ? ' · caixa N/I (mapear no web)' : '';
+          status.textContent = `Contado: ${rawBarcode}${res.employee?.name ? ` - ${res.employee.name}` : ''}${niTag}`;
         } else {
           status.textContent = `Código não cadastrado: ${rawBarcode}`;
         }
@@ -1830,7 +1837,7 @@ window.addEventListener('DOMContentLoaded', () => {
       cfgTerminalMode.value = cfg.terminal_mode || 'full';
       cfgAdminPass.value = cfg.admin_password || '';
       cfgCultureType.value = cfg.culture_type || 'MAMAO';
-      cfgCvEnabled.checked = !!cfg.cv_enabled;
+      cfgCvEnabled.checked = cfg.cv_enabled === true || cfg.cv_enabled === 'true' || cfg.cv_enabled === '1';
     }
 
 

@@ -134,7 +134,7 @@ async function syncToSupabase(db) {
         role: s.role,
         employee_name: s.employee_name || 'DESCONHECIDO',
         raw_barcode: s.raw_barcode,
-        weight_name: s.weight_name || 'PADRAO',
+        weight_name: s.weight_name || (s.caliber === 'N/I' ? 'NÃO IDENTIFICADA' : 'PADRAO'),
         weight_kg: s.weight_kg || 0,
         parcel_code: s.parcel_code || null,
         fruit_name: s.fruit_name || null,
