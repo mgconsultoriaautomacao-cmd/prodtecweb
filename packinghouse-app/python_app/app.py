@@ -502,6 +502,17 @@ class MainWindow(QMainWindow):
     _py_process = None
 
     def _start_cv_service(self):
+        # Verifica se o serviço de CV já está respondendo na porta 5000
+        try:
+            import socket
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.5)
+                if s.connect_ex(('127.0.0.1', 5000)) == 0:
+                    print('App: CV Service já está em execução na porta 5000.')
+                    return
+        except Exception:
+            pass
+
         if not _CV_SERVICE.exists():
             print(f'App: cv_service.py não encontrado em {_CV_SERVICE}')
             return
@@ -547,6 +558,22 @@ class MainWindow(QMainWindow):
 if __name__ == '__main__':
     # Compatibilidade com telas de alta resolução (DPI)
     os.environ.setdefault('QT_AUTO_SCREEN_SCALE_FACTOR', '1')
+
+    # Previne TELA PRETA no QWebEngine em PCs com placas integradas, drivers básicos ou sem GPU dedicada
+    chromium_flags = [
+        '--disable-gpu',
+        '--disable-software-rasterizer',
+        '--no-sandbox',
+        '--disable-gpu-compositing',
+        '--enable-features=NetworkServiceInProcess',
+        '--ignore-gpu-blocklist',
+        '--disable-direct-composition'
+    ]
+    existing_flags = os.environ.get('QTWEBENGINE_CHROMIUM_FLAGS', '')
+    os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = f"{existing_flags} {' '.join(chromium_flags)}".strip()
+
+    from PyQt6.QtCore import Qt, QCoreApplication
+    QCoreApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts, True)
 
     app = QApplication(sys.argv)
     app.setApplicationName('PRODTEC Packinghouse')

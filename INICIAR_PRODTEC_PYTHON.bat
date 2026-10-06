@@ -29,28 +29,23 @@ if not errorlevel 1 (
     goto :PYTHON_OK
 )
 
-if exist "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" (
-    set "PYCMD="%LOCALAPPDATA%\Programs\Python\Python311\python.exe""
-    goto :PYTHON_OK
-)
-
-if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" (
-    set "PYCMD="%LOCALAPPDATA%\Programs\Python\Python312\python.exe""
-    goto :PYTHON_OK
-)
-
-if exist "C:\Python311\python.exe" (
-    set "PYCMD=C:\Python311\python.exe"
-    goto :PYTHON_OK
-)
-
-if exist "C:\Python312\python.exe" (
-    set "PYCMD=C:\Python312\python.exe"
-    goto :PYTHON_OK
+for %%V in (314 313 312 311 310) do (
+    if exist "%LOCALAPPDATA%\Programs\Python\Python%%V\python.exe" (
+        set "PYCMD="%LOCALAPPDATA%\Programs\Python\Python%%V\python.exe""
+        goto :PYTHON_OK
+    )
+    if exist "C:\Python%%V\python.exe" (
+        set "PYCMD=C:\Python%%V\python.exe"
+        goto :PYTHON_OK
+    )
+    if exist "C:\Program Files\Python%%V\python.exe" (
+        set "PYCMD="C:\Program Files\Python%%V\python.exe""
+        goto :PYTHON_OK
+    )
 )
 
 echo [ERRO] Python nao foi localizado neste computador.
-echo Por favor, instale o Python 3.10, 3.11 ou 3.12 (marcando "Add to PATH").
+echo Por favor, instale o Python (3.10, 3.11, 3.12, 3.13 ou 3.14) marcando a opcao "Add python.exe to PATH".
 echo.
 pause
 exit /b 1
@@ -59,19 +54,15 @@ exit /b 1
 echo [OK] Python encontrado: %PYCMD%
 echo.
 
-:: 2. Instalar / verificar dependências básicas caso necessário
-echo [1/3] Verificando dependencias necessarias (PyQt6, PyQt6-WebEngine, etc.)...
-%PYCMD% -m pip install --quiet --upgrade pip
-%PYCMD% -m pip install --quiet PyQt6 PyQt6-WebEngine requests opencv-python-headless numpy flask flask-cors pytesseract
+:: 2. Variáveis de ambiente para evitar tela preta em placas de vídeo genéricas / Intel HD
+set "QTWEBENGINE_CHROMIUM_FLAGS=--disable-gpu --disable-software-rasterizer --no-sandbox --disable-gpu-compositing --enable-features=NetworkServiceInProcess --ignore-gpu-blocklist"
+
+:: 3. Instalar / verificar dependências básicas caso necessário
+echo [1/2] Verificando dependencias necessarias (PyQt6, PyQt6-WebEngine, Flask, OpenCV, etc.)...
+%PYCMD% -m pip install PyQt6 PyQt6-WebEngine requests opencv-python-headless numpy flask flask-cors pytesseract
 
 echo.
-echo [2/3] Iniciando servico de Visao Computacional (em segundo plano)...
-start "PRODTEC CV Service" /B %PYCMD% packinghouse-app\cv_service.py
-
-timeout /t 2 /nobreak >nul
-
-echo.
-echo [3/3] Abrindo PRODTEC Packinghouse (App Desktop Python)...
+echo [2/2] Abrindo PRODTEC Packinghouse (App Desktop Python)...
 cd /d "%~dp0packinghouse-app"
 %PYCMD% python_app\app.py
 
