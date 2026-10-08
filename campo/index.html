@@ -5657,7 +5657,30 @@ function printPastaCampoOrdemPulv(itemStr) {
   <tbody>
   ${foliaresRowsHtml}
   </tbody>
-  </table>
+  ${(() => {
+    const elemSum = calculateElementsSummary(itemsCalda, parseFloat(areaHa) || 1.0, parseFloat(item.volume_calda) || 500);
+    const active = Object.entries(elemSum.elementTotals).filter(([_, val]) => val > 0.0001);
+    if (active.length === 0) return '';
+    const elemLabels = {
+      MatOrg: 'Mat.Org', N: 'N', P2O5: 'P₂O₅', K2O: 'K₂O', CaO: 'CaO', MgO: 'MgO', SO3: 'SO₃',
+      B: 'B', Cu: 'Cu', Fe: 'Fe', Mn: 'Mn', Mo: 'Mo', Zn: 'Zn', Co: 'Co'
+    };
+    return `
+      <div style="font-weight: bold; font-size: 7pt; color: #1e3a8a; text-transform: uppercase; margin-top: 6px; margin-bottom: 2px;">RESUMO DOS ELEMENTOS NUTRICIONAIS (TOTAL APLICADO NA PARCELA)</div>
+      <table style="width:100%; border-collapse:collapse; font-size:6.5pt; margin-bottom:4px;">
+        <thead>
+          <tr style="background:#eff6ff;">
+            ${active.map(([e]) => `<th style="border:1px solid #000; padding:2px; text-align:center;">${elemLabels[e] || e}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            ${active.map(([_, val]) => `<td style="border:1px solid #000; padding:2px; text-align:center; font-weight:bold; color:#1e3a8a;">${val >= 1 ? val.toFixed(2) : val.toFixed(3)} kg/L</td>`).join('')}
+          </tr>
+        </tbody>
+      </table>
+    `;
+  })()}
 
   <table class="sig-grid" style="margin-top: 6px;">
   <tr>
@@ -8194,8 +8217,179 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
     });
   }
 
+  // BLOCO 3: RESUMO DOS ELEMENTOS NUTRICIONAIS (FOLIARES E DEFENSIVOS)
+  const elemSummary = calculateElementsSummary(opItems, areaHa, volCaldaLha);
+  html += renderElementsSummaryHtml(elemSummary);
+
   container.innerHTML = html;
   if(window.lucide) lucide.createIcons();
+}
+
+const NUTRIENT_DATABASE = {
+  'ACIDO NITRICO': { N: 0.12 },
+  'ADUBO 03-12-06': { N: 0.03, P2O5: 0.12, K2O: 0.06 },
+  'ADUBO 05.30.05': { N: 0.05, P2O5: 0.30, K2O: 0.05 },
+  'ADUBO 06-24-12': { N: 0.06, P2O5: 0.24, K2O: 0.12 },
+  'ADUBO 08-30-20': { N: 0.08, P2O5: 0.30, K2O: 0.20 },
+  'ADUBO 10-10-10': { N: 0.10, P2O5: 0.10, K2O: 0.10 },
+  'ADUBO 11-40-11': { N: 0.11, P2O5: 0.40, K2O: 0.11 },
+  'ADUBO 12-18-18': { N: 0.12, P2O5: 0.18, K2O: 0.18 },
+  'ADUBO 13-14-30': { N: 0.13, P2O5: 0.14, K2O: 0.30 },
+  'ADUBO 15.30.15': { N: 0.15, P2O5: 0.30, K2O: 0.15 },
+  'AMIORGAN': { MatOrg: 0.70, N: 0.17, CaO: 0.07, MgO: 0.08 },
+  'BIOTURBO': { N: 0.03, P2O5: 0.12, K2O: 0.06 },
+  'CLORETO DE POTASSIO (KCL)': { K2O: 0.60 },
+  'KCL': { K2O: 0.60 },
+  'COMPOSTO ORG': { MatOrg: 0.39, N: 0.17, P2O5: 0.03, K2O: 0.02 },
+  'MAGNUM PHOSCAL': { N: 0.09, P2O5: 0.49, CaO: 0.10 },
+  'MAP': { N: 0.11, P2O5: 0.50 },
+  'MAP 61%': { N: 0.12, P2O5: 0.61 },
+  'MAP CRISTAL': { N: 0.12, P2O5: 0.61 },
+  'MKP': { P2O5: 0.52, K2O: 0.34 },
+  'MULT NPK 00.50.36': { P2O5: 0.50, K2O: 0.36 },
+  'MULT NPK 13.02.44': { N: 0.13, P2O5: 0.02, K2O: 0.44 },
+  'MULT PROTEK 00.56.37': { P2O5: 0.56, K2O: 0.37, CaO: 0.30, MgO: 0.26 },
+  'NITRATO DE CALCIO': { N: 0.16, CaO: 0.26 },
+  'NIT. CALCIO': { N: 0.16, CaO: 0.26 },
+  'NITRATO DE MAGNESIO': { N: 0.11, MgO: 0.09 },
+  'NIT MAG': { N: 0.10, MgO: 0.09 },
+  'NITRATO DE POTASSIO': { N: 0.13, K2O: 0.44 },
+  'NIT. POT.': { N: 0.12, K2O: 0.09 },
+  'PEKACID': { P2O5: 0.60, K2O: 0.20 },
+  'PLANTAFOL 05.15.45': { N: 0.05, P2O5: 0.15, K2O: 0.45 },
+  'PLANTAFOL 10.55.10': { N: 0.10, P2O5: 0.55, K2O: 0.10 },
+  'PLANT-PROD 10.52.10': { N: 0.10, P2O5: 0.52, K2O: 0.10 },
+  'POLY FEED 12.43.12': { N: 0.12, P2O5: 0.43, K2O: 0.12 },
+  'SULF. MAG': { MgO: 0.09, SO3: 0.19 },
+  'SULFATO DE MAGNESIO': { MgO: 0.09, SO3: 0.19 },
+  'SULF. POT.': { K2O: 0.51, SO3: 0.46 },
+  'SULFATO DE POTASSIO': { K2O: 0.51, SO3: 0.46 },
+  'SULFATO DE AMONIA': { N: 0.20, SO3: 0.23 },
+  'SULFATO DE ZINCO': { Zn: 0.20, SO3: 0.09 },
+  'SULFORMAX': { SO3: 0.50 },
+  'UREIA': { N: 0.46 },
+  'UREIA MAX': { N: 0.46 },
+  'URFA 44%': { N: 0.17, P2O5: 0.44 },
+  'BORO PLUS': { B: 0.11 },
+  'BORAMIN CA': { CaO: 0.09, B: 0.03 },
+  'AMINOBOR CA': { CaO: 0.09, B: 0.03 },
+  'CODA BRIX': { K2O: 0.30 },
+  'FERTAMIN M': { N: 0.10, P2O5: 0.25, K2O: 0.10 },
+  'IMUNE MIX': { N: 0.31, P2O5: 0.01, K2O: 0.02, CaO: 0.03, MgO: 0.01, SO3: 0.01 },
+  'NIPHOKAM 108': { N: 0.10, P2O5: 0.08, K2O: 0.08, CaO: 0.01, MgO: 0.01, SO3: 0.02, B: 0.01, Zn: 0.01 },
+  'QUIMIORGAN K-40': { N: 0.10, K2O: 0.42 },
+  'RUTER AA': { N: 0.15, P2O5: 0.05, K2O: 0.05, CaO: 0.03, B: 0.01, Zn: 0.02 },
+  'UBYFOL MS-77': { N: 0.02, P2O5: 0.13, K2O: 0.01, CaO: 0.01, MgO: 0.05 },
+  'UBYFOL MULTIMICROS': { N: 0.01, P2O5: 0.12, K2O: 0.15, CaO: 0.02, MgO: 0.06, B: 0.04, Zn: 0.10 },
+  'VIVA': { N: 0.25, P2O5: 0.03, K2O: 0.09 },
+  'YANTRA': { N: 0.34, P2O5: 0.29 }
+};
+
+function getProductNutrientGuarantees(name) {
+  if (!name) return {};
+  const normKey = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+  if (NUTRIENT_DATABASE[normKey]) return NUTRIENT_DATABASE[normKey];
+  
+  const matchKey = Object.keys(NUTRIENT_DATABASE).find(k => normKey.includes(k) || k.includes(normKey));
+  if (matchKey) return NUTRIENT_DATABASE[matchKey];
+  
+  const npkMatch = normKey.match(/(\d{1,2})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})/);
+  if (npkMatch) {
+    const n = parseFloat(npkMatch[1]) / 100;
+    const p = parseFloat(npkMatch[2]) / 100;
+    const k = parseFloat(npkMatch[3]) / 100;
+    return { N: n, P2O5: p, K2O: k };
+  }
+  return {};
+}
+
+function calculateElementsSummary(items, areaHa = 1.0, volCaldaLtHa = 500) {
+  const volTotalCalda = (volCaldaLtHa || 500) * (areaHa || 1.0);
+  const elementTotals = {
+    MatOrg: 0, N: 0, P2O5: 0, K2O: 0, CaO: 0, MgO: 0, SO3: 0,
+    B: 0, Cu: 0, Fe: 0, Mn: 0, Mo: 0, Zn: 0, Co: 0
+  };
+  
+  const productBreakdown = [];
+
+  (items || []).forEach(item => {
+    const pName = item.produto_nome || item.produto || '';
+    if (!pName) return;
+
+    const guarantees = getProductNutrientGuarantees(pName);
+    const hasNutrients = Object.keys(guarantees).length > 0;
+    
+    const dose = parseFloat(item.dosagem_real) || parseFloat(item.dosagem_corrigida) || 0;
+    const unit = (item.unidade || 'KG').trim();
+    let qtyKgLt = 0;
+
+    if (item.isFoliar || item.tipo_produto === 'FOLIAR') {
+      qtyKgLt = dose;
+    } else if (unit.toLowerCase().includes('100l')) {
+      qtyKgLt = (volTotalCalda / 100) * dose;
+      if (unit.toLowerCase().startsWith('g') || unit.toLowerCase().startsWith('ml')) {
+        qtyKgLt = qtyKgLt / 1000.0;
+      }
+    } else {
+      qtyKgLt = dose * areaHa;
+      if (unit.toLowerCase().startsWith('g') || unit.toLowerCase().startsWith('ml')) {
+        qtyKgLt = qtyKgLt / 1000.0;
+      }
+    }
+
+    const rowNutrients = {};
+    Object.keys(elementTotals).forEach(elem => {
+      const pct = guarantees[elem] || 0;
+      const amount = qtyKgLt * pct;
+      rowNutrients[elem] = amount;
+      elementTotals[elem] += amount;
+    });
+
+    productBreakdown.push({
+      name: pName,
+      qty: qtyKgLt,
+      unit: unit.toLowerCase().startsWith('g') || unit.toLowerCase().startsWith('ml') ? (item.isFoliar ? unit : 'kg/L') : 'kg/L',
+      guarantees,
+      nutrients: rowNutrients,
+      hasNutrients
+    });
+  });
+
+  return { elementTotals, productBreakdown };
+}
+
+function renderElementsSummaryHtml(summaryData) {
+  const { elementTotals } = summaryData;
+  const activeElements = Object.entries(elementTotals).filter(([_, val]) => val > 0.0001);
+  
+  if (activeElements.length === 0) {
+    return `<div style="font-size:11px; color:var(--muted); text-align:center; padding:10px; margin-top:10px; background:rgba(0,0,0,0.1); border-radius:8px;">Nenhum elemento nutricional puro detectado nos produtos aplicados.</div>`;
+  }
+
+  const elemLabels = {
+    MatOrg: 'Mat. Org.', N: 'Nitrogênio (N)', P2O5: 'Fósforo (P₂O₅)', K2O: 'Potássio (K₂O)',
+    CaO: 'Cálcio (CaO)', MgO: 'Magnésio (MgO)', SO3: 'Enxofre (SO₃)', B: 'Boro (B)',
+    Cu: 'Cobre (Cu)', Fe: 'Ferro (Fe)', Mn: 'Manganês (Mn)', Mo: 'Molibdênio (Mo)',
+    Zn: 'Zinco (Zn)', Co: 'Cobalto (Co)'
+  };
+
+  const gridHtml = activeElements.map(([elem, val]) => `
+    <div style="background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.25); border-radius:6px; padding:6px 10px; text-align:center;">
+      <div style="font-size:9px; font-weight:700; color:var(--muted); text-transform:uppercase;">${elemLabels[elem] || elem}</div>
+      <div style="font-size:13px; font-weight:800; color:#4ade80;">${val >= 1 ? val.toFixed(2) : val.toFixed(3)} <span style="font-size:9px">kg/L</span></div>
+    </div>
+  `).join('');
+
+  return `
+    <div style="margin-top:12px; padding:12px; background:rgba(15,23,42,0.4); border:1px solid rgba(34,197,94,0.3); border-radius:10px;">
+      <div style="font-size:11px; font-weight:800; color:#4ade80; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+        🧪 Resumo dos Elementos Nutricionais (Foliares & Defensivos)
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap:8px;">
+        ${gridHtml}
+      </div>
+    </div>
+  `;
 }
 
 function getProductGroup(itemOrName) {

@@ -6500,8 +6500,10 @@ async function refreshDash(){
   if(top) {
   const [name, boxes] = top;
   const emp = _employees.find(e => e.name === name);
-  $('topPerformerCard').style.display = 'block';
-  $('topPerformerCard').dataset.barcode = emp?.barcode || '';
+  const cardEl = $('topPerformerCard');
+  cardEl.style.display = 'block';
+  cardEl.dataset.barcode = emp?.barcode || emp?.id || name || '';
+  cardEl.onclick = () => openEmpDrawer(emp?.barcode || emp?.id || name);
   $('topPerformerName').textContent = name;
   $('topPerformerStats').textContent = boxes + ' caixas';
   $('topPerformerAvatar').innerHTML = safePhotoUrl(emp?.photo_path) ? `<img src="${safePhotoUrl(emp.photo_path)}" onerror="this.outerHTML='${name[0]}'">` : name[0];
@@ -7210,17 +7212,19 @@ function onBulkParcelChange() {
 }
 
 async function openEmpDrawer(idOrName) {
+  if (!idOrName) return;
   const d = document.getElementById('empDrawer');
   const normalizeStr = (str) => (str || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const clean = normalizeStr(idOrName);
   
-  let emp = _employees.find(e => normalizeStr(e.barcode) === clean);
+  let emp = _employees.find(e => e.id === idOrName);
+  if (!emp) emp = _employees.find(e => normalizeStr(e.barcode) === clean);
   if (!emp) emp = _employees.find(e => normalizeStr(e.name) === clean);
   if (!emp) emp = _employees.find(e => normalizeStr(e.name).includes(clean) || clean.includes(normalizeStr(e.name)));
 
   if (!emp) {
-  if (clean !== 'desconhecido' && clean !== '—') console.error('Colaborador não encontrado:', idOrName);
-  return;
+    if (clean !== 'desconhecido' && clean !== '—') console.error('Colaborador não encontrado:', idOrName);
+    return;
   }
 
   const stats = window._lastEmpStats ? (window._lastEmpStats[clean] || (emp ? window._lastEmpStats[emp.name.trim().toLowerCase()] : null)) : null;
@@ -7237,19 +7241,22 @@ async function openEmpDrawer(idOrName) {
     scanQuery = scanQuery.eq('employee_name', emp.name);
   }
 
-  const qualityQuery = emp.barcode
-    ? sb.from('quality_audits').select('penalty_boxes').eq('tenant_id', tenantId).eq('employee_barcode', emp.barcode).gte('ts', start).lte('ts', end)
-    : sb.from('quality_audits').select('penalty_boxes').eq('tenant_id', tenantId).gte('ts', start).lte('ts', end);
-  const absenceQuery = emp.barcode
-    ? sb.from('employee_absences').select('*').eq('tenant_id', tenantId).eq('employee_barcode', emp.barcode).gte('date', start.split('T')[0]).lte('date', end.split('T')[0])
-    : sb.from('employee_absences').select('*').eq('tenant_id', tenantId).gte('date', start.split('T')[0]).lte('date', end.split('T')[0]);
+  let qualityQuery = sb.from('quality_audits').select('penalty_boxes').eq('tenant_id', tenantId).gte('ts', start).lte('ts', end);
+  if (emp.barcode) qualityQuery = qualityQuery.eq('employee_barcode', emp.barcode);
+  else if (emp.name) qualityQuery = qualityQuery.eq('employee_name', emp.name);
+  else qualityQuery = qualityQuery.eq('employee_id', emp.id);
+
+  let absenceQuery = sb.from('employee_absences').select('*').eq('tenant_id', tenantId).gte('date', start.split('T')[0]).lte('date', end.split('T')[0]);
+  if (emp.barcode) absenceQuery = absenceQuery.eq('employee_barcode', emp.barcode);
+  else if (emp.name) absenceQuery = absenceQuery.eq('employee_name', emp.name);
+  else absenceQuery = absenceQuery.eq('employee_id', emp.id);
 
   const [qAudits, qAbs, allScans, qFieldServices, qCarraoServices] = await Promise.all([
-  qualityQuery,
-  absenceQuery,
-  sbFetchAll(scanQuery.order('ts', {ascending: true})),
-  sb.from('field_service_employees').select('*, field_services(*)').eq('employee_id', emp.id),
-  sb.from('field_carrao_employees').select('*, field_carrao_sessions(*)').eq('employee_id', emp.id)
+    qualityQuery.then(r => r).catch(() => ({ data: [] })),
+    absenceQuery.then(r => r).catch(() => ({ data: [] })),
+    sbFetchAll(scanQuery.order('ts', {ascending: true})).catch(() => []),
+    sb.from('field_service_employees').select('*, field_services(*)').eq('employee_id', emp.id).then(r => r).catch(() => ({ data: [] })),
+    sb.from('field_carrao_employees').select('*, field_carrao_sessions(*)').eq('employee_id', emp.id).then(r => r).catch(() => ({ data: [] }))
   ]);
 
   const qualityCount = (qAudits.data || []).reduce((sum, q) => sum + Number(q.penalty_boxes || 0), 0);
