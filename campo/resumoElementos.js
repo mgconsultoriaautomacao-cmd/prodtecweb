@@ -270,15 +270,26 @@ function saveCustomElementComposition(productName, compositionObj) {
   localStorage.setItem('prodtech_elements_composition', JSON.stringify(localCustom));
 }
 
+function _showToastMsg(msg, type = 'ok') {
+  if (typeof window.toast === 'function') window.toast(msg, type);
+  else if (typeof toast === 'function') toast(msg, type);
+  else alert(msg);
+}
+
 // ── 4. CÁLCULO GERAL DOS ELEMENTOS POR PARCELA (PC08 / PC09) ───────────────
 async function calcResumoElementosParcela(parcelIdOrCode) {
   let item = null;
+  const allList = (window.infoParcelasData || [])
+    .concat(window.webInfoParcelasData || [])
+    .concat(window._infoParcelas || [])
+    .concat(window.parcelas || [])
+    .concat(window.dbParcels || []);
+
   if (parcelIdOrCode) {
-    item = (infoParcelasData || []).find(p => p.id === parcelIdOrCode || (p.parcela2 || p.parcela) === parcelIdOrCode) ||
-           (window._infoParcelas && window._infoParcelas.find(p => p.id === parcelIdOrCode || (p.parcela2 || p.parcela) === parcelIdOrCode));
+    item = allList.find(p => p.id === parcelIdOrCode || String(p.id) === String(parcelIdOrCode) || (p.parcela2 || p.parcela) === parcelIdOrCode);
   }
-  if (!item && infoParcelasData && infoParcelasData.length > 0) {
-    item = infoParcelasData[0];
+  if (!item && allList.length > 0) {
+    item = allList[0];
   }
 
   const parcelCode = item ? (item.parcela2 || (item.parcela ? item.parcela + (item.letra || '') : '')) : '';
@@ -306,12 +317,13 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
   let fertRows = [];
   let fertData = [];
   let itensData = [];
+  const currentTenantId = window.tenantId || (window.tenantConfig && window.tenantConfig.id);
 
   try {
-    if (window.sb && tenantId) {
-      let query = sb.from('caderno_campo_fertirrigacao')
+    if (window.sb && currentTenantId) {
+      let query = window.sb.from('caderno_campo_fertirrigacao')
         .select('*')
-        .eq('tenant_id', tenantId)
+        .eq('tenant_id', currentTenantId)
         .order('data_inicio', { ascending: true });
       if (parcelCode) query = query.eq('parcela', parcelCode);
       const { data: fData } = await query;
@@ -319,7 +331,7 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
 
       if (fertData.length > 0) {
         const fIds = fertData.map(f => f.id);
-        const { data: iData } = await sb.from('caderno_campo_fertirrigacao_itens').select('*').in('fert_id', fIds);
+        const { data: iData } = await window.sb.from('caderno_campo_fertirrigacao_itens').select('*').in('fert_id', fIds);
         itensData = iData || [];
       }
     }
@@ -555,7 +567,7 @@ async function printPastaCampoResumoElementos(parcelIdOrCode) {
   const totalGeralCols = NUTRIENT_COLUMNS.map(c => `<td style="border:1.5px solid #000; padding:4px 3px; text-align:center; font-weight:900; background:#e5e7eb">${fmtVal(data.totalGeral[c.key])}</td>`).join('');
 
   const printWin = window.open('', '_blank', 'width=1350,height=900');
-  if (!printWin) { toast('Permita popups para imprimir.', 'err'); return; }
+  if (!printWin) { _showToastMsg('Permita popups para imprimir.', 'err'); return; }
 
   const html = `
   <!DOCTYPE html>
@@ -693,7 +705,7 @@ async function printPastaCampoFoliares(parcelIdOrCode) {
   const totalQtdFoliar = data.foliarRows.reduce((sum, r) => sum + r.quantidade, 0);
 
   const printWin = window.open('', '_blank', 'width=1350,height=900');
-  if (!printWin) { toast('Permita popups para imprimir.', 'err'); return; }
+  if (!printWin) { _showToastMsg('Permita popups para imprimir.', 'err'); return; }
 
   const html = `
   <!DOCTYPE html>
@@ -806,7 +818,7 @@ function printPastaCampoTabelaTeores() {
   }).join('');
 
   const printWin = window.open('', '_blank', 'width=1350,height=900');
-  if (!printWin) { toast('Permita popups para imprimir.', 'err'); return; }
+  if (!printWin) { _showToastMsg('Permita popups para imprimir.', 'err'); return; }
 
   const html = `
   <!DOCTYPE html>
@@ -967,7 +979,7 @@ function selectTeorProductForEdit(productName) {
 
 function saveActiveProdutoTeor() {
   const prodName = (document.getElementById('teorProdSearch') || {}).value.trim();
-  if (!prodName) { toast('Informe o nome do produto.', 'err'); return; }
+  if (!prodName) { _showToastMsg('Informe o nome do produto.', 'err'); return; }
 
   const comp = {};
   NUTRIENT_COLUMNS.forEach(c => {
@@ -979,7 +991,7 @@ function saveActiveProdutoTeor() {
 
   saveCustomElementComposition(prodName, comp);
   renderTeoresProductChips();
-  toast(`Teores do produto "${prodName}" salvos com sucesso!`, 'ok');
+  _showToastMsg(`Teores do produto "${prodName}" salvos com sucesso!`, 'ok');
 }
 
 window.getElementsComposition = getElementsComposition;

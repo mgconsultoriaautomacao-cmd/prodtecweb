@@ -23,6 +23,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
   <script src="campo/infoParcelasData.js"></script>
+  <script src="campo/resumoElementos.js"></script>
   <script src="campo/parcelasCoords.js"></script>
   <script src="assets/idiarn_logos_b64.js"></script>
   <!-- Leaflet & Heatmap for High-Precision NOC GIS Mapping -->
@@ -1756,6 +1757,7 @@
   <button class="btn sec" id="ccTabFoliaresBtn" onclick="showCcTab('foliares')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="sprout" style="width:14px;height:14px; color:#4ade80"></i> Estoque Foliares</button>
   <button class="btn sec" id="ccTabCalagemBtn" onclick="showCcTab('calagem')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="layers" style="width:14px;height:14px"></i> Ordem de Calagem</button>
   <button class="btn sec" id="ccTabFertBtn" onclick="showCcTab('fert')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="droplet" style="width:14px;height:14px"></i> Fertirrigação</button>
+  <button class="btn sec" id="ccTabElementosBtn" onclick="showCcTab('elementos')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; border:1px solid #8b5cf6; color:#a78bfa; background:rgba(139,92,246,0.08); font-weight:700"><i data-lucide="flask-conical" style="width:14px;height:14px"></i> Resumo de Elementos (PC08 / PC09)</button>
   <button class="btn sec" id="ccTabTratosBtn" onclick="showCcTab('tratos')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="clipboard-list" style="width:14px;height:14px"></i> Tratos Culturais</button>
   <button class="btn sec" id="ccTabMudasBtn" onclick="showCcTab('mudas')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="tree-pine" style="width:14px;height:14px"></i> Mudas & Sementes</button>
   <button class="btn sec" id="ccTabPosBtn" onclick="showCcTab('pos')" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="sparkles" style="width:14px;height:14px"></i> Pós-Colheita</button>
@@ -2587,6 +2589,80 @@
   </thead>
   <tbody id="ccFertTableBody">
   <tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted)">Nenhum registro de fertirrigação encontrado.</td></tr>
+  </tbody>
+  </table>
+  </div>
+  </div>
+  </div>
+
+  <!-- ABA: RESUMO DE ELEMENTOS (PC08 / PC09) -->
+  <div id="ccTabElementos" class="tab-pane-cc" style="display:none">
+  <div class="card" style="margin-bottom:24px">
+  <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+  <div style="display:flex; align-items:center; gap:8px"><i data-lucide="flask-conical" class="btn-i" style="color:#8b5cf6"></i> Resumo de Elementos Nutricionais (PC08 & PC09)</div>
+  <div style="display:flex; gap:8px; flex-wrap:wrap">
+  <button onclick="openModalTeoresElementos()" class="btn sec" style="font-size:12px; padding:8px 12px; display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,0.06); border:1px solid var(--border)"><i data-lucide="settings" style="width:14px; height:14px;"></i> Configurar Teores (%)</button>
+  <button onclick="printPastaCampoTabelaTeores()" class="btn sec" style="font-size:12px; padding:8px 12px; display:inline-flex; align-items:center; gap:6px; background:rgba(59,130,246,0.1); color:#60a5fa; border:1px solid rgba(59,130,246,0.3)"><i data-lucide="printer" style="width:14px; height:14px;"></i> Tabela de Teores (PDF)</button>
+  <button onclick="printPastaCampoResumoElementos($('webElementosParcelSelect')?.value)" class="btn on" style="font-size:12px; padding:8px 14px; display:inline-flex; align-items:center; gap:6px; background:rgba(124,58,237,0.2); color:#c4b5fd; border:1px solid rgba(124,58,237,0.4)"><i data-lucide="printer" style="width:14px; height:14px;"></i> Imprimir Resumo PC08 (A4)</button>
+  <button onclick="printPastaCampoFoliares($('webElementosParcelSelect')?.value)" class="btn sec" style="font-size:12px; padding:8px 14px; display:inline-flex; align-items:center; gap:6px; background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3)"><i data-lucide="printer" style="width:14px; height:14px;"></i> Imprimir Foliares PC09 (A4)</button>
+  </div>
+  </div>
+  <p style="color:var(--muted); font-size:12px; margin-bottom:20px">Consolidação nutricional de todos os fertilizantes e produtos foliares aplicados na parcela (Fundação + Fertirrigação + Pulverização Foliar). Formato oficial GlobalGAP.</p>
+  
+  <!-- Seletor de Parcela -->
+  <div class="fbar" style="margin-bottom:20px; padding:16px; gap:12px">
+  <div class="f" style="flex:2">
+    <div class="flabel">Selecionar Parcela para Análise e Impressão</div>
+    <select id="webElementosParcelSelect" onchange="onWebElementosParcelChange()" style="font-size:14px; font-weight:700"></select>
+  </div>
+  <div class="f" style="flex:1">
+    <div class="flabel">Área Total</div>
+    <input type="text" id="webElementosArea" readonly style="font-size:13px; background:rgba(0,0,0,0.15); font-weight:bold" value="—" />
+  </div>
+  <div class="f" style="flex:2">
+    <div class="flabel">Variedades da Parcela</div>
+    <input type="text" id="webElementosVariedades" readonly style="font-size:13px; background:rgba(0,0,0,0.15)" value="—" />
+  </div>
+  </div>
+
+  <!-- Cards de Macronutrientes Principais -->
+  <div class="kgrid" style="margin-bottom:20px">
+    <div class="kcard">
+      <div class="klabel">Nitrogênio Total (N)</div>
+      <div class="kval blue" id="elemVal_N">0,00 kg</div>
+      <div class="ksub">Absorvido no ciclo</div>
+    </div>
+    <div class="kcard green">
+      <div class="klabel">Fósforo Total (P₂O₅)</div>
+      <div class="kval green" id="elemVal_P2O5">0,00 kg</div>
+      <div class="ksub">Fundação + Fert</div>
+    </div>
+    <div class="kcard orange">
+      <div class="klabel">Potássio Total (K₂O)</div>
+      <div class="kval orange" id="elemVal_K2O">0,00 kg</div>
+      <div class="ksub">Enchimento & maturação</div>
+    </div>
+    <div class="kcard yellow">
+      <div class="klabel">Cálcio Total (CaO)</div>
+      <div class="kval yellow" id="elemVal_CaO">0,00 kg</div>
+      <div class="ksub">Firmeza de casca/polpa</div>
+    </div>
+  </div>
+
+  <!-- Tabela com resumo de todos os 21 elementos -->
+  <div style="overflow-x:auto">
+  <table style="width:100%; border-collapse:collapse; font-size:13px">
+  <thead>
+  <tr style="border-bottom:1px solid var(--border); background:var(--table-header-bg)">
+  <th style="padding:10px 14px; text-align:left">Nutriente / Elemento</th>
+  <th style="padding:10px 14px; text-align:center">Fundação (kg)</th>
+  <th style="padding:10px 14px; text-align:center">Fertirrigação (kg)</th>
+  <th style="padding:10px 14px; text-align:center">Foliar (kg/L)</th>
+  <th style="padding:10px 14px; text-align:center; font-weight:800; color:var(--text)">TOTAL ABSORVIDO NO CICLO (kg)</th>
+  </tr>
+  </thead>
+  <tbody id="ccElementosTableBody">
+  <tr><td colspan="5" style="text-align:center; padding:20px; color:var(--muted)">Selecione uma parcela para carregar o resumo de elementos.</td></tr>
   </tbody>
   </table>
   </div>
@@ -15425,7 +15501,7 @@ let webInfoParcelasData = [];
 let webVariedadeRowCount = 0;
 
 function showCcTab(tab) {
-  ['plantios','colheitas','mip','noc','op','defreg','foliares','calagem','fert','tratos','mudas','pos','idiarn'].forEach(t => {
+  ['plantios','colheitas','mip','noc','op','defreg','foliares','calagem','fert','elementos','tratos','mudas','pos','idiarn'].forEach(t => {
   const pane = $(`ccTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
   const btn = $(`ccTab${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
   if (pane) pane.style.display = (tab === t) ? 'block' : 'none';
@@ -15455,6 +15531,8 @@ function showCcTab(tab) {
     loadCalagemTable();
   } else if (tab === 'fert') {
     loadFertTable();
+  } else if (tab === 'elementos') {
+    loadWebResumoElementosUI();
   } else if (tab === 'tratos') {
     loadTratosTable();
   } else if (tab === 'mudas') {
@@ -15465,6 +15543,77 @@ function showCcTab(tab) {
   } catch (err) {
   console.error('Erro ao alternar aba do Caderno de Campo:', err);
   }
+}
+
+async function loadWebResumoElementosUI() {
+  const select = $('webElementosParcelSelect');
+  if (!select) return;
+
+  const allParcels = (window.webInfoParcelasData && window.webInfoParcelasData.length > 0)
+    ? window.webInfoParcelasData
+    : (window.infoParcelasData || []);
+
+  const currentVal = select.value;
+  select.innerHTML = allParcels.map(p => {
+    const pCode = p.parcela2 || (p.parcela ? p.parcela + (p.letra || '') : p.id);
+    const vars = [p.variedade, p.variedade2, p.variedade3].filter(Boolean).join(', ') || 'Sem variedade';
+    return `<option value="${p.id}">${pCode} — ${p.cultura || 'Melão'} (${vars})</option>`;
+  }).join('');
+
+  if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
+    select.value = currentVal;
+  }
+
+  await onWebElementosParcelChange();
+}
+
+async function onWebElementosParcelChange() {
+  const pId = $('webElementosParcelSelect')?.value;
+  if (!pId) return;
+
+  const allParcels = (window.webInfoParcelasData && window.webInfoParcelasData.length > 0)
+    ? window.webInfoParcelasData
+    : (window.infoParcelasData || []);
+  const pObj = allParcels.find(p => p.id === pId || String(p.id) === String(pId));
+
+  if (pObj) {
+    if ($('webElementosArea')) $('webElementosArea').value = pObj.area ? `${pObj.area} ha` : '3.00 ha';
+    const vars = [pObj.variedade, pObj.variedade2, pObj.variedade3, pObj.variedade4, pObj.variedade5].filter(Boolean).join(', ');
+    if ($('webElementosVariedades')) $('webElementosVariedades').value = vars || '—';
+  }
+
+  if (typeof calcResumoElementosParcela === 'function') {
+    const res = await calcResumoElementosParcela(pId);
+    const fmt = v => (v != null && v > 0) ? v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' kg' : '0,00 kg';
+
+    if ($('elemVal_N')) $('elemVal_N').textContent = fmt(res.totalGeral.n);
+    if ($('elemVal_P2O5')) $('elemVal_P2O5').textContent = fmt(res.totalGeral.p2o5);
+    if ($('elemVal_K2O')) $('elemVal_K2O').textContent = fmt(res.totalGeral.k2o);
+    if ($('elemVal_CaO')) $('elemVal_CaO').textContent = fmt(res.totalGeral.cao);
+
+    const tbody = $('ccElementosTableBody');
+    if (tbody && window.NUTRIENT_COLUMNS) {
+      tbody.innerHTML = NUTRIENT_COLUMNS.map(col => {
+        const fund = res.fundacaoNutrientes[col.key] || 0;
+        const fert = (res.totalFert[col.key] || 0) - fund;
+        const fol = res.totalFoliar[col.key] || 0;
+        const tot = res.totalGeral[col.key] || 0;
+        const isDestaque = ['n', 'p2o5', 'k2o', 'cao', 'mgo', 'so3'].includes(col.key);
+
+        return `
+          <tr style="border-bottom:1px solid var(--border); ${isDestaque ? 'background:rgba(255,255,255,0.02); font-weight:600' : ''}">
+            <td style="padding:10px 14px; color:var(--text)"><strong>${col.label}</strong></td>
+            <td style="padding:10px 14px; text-align:center">${fund > 0 ? fund.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—'}</td>
+            <td style="padding:10px 14px; text-align:center">${fert > 0 ? fert.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—'}</td>
+            <td style="padding:10px 14px; text-align:center">${fol > 0 ? fol.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—'}</td>
+            <td style="padding:10px 14px; text-align:center; font-weight:800; color:${tot > 0 ? 'var(--blue)' : 'var(--muted)'}">${tot > 0 ? tot.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' kg' : '—'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+  }
+
+  if (window.lucide) lucide.createIcons();
 }
 
 async function loadMipTable() {
@@ -15660,6 +15809,8 @@ function renderWebPlantiosTable(data) {
   <button onclick="printPastaCampoCalendario('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(124,58,237,0.15); color:#8b5cf6; border:1px solid rgba(124,58,237,0.3)"><i data-lucide="calendar" style="width:12px; height:12px"></i> Calendário (PC04)</button>
   <button onclick="printPastaCampoTratos('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:12px; height:12px"></i> Tratos (PC05)</button>
   <button onclick="printPastaCampoFertirrigacao(\'${p.id}\')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(6,182,212,0.15); color:#06b6d4; border:1px solid rgba(6,182,212,0.3)"><i data-lucide="droplet" style="width:12px; height:12px"></i> Fertirrigação (PC07)</button>
+  <button onclick="printPastaCampoResumoElementos('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(139,92,246,0.15); color:#a78bfa; border:1px solid rgba(139,92,246,0.3)"><i data-lucide="flask-conical" style="width:12px; height:12px"></i> Elementos (PC08)</button>
+  <button onclick="printPastaCampoFoliares('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(34,197,94,0.15); color:#4ade80; border:1px solid rgba(34,197,94,0.3)"><i data-lucide="printer" style="width:12px; height:12px"></i> Foliares (PC09)</button>
   <button onclick="printPastaCampoIdiarn('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(234,88,12,0.15); color:#ea580c; border:1px solid rgba(234,88,12,0.3)"><i data-lucide="file-check" style="width:12px; height:12px"></i> Ficha IDIARN</button>
   <button onclick="openWebPlantioModal('${p.id}')" class="sec" style="padding:4px 8px; font-size:11px; margin-right:3px; display:inline-flex; align-items:center; gap:4px" title="Editar"><i data-lucide="edit-3" style="width:13px;height:13px"></i> Editar</button>
   <button onclick="deleteWebPlantio('${p.id}')" class="danger" style="padding:4px 8px; font-size:11px; display:inline-flex; align-items:center; gap:4px; background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:var(--red); border-radius:6px; cursor:pointer" title="Excluir Definitivamente"><i data-lucide="trash-2" style="width:13px;height:13px"></i> Excluir</button>
