@@ -338,27 +338,64 @@ def parcel_pair_remove(parcel_id, fruit_id, variety_id) -> dict:
     return {'ok': True}
 
 
+import unicodedata
+
+def _norm(s: str) -> str:
+    if not s: return ''
+    return ''.join(c for c in unicodedata.normalize('NFD', str(s)) if unicodedata.category(c) != 'Mn').upper().strip()
+
+
 def parcel_fruits_list(parcel_id) -> list:
     pid = int(parcel_id or 0)
-    rows = []
     if pid:
-        rows = _all("""
+        # 1. Trava de segurança: busca frutas vinculadas diretamente na tabela de vínculos
+        linked = _all("""
             SELECT DISTINCT f.id, f.name FROM parcel_fruit_varieties pfv
             JOIN fruits f ON f.id=pfv.fruit_id WHERE pfv.parcel_id=? AND f.active=1 ORDER BY f.name
         """, (pid,))
-    return rows or _all('SELECT id, name FROM fruits WHERE active=1 ORDER BY name')
+        if linked:
+            return linked
+
+        # 2. Análise inteligente pelo nome/código do talhão (ex: "P01 — MELAO / CANTALOUPE")
+        parcel = _one("SELECT code FROM parcels WHERE id=?", (pid,))
+        if parcel and parcel.get('code'):
+            code_norm = _norm(parcel['code'])
+            all_fruits = _all("SELECT id, name FROM fruits WHERE active=1 ORDER BY name")
+            matched = [f for f in all_fruits if _norm(f['name']) in code_norm or code_norm.startswith(_norm(f['name']))]
+            if matched:
+                return matched
+
+    # Se o talhão ainda não possuir vínculos específicos cadastrados, retorna frutas ativas (sem travar a operação)
+    return _all('SELECT id, name FROM fruits WHERE active=1 ORDER BY name')
 
 
 def parcel_varieties_list(parcel_id, fruit_id) -> list:
     pid, fid = int(parcel_id or 0), int(fruit_id or 0)
-    rows = []
     if pid and fid:
-        rows = _all("""
+        # 1. Trava de segurança: apenas variedades cadastradas para este talhão e esta fruta
+        linked = _all("""
             SELECT DISTINCT v.id, v.name FROM parcel_fruit_varieties pfv
             JOIN varieties v ON v.id=pfv.variety_id WHERE pfv.parcel_id=? AND pfv.fruit_id=? AND v.active=1
             ORDER BY v.name
         """, (pid, fid))
-    return rows or _all('SELECT id, name FROM varieties WHERE active=1 ORDER BY name')
+        if linked:
+            return linked
+
+        # 2. Análise inteligente pelo código do talhão (ex: "P01 — MELAO / CANTALOUPE")
+        parcel = _one("SELECT code FROM parcels WHERE id=?", (pid,))
+        if parcel and parcel.get('code'):
+            code_norm = _norm(parcel['code'])
+            all_vars = _all("SELECT id, name FROM varieties WHERE active=1 ORDER BY name")
+            matched = [v for v in all_vars if _norm(v['name']) in code_norm]
+            if matched:
+                return matched
+
+    if fid:
+        return _all('SELECT id, name FROM varieties WHERE active=1 ORDER BY name')
+    return []
+
+
+
 
 
 # ─── Pesos de Caixa ───────────────────────────────────────────────────────────

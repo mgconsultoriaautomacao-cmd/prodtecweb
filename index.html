@@ -7188,21 +7188,44 @@ async function openEmpDrawer(idOrName) {
 
   const stats = window._lastEmpStats ? (window._lastEmpStats[clean] || (emp ? window._lastEmpStats[emp.name.trim().toLowerCase()] : null)) : null;
   const activeTab = document.querySelector('.tab.active')?.id;
-  const start = activeTab === 'tab-finance' ? $('finStart').value : $('dashStart').value;
-  const end = (activeTab === 'tab-finance' ? $('finEnd').value : $('dashEnd').value) + 'T23:59:59Z';
+  const rawStart = (activeTab === 'tab-finance' ? $('finStart')?.value : $('dashStart')?.value) || new Date().toISOString().split('T')[0];
+  const rawEnd = (activeTab === 'tab-finance' ? $('finEnd')?.value : $('dashEnd')?.value) || rawStart;
+
+  const sDateOnly = rawStart.split('T')[0];
+  const eDateOnly = rawEnd.split('T')[0];
+  const startMs = new Date(sDateOnly + 'T00:00:00').getTime();
+  const endMs = new Date(eDateOnly + 'T23:59:59.999').getTime();
+  const startIso = sDateOnly;
+  const endIso = eDateOnly + 'T23:59:59Z';
+
+  const empBarcode = emp.barcode ? String(emp.barcode).trim() : '0';
+  const empName = emp.name ? String(emp.name).trim() : '';
 
   const [qAudits, qAbs, qScans, qFieldServices, qCarraoServices] = await Promise.all([
-  sb.from('quality_audits').select('penalty_boxes').eq('tenant_id', tenantId).eq('employee_barcode', emp.barcode).gte('ts', start).lte('ts', end),
-  sb.from('employee_absences').select('*').eq('tenant_id', tenantId).eq('employee_barcode', emp.barcode).gte('date', start.split('T')[0]).lte('date', end.split('T')[0]),
-  sb.from('production_scans').select('ts, weight_kg, role').eq('tenant_id', tenantId).eq('employee_name', emp.name).gte('ts', start).lte('ts', end).order('ts', {ascending: true}),
-  sb.from('field_service_employees').select('*, field_services(*)').eq('employee_id', emp.id),
-  sb.from('field_carrao_employees').select('*, field_carrao_sessions(*)').eq('employee_id', emp.id)
+    sb.from('quality_audits').select('penalty_boxes').eq('tenant_id', tenantId).or(`employee_barcode.eq.${empBarcode},employee_name.eq.${empName}`).gte('ts', startMs).lte('ts', endMs),
+    sb.from('employee_absences').select('*').eq('tenant_id', tenantId).or(`employee_barcode.eq.${empBarcode},employee_name.eq.${empName}`).gte('date', sDateOnly).lte('date', eDateOnly),
+    sb.from('production_scans').select('ts, weight_kg, role').eq('tenant_id', tenantId).or(`employee_barcode.eq.${empBarcode},employee_name.eq.${empName}`).gte('ts', startMs).lte('ts', endMs).order('ts', {ascending: true}),
+    sb.from('field_service_employees').select('*, field_services(*)').eq('employee_id', emp.id),
+    sb.from('field_carrao_employees').select('*, field_carrao_sessions(*)').eq('employee_id', emp.id)
   ]);
+
+  let allScans = qScans.data || [];
+  if ((!allScans || allScans.length === 0) && qScans.error) {
+    // Fallback se a coluna ts estiver em formato ISO Timestamptz
+    const { data: retryData } = await sb.from('production_scans')
+      .select('ts, weight_kg, role')
+      .eq('tenant_id', tenantId)
+      .or(`employee_barcode.eq.${empBarcode},employee_name.eq.${empName}`)
+      .gte('ts', startIso)
+      .lte('ts', endIso)
+      .order('ts', {ascending: true});
+    if (retryData) allScans = retryData;
+  }
 
   const qualityCount = (qAudits.data || []).reduce((sum, q) => sum + Number(q.penalty_boxes || 0), 0);
   const absencesCount = qAbs.data?.length || 0;
-  const allScans = qScans.data || [];
-  const scanTimestamps = allScans.map(s => new Date(s.ts).getTime());
+  const scanTimestamps = allScans.map(s => typeof s.ts === 'number' ? s.ts : new Date(s.ts).getTime());
+
 
   const hourlyData = new Array(24).fill(0);
   scanTimestamps.forEach(ts => {
@@ -7231,22 +7254,22 @@ async function openEmpDrawer(idOrName) {
   
   // Client-side date filter for field services
   const fieldServicesList = (qFieldServices.data || []).filter(fs => {
-  if (!fs.field_services) return false;
-  const dateVal = fs.field_services.date;
-  return dateVal >= start.split('T')[0] && dateVal <= end.split('T')[0];
+    if (!fs.field_services) return false;
+    const dateVal = fs.field_services.date;
+    return dateVal >= sDateOnly && dateVal <= eDateOnly;
   });
   
   const carraoServicesList = (qCarraoServices.data || []).filter(fs => {
-  if (!fs.field_carrao_sessions) return false;
-  const dateVal = fs.field_carrao_sessions.date;
-  return dateVal >= start.split('T')[0] && dateVal <= end.split('T')[0];
+    if (!fs.field_carrao_sessions) return false;
+    const dateVal = fs.field_carrao_sessions.date;
+    return dateVal >= sDateOnly && dateVal <= eDateOnly;
   });
   
   const totalFieldOps = fieldServicesList.length + carraoServicesList.length;
   const totalFieldEarned = fieldServicesList.reduce((sum, srv) => sum + Number(srv.value_received || 0), 0) + carraoServicesList.reduce((sum, srv) => sum + Number(srv.value_received || 0), 0);
 
-  const dStart = new Date(start);
-  const dEnd = new Date(end);
+  const dStart = new Date(sDateOnly);
+  const dEnd = new Date(eDateOnly);
   const numDaysInPeriod = Math.max(1, Math.round((dEnd - dStart) / (1000 * 60 * 60 * 24)) + 1);
   const bonusBase = parseFloat($('cfgAttendanceBonus')?.value || tenantConfig.attendance_bonus || 0);
   const dailyBonusRate = bonusBase / 24;

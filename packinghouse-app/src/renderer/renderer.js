@@ -18,6 +18,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const tenantSub = must('tenantSub');
 
   const stationId = 'st01';
+  window.stationId = stationId;
   const scannerId = 'sc01';
 
   const hasApi = (name) => typeof window.api?.[name] === 'function';
@@ -71,9 +72,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
   function tickClock() {
     const now = new Date();
-    clockEl.textContent = fmtClock(now);
-    const pClock = document.getElementById('clock');
-    if (pClock) pClock.textContent = fmtClock(now);
+    const formatted = fmtClock(now);
+    if (clockEl) clockEl.textContent = formatted;
+    document.querySelectorAll('#clock, .clock-el').forEach(el => {
+      el.textContent = formatted;
+    });
   }
 
   function colorByPct(p) {
@@ -660,43 +663,82 @@ window.addEventListener('DOMContentLoaded', () => {
     const ctxVariety = $('ctxVariety');
 
     async function setupTraceSelectors() {
-      if (traceContext) traceContext.style.display = 'grid';
+      if (traceContext) traceContext.style.display = 'flex';
 
       const ctx = await window.api.contextGet({ stationId, role: roleSelect.value });
       const parcels = await window.api.parcelsList();
 
-      ctxParcel.innerHTML = '<option value="">Parcela...</option>';
+      ctxParcel.innerHTML = '<option value="">Selecione o Talhão / Parcela...</option>';
       parcels.filter(p => p.active).forEach(p => {
         const o = new Option(p.code, p.id);
         if (p.id == ctx.parcel_id) o.selected = true;
         ctxParcel.add(o);
       });
 
-      async function updateFruits() {
+      async function updateFruits(preserveSaved = false) {
         const pid = ctxParcel.value;
         ctxFruit.innerHTML = '<option value="">Fruta...</option>';
         ctxVariety.innerHTML = '<option value="">Variedade...</option>';
-        if (!pid) return;
+
+        if (!pid) {
+          ctxFruit.disabled = true;
+          ctxVariety.disabled = true;
+          return;
+        }
+
         const fruits = await window.api.parcelFruitsList({ parcelId: pid });
+        if (!fruits || fruits.length === 0) {
+          ctxFruit.innerHTML = '<option value="">Sem fruta vinculada a este talhão</option>';
+          ctxFruit.disabled = true;
+          ctxVariety.disabled = true;
+          return;
+        }
+
+        ctxFruit.disabled = false;
         fruits.forEach(f => {
           const o = new Option(f.name, f.id);
-          if (f.id == ctx.fruit_id) o.selected = true;
+          if (preserveSaved && f.id == ctx.fruit_id) o.selected = true;
           ctxFruit.add(o);
         });
-        if (ctxFruit.value) await updateVarieties();
+
+        if (fruits.length === 1) {
+          ctxFruit.value = fruits[0].id;
+        } else if (!preserveSaved && !fruits.some(f => f.id == ctxFruit.value)) {
+          ctxFruit.value = '';
+        }
+
+        await updateVarieties(preserveSaved);
       }
 
-      async function updateVarieties() {
+      async function updateVarieties(preserveSaved = false) {
         const pid = ctxParcel.value;
         const fid = ctxFruit.value;
         ctxVariety.innerHTML = '<option value="">Variedade...</option>';
-        if (!pid || !fid) return;
+
+        if (!pid || !fid) {
+          ctxVariety.disabled = true;
+          return;
+        }
+
         const varieties = await window.api.parcelVarietiesList({ parcelId: pid, fruitId: fid });
+        if (!varieties || varieties.length === 0) {
+          ctxVariety.innerHTML = '<option value="">Sem variedade vinculada</option>';
+          ctxVariety.disabled = true;
+          return;
+        }
+
+        ctxVariety.disabled = false;
         varieties.forEach(v => {
           const o = new Option(v.name, v.id);
-          if (v.id == ctx.variety_id) o.selected = true;
+          if (preserveSaved && v.id == ctx.variety_id) o.selected = true;
           ctxVariety.add(o);
         });
+
+        if (varieties.length === 1) {
+          ctxVariety.value = varieties[0].id;
+        } else if (!preserveSaved && !varieties.some(v => v.id == ctxVariety.value)) {
+          ctxVariety.value = '';
+        }
       }
 
       async function saveContext() {
@@ -710,16 +752,32 @@ window.addEventListener('DOMContentLoaded', () => {
         await refreshTotals();
       }
 
-      ctxParcel.onchange = async () => { await updateFruits(); await saveContext(); };
-      ctxFruit.onchange = async () => { await updateVarieties(); await saveContext(); };
-      ctxVariety.onchange = async () => { await saveContext(); };
+      ctxParcel.onchange = async () => {
+        await updateFruits(false);
+        await saveContext();
+        setTimeout(() => scanInput && scanInput.focus(), 50);
+      };
 
-      await updateFruits();
+      ctxFruit.onchange = async () => {
+        await updateVarieties(false);
+        await saveContext();
+        setTimeout(() => scanInput && scanInput.focus(), 50);
+      };
+
+      ctxVariety.onchange = async () => {
+        await saveContext();
+        setTimeout(() => scanInput && scanInput.focus(), 50);
+      };
+
+      // Carrega inicial preservando contexto salvo no banco
+      await updateFruits(true);
+      await saveContext();
     }
 
     await setupTraceSelectors();
     await refreshState();
-    setTimeout(() => scanInput.focus(), 100);
+    setTimeout(() => scanInput && scanInput.focus(), 100);
+
   }
 
   async function initAdmin() {
@@ -2419,5 +2477,143 @@ if (window.api && window.api.onUpdateStatus) {
     }
   });
 }
+
+// ── Controle Permanente de Foco no Campo de Bipe ─────────────────────────────
+function ensureScanInputFocus() {
+  const scanInput = document.getElementById('scanInput');
+  if (!scanInput) return;
+  const active = document.activeElement;
+  if (!active || active === document.body || active.tagName === 'DIV' || active.tagName === 'BODY' || active.tagName === 'BUTTON') {
+    scanInput.focus();
+  }
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target && !['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(e.target.tagName)) {
+    ensureScanInputFocus();
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  const scanInput = document.getElementById('scanInput');
+  if (!scanInput) return;
+  const active = document.activeElement;
+  if (active && active !== scanInput && !['INPUT', 'TEXTAREA'].includes(active.tagName)) {
+    scanInput.focus();
+  }
+});
+
+// ── Módulo de Apresentação de Desempenho dos Colaboradores (Showcase/Rotativo) ─
+let showcaseTimer = null;
+let showcaseCollabs = [];
+let showcaseIndex = 0;
+
+async function triggerCollabShowcase() {
+  const overlay = document.getElementById('collabShowcaseOverlay');
+  if (!overlay) return;
+
+  const stationId = window.stationId || 'st01';
+  const roleSelect = document.getElementById('roleSelect');
+  const role = roleSelect ? roleSelect.value : 'EMBALADOR';
+
+  try {
+    const res = await window.api.stateGet({ stationId, role });
+    let collabs = (res && res.top10 && res.top10.length > 0) ? res.top10 : [];
+
+    if (collabs.length === 0) {
+      // Fallback: se não houver registros de bipe hoje, busca os colaboradores cadastrados para apresentar a tela
+      const emps = await window.api.employeesList();
+      if (emps && emps.length > 0) {
+        collabs = emps
+          .filter(e => !role || e.role === role || e.role === 'AMBOS')
+          .map(e => ({
+            id: e.id,
+            name: e.name,
+            role: e.role,
+            photoPath: e.photo_url || e.photoPath || '',
+            produced: 0,
+            qualityPct: 100,
+            productivityPct: 0
+          }));
+      }
+    }
+
+    if (!collabs || collabs.length === 0) return;
+
+    showcaseCollabs = collabs;
+    showcaseIndex = 0;
+
+    overlay.classList.add('active');
+    renderShowcaseSlide();
+
+    if (showcaseTimer) clearInterval(showcaseTimer);
+    showcaseTimer = setInterval(() => {
+      showcaseIndex++;
+      if (showcaseIndex >= showcaseCollabs.length) {
+        stopCollabShowcase();
+      } else {
+        renderShowcaseSlide();
+      }
+    }, 6000);
+  } catch (err) {
+    console.error('Erro ao iniciar showcase:', err);
+  }
+}
+
+function renderShowcaseSlide() {
+  const c = showcaseCollabs[showcaseIndex];
+  if (!c) return;
+
+  const photo = document.getElementById('showcasePhoto');
+  const name = document.getElementById('showcaseName');
+  const role = document.getElementById('showcaseRole');
+  const boxes = document.getElementById('showcaseBoxes');
+  const pacing = document.getElementById('showcasePacing');
+  const quality = document.getElementById('showcaseQuality');
+  const achieved = document.getElementById('showcaseAchieved');
+
+  if (photo) {
+    if (c.photoPath) {
+      photo.style.backgroundImage = `url("${c.photoPath}")`;
+    } else {
+      photo.style.backgroundImage = `radial-gradient(circle, #3b82f6 0%, #1e293b 100%)`;
+    }
+  }
+  if (name) name.textContent = c.name || `Colaborador #${c.id}`;
+  if (role) role.textContent = c.role || 'Colaborador';
+  if (boxes) boxes.textContent = c.produced || 0;
+  if (pacing) pacing.textContent = c.produced || 0;
+  if (quality) quality.textContent = `${c.qualityPct || 100}%`;
+  if (achieved) achieved.textContent = `${c.productivityPct || 0}%`;
+}
+
+function stopCollabShowcase() {
+  const overlay = document.getElementById('collabShowcaseOverlay');
+  if (overlay) overlay.classList.remove('active');
+  if (showcaseTimer) {
+    clearInterval(showcaseTimer);
+    showcaseTimer = null;
+  }
+  ensureScanInputFocus();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') stopCollabShowcase();
+  if (e.key === 'F8') {
+    e.preventDefault();
+    triggerCollabShowcase();
+  }
+});
+
+const showcaseOverlayEl = document.getElementById('collabShowcaseOverlay');
+if (showcaseOverlayEl) {
+  showcaseOverlayEl.onclick = () => stopCollabShowcase();
+}
+
+// Inicia carrossel de desempenho a cada 2 minutos automaticamente (para testes)
+setInterval(() => {
+  triggerCollabShowcase();
+}, 2 * 60 * 1000);
+
 
 

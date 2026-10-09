@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prodtech-campo-v13';
+const CACHE_NAME = 'prodtech-campo-v14';
 
 const ASSETS = [
   './',
@@ -6,6 +6,7 @@ const ASSETS = [
   './manifest.json',
   './fieldOp.js',
   './dragDropTouch.js',
+  './resumoElementos.js',
   './infoParcelasData.js',
   './campo-theme.css',
   './vendor/supabase.js',

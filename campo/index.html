@@ -551,6 +551,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   
 </style>
 <script src="dragDropTouch.js"></script>
+<script src="resumoElementos.js"></script>
 </head>
 <body>
 
@@ -671,6 +672,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   <span class="module-icon"><i data-lucide="leaf"></i></span>
   <div class="module-name">Cadastro de Plantios</div>
   <div class="module-desc">Cadastre e gerencie plantios com variedades, datas e previsão de colheita</div>
+  <div class="module-arrow">›</div>
+  </div>
+  <div class="module-card" style="--grad:linear-gradient(90deg,#0284c7,#8b5cf6)" onclick="openModalTeoresElementos()">
+  <span class="module-icon"><i data-lucide="flask-conical"></i></span>
+  <div class="module-name">Resumo de Elementos (PC08 / PC09)</div>
+  <div class="module-desc">Controle nutricional dos fertilizantes e foliares (N, P₂O₅, K₂O, micronutrientes)</div>
   <div class="module-arrow">›</div>
   </div>
   </div>
@@ -1868,6 +1875,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   </div>
 
   <div style="padding:16px; padding-bottom:100px;">
+  <!-- AÇÕES RÁPIDAS & RELATÓRIOS -->
+  <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap">
+    <button type="button" class="btn btn-sec" onclick="openModalTeoresElementos()" style="font-size:11px; padding:6px 10px; display:inline-flex; align-items:center; gap:4px; background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.15)"><i data-lucide="flask-conical" style="width:13px;height:13px"></i> Teores (%)</button>
+    <button type="button" class="btn btn-sec" onclick="printPastaCampoFertirrigacao($('fertParcelSelect')?.value)" style="font-size:11px; padding:6px 10px; display:inline-flex; align-items:center; gap:4px; background:rgba(6,182,212,0.1); border-color:rgba(6,182,212,0.3); color:#06b6d4"><i data-lucide="printer" style="width:13px;height:13px"></i> Fert (PC07)</button>
+    <button type="button" class="btn btn-sec" onclick="printPastaCampoResumoElementos($('fertParcelSelect')?.value)" style="font-size:11px; padding:6px 10px; display:inline-flex; align-items:center; gap:4px; background:rgba(124,58,237,0.1); border-color:rgba(124,58,237,0.3); color:#a78bfa"><i data-lucide="printer" style="width:13px;height:13px"></i> Elementos (PC08)</button>
+    <button type="button" class="btn btn-sec" onclick="printPastaCampoFoliares($('fertParcelSelect')?.value)" style="font-size:11px; padding:6px 10px; display:inline-flex; align-items:center; gap:4px; background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3); color:#4ade80"><i data-lucide="printer" style="width:13px;height:13px"></i> Foliares (PC09)</button>
+  </div>
+
   <!-- TABS DE NAVEGAÇÃO -->
   <div style="display:flex; background:rgba(255,255,255,0.06); border-radius:10px; padding:3px; margin-bottom:16px; border:1px solid rgba(255,255,255,0.1)">
   <button type="button" id="fertTabBtn_form" onclick="switchFertTab('form')" style="flex:1; padding:9px 12px; font-size:12px; font-weight:700; border-radius:8px; background:var(--blue); color:#fff; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all .2s">
@@ -3358,6 +3373,9 @@ let varieties = [];
   <button onclick="event.stopPropagation(); printPastaCampoSementes('${p.id}')" style="font-size:10px; padding:3px 6px; border-radius:6px; background:var(--card2); color:var(--text); border:1px solid var(--border2); cursor:pointer; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:10px;height:10px"></i> Sementes (PC03)</button>
   <button onclick="event.stopPropagation(); printPastaCampoCalendario('${p.id}')" style="font-size:10px; padding:3px 6px; border-radius:6px; background:rgba(124,58,237,0.12); color:#8b5cf6; border:1px solid rgba(124,58,237,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:2px"><i data-lucide="calendar" style="width:10px;height:10px"></i> Calendário (PC04)</button>
   <button onclick="event.stopPropagation(); printPastaCampoTratos('${p.id}')" style="font-size:10px; padding:3px 6px; border-radius:6px; background:var(--card2); color:var(--text); border:1px solid var(--border2); cursor:pointer; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:10px;height:10px"></i> Tratos (PC05)</button>
+  <button onclick="event.stopPropagation(); printPastaCampoFertirrigacao('${p.id}')" style="font-size:10px; padding:3px 6px; border-radius:6px; background:rgba(6,182,212,0.12); color:#06b6d4; border:1px solid rgba(6,182,212,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:10px;height:10px"></i> Fert (PC07)</button>
+  <button onclick="event.stopPropagation(); printPastaCampoResumoElementos('${p.id}')" style="font-size:10px; padding:3px 6px; border-radius:6px; background:rgba(139,92,246,0.12); color:#a78bfa; border:1px solid rgba(139,92,246,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:10px;height:10px"></i> Elementos (PC08)</button>
+  <button onclick="event.stopPropagation(); printPastaCampoFoliares('${p.id}')" style="font-size:10px; padding:3px 6px; border-radius:6px; background:rgba(34,197,94,0.12); color:#4ade80; border:1px solid rgba(34,197,94,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:10px;height:10px"></i> Foliares (PC09)</button>
   </div>
   </div>
   `;

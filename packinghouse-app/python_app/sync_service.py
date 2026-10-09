@@ -345,6 +345,22 @@ def sync_from_supabase(conn: sqlite3.Connection, on_auth_error=None):
                         ON CONFLICT(remote_id) DO UPDATE SET
                           code=excluded.code, active=excluded.active, updated_at=excluded.updated_at, synced=1
                     """, (full_code, 0 if ip.get('ativo') is False else 1, ip['id'], now_ms(), now_ms()))
+
+                    # Auto-vínculo de fruta e variedades da parcela a partir do Caderno de Campo
+                    fruta_name = ip.get('fruta') or ip.get('cultura') or ip.get('especie') or ip.get('fruta_nome')
+                    if fruta_name:
+                        conn.execute("INSERT OR IGNORE INTO fruits(name,active,created_at,updated_at,synced) VALUES(?,1,?,?,0)", (fruta_name, now_ms(), now_ms()))
+                        fruit_row = conn.execute("SELECT id FROM fruits WHERE name=?", (fruta_name,)).fetchone()
+                        parcel_row = conn.execute("SELECT id FROM parcels WHERE remote_id=? OR code=?", (ip['id'], full_code)).fetchone()
+                        
+                        if fruit_row and parcel_row:
+                            p_id, f_id = parcel_row[0], fruit_row[0]
+                            clean_vars = [v for v in vars_list if v]
+                            for var_name in clean_vars:
+                                conn.execute("INSERT OR IGNORE INTO varieties(name,active,created_at,updated_at,synced) VALUES(?,1,?,?,0)", (var_name, now_ms(), now_ms()))
+                                var_row = conn.execute("SELECT id FROM varieties WHERE name=?", (var_name,)).fetchone()
+                                if var_row:
+                                    conn.execute("INSERT OR IGNORE INTO parcel_fruit_varieties(parcel_id,fruit_id,variety_id) VALUES(?,?,?)", (p_id, f_id, var_row[0]))
             except Exception as ex:
                 print(f'Sync [down]: Erro info_parcela {ip.get("parcela2")}: {ex}')
         conn.commit()

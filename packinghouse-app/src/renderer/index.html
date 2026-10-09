@@ -51,6 +51,42 @@
 
   <main id="app" class="appMount"></main>
 
+  <!-- Overlay para Modo Carrossel Desempenho (Showcase Colaboradores) -->
+  <div id="collabShowcaseOverlay" class="collab-showcase-overlay">
+    <div class="showcase-card">
+      <div id="showcaseBadge" class="showcase-badge-bg">Desempenho Individual</div>
+      <div id="showcasePhoto" class="showcase-photo"></div>
+      <div id="showcaseName" class="showcase-name">-</div>
+      <div id="showcaseRole" class="showcase-role">-</div>
+      
+      <div class="showcase-grid">
+        <div class="showcase-metric">
+          <div id="showcaseBoxes" class="showcase-metric-val">0</div>
+          <div class="showcase-metric-lbl">Caixas Hoje</div>
+        </div>
+        <div class="showcase-metric">
+          <div id="showcasePacing" class="showcase-metric-val">0</div>
+          <div class="showcase-metric-lbl">Caixas / Hora</div>
+        </div>
+        <div class="showcase-metric">
+          <div id="showcaseQuality" class="showcase-metric-val" style="color: var(--blue);">100%</div>
+          <div class="showcase-metric-lbl">Qualidade</div>
+        </div>
+      </div>
+
+      <div style="font-size: 11px; color: var(--muted); display: flex; gap: 15px; justify-content: center;">
+        <span>Meta da Estação: <strong id="showcaseTarget" style="color: var(--text);">100/h</strong></span>
+        <span>Atingimento: <strong id="showcaseAchieved" style="color: var(--green);">0%</strong></span>
+      </div>
+
+      <div class="showcase-toast-indicator">
+        <i data-lucide="radio" style="width: 12px; height: 12px;"></i>
+        <span>Leitura e Visão Computacional Ativas em Segundo Plano</span>
+      </div>
+    </div>
+  </div>
+
+
   <template id="tpl-inicio">
     <div class="agro-stage glass">
       <div class="agro-bg"></div>
@@ -124,16 +160,18 @@
             </div>
           </div>
 
-          <div id="traceContext" style="display: none; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 8px;">
-            <select id="ctxParcel" style="font-size: 11px; padding: 6px;">
-              <option value="">Parc...</option>
+          <div id="traceContext" style="display: none; flex-direction: column; gap: 6px; margin-top: 8px;">
+            <select id="ctxParcel" style="width: 100%; font-size: 11px; padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text);">
+              <option value="">Parcela...</option>
             </select>
-            <select id="ctxFruit" style="font-size: 11px; padding: 6px;">
-              <option value="">Frut...</option>
-            </select>
-            <select id="ctxVariety" style="font-size: 11px; padding: 6px;">
-              <option value="">Var...</option>
-            </select>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <select id="ctxFruit" style="width: 100%; font-size: 11px; padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text);">
+                <option value="">Fruta...</option>
+              </select>
+              <select id="ctxVariety" style="width: 100%; font-size: 11px; padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text);">
+                <option value="">Variedade...</option>
+              </select>
+            </div>
           </div>
 
           <div id="totals"
@@ -164,22 +202,22 @@
 
       <!-- Center Column: Top Performer -->
       <section class="card tvCenter"
-        style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid var(--blue); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center;">
-        <div style="position: absolute; top: -20px; right: -20px; opacity: 0.05; transform: rotate(15deg);"><i
+        style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid var(--blue); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 20px 15px;">
+        <div style="position: absolute; top: -20px; right: -20px; opacity: 0.05; transform: rotate(15deg); pointer-events: none;"><i
             data-lucide="trophy" style="width:120px; height:120px"></i></div>
         <div class="title"
-          style="text-transform: uppercase; color: var(--blue); font-weight: 800; letter-spacing: 2px; text-align: center; margin-bottom: 24px; display:flex; align-items:center; justify-content:center; gap:8px; font-size: 16px;">
-          <i data-lucide="crown" style="width:24px; height:24px; color:var(--yellow)"></i> Top 1 Líder</div>
-        <div class="leaderWrap" style="flex-direction: column; text-align: center; gap: 18px;">
+          style="text-transform: uppercase; color: var(--blue); font-weight: 800; letter-spacing: 2px; text-align: center; margin-bottom: 16px; display:flex; align-items:center; justify-content:center; gap:8px; font-size: 16px;">
+          <i data-lucide="crown" style="width:22px; height:22px; color:var(--yellow)"></i> Top 1 Líder</div>
+        <div class="leaderWrap" style="flex-direction: column; text-align: center; gap: 14px; width: 100%;">
           <div id="leaderPhoto" class="photo"
-            style="width: 210px; height: 210px; border: 4px solid var(--blue); box-shadow: 0 0 35px rgba(59, 130, 246, 0.35); border-radius: 50%; margin: 0 auto;">
+            style="width: min(190px, 26vh); height: min(190px, 26vh); border: 4px solid var(--blue); box-shadow: 0 0 30px rgba(59, 130, 246, 0.35); border-radius: 50%; margin: 0 auto; flex-shrink: 0;">
           </div>
-          <div>
-            <div id="leaderName" style="font-size: 36px; font-weight: 900; line-height: 1.2; margin-bottom: 10px;">-
+          <div style="width: 100%;">
+            <div id="leaderName" style="font-size: clamp(22px, 2.5vw, 34px); font-weight: 900; line-height: 1.2; margin-bottom: 8px; word-break: break-word;">-
             </div>
-            <div id="leaderBoxes" style="font-size: 42px; font-weight: 900; color: var(--green);">-</div>
-            <div id="leaderProd" style="font-size: 17px; color: var(--muted); margin-top: 10px; font-weight: 600;">-</div>
-            <div id="leaderQual" style="font-size: 14px; opacity: 0.6; margin-top: 5px;">-</div>
+            <div id="leaderBoxes" style="font-size: clamp(26px, 3.2vw, 42px); font-weight: 900; color: var(--green);">-</div>
+            <div id="leaderProd" style="font-size: clamp(13px, 1.2vw, 17px); color: var(--muted); margin-top: 8px; font-weight: 600;">-</div>
+            <div id="leaderQual" style="font-size: clamp(12px, 1vw, 14px); opacity: 0.6; margin-top: 4px;">-</div>
           </div>
         </div>
       </section>
