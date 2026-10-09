@@ -5809,6 +5809,25 @@ async function delCarriage(id) { if(confirm('Excluir este carrocão?')) { await 
 async function delMachine(id) { if(confirm('Excluir esta máquina?')) { await sb.from('machines').delete().eq('id', id); loadMachines(); } }
 async function delOperation(id) { if(confirm('Excluir esta operação?')) { await sb.from('operations').delete().eq('id', id); loadOperations(); } }
 
+// Helper: fetch all records handling Supabase 1000 row default PostgREST limit
+async function sbFetchAll(queryBuilder) {
+  let allRows = [];
+  let from = 0;
+  const step = 1000;
+  while (true) {
+    const { data, error } = await queryBuilder.range(from, from + step - 1);
+    if (error) {
+      console.error('sbFetchAll error:', error);
+      throw error;
+    }
+    if (!data || data.length === 0) break;
+    allRows = allRows.concat(data);
+    if (data.length < step) break;
+    from += step;
+  }
+  return allRows;
+}
+
 // Helper: get role config for a given role name
 function getRoleConfig(roleName) {
   let target = tenantConfig.target_per_hour_packer;
@@ -5903,8 +5922,10 @@ async function refreshRanking(){
   const type = window._rankType || 'PACKING';
   
   if (type === 'PACKING') {
-  const {data,error}=await sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')).order('ts',{ascending:false});
-  if(error)return;
+  let data = [];
+  try {
+    data = await sbFetchAll(sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')).order('ts',{ascending:false}));
+  } catch(err) { console.error('Error in refreshRanking:', err); return; }
   
   // Apply client side filters if selected
   let filteredData = data || [];
@@ -6101,7 +6122,10 @@ async function refreshFin(){
   const targetBarcode = targetEmp ? targetEmp.barcode : null;
   const targetNameNormalized = targetEmp ? targetEmp.name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : null;
 
-  const {data:scans}=await sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
+  let scans = [];
+  try {
+    scans = await sbFetchAll(sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')));
+  } catch(err) { console.error('Error fetching production_scans for finance:', err); }
   const {data:abs}=await sb.from('employee_absences').select('*').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -6407,16 +6431,29 @@ async function refreshDash(){
   let q=sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
   if(empId) {
   const emp = _employees.find(ex => ex.id === empId);
-  if(emp) q = q.eq('employee_name', emp.name);
+  if(emp) {
+    if (emp.barcode && emp.name) {
+      q = q.or(`employee_barcode.eq.${emp.barcode},employee_name.eq.${emp.name}`);
+    } else if (emp.barcode) {
+      q = q.eq('employee_barcode', emp.barcode);
+    } else {
+      q = q.eq('employee_name', emp.name);
+    }
   }
-  const {data:scans, error}=await q.order('ts',{ascending:false});
-  if(error)return;
+  }
+  let scans = [];
+  try {
+    scans = await sbFetchAll(q.order('ts',{ascending:false}));
+  } catch(err) { console.error('Error in refreshDash:', err); return; }
 
   // Comparativo Período Anterior
   const diff = new Date(e) - new Date(s);
   const ps = new Date(new Date(s) - diff - 86400000).toISOString().split('T')[0];
   const pe = new Date(new Date(s) - 86400000).toISOString().split('T')[0];
-  const {data:prevScans} = await sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(ps)).lte('ts',toISO(pe,'23:59:59'));
+  let prevScans = [];
+  try {
+    prevScans = await sbFetchAll(sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(ps)).lte('ts',toISO(pe,'23:59:59')));
+  } catch(err) { console.error('Error fetching prevScans:', err); }
   
   const { data: stops } = await sb.from('global_stops').select('*').eq('tenant_id', tenantId).gte('start_ts', s).lte('start_ts', e+'T23:59:59Z');
   window._currentStops = stops || [];
@@ -6463,8 +6500,10 @@ async function refreshDash(){
   if(top) {
   const [name, boxes] = top;
   const emp = _employees.find(e => e.name === name);
-  $('topPerformerCard').style.display = 'block';
-  $('topPerformerCard').dataset.barcode = emp?.barcode || '';
+  const cardEl = $('topPerformerCard');
+  cardEl.style.display = 'block';
+  cardEl.dataset.barcode = emp?.barcode || emp?.id || name || '';
+  cardEl.onclick = () => openEmpDrawer(emp?.barcode || emp?.id || name);
   $('topPerformerName').textContent = name;
   $('topPerformerStats').textContent = boxes + ' caixas';
   $('topPerformerAvatar').innerHTML = safePhotoUrl(emp?.photo_path) ? `<img src="${safePhotoUrl(emp.photo_path)}" onerror="this.outerHTML='${name[0]}'">` : name[0];
@@ -7173,17 +7212,19 @@ function onBulkParcelChange() {
 }
 
 async function openEmpDrawer(idOrName) {
+  if (!idOrName) return;
   const d = document.getElementById('empDrawer');
   const normalizeStr = (str) => (str || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const clean = normalizeStr(idOrName);
   
-  let emp = _employees.find(e => normalizeStr(e.barcode) === clean);
+  let emp = _employees.find(e => e.id === idOrName);
+  if (!emp) emp = _employees.find(e => normalizeStr(e.barcode) === clean);
   if (!emp) emp = _employees.find(e => normalizeStr(e.name) === clean);
   if (!emp) emp = _employees.find(e => normalizeStr(e.name).includes(clean) || clean.includes(normalizeStr(e.name)));
 
   if (!emp) {
-  if (clean !== 'desconhecido' && clean !== '—') console.error('Colaborador não encontrado:', idOrName);
-  return;
+    if (clean !== 'desconhecido' && clean !== '—') console.error('Colaborador não encontrado:', idOrName);
+    return;
   }
 
   const stats = window._lastEmpStats ? (window._lastEmpStats[clean] || (emp ? window._lastEmpStats[emp.name.trim().toLowerCase()] : null)) : null;
@@ -7201,31 +7242,44 @@ async function openEmpDrawer(idOrName) {
   const empBarcode = emp.barcode ? String(emp.barcode).trim() : '0';
   const empName = emp.name ? String(emp.name).trim() : '';
 
-  const [qAudits, qAbs, qScans, qFieldServices, qCarraoServices] = await Promise.all([
-    sb.from('quality_audits').select('penalty_boxes').eq('tenant_id', tenantId).or(`employee_barcode.eq.${empBarcode},employee_name.eq.${empName}`).gte('ts', startMs).lte('ts', endMs),
-    sb.from('employee_absences').select('*').eq('tenant_id', tenantId).or(`employee_barcode.eq.${empBarcode},employee_name.eq.${empName}`).gte('date', sDateOnly).lte('date', eDateOnly),
-    sb.from('production_scans').select('ts, weight_kg, role').eq('tenant_id', tenantId).or(`employee_barcode.eq.${empBarcode},employee_name.eq.${empName}`).gte('ts', startMs).lte('ts', endMs).order('ts', {ascending: true}),
-    sb.from('field_service_employees').select('*, field_services(*)').eq('employee_id', emp.id),
-    sb.from('field_carrao_employees').select('*, field_carrao_sessions(*)').eq('employee_id', emp.id)
-  ]);
-
-  let allScans = qScans.data || [];
-  if ((!allScans || allScans.length === 0) && qScans.error) {
-    // Fallback se a coluna ts estiver em formato ISO Timestamptz
-    const { data: retryData } = await sb.from('production_scans')
-      .select('ts, weight_kg, role')
-      .eq('tenant_id', tenantId)
-      .or(`employee_barcode.eq.${empBarcode},employee_name.eq.${empName}`)
-      .gte('ts', startIso)
-      .lte('ts', endIso)
-      .order('ts', {ascending: true});
-    if (retryData) allScans = retryData;
+  let scanQuery = sb.from('production_scans').select('ts, weight_kg, role, employee_barcode, employee_name').eq('tenant_id', tenantId).gte('ts', startIso).lte('ts', endIso);
+  if (emp.barcode && emp.name) {
+    scanQuery = scanQuery.or(`employee_barcode.eq.${empBarcode},employee_name.eq.${empName}`);
+  } else if (emp.barcode) {
+    scanQuery = scanQuery.eq('employee_barcode', empBarcode);
+  } else if (emp.name) {
+    scanQuery = scanQuery.eq('employee_name', empName);
   }
+
+  let qualityQuery = sb.from('quality_audits').select('penalty_boxes').eq('tenant_id', tenantId);
+  if (emp.barcode && emp.name) {
+    qualityQuery = qualityQuery.or(`employee_barcode.eq.${empBarcode},employee_name.eq.${empName}`);
+  } else if (emp.barcode) {
+    qualityQuery = qualityQuery.eq('employee_barcode', empBarcode);
+  } else if (emp.name) {
+    qualityQuery = qualityQuery.eq('employee_name', empName);
+  }
+
+  let absenceQuery = sb.from('employee_absences').select('*').eq('tenant_id', tenantId).gte('date', sDateOnly).lte('date', eDateOnly);
+  if (emp.barcode && emp.name) {
+    absenceQuery = absenceQuery.or(`employee_barcode.eq.${empBarcode},employee_name.eq.${empName}`);
+  } else if (emp.barcode) {
+    absenceQuery = absenceQuery.eq('employee_barcode', empBarcode);
+  } else if (emp.name) {
+    absenceQuery = absenceQuery.eq('employee_name', empName);
+  }
+
+  const [qAudits, qAbs, allScans, qFieldServices, qCarraoServices] = await Promise.all([
+    qualityQuery.gte('ts', startMs).lte('ts', endMs).then(r => r).catch(() => ({ data: [] })),
+    absenceQuery.then(r => r).catch(() => ({ data: [] })),
+    sbFetchAll(scanQuery.order('ts', {ascending: true})).catch(() => []),
+    sb.from('field_service_employees').select('*, field_services(*)').eq('employee_id', emp.id).then(r => r).catch(() => ({ data: [] })),
+    sb.from('field_carrao_employees').select('*, field_carrao_sessions(*)').eq('employee_id', emp.id).then(r => r).catch(() => ({ data: [] }))
+  ]);
 
   const qualityCount = (qAudits.data || []).reduce((sum, q) => sum + Number(q.penalty_boxes || 0), 0);
   const absencesCount = qAbs.data?.length || 0;
-  const scanTimestamps = allScans.map(s => typeof s.ts === 'number' ? s.ts : new Date(s.ts).getTime());
-
+  const scanTimestamps = (allScans || []).map(s => typeof s.ts === 'number' ? s.ts : new Date(s.ts).getTime());
 
   const hourlyData = new Array(24).fill(0);
   scanTimestamps.forEach(ts => {
@@ -7296,27 +7350,29 @@ async function openEmpDrawer(idOrName) {
   };
 
   if (totalBoxes > 0 || stats || totalFieldOps > 0) {
-  // Bônus de assiduidade: valor FIXO MENSAL, sem pro-rata por dias
+  // Bônus de assiduidade
   const bonusBase = parseFloat($('cfgAttendanceBonus')?.value || tenantConfig.attendance_bonus || 0);
   const bonusEarned = (absencesCount === 0) ? bonusBase : 0;
   
   let packingStatsHtml = '';
-  const isPackingRole = ['EMBALADOR', 'EMPILHADOR', 'PACKER', 'STACKER', 'CAIXARIA'].some(r => emp.role.toUpperCase().includes(r));
+  const isPackingRole = ['EMBALADOR', 'EMPILHADOR', 'PACKER', 'STACKER', 'CAIXARIA'].some(r => (emp.role || '').toUpperCase().includes(r));
   if (totalBoxes > 0 || stats || isPackingRole) {
   const roleConfig = getRoleConfig(emp.role);
-  const prodTarget = roleConfig.target;
+  const [wsH,wsM] = (tenantConfig.work_start_time||'07:00').split(':').map(Number);
+  const [weH,weM] = (tenantConfig.work_end_time||'17:00').split(':').map(Number);
+  const [lsH,lsM] = (tenantConfig.lunch_start_time||'11:30').split(':').map(Number);
+  const [leH,leM] = (tenantConfig.lunch_end_time||'13:00').split(':').map(Number);
+  const dailyWorkHours = Math.max(1, ((weH*60+weM)-(wsH*60+wsM)-((leH*60+leM)-(lsH*60+lsM))) / 60);
+
+  const prodTarget = Math.round(roleConfig.target * dailyWorkHours * numDaysInPeriod);
   const valuePerUnit = roleConfig.value;
-  const prodScore = Math.min(100, Math.round((totalBoxes / prodTarget) * 100));
+  const prodScore = Math.min(100, Math.round((totalBoxes / Math.max(1, prodTarget)) * 100));
   const idleDetails = calculateIdleDetails(allScans, window._currentStops || []);
   const stabClass = idleDetails.totalMinutes < 30 ? 'good' : idleDetails.totalMinutes < 60 ? 'warn' : 'bad';
   const valueEarned = totalBoxes * valuePerUnit;
 
   // Work hours calc (grouped by day)
-  const [wsH,wsM] = (tenantConfig.work_start_time||'07:00').split(':').map(Number);
-  const [weH,weM] = (tenantConfig.work_end_time||'17:00').split(':').map(Number);
-  const [lsH,lsM] = (tenantConfig.lunch_start_time||'11:30').split(':').map(Number);
-  const [leH,leM] = (tenantConfig.lunch_end_time||'13:00').split(':').map(Number);
-  const dailyWorkMin = (weH*60+weM)-(wsH*60+wsM)-((leH*60+leM)-(lsH*60+lsM));
+  const dailyWorkMin = Math.round(dailyWorkHours * 60);
   
   const scansByDay = {};
   allScans.forEach(s => {
@@ -7546,10 +7602,13 @@ function calculateIdleTime(scans, globalStops = []) {
   for (let i = 1; i < sorted.length; i++) {
   const start = new Date(sorted[i-1].ts);
   const end = new Date(sorted[i].ts);
+  const isSameDay = start.getFullYear() === end.getFullYear() && 
+                    start.getMonth() === end.getMonth() && 
+                    start.getDate() === end.getDate();
+  if (!isSameDay) continue;
+
   const diff = (end - start) / 1000;
-  
-  if (diff > thresholdSeconds && diff < 3600 * 4) {
-  // Subtrair sobreposição com paradas globais
+  if (diff > thresholdSeconds) {
   let overlapSeconds = 0;
   (globalStops || []).forEach(gs => {
   const gsStart = new Date(gs.start_ts);
@@ -7559,9 +7618,7 @@ function calculateIdleTime(scans, globalStops = []) {
   if (intersectEnd > intersectStart) overlapSeconds += (intersectEnd - intersectStart) / 1000;
   });
   
-  // Subtrair sobreposição com almoço
   const lunchOverlap = getLunchOverlap(start, end);
-  
   const effectiveIdle = diff - overlapSeconds - lunchOverlap;
   if (effectiveIdle > thresholdSeconds) {
   totalIdleSeconds += (effectiveIdle - thresholdSeconds);
@@ -7581,9 +7638,13 @@ function calculateIdleDetails(scans, globalStops = []) {
   for (let i = 1; i < sorted.length; i++) {
   const start = new Date(sorted[i-1].ts);
   const end = new Date(sorted[i].ts);
+  const isSameDay = start.getFullYear() === end.getFullYear() && 
+                    start.getMonth() === end.getMonth() && 
+                    start.getDate() === end.getDate();
+  if (!isSameDay) continue;
+
   const diff = (end - start) / 1000;
-  
-  if (diff > thresholdSeconds && diff < 3600 * 4) {
+  if (diff > thresholdSeconds) {
   const lunchOverlap = getLunchOverlap(start, end);
   let stopOverlap = 0;
   (globalStops || []).forEach(gs => {
@@ -7780,7 +7841,10 @@ async function loadManagers(){
 
 async function previewFinalize(){
   const date=$('finalizeDate').value; if(!date)return;
-  const {data:scans}=await sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(date)).lte('ts',toISO(date,'23:59:59'));
+  let scans = [];
+  try {
+    scans = await sbFetchAll(sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(date)).lte('ts',toISO(date,'23:59:59')));
+  } catch(err) { console.error(err); }
   if(!scans||!scans.length){$('finalizePreview').innerHTML='<div style="color:var(--muted);font-size:13px">Nenhum registro para esta data.</div>';return;}
   const eb={};
   scans.forEach(x=>{if(!eb[x.employee_name])eb[x.employee_name]={boxes:0,kg:0,role:x.role};eb[x.employee_name].boxes++;eb[x.employee_name].kg+=(x.weight_kg||0);});
@@ -9416,12 +9480,15 @@ async function exportProducaoPDF(dateParam){
   // Exporta o relatório de produção diária em PDF
   const date = dateParam || $('finDate')?.value || today();
   console.log('Gerando PDF de produção...');
-  const {data} = await sb.from('production_scans')
-  .select('*, employees(name)')
-  .eq('tenant_id', tenantId)
-  .gte('ts', toISO(date))
-  .lte('ts', toISO(date, '23:59:59'))
-  .order('ts', {ascending: false});
+  let data = [];
+  try {
+    data = await sbFetchAll(sb.from('production_scans')
+      .select('*, employees(name)')
+      .eq('tenant_id', tenantId)
+      .gte('ts', toISO(date))
+      .lte('ts', toISO(date, '23:59:59'))
+      .order('ts', {ascending: false}));
+  } catch(err) { console.error(err); }
   if(!data?.length) { alert('Nenhum dado de produção para esta data.'); return; }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
@@ -13916,10 +13983,12 @@ async function e3dLoadGridState() {
 
   // ── Reconcile with production_scans ──
   const todayIso = toISO(today());
-  const [scansRes, palletsRes] = await Promise.all([
-  sb.from('production_scans').select('role, variety_name, caliber, parcel_code, weight_name').eq('tenant_id', tenantId).gte('ts', todayIso),
-  sb.from('pallets').select('variety_name, caliber, parcel_code, box_count').eq('tenant_id', tenantId).gte('created_at', todayIso)
+  const [scansData, palletsData] = await Promise.all([
+    sbFetchAll(sb.from('production_scans').select('role, variety_name, caliber, parcel_code, weight_name').eq('tenant_id', tenantId).gte('ts', todayIso)),
+    sbFetchAll(sb.from('pallets').select('variety_name, caliber, parcel_code, box_count').eq('tenant_id', tenantId).gte('created_at', todayIso))
   ]);
+  const scansRes = { data: scansData, error: null };
+  const palletsRes = { data: palletsData, error: null };
 
   if (!scansRes.error && !palletsRes.error) {
   const scanGroups = {};
