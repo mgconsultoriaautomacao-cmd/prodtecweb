@@ -55,7 +55,7 @@ echo [OK] Python encontrado: %PYCMD%
 echo.
 
 :: 2. Variáveis de ambiente para evitar tela preta em placas de vídeo genéricas / Intel HD
-set "QTWEBENGINE_CHROMIUM_FLAGS=--disable-gpu --disable-software-rasterizer --no-sandbox --disable-gpu-compositing --enable-features=NetworkServiceInProcess --ignore-gpu-blocklist"
+set "QTWEBENGINE_CHROMIUM_FLAGS=--disable-gpu --no-sandbox --disable-gpu-compositing --enable-features=NetworkServiceInProcess --ignore-gpu-blocklist --enable-software-rasterizer"
 
 :: 3. Instalar / verificar dependências básicas caso necessário
 echo [1/2] Verificando dependencias necessarias (PyQt6, PyQt6-WebEngine, Flask, OpenCV, etc.)...

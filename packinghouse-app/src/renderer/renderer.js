@@ -380,21 +380,21 @@ window.addEventListener('DOMContentLoaded', () => {
     const rankList = must('rankList');
 
     async function refreshTotals() {
-      const cfg = await window.api.configGetAll();
+      const cfg = (await window.api.configGetAll()) || {};
       const isMelonMode = cfg.culture_type === 'MELAO_MELANCIA';
-      const t = await window.api.totalsNow({ stationId, role: roleSelect.value });
+      const t = (await window.api.totalsNow({ stationId, role: roleSelect.value })) || {};
 
       let html = `
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px; margin-bottom: 10px;">
           <div style="font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px;">Produção Hoje</div>
           <div style="text-align: right;">
-            <div style="font-size: 18px; font-weight: 800; color: #fff;">${t.dayTotal} <span style="font-size: 11px; font-weight: 400; color: var(--muted);">cx</span></div>
-            <div style="font-size: 12px; color: var(--green);">${isMelonMode ? (t.dayKg / 1000).toFixed(3) + ' t' : t.dayKg + ' kg'}</div>
+            <div style="font-size: 18px; font-weight: 800; color: #fff;">${t.dayTotal || 0} <span style="font-size: 11px; font-weight: 400; color: var(--muted);">cx</span></div>
+            <div style="font-size: 12px; color: var(--green);">${isMelonMode ? ((t.dayKg || 0) / 1000).toFixed(3) + ' t' : (t.dayKg || 0) + ' kg'}</div>
           </div>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
           <div style="font-size: 11px; color: var(--muted);">TOTAL HORA</div>
-          <div style="font-size: 14px; font-weight: 700;">${t.hourTotal} cx</div>
+          <div style="font-size: 14px; font-weight: 700;">${t.hourTotal || 0} cx</div>
         </div>
       `;
 
@@ -444,7 +444,7 @@ window.addEventListener('DOMContentLoaded', () => {
     let lastRanks = {};
 
     async function refreshState() {
-      const st = await window.api.stateGet({ stationId, role: roleSelect.value });
+      const st = (await window.api.stateGet({ stationId, role: roleSelect.value })) || {};
 
       if (st.leader) {
         leaderName.textContent = st.leader.name;
@@ -665,11 +665,11 @@ window.addEventListener('DOMContentLoaded', () => {
     async function setupTraceSelectors() {
       if (traceContext) traceContext.style.display = 'flex';
 
-      const ctx = await window.api.contextGet({ stationId, role: roleSelect.value });
-      const parcels = await window.api.parcelsList();
+      const ctx = (await window.api.contextGet({ stationId, role: roleSelect.value })) || {};
+      const parcels = (await window.api.parcelsList()) || [];
 
       ctxParcel.innerHTML = '<option value="">Selecione o Talhão / Parcela...</option>';
-      parcels.filter(p => p.active).forEach(p => {
+      (parcels || []).filter(p => p && p.active).forEach(p => {
         const o = new Option(p.code, p.id);
         if (p.id == ctx.parcel_id) o.selected = true;
         ctxParcel.add(o);
@@ -1294,18 +1294,18 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   async function initDashboards() {
-    const kpiTotalDia = must('kpiTotalDia');
-    const kpiTotalKg = must('kpiTotalKg');
-    const kpiMediaHora = must('kpiMediaHora');
-    const kpiEficiencia = must('kpiEficiencia');
-    const liveFeed = must('liveFeed');
-    const logStart = must('logStart');
-    const logEnd = must('logEnd');
-    const logLoad = must('logLoad');
-    const logOut = must('logOut');
-    const dashStart = must('dashStart');
-    const dashEnd = must('dashEnd');
-    const dashRefresh = must('dashRefresh');
+    const kpiTotalDia = document.getElementById('kpiTotalDia');
+    const kpiTotalKg = document.getElementById('kpiTotalKg');
+    const kpiMediaHora = document.getElementById('kpiMediaHora');
+    const kpiEficiencia = document.getElementById('kpiEficiencia');
+    const liveFeed = document.getElementById('liveFeed');
+    const logStart = document.getElementById('logStart');
+    const logEnd = document.getElementById('logEnd');
+    const logLoad = document.getElementById('logLoad');
+    const logOut = document.getElementById('logOut');
+    const dashStart = document.getElementById('dashStart');
+    const dashEnd = document.getElementById('dashEnd');
+    const dashRefresh = document.getElementById('dashRefresh');
 
     let prodChart = null;
     let weightChart = null;
@@ -1387,9 +1387,33 @@ window.addEventListener('DOMContentLoaded', () => {
       }
 
       // 1. KPIs
-      must('kpiTotalDia').textContent = dsStats.totalBoxes || 0;
-      must('kpiTotalKg').textContent = dsStats.totalKg || 0;
-      must('kpiMediaHora').textContent = dsStats.avgPerHour || 0;
+      const elTotalDia = document.getElementById('kpiTotalDia');
+      if (elTotalDia) elTotalDia.textContent = dsStats.totalBoxes || 0;
+
+      const elBruto = document.getElementById('kpiTotalBruto');
+      if (elBruto) elBruto.textContent = dsStats.rawTotalBoxes || dsStats.totalBoxes || 0;
+
+      const elTotalKg = document.getElementById('kpiTotalKg');
+      if (elTotalKg) elTotalKg.textContent = dsStats.totalKg || 0;
+
+      const elTon = document.getElementById('kpiTotalToneladas');
+      if (elTon) elTon.textContent = dsStats.totalKg ? (dsStats.totalKg / 1000).toFixed(3) : '0.000';
+
+      const elQual = document.getElementById('kpiQualidadeGlobal');
+      if (elQual) {
+        const qVal = dsStats.qualityPct != null ? dsStats.qualityPct : 100;
+        elQual.textContent = `${qVal}%`;
+        elQual.style.color = qVal >= 95 ? 'var(--green)' : (qVal >= 85 ? 'var(--yellow)' : 'var(--red)');
+      }
+
+      const elErros = document.getElementById('kpiTotalErros');
+      if (elErros) elErros.textContent = dsStats.penaltyCount || 0;
+
+      const elTaxaErro = document.getElementById('kpiTaxaErro');
+      if (elTaxaErro) elTaxaErro.textContent = `${dsStats.errorPct || 0}%`;
+
+      const elMediaHora = document.getElementById('kpiMediaHora');
+      if (elMediaHora) elMediaHora.textContent = dsStats.avgPerHour || 0;
 
       const kpiCadencia = document.getElementById('kpiCadencia');
       if (kpiCadencia) {
@@ -1421,6 +1445,109 @@ window.addEventListener('DOMContentLoaded', () => {
         } else {
           kpiCons.style.color = 'var(--green)';
           if (cardCons) cardCons.style.borderColor = 'rgba(46, 204, 113, 0.1)';
+        }
+      }
+
+      const elEfic = document.getElementById('kpiEficiencia');
+      if (elEfic) {
+        const avgYield = dsStats.collaboratorStats && dsStats.collaboratorStats.length > 0
+          ? Math.round(dsStats.collaboratorStats.reduce((sum, c) => sum + (c.yieldPct || 0), 0) / dsStats.collaboratorStats.length)
+          : 100;
+        elEfic.textContent = `${avgYield}%`;
+        elEfic.style.color = colorByPct(avgYield);
+      }
+
+      const elAtivos = document.getElementById('kpiColabAtivos');
+      if (elAtivos) elAtivos.textContent = dsStats.collaboratorStats ? dsStats.collaboratorStats.length : 0;
+
+      // Banner do Colaborador Selecionado
+      const bannerEl = document.getElementById('collabSelectedBanner');
+      if (bannerEl) {
+        if (empId) {
+          bannerEl.style.display = 'block';
+          const selectedCollab = (dsStats.collaboratorStats && dsStats.collaboratorStats.length > 0)
+            ? (dsStats.collaboratorStats.find(c => String(c.id) === String(empId)) || dsStats.collaboratorStats[0])
+            : null;
+          const photoEl = document.getElementById('collabBannerPhoto');
+          const nameEl = document.getElementById('collabBannerName');
+          const roleEl = document.getElementById('collabBannerRole');
+          const boxesEl = document.getElementById('collabBannerBoxes');
+          const qualEl = document.getElementById('collabBannerQuality');
+          const paceEl = document.getElementById('collabBannerPace');
+          const cadEl = document.getElementById('collabBannerCadence');
+
+          if (selectedCollab) {
+            if (photoEl) photoEl.style.backgroundImage = selectedCollab.photoPath ? `url('${selectedCollab.photoPath}')` : 'none';
+            if (nameEl) nameEl.textContent = selectedCollab.name;
+            if (roleEl) {
+              roleEl.textContent = selectedCollab.role || 'EMBALADOR';
+              roleEl.className = `badge ${(selectedCollab.role || '').toLowerCase()}`;
+            }
+            if (boxesEl) boxesEl.textContent = `${selectedCollab.boxes} cx`;
+            if (qualEl) {
+              qualEl.textContent = `${selectedCollab.qualityPct}%`;
+              qualEl.style.color = colorByPct(selectedCollab.qualityPct);
+            }
+            if (paceEl) paceEl.textContent = `${selectedCollab.avgPerHour || 0} cx/h`;
+            if (cadEl) {
+              cadEl.textContent = dsStats.avgScanGapSec > 0 ? `${dsStats.avgScanGapSec}s` : '--';
+              cadEl.style.color = dsStats.avgScanGapSec < 20 ? 'var(--green)' : 'var(--yellow)';
+            }
+          }
+          const clearBtn = document.getElementById('collabBannerClearBtn');
+          if (clearBtn && !clearBtn._hasClick) {
+            clearBtn._hasClick = true;
+            clearBtn.onclick = async () => {
+              if (dashEmployee) {
+                dashEmployee.value = '';
+                dashEmployee.dispatchEvent(new Event('change'));
+              }
+            };
+          }
+        } else {
+          bannerEl.style.display = 'none';
+        }
+      }
+
+      // Tabela Analítica de Desempenho por Colaborador
+      const tableBody = document.getElementById('collabAnalyticsTableBody');
+      if (tableBody) {
+        if (dsStats.collaboratorStats && dsStats.collaboratorStats.length > 0) {
+          const sorted = [...dsStats.collaboratorStats].sort((a, b) => b.boxes - a.boxes);
+          tableBody.innerHTML = sorted.map((c, idx) => {
+            const errBadgeColor = (c.penaltyBoxes && c.penaltyBoxes > 0) ? 'var(--red)' : 'var(--muted)';
+            const qualColor = colorByPct(c.qualityPct);
+            const prodColor = colorByPct(c.yieldPct);
+            return `
+              <tr onclick="window.openCollaboratorModal('${c.id}')" style="border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.08)'" onmouseout="this.style.background='transparent'" title="Clique para abrir Raio-X detalhado de ${esc(c.name)}">
+                <td style="padding:10px 12px; font-weight:600; display:flex; align-items:center; gap:8px;">
+                  <span style="color:var(--muted); font-size:10px; width:16px;">#${idx+1}</span>
+                  <div style="${photoStyle(c.photoPath, 28)}"></div>
+                  <span style="color:var(--text);">${esc(c.name)}</span>
+                </td>
+                <td style="padding:10px 12px; text-align:center;">
+                  <span class="badge ${(c.role || '').toLowerCase()}" style="font-size:10px; padding:2px 6px;">${esc(c.role || '—')}</span>
+                </td>
+                <td style="padding:10px 12px; text-align:right; font-weight:700; color:var(--text); font-size:13px;">
+                  ${c.boxes} <span class="muted" style="font-size:10px; font-weight:400;">cx</span>
+                </td>
+                <td style="padding:10px 12px; text-align:right; font-weight:700; color:${errBadgeColor};">
+                  ${c.penaltyBoxes || 0} <span style="font-size:10px; font-weight:400; opacity:0.8;">(${c.errorPct || 0}%)</span>
+                </td>
+                <td style="padding:10px 12px; text-align:right; font-weight:700; color:${prodColor};">
+                  ${c.yieldPct}%
+                </td>
+                <td style="padding:10px 12px; text-align:right; font-weight:700; color:${qualColor};">
+                  ${c.qualityPct}%
+                </td>
+                <td style="padding:10px 12px; text-align:right; font-weight:700; color:var(--blue);">
+                  ${c.avgPerHour || 0} <span class="muted" style="font-size:10px; font-weight:400;">cx/h</span>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        } else {
+          tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted);">Nenhum colaborador registrado no período.</td></tr>';
         }
       }
 
@@ -1534,7 +1661,7 @@ window.addEventListener('DOMContentLoaded', () => {
       if (collabList) {
         const sortedCollabs = [...dsStats.collaboratorStats].sort((a, b) => b.boxes - a.boxes);
         collabList.innerHTML = sortedCollabs.map((c, i) => `
-          <div style="display:flex; gap:12px; align-items:center; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.2);">
+          <div onclick="window.openCollaboratorModal('${c.id}')" style="cursor:pointer; display:flex; gap:12px; align-items:center; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.2); transition: all 0.2s;" onmouseover="this.style.borderColor='var(--blue)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='rgba(59, 130, 246, 0.2)'; this.style.transform='none'" title="Clique para abrir Raio-X detalhado de ${esc(c.name)}">
             <div style="font-size: 16px; font-weight:800; color: rgba(255,255,255,0.2); width: 20px;">#${i + 1}</div>
             <div style="${photoStyle(c.photoPath, 42)}"></div>
             <div style="flex:1; min-width:0;">
@@ -1845,6 +1972,205 @@ window.addEventListener('DOMContentLoaded', () => {
       await refresh();
     }, 15000);
   }
+
+  // ── Modal / Raio-X Individual do Colaborador (Local Python) ─────────────────
+  window.openCollaboratorModal = async function(empId) {
+    if (!empId) return;
+    let modal = document.getElementById('collabDetailModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'collabDetailModal';
+      modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.85); backdrop-filter:blur(8px); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;';
+      modal.innerHTML = `
+        <div id="collabModalCard" style="background:#0f172a; border:1px solid rgba(59,130,246,0.3); border-radius:20px; width:740px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 25px 60px rgba(0,0,0,0.8); display:flex; flex-direction:column;">
+          <div style="padding:20px 24px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)); border-radius:20px 20px 0 0;">
+            <div style="display:flex; align-items:center; gap:16px;">
+              <div id="modalCollabPhoto" style="width:58px; height:58px; border-radius:50%; background:#1e293b; background-size:cover; background-position:center; border:2px solid var(--blue); box-shadow:0 4px 15px rgba(0,0,0,0.5);"></div>
+              <div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <h2 id="modalCollabName" style="margin:0; font-size:18px; font-weight:800; color:#fff;">Nome do Colaborador</h2>
+                  <span id="modalCollabRole" class="badge" style="font-size:11px; padding:2px 8px;">EMBALADOR</span>
+                </div>
+                <div id="modalCollabMeta" class="muted" style="font-size:12px; margin-top:4px;">Código de Barras: — • Meta: —</div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <button id="modalCollabFilterBtn" type="button" style="background:var(--blue); color:#fff; border:none; padding:8px 14px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                Filtrar no Painel
+              </button>
+              <button type="button" onclick="document.getElementById('collabDetailModal').style.display='none'" style="background:rgba(255,255,255,0.1); border:none; color:#94a3b8; font-size:20px; width:34px; height:34px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;">&times;</button>
+            </div>
+          </div>
+
+          <div id="modalCollabBody" style="padding:24px; display:flex; flex-direction:column; gap:20px;">
+            <div style="text-align:center; padding:40px; color:var(--muted);">Carregando métricas individuais...</div>
+          </div>
+        </div>
+      `;
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.style.display = 'none';
+      });
+      document.body.appendChild(modal);
+    }
+
+    modal.style.display = 'flex';
+    const bodyEl = document.getElementById('modalCollabBody');
+    bodyEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--muted);">Carregando métricas individuais...</div>';
+
+    try {
+      const sInput = document.getElementById('dashStart');
+      const eInput = document.getElementById('dashEnd');
+      const sMs = sInput ? startOfDayMs(sInput.value) : startOfDayMs(isoDateToday());
+      const eMs = eInput ? endOfDayMs(eInput.value) : endOfDayMs(isoDateToday());
+      const stationId = document.getElementById('stationIdInput')?.value || 'ST01';
+
+      const [empList, empStats, recentLogs] = await Promise.all([
+        window.api.employeesList(),
+        window.api.dashboardsGetStats({ stationId, startMs: sMs, endMs: eMs, employeeId: empId }),
+        window.api.logsList({ stationId, startMs: sMs, endMs: eMs, limit: 100 })
+      ]);
+
+      const emp = (empList || []).find(e => String(e.id) === String(empId) || e.barcode === empId);
+      const photoEl = document.getElementById('modalCollabPhoto');
+      const nameEl = document.getElementById('modalCollabName');
+      const roleEl = document.getElementById('modalCollabRole');
+      const metaEl = document.getElementById('modalCollabMeta');
+      const filterBtn = document.getElementById('modalCollabFilterBtn');
+
+      if (emp) {
+        if (photoEl) photoEl.style.backgroundImage = emp.photo_path ? `url('${emp.photo_path}')` : 'none';
+        if (nameEl) nameEl.textContent = emp.name;
+        if (roleEl) {
+          roleEl.textContent = emp.role || 'EMBALADOR';
+          roleEl.className = `badge ${(emp.role || '').toLowerCase()}`;
+        }
+        if (metaEl) {
+          metaEl.textContent = `Código: ${emp.barcode || '—'} • Meta: ${empStats.targets ? empStats.targets[(emp.role || '').toLowerCase() === 'empilhador' ? 'stacker' : 'packer'] : 100} cx/h`;
+        }
+      }
+
+      if (filterBtn) {
+        filterBtn.onclick = async () => {
+          const dEmp = document.getElementById('dashEmployee');
+          if (dEmp) {
+            dEmp.value = empId;
+            dEmp.dispatchEvent(new Event('change'));
+          }
+          modal.style.display = 'none';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+      }
+
+      const collabData = (empStats.collaboratorStats && empStats.collaboratorStats.length > 0)
+        ? empStats.collaboratorStats[0]
+        : null;
+
+      const netBoxes = collabData ? collabData.boxes : (empStats.totalBoxes || 0);
+      const rawBoxes = collabData ? collabData.rawBoxes : (empStats.rawTotalBoxes || 0);
+      const qualPct = collabData ? collabData.qualityPct : (empStats.qualityPct || 100);
+      const errBoxes = collabData ? collabData.penaltyBoxes : (empStats.penaltyCount || 0);
+      const yieldPct = collabData ? collabData.yieldPct : 0;
+      const avgHour = collabData ? collabData.avgPerHour : (empStats.avgPerHour || 0);
+      const cadSec = empStats.avgScanGapSec || 0;
+      const totKg = empStats.totalKg || 0;
+
+      const myLogs = (recentLogs || []).filter(l => String(l.employeeId) === String(empId) || (emp && l.employeeName === emp.name)).slice(0, 10);
+
+      bodyEl.innerHTML = `
+        <!-- Grid de KPIs -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:12px;">
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px; text-align:center;">
+            <div style="font-size:10px; color:var(--muted); text-transform:uppercase;">Caixas Líquidas</div>
+            <div style="font-size:22px; font-weight:800; color:#fff; margin-top:4px;">${netBoxes}</div>
+            <div style="font-size:10px; color:var(--muted); margin-top:2px;">Bruto: ${rawBoxes}</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px; text-align:center;">
+            <div style="font-size:10px; color:var(--muted); text-transform:uppercase;">Peso Total</div>
+            <div style="font-size:22px; font-weight:800; color:var(--green-neon); margin-top:4px;">${totKg} <span style="font-size:11px; font-weight:400;">kg</span></div>
+            <div style="font-size:10px; color:var(--muted); margin-top:2px;">${(totKg/1000).toFixed(3)} t</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px; text-align:center;">
+            <div style="font-size:10px; color:var(--muted); text-transform:uppercase;">Qualidade</div>
+            <div style="font-size:22px; font-weight:800; color:${colorByPct(qualPct)}; margin-top:4px;">${qualPct}%</div>
+            <div style="font-size:10px; color:${errBoxes > 0 ? 'var(--red)' : 'var(--muted)'}; margin-top:2px;">${errBoxes} erros</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px; text-align:center;">
+            <div style="font-size:10px; color:var(--muted); text-transform:uppercase;">Produtividade</div>
+            <div style="font-size:22px; font-weight:800; color:${colorByPct(yieldPct)}; margin-top:4px;">${yieldPct}%</div>
+            <div style="font-size:10px; color:var(--muted); margin-top:2px;">Meta diária</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px; text-align:center;">
+            <div style="font-size:10px; color:var(--muted); text-transform:uppercase;">Ritmo Médio</div>
+            <div style="font-size:22px; font-weight:800; color:var(--blue); margin-top:4px;">${avgHour} <span style="font-size:11px; font-weight:400;">cx/h</span></div>
+            <div style="font-size:10px; color:var(--muted); margin-top:2px;">Por hora ativa</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px; text-align:center;">
+            <div style="font-size:10px; color:var(--muted); text-transform:uppercase;">Cadência (Gap)</div>
+            <div style="font-size:22px; font-weight:800; color:${cadSec > 0 && cadSec < 20 ? 'var(--green)' : 'var(--yellow)'}; margin-top:4px;">${cadSec > 0 ? cadSec + 's' : '--'}</div>
+            <div style="font-size:10px; color:var(--muted); margin-top:2px;">Intervalo médio</div>
+          </div>
+        </div>
+
+        <!-- Breakdown: Modelos de Caixas e Parcelas -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:14px;">
+            <div style="font-size:12px; font-weight:700; color:var(--blue); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px;">📦 Modelos / Pesos Produzidos</div>
+            <div style="display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto;">
+              ${(empStats.boxTypeStats && empStats.boxTypeStats.length > 0) ? empStats.boxTypeStats.map(b => `
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; padding:6px 8px; background:rgba(0,0,0,0.2); border-radius:6px;">
+                  <span>${esc(b.label)}</span>
+                  <span style="font-weight:700; color:#fff;">${b.boxes} cx <span class="muted" style="font-weight:400;">(${(b.kg/1000).toFixed(2)} t)</span></span>
+                </div>
+              `).join('') : '<div class="muted" style="font-size:12px; padding:10px;">Nenhum modelo registrado.</div>'}
+            </div>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:14px;">
+            <div style="font-size:12px; font-weight:700; color:var(--green); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px;">🌱 Parcelas / Variedades</div>
+            <div style="display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto;">
+              ${(empStats.parcelStats && empStats.parcelStats.length > 0) ? empStats.parcelStats.map(p => `
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; padding:6px 8px; background:rgba(0,0,0,0.2); border-radius:6px;">
+                  <span>${esc(p.label)}</span>
+                  <span style="font-weight:700; color:#fff;">${p.boxes} cx</span>
+                </div>
+              `).join('') : '<div class="muted" style="font-size:12px; padding:10px;">Nenhuma parcela registrada.</div>'}
+            </div>
+          </div>
+        </div>
+
+        <!-- Auditorias / Defeitos se houver -->
+        ${(empStats.qualityBreakdown && empStats.qualityBreakdown.length > 0) ? `
+          <div style="background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); border-radius:12px; padding:14px;">
+            <div style="font-size:12px; font-weight:700; color:var(--red); margin-bottom:8px; text-transform:uppercase;">⚠️ Ocorrências de Auditoria / Defeitos</div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              ${empStats.qualityBreakdown.map(q => `
+                <span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#fca5a5; font-size:11px; padding:4px 10px; border-radius:8px;">
+                  <strong>${esc(q.label)}:</strong> ${q.count} penalidades
+                </span>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Últimas Leituras do Colaborador -->
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:14px;">
+          <div style="font-size:12px; font-weight:700; color:var(--text); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px;">🕒 Histórico Recente de Bipes</div>
+          <div style="display:flex; flex-direction:column; gap:6px; max-height:150px; overflow-y:auto;">
+            ${myLogs.length > 0 ? myLogs.map(l => `
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; padding:6px 10px; background:rgba(0,0,0,0.25); border-radius:6px;">
+                <span style="color:var(--muted);">${new Date(l.ts).toLocaleTimeString()}</span>
+                <span style="font-weight:600; color:#fff;">${esc(l.weightLabel || 'SEM PESO')}</span>
+                <span style="color:var(--muted);">${esc(l.parcelCode || '')} ${esc(l.varietyName || '')}</span>
+              </div>
+            `).join('') : '<div class="muted" style="font-size:11px; padding:6px;">Nenhum bipe recente.</div>'}
+          </div>
+        </div>
+      `;
+    } catch (err) {
+      console.error('Erro ao abrir modal de colaborador:', err);
+      bodyEl.innerHTML = `<div style="text-align:center; padding:30px; color:var(--red);">Erro ao carregar dados do colaborador: ${esc(err.message || String(err))}</div>`;
+    }
+  };
 
   async function initConfig() {
     const cfgTenant = must('cfgTenant');
@@ -2503,37 +2829,62 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// ── Módulo de Apresentação de Desempenho dos Colaboradores (Showcase/Rotativo) ─
+// ── Módulo de Apresentação de Desempenho dos Colaboradores (Showcase/Rotativo a cada 2 min) ─
 let showcaseTimer = null;
+let showcaseProgressTimer = null;
 let showcaseCollabs = [];
 let showcaseIndex = 0;
+let showcaseIsPaused = false;
+const SLIDE_DURATION_MS = 8000;
+let slideStartedAt = Date.now();
 
 async function triggerCollabShowcase() {
   const overlay = document.getElementById('collabShowcaseOverlay');
   if (!overlay) return;
+
+  // Só exibe se o painel estiver ativo e o leitor não estiver digitando
+  const scanInput = document.getElementById('scanInput');
+  if (!scanInput) return;
+  if (scanInput.value && scanInput.value.trim().length > 0) return;
 
   const stationId = window.stationId || 'st01';
   const roleSelect = document.getElementById('roleSelect');
   const role = roleSelect ? roleSelect.value : 'EMBALADOR';
 
   try {
-    const res = await window.api.stateGet({ stationId, role });
-    let collabs = (res && res.top10 && res.top10.length > 0) ? res.top10 : [];
+    const todaySMs = startOfDayMs(isoDateToday());
+    const todayEMs = endOfDayMs(isoDateToday());
+
+    // Busca estatísticas analíticas consolidadas de hoje
+    const dsStats = await window.api.dashboardsGetStats({
+      stationId,
+      startMs: todaySMs,
+      endMs: todayEMs
+    });
+
+    let collabs = (dsStats && dsStats.collaboratorStats && dsStats.collaboratorStats.length > 0)
+      ? [...dsStats.collaboratorStats]
+      : [];
 
     if (collabs.length === 0) {
-      // Fallback: se não houver registros de bipe hoje, busca os colaboradores cadastrados para apresentar a tela
+      // Fallback: se ainda não houver caixas registradas hoje, apresenta lista de colaboradores cadastrados
       const emps = await window.api.employeesList();
       if (emps && emps.length > 0) {
         collabs = emps
-          .filter(e => !role || e.role === role || e.role === 'AMBOS')
+          .filter(e => Number(e.active) === 1 && (!role || e.role === role || e.role === 'AMBOS'))
           .map(e => ({
             id: e.id,
             name: e.name,
             role: e.role,
-            photoPath: e.photo_url || e.photoPath || '',
-            produced: 0,
+            photoPath: e.photo_path || '',
+            boxes: 0,
+            rawBoxes: 0,
+            penaltyBoxes: 0,
+            errorPct: 0,
             qualityPct: 100,
-            productivityPct: 0
+            yieldPct: 0,
+            avgPerHour: 0,
+            target: dsStats.targets ? dsStats.targets[(e.role || '').toLowerCase() === 'empilhador' ? 'stacker' : 'packer'] : 100
           }));
       }
     }
@@ -2542,35 +2893,82 @@ async function triggerCollabShowcase() {
 
     showcaseCollabs = collabs;
     showcaseIndex = 0;
+    showcaseIsPaused = false;
 
     overlay.classList.add('active');
-    renderShowcaseSlide();
-
-    if (showcaseTimer) clearInterval(showcaseTimer);
-    showcaseTimer = setInterval(() => {
-      showcaseIndex++;
-      if (showcaseIndex >= showcaseCollabs.length) {
-        stopCollabShowcase();
-      } else {
-        renderShowcaseSlide();
-      }
-    }, 6000);
+    setupShowcaseControls();
+    await renderShowcaseSlide();
+    startSlideTimer();
   } catch (err) {
     console.error('Erro ao iniciar showcase:', err);
   }
 }
 
-function renderShowcaseSlide() {
+function startSlideTimer() {
+  if (showcaseTimer) clearTimeout(showcaseTimer);
+  if (showcaseProgressTimer) clearInterval(showcaseProgressTimer);
+
+  slideStartedAt = Date.now();
+  const pBar = document.getElementById('showcaseProgressBar');
+  if (pBar) pBar.style.width = '0%';
+
+  showcaseProgressTimer = setInterval(() => {
+    if (showcaseIsPaused) return;
+    const elapsed = Date.now() - slideStartedAt;
+    const pct = Math.min(100, (elapsed / SLIDE_DURATION_MS) * 100);
+    if (pBar) pBar.style.width = `${pct}%`;
+
+    if (elapsed >= SLIDE_DURATION_MS) {
+      clearInterval(showcaseProgressTimer);
+      nextShowcaseSlide();
+    }
+  }, 100);
+}
+
+async function renderShowcaseSlide() {
   const c = showcaseCollabs[showcaseIndex];
   if (!c) return;
 
+  const total = showcaseCollabs.length;
+  const rank = showcaseIndex + 1;
+
+  // 1. Ranking Badge
+  const rankBadge = document.getElementById('showcaseRankBadge');
+  if (rankBadge) {
+    if (rank === 1) {
+      rankBadge.textContent = '🏆 1º LUGAR NO RANKING';
+      rankBadge.style.background = 'rgba(234, 179, 8, 0.25)';
+      rankBadge.style.borderColor = '#eab308';
+      rankBadge.style.color = '#fde047';
+    } else if (rank === 2) {
+      rankBadge.textContent = '🥈 2º LUGAR NO RANKING';
+      rankBadge.style.background = 'rgba(148, 163, 184, 0.2)';
+      rankBadge.style.borderColor = '#94a3b8';
+      rankBadge.style.color = '#e2e8f0';
+    } else if (rank === 3) {
+      rankBadge.textContent = '🥉 3º LUGAR NO RANKING';
+      rankBadge.style.background = 'rgba(217, 119, 6, 0.2)';
+      rankBadge.style.borderColor = '#d97706';
+      rankBadge.style.color = '#fdba74';
+    } else {
+      rankBadge.textContent = `#${rank} NO RANKING GERAL`;
+      rankBadge.style.background = 'rgba(59, 130, 246, 0.2)';
+      rankBadge.style.borderColor = 'var(--blue)';
+      rankBadge.style.color = '#60a5fa';
+    }
+  }
+
+  // 2. Contador
+  const counter = document.getElementById('showcaseSlideCounter');
+  if (counter) counter.textContent = `Colaborador ${rank} de ${total}`;
+
+  // 3. Perfil
   const photo = document.getElementById('showcasePhoto');
   const name = document.getElementById('showcaseName');
-  const role = document.getElementById('showcaseRole');
-  const boxes = document.getElementById('showcaseBoxes');
-  const pacing = document.getElementById('showcasePacing');
-  const quality = document.getElementById('showcaseQuality');
-  const achieved = document.getElementById('showcaseAchieved');
+  const roleBadge = document.getElementById('showcaseRoleBadge');
+  const empIdEl = document.getElementById('showcaseEmpId');
+  const targetVal = document.getElementById('showcaseTargetVal');
+  const yieldVal = document.getElementById('showcaseYieldVal');
 
   if (photo) {
     if (c.photoPath) {
@@ -2578,41 +2976,192 @@ function renderShowcaseSlide() {
     } else {
       photo.style.backgroundImage = `radial-gradient(circle, #3b82f6 0%, #1e293b 100%)`;
     }
+    const qPct = c.qualityPct != null ? c.qualityPct : 100;
+    const ringColor = (qPct >= 95) ? 'var(--green)' : ((qPct >= 85) ? 'var(--yellow)' : 'var(--red)');
+    photo.style.borderColor = ringColor;
   }
   if (name) name.textContent = c.name || `Colaborador #${c.id}`;
-  if (role) role.textContent = c.role || 'Colaborador';
-  if (boxes) boxes.textContent = c.produced || 0;
-  if (pacing) pacing.textContent = c.produced || 0;
-  if (quality) quality.textContent = `${c.qualityPct || 100}%`;
-  if (achieved) achieved.textContent = `${c.productivityPct || 0}%`;
+  if (roleBadge) {
+    roleBadge.textContent = c.role || 'EMBALADOR';
+    roleBadge.className = `badge ${(c.role || '').toLowerCase()}`;
+  }
+  if (empIdEl) empIdEl.textContent = `#${c.id}`;
+  if (targetVal) targetVal.textContent = `${c.target || 100} cx/h`;
+  if (yieldVal) {
+    yieldVal.textContent = `${c.yieldPct || 0}%`;
+    yieldVal.style.color = colorByPct(c.yieldPct);
+  }
+
+  // 4. Métricas Principais
+  const boxesNet = document.getElementById('showcaseBoxesNet');
+  const boxesRaw = document.getElementById('showcaseBoxesRaw');
+  const boxesErr = document.getElementById('showcaseBoxesError');
+  const errRate = document.getElementById('showcaseErrorRate');
+  const qualVal = document.getElementById('showcaseQualityVal');
+  const paceVal = document.getElementById('showcasePaceVal');
+  const cadVal = document.getElementById('showcaseCadenceVal');
+  const totKg = document.getElementById('showcaseTotalKg');
+  const totTon = document.getElementById('showcaseTotalTon');
+
+  if (boxesNet) boxesNet.innerHTML = `${c.boxes || 0} <span style="font-size: 12px; font-weight: 400; color: var(--muted);">cx</span>`;
+  if (boxesRaw) boxesRaw.textContent = `Bruto: ${c.rawBoxes || c.boxes || 0} cx`;
+
+  const pen = c.penaltyBoxes || 0;
+  if (boxesErr) {
+    boxesErr.textContent = pen;
+    boxesErr.style.color = pen > 0 ? 'var(--red)' : 'var(--muted)';
+  }
+  if (errRate) errRate.textContent = `Taxa: ${c.errorPct || 0}%`;
+
+  if (qualVal) {
+    qualVal.textContent = `${c.qualityPct || 100}%`;
+    qualVal.style.color = colorByPct(c.qualityPct);
+  }
+  if (paceVal) paceVal.innerHTML = `${c.avgPerHour || 0} <span style="font-size: 12px; font-weight: 400; color: var(--muted);">cx/h</span>`;
+
+  // 5. Busca detalhamento rápido de modelos e cadência do colaborador no SQLite
+  const stationId = window.stationId || 'st01';
+  const todaySMs = startOfDayMs(isoDateToday());
+  const todayEMs = endOfDayMs(isoDateToday());
+
+  try {
+    const singleStats = await window.api.dashboardsGetStats({
+      stationId,
+      startMs: todaySMs,
+      endMs: todayEMs,
+      employeeId: c.id
+    });
+
+    const cad = singleStats.avgScanGapSec || 0;
+    if (cadVal) {
+      cadVal.textContent = cad > 0 ? `${cad}s` : '--';
+      cadVal.style.color = cad > 0 && cad < 20 ? 'var(--green)' : 'var(--yellow)';
+    }
+
+    const kg = singleStats.totalKg || 0;
+    if (totKg) totKg.innerHTML = `${kg.toLocaleString('pt-BR')} <span style="font-size: 12px; font-weight: 400; color: var(--muted);">kg</span>`;
+    if (totTon) totTon.textContent = `${(kg / 1000).toFixed(3)} t`;
+
+    const modelsList = document.getElementById('showcaseModelsList');
+    if (modelsList) {
+      if (singleStats.boxTypeStats && singleStats.boxTypeStats.length > 0) {
+        modelsList.innerHTML = singleStats.boxTypeStats.map(b => `
+          <span style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #93c5fd; font-size: 11px; padding: 4px 10px; border-radius: 8px; font-weight: 600;">
+            ${esc(b.label)}: <strong style="color: #fff;">${b.boxes} cx</strong>
+          </span>
+        `).join('');
+      } else {
+        modelsList.innerHTML = '<span class="muted" style="font-size: 11px;">Nenhum modelo específico registrado hoje.</span>';
+      }
+    }
+  } catch (err) {
+    console.warn('Erro ao carregar detalhe de modelos do colaborador:', err);
+  }
+}
+
+function nextShowcaseSlide() {
+  showcaseIndex++;
+  if (showcaseIndex >= showcaseCollabs.length) {
+    stopCollabShowcase();
+  } else {
+    renderShowcaseSlide();
+    startSlideTimer();
+  }
+}
+
+function prevShowcaseSlide() {
+  showcaseIndex--;
+  if (showcaseIndex < 0) showcaseIndex = Math.max(0, showcaseCollabs.length - 1);
+  renderShowcaseSlide();
+  startSlideTimer();
+}
+
+function setupShowcaseControls() {
+  const prevBtn = document.getElementById('showcasePrevBtn');
+  const nextBtn = document.getElementById('showcaseNextBtn');
+  const pauseBtn = document.getElementById('showcasePauseBtn');
+  const closeBtn = document.getElementById('showcaseCloseBtn');
+
+  if (prevBtn) prevBtn.onclick = (e) => { e.stopPropagation(); prevShowcaseSlide(); };
+  if (nextBtn) nextBtn.onclick = (e) => { e.stopPropagation(); nextShowcaseSlide(); };
+  if (closeBtn) closeBtn.onclick = (e) => { e.stopPropagation(); stopCollabShowcase(); };
+  if (pauseBtn) {
+    pauseBtn.onclick = (e) => {
+      e.stopPropagation();
+      showcaseIsPaused = !showcaseIsPaused;
+      pauseBtn.textContent = showcaseIsPaused ? '▶' : '⏸';
+      pauseBtn.title = showcaseIsPaused ? 'Retomar' : 'Pausar';
+    };
+  }
 }
 
 function stopCollabShowcase() {
   const overlay = document.getElementById('collabShowcaseOverlay');
   if (overlay) overlay.classList.remove('active');
   if (showcaseTimer) {
-    clearInterval(showcaseTimer);
+    clearTimeout(showcaseTimer);
     showcaseTimer = null;
+  }
+  if (showcaseProgressTimer) {
+    clearInterval(showcaseProgressTimer);
+    showcaseProgressTimer = null;
   }
   ensureScanInputFocus();
 }
 
+// Atalhos de teclado no modo carrossel
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') stopCollabShowcase();
+  const overlay = document.getElementById('collabShowcaseOverlay');
+  const isActive = overlay && overlay.classList.contains('active');
+
+  if (e.key === 'Escape') {
+    stopCollabShowcase();
+    return;
+  }
   if (e.key === 'F8') {
     e.preventDefault();
-    triggerCollabShowcase();
+    if (isActive) stopCollabShowcase();
+    else triggerCollabShowcase();
+    return;
+  }
+  if (isActive) {
+    if (e.key === 'ArrowRight') {
+      nextShowcaseSlide();
+      return;
+    }
+    if (e.key === 'ArrowLeft') {
+      prevShowcaseSlide();
+      return;
+    }
+    if (e.key === ' ') {
+      e.preventDefault();
+      showcaseIsPaused = !showcaseIsPaused;
+      const pauseBtn = document.getElementById('showcasePauseBtn');
+      if (pauseBtn) pauseBtn.textContent = showcaseIsPaused ? '▶' : '⏸';
+      return;
+    }
+    // Se o leitor de código de barras ou operador digitou qualquer caractere ou Enter, fecha instantaneamente
+    if (e.key.length === 1 || e.key === 'Enter') {
+      stopCollabShowcase();
+    }
   }
 });
 
 const showcaseOverlayEl = document.getElementById('collabShowcaseOverlay');
 if (showcaseOverlayEl) {
-  showcaseOverlayEl.onclick = () => stopCollabShowcase();
+  showcaseOverlayEl.onclick = (e) => {
+    // Só fecha se clicou no fundo do overlay, não nos controles internos do card
+    if (e.target === showcaseOverlayEl) stopCollabShowcase();
+  };
 }
 
-// Inicia carrossel de desempenho a cada 2 minutos automaticamente (para testes)
+// Inicia carrossel de desempenho a cada 2 minutos automaticamente no Painel
 setInterval(() => {
-  triggerCollabShowcase();
+  const scanInput = document.getElementById('scanInput');
+  const overlay = document.getElementById('collabShowcaseOverlay');
+  if (scanInput && overlay && !overlay.classList.contains('active')) {
+    triggerCollabShowcase();
+  }
 }, 2 * 60 * 1000);
 
 

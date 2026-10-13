@@ -357,7 +357,7 @@ def parcel_fruits_list(parcel_id) -> list:
             return linked
 
         # 2. Análise inteligente pelo nome/código do talhão (ex: "P01 — MELAO / CANTALOUPE")
-        parcel = _one("SELECT code FROM parcels WHERE id=?", (pid,))
+        parcel = _get("SELECT code FROM parcels WHERE id=?", (pid,))
         if parcel and parcel.get('code'):
             code_norm = _norm(parcel['code'])
             all_fruits = _all("SELECT id, name FROM fruits WHERE active=1 ORDER BY name")
@@ -382,7 +382,7 @@ def parcel_varieties_list(parcel_id, fruit_id) -> list:
             return linked
 
         # 2. Análise inteligente pelo código do talhão (ex: "P01 — MELAO / CANTALOUPE")
-        parcel = _one("SELECT code FROM parcels WHERE id=?", (pid,))
+        parcel = _get("SELECT code FROM parcels WHERE id=?", (pid,))
         if parcel and parcel.get('code'):
             code_norm = _norm(parcel['code'])
             all_vars = _all("SELECT id, name FROM varieties WHERE active=1 ORDER BY name")
@@ -487,10 +487,9 @@ def scan_submit(station_id='ST01', scanner_id='SC01', role='EMBALADOR',
     if not raw:
         return {'ok': False, 'error': 'EMPTY_BARCODE'}
 
-    # Anti-duplicata (1 segundo)
-    last = _get("SELECT ts, raw_barcode FROM scan_events WHERE station_id=? AND scanner_id=? ORDER BY ts DESC LIMIT 1", (st, sc))
-    if last and last['raw_barcode'] == raw and (ts - last['ts']) < 1000:
-        return {'ok': True, 'ignored': True, 'reason': 'DUPLICATE_SCAN'}
+    # PALIATIVO: bloqueio anti-duplicata (1s) REMOVIDO. Com o relógio do PC voltando,
+    # (ts - last.ts) ficava negativo e toda leitura era descartada como "repetida".
+    # Toda leitura válida agora é contada.
 
     ctx = context_get(st, rl)
 
@@ -812,7 +811,9 @@ def dashboard_get_stats(station_id='ST01', start_ms=0, end_ms=0, employee_id=Non
     t_packer = int(sanitize_num(cfg.get('target_per_hour_packer'), 100))
     t_stacker = int(sanitize_num(cfg.get('target_per_hour_stacker'), 100))
 
-    emp_where = 'AND se.employee_id=?' if employee_id else ''
+    emp_where_se = 'AND se.employee_id=?' if employee_id else ''
+    emp_where_qa = 'AND employee_id=?' if employee_id else ''
+    emp_where_q = 'AND q.employee_id=?' if employee_id else ''
     emp_param = [employee_id] if employee_id else []
 
     collab = _all(f"""
@@ -822,16 +823,16 @@ def dashboard_get_stats(station_id='ST01', start_ms=0, end_ms=0, employee_id=Non
                COALESCE((SELECT SUM(penalty_boxes) FROM quality_audits WHERE employee_id=e.id AND ts BETWEEN ? AND ?),0) as penalty_boxes
         FROM employees e JOIN scan_events se ON se.employee_id=e.id
         LEFT JOIN box_weights bw ON bw.id=se.weight_id
-        WHERE se.station_id=? AND se.ts BETWEEN ? AND ? {emp_where}
+        WHERE se.station_id=? AND se.ts BETWEEN ? AND ? {emp_where_se}
         GROUP BY e.id, e.name, e.photo_path, e.role
         ORDER BY (COUNT(se.id) - COALESCE((SELECT SUM(penalty_boxes) FROM quality_audits WHERE employee_id=e.id AND ts BETWEEN ? AND ?),0)) DESC
-        LIMIT 10
+        LIMIT 100
     """, [s, e, s, e, st, s, e] + emp_param + [s, e])
 
     box_stats = _all(f"""
         SELECT COALESCE(bw.name,'SEM PESO') as label, COUNT(se.id) as boxes, SUM(COALESCE(bw.weight_kg,0)) as kg
         FROM scan_events se LEFT JOIN box_weights bw ON bw.id=se.weight_id
-        WHERE se.station_id=? AND se.employee_id IS NOT NULL AND se.ts BETWEEN ? AND ? {emp_where}
+        WHERE se.station_id=? AND se.employee_id IS NOT NULL AND se.ts BETWEEN ? AND ? {emp_where_se}
         GROUP BY COALESCE(bw.name,'SEM PESO') ORDER BY boxes DESC
     """, [st, s, e] + emp_param)
 
@@ -843,29 +844,29 @@ def dashboard_get_stats(station_id='ST01', start_ms=0, end_ms=0, employee_id=Non
         LEFT JOIN parcels p ON p.id=se.parcel_id
         LEFT JOIN fruits f ON f.id=se.fruit_id
         LEFT JOIN varieties v ON v.id=se.variety_id
-        WHERE se.station_id=? AND se.employee_id IS NOT NULL AND se.ts BETWEEN ? AND ? {emp_where}
+        WHERE se.station_id=? AND se.employee_id IS NOT NULL AND se.ts BETWEEN ? AND ? {emp_where_se}
         GROUP BY se.parcel_id, se.fruit_id, se.variety_id ORDER BY boxes DESC
     """, [st, s, e] + emp_param)
 
     total_stats = _get(f"""
         SELECT COUNT(se.id) as totalBoxes, SUM(COALESCE(bw.weight_kg,0)) as totalKg
         FROM scan_events se LEFT JOIN box_weights bw ON bw.id=se.weight_id
-        WHERE se.station_id=? AND se.ts BETWEEN ? AND ? {emp_where}
+        WHERE se.station_id=? AND se.ts BETWEEN ? AND ? {emp_where_se}
     """, [st, s, e] + emp_param)
 
-    penalties = _get(f"SELECT SUM(penalty_boxes) as n FROM quality_audits WHERE ts BETWEEN ? AND ? {emp_where}", [s, e] + emp_param)
+    penalties = _get(f"SELECT SUM(penalty_boxes) as n FROM quality_audits WHERE ts BETWEEN ? AND ? {emp_where_qa}", [s, e] + emp_param)
     penalty_count = int((penalties or {}).get('n') or 0)
 
     hourly_collab = _all(f"""
         SELECT e.name, strftime('%H', se.ts/1000, 'unixepoch','localtime') as hr, COUNT(se.id) as boxes
         FROM scan_events se JOIN employees e ON se.employee_id=e.id
-        WHERE se.station_id=? AND se.ts BETWEEN ? AND ? {emp_where}
+        WHERE se.station_id=? AND se.ts BETWEEN ? AND ? {emp_where_se}
         GROUP BY e.name, hr ORDER BY hr ASC, boxes DESC
     """, [st, s, e] + emp_param)
 
-    current = _get(f"SELECT COUNT(*) as n FROM scan_events se WHERE se.station_id=? AND se.employee_id IS NOT NULL AND se.ts BETWEEN ? AND ? {emp_where}", [st, s, e] + emp_param)
+    current = _get(f"SELECT COUNT(*) as n FROM scan_events se WHERE se.station_id=? AND se.employee_id IS NOT NULL AND se.ts BETWEEN ? AND ? {emp_where_se}", [st, s, e] + emp_param)
     duration = e - s
-    prev = _get(f"SELECT COUNT(*) as n FROM scan_events se WHERE se.station_id=? AND se.employee_id IS NOT NULL AND se.ts BETWEEN ? AND ? {emp_where}", [st, s - duration, s] + emp_param)
+    prev = _get(f"SELECT COUNT(*) as n FROM scan_events se WHERE se.station_id=? AND se.employee_id IS NOT NULL AND se.ts BETWEEN ? AND ? {emp_where_se}", [st, s - duration, s] + emp_param)
 
     net_boxes = max(0, int((total_stats or {}).get('totalBoxes') or 0) - penalty_count)
     hours_active = max(1, round((e - s) / 3_600_000))
@@ -873,24 +874,53 @@ def dashboard_get_stats(station_id='ST01', start_ms=0, end_ms=0, employee_id=Non
 
     quality_breakdown = _all(f"""
         SELECT COALESCE(issue_type,'Outros') as label, SUM(penalty_boxes) as count
-        FROM quality_audits WHERE ts BETWEEN ? AND ? {emp_where}
+        FROM quality_audits WHERE ts BETWEEN ? AND ? {emp_where_qa}
         GROUP BY COALESCE(issue_type,'Outros') ORDER BY count DESC
     """, [s, e] + emp_param)
 
     quality_worst = _all(f"""
         SELECT e.name, SUM(q.penalty_boxes) as penalty_count
         FROM quality_audits q JOIN employees e ON e.id=q.employee_id
-        WHERE q.ts BETWEEN ? AND ? {emp_where}
+        WHERE q.ts BETWEEN ? AND ? {emp_where_q}
         GROUP BY e.name ORDER BY penalty_count DESC LIMIT 5
     """, [s, e] + emp_param)
+
+    avg_scan_gap = 0
+    if employee_id:
+        scans = _all("SELECT ts FROM scan_events WHERE station_id=? AND employee_id=? AND ts BETWEEN ? AND ? ORDER BY ts ASC", [st, employee_id, s, e])
+        if len(scans) > 1:
+            gaps = [(scans[i]['ts'] - scans[i-1]['ts']) / 1000.0 for i in range(1, len(scans)) if 1 <= (scans[i]['ts'] - scans[i-1]['ts']) / 1000.0 <= 300]
+            if gaps:
+                avg_scan_gap = round(sum(gaps) / len(gaps), 1)
+
+    raw_total_boxes = int((total_stats or {}).get('totalBoxes') or 0)
+    total_audited = max(1, raw_total_boxes + penalty_count) if (raw_total_boxes + penalty_count) > 0 else 0
+    global_error_pct = round((penalty_count / total_audited * 100), 1) if total_audited > 0 else 0.0
+    global_quality_pct = round(max(0.0, 100.0 - global_error_pct), 1)
 
     def enrich_collab(c):
         target = t_stacker if c.get('role') == 'EMPILHADOR' else t_packer
         raw = int(c.get('boxes') or 0)
         pen = int(c.get('penalty_boxes') or 0)
         net = max(0, raw - pen)
-        return {**c, 'boxes': net, 'rawBoxes': raw, 'target': target,
-                'yieldPct': round(net / target * 100) if target else 0}
+        tot_c = max(raw, net + pen)
+        c_qual = round((net / tot_c * 100), 1) if tot_c > 0 else 100.0
+        c_err = round((pen / tot_c * 100), 1) if tot_c > 0 else 0.0
+        c_avg = round(net / hours_active, 1) if hours_active > 0 else net
+        c_target_tot = target * hours_active if hours_active > 0 else target
+        c_yield = round((net / c_target_tot * 100), 1) if c_target_tot > 0 else 0.0
+
+        return {
+            **c,
+            'boxes': net,
+            'rawBoxes': raw,
+            'penaltyBoxes': pen,
+            'target': target,
+            'yieldPct': c_yield,
+            'qualityPct': c_qual,
+            'errorPct': c_err,
+            'avgPerHour': c_avg
+        }
 
     return {
         'collaboratorStats': [enrich_collab(c) for c in collab],
@@ -898,12 +928,16 @@ def dashboard_get_stats(station_id='ST01', start_ms=0, end_ms=0, employee_id=Non
         'parcelStats': parcel_stats,
         'hourlyCollab': hourly_collab,
         'totalBoxes': net_boxes,
+        'rawTotalBoxes': raw_total_boxes,
         'totalKg': round(float((total_stats or {}).get('totalKg') or 0) * 10) / 10,
         'penaltyCount': penalty_count,
+        'errorPct': global_error_pct,
+        'qualityPct': global_quality_pct,
         'avgPerHour': avg_per_hour,
+        'hoursActive': hours_active,
         'qualityBreakdown': quality_breakdown,
         'qualityWorstPerformers': quality_worst,
-        'avgScanGapSec': 0,
+        'avgScanGapSec': avg_scan_gap,
         'targets': {'packer': t_packer, 'stacker': t_stacker},
         'comparison': {'current': int((current or {}).get('n') or 0), 'previous': int((prev or {}).get('n') or 0)},
         'packerTotal': sum(int(c.get('boxes') or 0) for c in collab if c.get('role') == 'EMBALADOR'),

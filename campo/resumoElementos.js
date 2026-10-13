@@ -276,20 +276,67 @@ function _showToastMsg(msg, type = 'ok') {
   else alert(msg);
 }
 
+function isFoliarProduct(d) {
+  if (!d) return false;
+  const norm = s => (s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const t = norm(d.tipo);
+  const prod = norm(d.produto || d.produto_nome || d.nome);
+  const ia = norm(d.ingrediente_ativo);
+  const alvo = norm(d.alvo);
+  return t.includes('FOLIAR') || t.includes('FERTILIZANTE') || t.includes('NUTRI') ||
+    prod.includes('FOLIAR') || prod.includes('ADUBO') || prod.includes('NUTRI') ||
+    prod.includes('P-51') || prod.includes('P - 51') || prod.includes('BORO') ||
+    prod.includes('ZINCO') || prod.includes('CALCIO') || prod.includes('MAGNESIO') ||
+    prod.includes('POTASSIO') || prod.includes('UREIA') || prod.includes('AMINO') ||
+    ia.includes('FOLIAR') || ia.includes('FERTILIZANTE') ||
+    alvo.includes('FOLIAR') || alvo.includes('NUTRI') || alvo.includes('NUTRICAO');
+}
+window.isFoliarProduct = isFoliarProduct;
+
 // ── 4. CÁLCULO GERAL DOS ELEMENTOS POR PARCELA (PC08 / PC09) ───────────────
 async function calcResumoElementosParcela(parcelIdOrCode) {
   let item = null;
+  const localWeb = (typeof webInfoParcelasData !== 'undefined' && Array.isArray(webInfoParcelasData)) ? webInfoParcelasData : [];
+  const localInfo = (typeof _infoParcelas !== 'undefined' && Array.isArray(_infoParcelas)) ? _infoParcelas : [];
   const allList = (window.infoParcelasData || [])
     .concat(window.webInfoParcelasData || [])
+    .concat(localWeb)
     .concat(window._infoParcelas || [])
+    .concat(localInfo)
     .concat(window.parcelas || [])
     .concat(window.dbParcels || []);
 
   if (parcelIdOrCode) {
-    item = allList.find(p => p.id === parcelIdOrCode || String(p.id) === String(parcelIdOrCode) || (p.parcela2 || p.parcela) === parcelIdOrCode);
+    item = allList.find(p => p && (p.id === parcelIdOrCode || String(p.id) === String(parcelIdOrCode) || (p.parcela2 || p.parcela) === parcelIdOrCode));
   }
   if (!item && allList.length > 0) {
     item = allList[0];
+  }
+
+  const currentTenantId = window.tenantId || (window.tenantConfig && window.tenantConfig.id);
+
+  // Fallback: se não encontrou em memória, tenta consultar diretamente no Supabase
+  if (!item && window.sb && currentTenantId) {
+    try {
+      let q = window.sb.from('info_parcelas').select('*').eq('tenant_id', currentTenantId);
+      if (parcelIdOrCode) {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(parcelIdOrCode));
+        if (isUuid) {
+          q = q.or(`id.eq.${parcelIdOrCode},parcela2.eq.${parcelIdOrCode},parcela.eq.${parcelIdOrCode}`);
+        } else {
+          q = q.or(`parcela2.eq.${parcelIdOrCode},parcela.eq.${parcelIdOrCode}`);
+        }
+      }
+      const { data: pData } = await q.limit(50);
+      if (pData && pData.length > 0) {
+        item = pData[0];
+        if (!window.webInfoParcelasData || window.webInfoParcelasData.length === 0) {
+          window.webInfoParcelasData = pData;
+        }
+      }
+    } catch(e) {
+      console.warn('Erro ao carregar parcelas diretamente do Supabase para cálculo:', e);
+    }
   }
 
   const parcelCode = item ? (item.parcela2 || (item.parcela ? item.parcela + (item.letra || '') : '')) : '';
@@ -317,7 +364,6 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
   let fertRows = [];
   let fertData = [];
   let itensData = [];
-  const currentTenantId = window.tenantId || (window.tenantConfig && window.tenantConfig.id);
 
   try {
     if (window.sb && currentTenantId) {
@@ -426,24 +472,29 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
   let foliarRows = [];
   try {
     let opList = [];
-    if (window.sb && tenantId) {
-      const { data: ops } = await sb.from('caderno_campo_op')
+    if (window.sb && currentTenantId) {
+      const { data: ops } = await window.sb.from('caderno_campo_op')
         .select('*, caderno_campo_op_itens(*)')
-        .eq('tenant_id', tenantId)
+        .eq('tenant_id', currentTenantId)
         .order('data_aplicacao', { ascending: true });
       if (ops) opList = ops;
     } else {
       opList = JSON.parse(localStorage.getItem('prodtech_op_records') || '[]');
     }
 
-    const parcelOps = opList.filter(o => o.parcela === parcelCode || o.parcel_id == (item ? item.id : null));
+    const parcelOps = opList.filter(o => {
+      const p1 = (o.parcela && parcelCode && String(o.parcela).trim().toUpperCase() === String(parcelCode).trim().toUpperCase());
+      const p2 = (item && (o.parcel_id == item.id || o.parcela_id == item.id));
+      return p1 || p2;
+    });
     parcelOps.forEach((op, opIdx) => {
       const itens = op.caderno_campo_op_itens || op.itens || [];
-      const foliarItens = itens.filter(it => isFoliarProduct(it) || (it.produto || '').toUpperCase().includes('FOLIAR') || (it.produto || '').toUpperCase().includes('P-51'));
+      const foliarItens = itens.filter(it => isFoliarProduct(it) || (it.produto || it.produto_nome || '').toUpperCase().includes('FOLIAR') || (it.produto || it.produto_nome || '').toUpperCase().includes('P-51'));
       
       foliarItens.forEach((fit, fIdx) => {
+        const prodName = fit.produto_nome || fit.produto || fit.nome || 'P - 51';
         const q = parseFloat(fit.quantidade_utilizada || fit.quantidade || fit.dose_calculada || 5.0) || 5.0;
-        const comp = getElementsComposition(fit.produto || fit.produto_nome || 'P - 51');
+        const comp = getElementsComposition(prodName);
         const nutrs = {};
         NUTRIENT_COLUMNS.forEach(col => {
           const pct = (comp[col.key] || 0) / 100;

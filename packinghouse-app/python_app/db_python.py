@@ -324,6 +324,31 @@ def rows_to_list(rows) -> list:
     return [dict(r) for r in rows]
 
 
+_clock_anchor = None  # (base_ms, monotonic_start)
+
+
+def _init_clock():
+    """
+    PALIATIVO: o relógio do PC da empresa fica voltando sozinho. Ancoramos a hora
+    na partida (maior entre a hora do PC e o último registro gravado no banco) e
+    avançamos com time.monotonic(), que não é afetado por ajustes do relógio.
+    """
+    global _clock_anchor
+    base = int(time.time() * 1000)
+    try:
+        conn = get_db()
+        for tbl in ('scan_events',):
+            row = conn.execute(f"SELECT MAX(ts) FROM {tbl}").fetchone()
+            if row and row[0]:
+                base = max(base, int(row[0]) + 1)
+    except Exception:
+        pass
+    _clock_anchor = (base, time.monotonic())
+
+
 def now_ms() -> int:
-    """Timestamp atual em milissegundos (equivalente ao Date.now() do JS)."""
-    return int(time.time() * 1000)
+    """Timestamp atual em ms, imune a voltas do relógio do Windows."""
+    if _clock_anchor is None:
+        _init_clock()
+    base, t0 = _clock_anchor
+    return base + int((time.monotonic() - t0) * 1000)

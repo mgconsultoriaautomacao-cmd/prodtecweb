@@ -26,21 +26,24 @@
     listeners[eventName].push(callback);
   }
 
+  let channelInitialized = false;
   let pyapiReadyPromise = new Promise((resolve) => {
     function initChannel() {
+      if (channelInitialized) return;
       if (typeof QWebChannel !== 'undefined' && typeof qt !== 'undefined' && qt.webChannelTransport) {
+        channelInitialized = true;
         new QWebChannel(qt.webChannelTransport, function(channel) {
           window.pyapi = channel.objects.pyapi;
           console.log('[Bridge] QWebChannel conectado com sucesso ao Python backend.');
           resolve(window.pyapi);
         });
       } else {
-        setTimeout(initChannel, 10);
+        setTimeout(initChannel, 25);
       }
     }
     initChannel();
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initChannel);
+      document.addEventListener('DOMContentLoaded', initChannel, { once: true });
     }
   });
 

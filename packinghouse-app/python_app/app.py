@@ -556,19 +556,28 @@ class MainWindow(QMainWindow):
 # Ponto de entrada
 # ═══════════════════════════════════════════════════════════════════════════════
 if __name__ == '__main__':
+    import traceback
+
+    def _safe_excepthook(exc_type, exc, tb):
+        # Evita que o PyQt6 derrube o app (abort) por erro em qualquer slot.
+        print('ERRO (app continua rodando):')
+        traceback.print_exception(exc_type, exc, tb)
+    sys.excepthook = _safe_excepthook
     # Compatibilidade com telas de alta resolução (DPI)
     os.environ.setdefault('QT_AUTO_SCREEN_SCALE_FACTOR', '1')
 
     # Previne TELA PRETA no QWebEngine em PCs com placas integradas, drivers básicos ou sem GPU dedicada
     chromium_flags = [
         '--disable-gpu',
-        '--disable-software-rasterizer',
         '--no-sandbox',
         '--disable-gpu-compositing',
         '--enable-features=NetworkServiceInProcess',
         '--ignore-gpu-blocklist',
-        '--disable-direct-composition'
+        '--disable-direct-composition',
+        '--enable-software-rasterizer'
     ]
+    os.environ.setdefault('QT_QUICK_BACKEND', 'software')
+    os.environ.setdefault('QMLSCENE_DEVICE', 'softwarecontext')
     existing_flags = os.environ.get('QTWEBENGINE_CHROMIUM_FLAGS', '')
     os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = f"{existing_flags} {' '.join(chromium_flags)}".strip()
 

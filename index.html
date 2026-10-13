@@ -7299,8 +7299,7 @@ async function openEmpDrawer(idOrName) {
   if (!emp) emp = _employees.find(e => normalizeStr(e.name).includes(clean) || clean.includes(normalizeStr(e.name)));
 
   if (!emp) {
-    if (clean !== 'desconhecido' && clean !== '—') console.error('Colaborador não encontrado:', idOrName);
-    return;
+    emp = { id: idOrName, name: String(idOrName), barcode: String(idOrName), role: 'EMBALADOR', photo_path: '' };
   }
 
   const stats = window._lastEmpStats ? (window._lastEmpStats[clean] || (emp ? window._lastEmpStats[emp.name.trim().toLowerCase()] : null)) : null;
@@ -7318,31 +7317,23 @@ async function openEmpDrawer(idOrName) {
   const empBarcode = emp.barcode ? String(emp.barcode).trim() : '0';
   const empName = emp.name ? String(emp.name).trim() : '';
 
-  let scanQuery = sb.from('production_scans').select('ts, weight_kg, role, employee_barcode, employee_name').eq('tenant_id', tenantId).gte('ts', startIso).lte('ts', endIso);
+  let scanQuery = sb.from('production_scans').select('ts, weight_kg, role, raw_barcode, employee_name').eq('tenant_id', tenantId).gte('ts', startIso).lte('ts', endIso);
   if (emp.barcode && emp.name) {
-    scanQuery = scanQuery.or(`employee_barcode.eq.${empBarcode},employee_name.eq.${empName}`);
+    scanQuery = scanQuery.or(`raw_barcode.eq.${empBarcode},employee_name.eq.${empName}`);
   } else if (emp.barcode) {
-    scanQuery = scanQuery.eq('employee_barcode', empBarcode);
+    scanQuery = scanQuery.eq('raw_barcode', empBarcode);
   } else if (emp.name) {
     scanQuery = scanQuery.eq('employee_name', empName);
   }
 
   let qualityQuery = sb.from('quality_audits').select('penalty_boxes').eq('tenant_id', tenantId);
-  if (emp.barcode && emp.name) {
-    qualityQuery = qualityQuery.or(`employee_barcode.eq.${empBarcode},employee_name.eq.${empName}`);
-  } else if (emp.barcode) {
+  if (emp.barcode) {
     qualityQuery = qualityQuery.eq('employee_barcode', empBarcode);
-  } else if (emp.name) {
-    qualityQuery = qualityQuery.eq('employee_name', empName);
   }
 
   let absenceQuery = sb.from('employee_absences').select('*').eq('tenant_id', tenantId).gte('date', sDateOnly).lte('date', eDateOnly);
-  if (emp.barcode && emp.name) {
-    absenceQuery = absenceQuery.or(`employee_barcode.eq.${empBarcode},employee_name.eq.${empName}`);
-  } else if (emp.barcode) {
+  if (emp.barcode) {
     absenceQuery = absenceQuery.eq('employee_barcode', empBarcode);
-  } else if (emp.name) {
-    absenceQuery = absenceQuery.eq('employee_name', empName);
   }
 
   const [qAudits, qAbs, allScans, qFieldServices, qCarraoServices] = await Promise.all([
@@ -7421,8 +7412,8 @@ async function openEmpDrawer(idOrName) {
   bonusEarned: bonusEarned,
   idleTime: stats?.idleTime || 0,
   periodDays: numDaysInPeriod,
-  startDate: start.split('T')[0],
-  endDate: end.split('T')[0]
+  startDate: sDateOnly,
+  endDate: eDateOnly
   };
 
   if (totalBoxes > 0 || stats || totalFieldOps > 0) {
@@ -15549,19 +15540,68 @@ async function loadWebResumoElementosUI() {
   const select = $('webElementosParcelSelect');
   if (!select) return;
 
-  const allParcels = (window.webInfoParcelasData && window.webInfoParcelasData.length > 0)
-    ? window.webInfoParcelasData
-    : (window.infoParcelasData || []);
+  function getLocalParcels() {
+    if (typeof _infoParcelas !== 'undefined' && Array.isArray(_infoParcelas) && _infoParcelas.length > 0) return _infoParcelas;
+    if (window._infoParcelas && window._infoParcelas.length > 0) return window._infoParcelas;
+    if (typeof webInfoParcelasData !== 'undefined' && Array.isArray(webInfoParcelasData) && webInfoParcelasData.length > 0) return webInfoParcelasData;
+    if (window.webInfoParcelasData && window.webInfoParcelasData.length > 0) return window.webInfoParcelasData;
+    if (window.infoParcelasData && window.infoParcelasData.length > 0) return window.infoParcelasData;
+    if (typeof parcels !== 'undefined' && Array.isArray(parcels) && parcels.length > 0) return parcels;
+    if (window.parcels && window.parcels.length > 0) return window.parcels;
+    return [];
+  }
+
+  let allParcels = getLocalParcels();
+
+  // Se não encontrou em memória, tenta chamar loadWebPlantios ou loadInfoParcelas
+  if (!allParcels || allParcels.length === 0) {
+    if (typeof loadInfoParcelas === 'function') {
+      try { await loadInfoParcelas(); } catch(e) {}
+    }
+    if (typeof loadWebPlantios === 'function') {
+      try { await loadWebPlantios(); } catch(e) {}
+    }
+    allParcels = getLocalParcels();
+  }
+
+  // Se ainda assim estiver vazio, busca diretamente no Supabase
+  if ((!allParcels || allParcels.length === 0) && window.sb) {
+    const tId = window.tenantId || (window.tenantConfig && window.tenantConfig.id);
+    try {
+      let q = window.sb.from('info_parcelas').select('*').order('created_at', { ascending: false });
+      if (tId) q = q.eq('tenant_id', tId);
+      const { data, error } = await q;
+      if (!error && data && data.length > 0) {
+        allParcels = data;
+        if (typeof webInfoParcelasData !== 'undefined') webInfoParcelasData = data;
+        window.webInfoParcelasData = data;
+        window._infoParcelas = data;
+      }
+    } catch (e) {
+      console.warn('Erro ao consultar info_parcelas do Supabase:', e);
+    }
+  }
+
+  // Garante exposição global
+  window.webInfoParcelasData = allParcels;
+  window._infoParcelas = allParcels;
 
   const currentVal = select.value;
-  select.innerHTML = allParcels.map(p => {
-    const pCode = p.parcela2 || (p.parcela ? p.parcela + (p.letra || '') : p.id);
-    const vars = [p.variedade, p.variedade2, p.variedade3].filter(Boolean).join(', ') || 'Sem variedade';
+  select.innerHTML = (allParcels || []).map(p => {
+    const pCode = p.parcela2 || (p.parcela ? p.parcela + (p.letra || '') : (p.code || p.id));
+    const vars = [p.variedade, p.variedade2, p.variedade3, p.variedade4, p.variedade5].filter(Boolean).join(', ') || 'Sem variedade';
     return `<option value="${p.id}">${pCode} — ${p.cultura || 'Melão'} (${vars})</option>`;
   }).join('');
 
   if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
     select.value = currentVal;
+  } else if (select.options.length > 0) {
+    const firstActive = (allParcels || []).find(p => p.ativo !== false);
+    if (firstActive) {
+      select.value = firstActive.id;
+    } else {
+      select.selectedIndex = 0;
+    }
   }
 
   await onWebElementosParcelChange();
@@ -15571,10 +15611,19 @@ async function onWebElementosParcelChange() {
   const pId = $('webElementosParcelSelect')?.value;
   if (!pId) return;
 
-  const allParcels = (window.webInfoParcelasData && window.webInfoParcelasData.length > 0)
-    ? window.webInfoParcelasData
-    : (window.infoParcelasData || []);
-  const pObj = allParcels.find(p => p.id === pId || String(p.id) === String(pId));
+  function getLocalParcels() {
+    if (typeof _infoParcelas !== 'undefined' && Array.isArray(_infoParcelas) && _infoParcelas.length > 0) return _infoParcelas;
+    if (window._infoParcelas && window._infoParcelas.length > 0) return window._infoParcelas;
+    if (typeof webInfoParcelasData !== 'undefined' && Array.isArray(webInfoParcelasData) && webInfoParcelasData.length > 0) return webInfoParcelasData;
+    if (window.webInfoParcelasData && window.webInfoParcelasData.length > 0) return window.webInfoParcelasData;
+    if (window.infoParcelasData && window.infoParcelasData.length > 0) return window.infoParcelasData;
+    if (typeof parcels !== 'undefined' && Array.isArray(parcels) && parcels.length > 0) return parcels;
+    if (window.parcels && window.parcels.length > 0) return window.parcels;
+    return [];
+  }
+
+  const allParcels = getLocalParcels();
+  const pObj = allParcels.find(p => p && (p.id === pId || String(p.id) === String(pId)));
 
   if (pObj) {
     if ($('webElementosArea')) $('webElementosArea').value = pObj.area ? `${pObj.area} ha` : '3.00 ha';
