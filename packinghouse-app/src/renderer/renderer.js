@@ -2150,7 +2150,7 @@ window.addEventListener('DOMContentLoaded', () => {
           </div>
 
           <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:14px;">
-            <div style="font-size:12px; font-weight:700; color:var(--green); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px;">🌱 Parcelas / Variedades</div>
+            <div style="font-size:12px; font-weight:700; color:var(--green); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:5px;"><i data-lucide="sprout" style="width:13px;height:13px"></i> Parcelas / Variedades</div>
             <div style="display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto;">
               ${(empStats.parcelStats && empStats.parcelStats.length > 0) ? empStats.parcelStats.map(p => `
                 <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; padding:6px 8px; background:rgba(0,0,0,0.2); border-radius:6px;">
@@ -3134,10 +3134,12 @@ async function renderShowcaseSlide() {
   }
 }
 
-function nextShowcaseSlide() {
+function nextShowcaseSlide(isManual = false) {
   showcaseIndex++;
   if (showcaseIndex >= showcaseCollabs.length) {
-    showcaseIndex = 0; // Loop contínuo: volta para o 1º colocado sem fechar
+    // Ao passar por todos os embaladores/colaboradores, encerra o carrossel e volta para a tela de contagem do painel
+    stopCollabShowcase();
+    return;
   }
   renderShowcaseSlide();
   startSlideTimer();
@@ -3157,7 +3159,7 @@ function setupShowcaseControls() {
   const closeBtn = document.getElementById('showcaseCloseBtn');
 
   if (prevBtn) prevBtn.onclick = (e) => { e.stopPropagation(); prevShowcaseSlide(); };
-  if (nextBtn) nextBtn.onclick = (e) => { e.stopPropagation(); nextShowcaseSlide(); };
+  if (nextBtn) nextBtn.onclick = (e) => { e.stopPropagation(); nextShowcaseSlide(true); };
   if (closeBtn) closeBtn.onclick = (e) => { e.stopPropagation(); stopCollabShowcase(); };
   if (pauseBtn) {
     pauseBtn.onclick = (e) => {
@@ -3209,7 +3211,7 @@ document.addEventListener('keydown', (e) => {
   }
   if (isActive) {
     if (e.key === 'ArrowRight') {
-      nextShowcaseSlide();
+      nextShowcaseSlide(true);
       return;
     }
     if (e.key === 'ArrowLeft') {
@@ -3228,9 +3230,16 @@ document.addEventListener('keydown', (e) => {
       }
       return;
     }
-    // IMPORTANTE: Se o leitor de código de barras ou operador digitou qualquer caractere ou Enter,
-    // NÃO fecha o carrossel! Mantém o foco no input de leitura do painel para continuar contabilizando
-    // caixas e atualizando dados em background.
+    // Se o operador ou leitor de código de barras bipar (Enter), encerra o carrossel imediatamente
+    // para exibir a tela de contagem com a leitura processada em primeiro plano.
+    if (e.key === 'Enter') {
+      stopCollabShowcase();
+      const scanInput = document.getElementById('scanInput');
+      if (scanInput) {
+        scanInput.focus();
+      }
+      return;
+    }
     const scanInput = document.getElementById('scanInput');
     if (scanInput && document.activeElement !== scanInput) {
       scanInput.focus();
@@ -3241,7 +3250,7 @@ document.addEventListener('keydown', (e) => {
 const showcaseOverlayEl = document.getElementById('collabShowcaseOverlay');
 if (showcaseOverlayEl) {
   showcaseOverlayEl.onclick = (e) => {
-    // Não fecha ao clicar fora por acidente — usuário fecha explicitamente no botão [X] ou tecla Esc
+    // Não fecha ao clicar fora por acidente — usuário fecha no botão [X], no término da lista ou tecla Esc/Enter
   };
 }
 
@@ -3249,7 +3258,9 @@ if (showcaseOverlayEl) {
 setInterval(() => {
   const scanInput = document.getElementById('scanInput');
   const overlay = document.getElementById('collabShowcaseOverlay');
-  if (scanInput && overlay && !overlay.classList.contains('active')) {
+  const painelView = document.getElementById('view-painel');
+  const isPainelVisible = painelView && painelView.style.display !== 'none';
+  if (scanInput && overlay && isPainelVisible && !overlay.classList.contains('active')) {
     triggerCollabShowcase();
   }
 }, 2 * 60 * 1000);

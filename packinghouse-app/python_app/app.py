@@ -572,20 +572,37 @@ if __name__ == '__main__':
     # Compatibilidade com telas de alta resolução (DPI)
     os.environ.setdefault('QT_AUTO_SCREEN_SCALE_FACTOR', '1')
 
-    # Configuração de alto desempenho para o QWebEngine (suporta Windows, Linux/Raspberry Pi e macOS)
-    # Habilita aceleração por GPU, rasterização eficiente e desativa throttling desnecessário
+    # Flags comuns (sem dependência de GPU): desativa throttling desnecessário
     chromium_flags = [
         '--no-sandbox',
         '--enable-features=NetworkServiceInProcess',
         '--ignore-gpu-blocklist',
-        '--enable-gpu-rasterization',
-        '--enable-zero-copy',
         '--disable-background-timer-throttling',
         '--disable-renderer-backgrounding',
         '--disable-smooth-scrolling',
-        '--num-raster-threads=4',
-        '--enable-accelerated-2d-canvas'
     ]
+
+    # Por padrão usa renderização por SOFTWARE: previne TELA PRETA no QWebEngine em PCs com
+    # placas integradas, drivers básicos ou sem GPU dedicada.
+    # Para habilitar aceleração por GPU (máquinas com driver bom), defina PRODTEC_GPU=1.
+    if os.environ.get('PRODTEC_GPU', '').strip() in ('1', 'true', 'yes'):
+        print('App: Modo GPU habilitado (PRODTEC_GPU=1).')
+        chromium_flags += [
+            '--enable-gpu-rasterization',
+            '--enable-zero-copy',
+            '--num-raster-threads=4',
+            '--enable-accelerated-2d-canvas',
+        ]
+    else:
+        chromium_flags += [
+            '--disable-gpu',
+            '--disable-gpu-compositing',
+            '--disable-direct-composition',
+            '--enable-software-rasterizer',
+        ]
+        os.environ.setdefault('QT_QUICK_BACKEND', 'software')
+        os.environ.setdefault('QMLSCENE_DEVICE', 'softwarecontext')
+
     existing_flags = os.environ.get('QTWEBENGINE_CHROMIUM_FLAGS', '')
     os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = f"{existing_flags} {' '.join(chromium_flags)}".strip()
 

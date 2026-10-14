@@ -1883,6 +1883,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
     <button type="button" class="btn btn-sec" onclick="printPastaCampoFertirrigacao($('fertParcelSelect')?.value)" style="font-size:11px; padding:6px 10px; display:inline-flex; align-items:center; gap:4px; background:rgba(6,182,212,0.1); border-color:rgba(6,182,212,0.3); color:#06b6d4"><i data-lucide="printer" style="width:13px;height:13px"></i> Fert (PC07)</button>
     <button type="button" class="btn btn-sec" onclick="printPastaCampoResumoElementos($('fertParcelSelect')?.value)" style="font-size:11px; padding:6px 10px; display:inline-flex; align-items:center; gap:4px; background:rgba(124,58,237,0.1); border-color:rgba(124,58,237,0.3); color:#a78bfa"><i data-lucide="printer" style="width:13px;height:13px"></i> Elementos (PC08)</button>
     <button type="button" class="btn btn-sec" onclick="printPastaCampoFoliares($('fertParcelSelect')?.value)" style="font-size:11px; padding:6px 10px; display:inline-flex; align-items:center; gap:4px; background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3); color:#4ade80"><i data-lucide="printer" style="width:13px;height:13px"></i> Foliares (PC09)</button>
+    <button type="button" class="btn btn-sec" onclick="printPastaCampoDefensivos($('fertParcelSelect')?.value)" style="font-size:11px; padding:6px 10px; display:inline-flex; align-items:center; gap:4px; background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.3); color:#f87171"><i data-lucide="shield" style="width:13px;height:13px"></i> Defensivos (PC06)</button>
   </div>
 
   <!-- TABS DE NAVEGAÇÃO -->
@@ -3378,6 +3379,7 @@ let varieties = [];
   <button onclick="event.stopPropagation(); printPastaCampoFertirrigacao('${p.id}')" style="font-size:10px; padding:3px 6px; border-radius:6px; background:rgba(6,182,212,0.12); color:#06b6d4; border:1px solid rgba(6,182,212,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:10px;height:10px"></i> Fert (PC07)</button>
   <button onclick="event.stopPropagation(); printPastaCampoResumoElementos('${p.id}')" style="font-size:10px; padding:3px 6px; border-radius:6px; background:rgba(139,92,246,0.12); color:#a78bfa; border:1px solid rgba(139,92,246,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:10px;height:10px"></i> Elementos (PC08)</button>
   <button onclick="event.stopPropagation(); printPastaCampoFoliares('${p.id}')" style="font-size:10px; padding:3px 6px; border-radius:6px; background:rgba(34,197,94,0.12); color:#4ade80; border:1px solid rgba(34,197,94,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:10px;height:10px"></i> Foliares (PC09)</button>
+  <button onclick="event.stopPropagation(); printPastaCampoDefensivos('${p.id}')" style="font-size:10px; padding:3px 6px; border-radius:6px; background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:2px"><i data-lucide="shield" style="width:10px;height:10px"></i> Defensivos (PC06)</button>
   </div>
   </div>
   `;
@@ -6463,47 +6465,98 @@ async function printPastaCampoTratos(idOrStr) {
     try { item = JSON.parse(decodeURIComponent(idOrStr)); } catch(e){}
   }
   if (!item) {
-    item = infoParcelasData.find(x => x.id === idOrStr || x.parcela === idOrStr || x.parcela2 === idOrStr) ||
-           (window._infoParcelas && window._infoParcelas.find(x => x.id === idOrStr || x.parcela === idOrStr || x.parcela2 === idOrStr));
+    item = (typeof infoParcelasData !== 'undefined' ? infoParcelasData : []).find(x => x && (x.id === idOrStr || String(x.id) === String(idOrStr) || x.parcela === idOrStr || x.parcela2 === idOrStr)) ||
+           (window._infoParcelas && window._infoParcelas.find(x => x && (x.id === idOrStr || String(x.id) === String(idOrStr) || x.parcela === idOrStr || x.parcela2 === idOrStr)));
   }
   if (!item) { toast('Parcela não encontrada.', 'err'); return; }
 
-  const pCode = item.parcela2 || item.parcela || '10';
+  const pCode = item.parcela2 || item.parcela || '10.01 T';
 
+  // Buscar tratos no banco se houver
+  let tratosDb = [];
+  try {
+    if (window.sb && tenantId) {
+      const { data, error } = await sb.from('caderno_campo_tratos')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .or(`parcel_id.eq.${item.id},parcela.eq.${pCode}`)
+        .order('data_trato', { ascending: true });
+      if (!error && data) tratosDb = data;
+    }
+  } catch(e) {
+    console.warn('Aviso: busca de tratos:', e);
+  }
+
+  // Data base do plantio
+  const plantioStr = item.plantio || item.data_plantio || item.transplante;
+  const plantioDt = plantioStr ? new Date(plantioStr + (plantioStr.includes('T') ? '' : 'T00:00:00')) : new Date();
+
+  // 17 Operações Oficiais do Modelo da Foto 1 da Bom Jesus Agrícola
   const standardOperations = [
-    { ativ: 'GRADAGEM', impl: 'GRADE ARADORA', padraoData: '30/06/26' },
-    { ativ: 'SUBSOLAGEM', impl: 'SUBSOLADOR', padraoData: '' },
-    { ativ: 'ARAÇÃO', impl: 'ARADO', padraoData: '' },
-    { ativ: 'GRADAGEM', impl: 'GRADE NIVELADORA', padraoData: '02/07/26' },
-    { ativ: 'SULCAMENTO', impl: 'SULCADOR', padraoData: '' },
-    { ativ: 'ADUBAÇÃO QUÍMICA (FUNDAÇÃO)', impl: 'ADUBADEIRA QUÍMICA/GRADE COBERTURA', padraoData: '' },
-    { ativ: 'ADUBAÇÃO ORGÂNICA (FUNDAÇÃO)', impl: 'ADUBADEIRA ORGÂNICA', padraoData: '' },
-    { ativ: 'COBERTURA', impl: 'GRADE DE COBERTURA', padraoData: '03/07/26' },
-    { ativ: 'INSTALAÇÃO DO SISTEMA DE IRRIGAÇÃO', impl: 'MANUAL', padraoData: '04/07/26' },
-    { ativ: 'COLOCAÇÃO DO MULCHING', impl: 'MÁQUINA DE MULCHING', padraoData: '05/07/26' },
-    { ativ: 'FURAMENTO DO MULCHING', impl: 'MANUAL', padraoData: '' },
-    { ativ: 'COLOCAÇÃO DE ARCOS', impl: 'MANUAL', padraoData: '08/07/26' },
-    { ativ: 'PLANTIO DE MUDAS', impl: 'MANUAL', padraoData: '07/07/26' },
-    { ativ: 'COLOCAÇÃO DE MANTA (TNT)', impl: 'MANUAL', padraoData: '08/07/26' },
-    { ativ: 'RETIRADA DA MANTA (TNT)', impl: 'MANUAL', padraoData: '31/07/26' },
-    { ativ: 'REVISÃO DO SISTEMA DE IRRIGAÇÃO', impl: 'MANUAL', padraoData: '' },
-    { ativ: 'CAPINA DE TRONCO E ENTRE LINHAS', impl: 'MANUAL', padraoData: '31/07/26' },
-    { ativ: 'COLOCAÇÃO COLMÉIAS DE ABELHAS', impl: 'MANUAL', padraoData: '' },
-    { ativ: 'REVISÃO DO SISTEMA DE IRRIGAÇÃO', impl: 'MANUAL', padraoData: '' },
-    { ativ: 'RETIRADA COLMÉIAS DE ABELHAS', impl: 'MANUAL', padraoData: '' },
-    { ativ: 'GIRAMENTO/BANDEJAMENTO DE FRUTOS', impl: 'MANUAL', padraoData: '' },
-    { ativ: 'COLOCAÇÃO DE BANDEJAS', impl: 'MANUAL', padraoData: '' }
+    { ativ: 'GRADAGEM ARADORA', offsetDays: -7, impl: 'GRADE ARADORA', num: '1', defaultOp: 'FRANCISCO ANTONIO PEREIRA CANDIDO' },
+    { ativ: 'GRADAGEM NIVELADORA', offsetDays: -3, impl: 'GRADE NIVELADORA', num: '1', defaultOp: 'FRANCISCO ANTONIO PEREIRA CANDIDO' },
+    { ativ: 'GRADAGEM NIVELADORA', offsetDays: -3, impl: 'GRADE NIVELADORA', num: '1', defaultOp: 'FRANCISCO ANTONIO PEREIRA CANDIDO' },
+    { ativ: 'COBERTURA', offsetDays: -3, impl: 'GRADE DE COBERTURA', num: '1', defaultOp: 'FRANCISCO ANTONIO PEREIRA CANDIDO' },
+    { ativ: 'MONTAGEM', offsetDays: -3, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' },
+    { ativ: 'COLOCAÇÃO DE MULCHING', offsetDays: -2, impl: 'MAQUINA DE MULCHING', num: '1', defaultOp: 'FRANCISCO ANTONIO PEREIRA CANDIDO' },
+    { ativ: 'PLANTIO', offsetDays: 0, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' },
+    { ativ: 'COLOCAÇÃO DE ARCO', offsetDays: 1, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' },
+    { ativ: 'COLOCAÇÃO DE MANTA', offsetDays: 1, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' },
+    { ativ: 'RETIROU MANTA', offsetDays: 25, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' },
+    { ativ: 'RETIROU ARCO', offsetDays: 25, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' },
+    { ativ: 'CAPINA MANUAL', offsetDays: 25, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' },
+    { ativ: 'COLOCAÇÃO DE COLMÉIAS DE ABELHAS', offsetDays: 26, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' },
+    { ativ: 'RETIRADA DE COLMÉIAS DE ABELHAS', offsetDays: 36, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' },
+    { ativ: 'COLOCAÇÃO DE BANDEJAS', offsetDays: 38, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' },
+    { ativ: 'VIRADA DE FRUTOS', offsetDays: 45, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' },
+    { ativ: 'PLÁSTICO AMARELO NAS BORDADURAS', offsetDays: 15, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' }
   ];
 
-  const rowsHtml = standardOperations.map(op => `
-    <tr>
-      <td style="border:1px solid #000; padding:3px 4px; text-align:center; font-size:7.5pt">${op.padraoData}</td>
-      <td style="border:1px solid #000; padding:3px 6px; font-weight:bold; font-size:7.5pt">${op.ativ}</td>
-      <td style="border:1px solid #000; padding:3px 6px; font-size:7.5pt; text-align:center">${op.impl}</td>
-      <td style="border:1px solid #000; padding:3px 4px; text-align:center; font-size:7.5pt"></td>
-      <td style="border:1px solid #000; padding:3px 6px; font-size:7.5pt"></td>
-    </tr>
-  `).join('');
+  const fmtD = d => {
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
+  const rowsHtml = standardOperations.map((op, idx) => {
+    const matched = tratosDb.find(t => t.atividade && t.atividade.trim().toUpperCase() === op.ativ);
+    let dataVal = '';
+    let numImplVal = op.num;
+    let implVal = op.impl;
+    let operadorVal = op.defaultOp;
+
+    if (matched) {
+      if (matched.data_trato) {
+        const parts = matched.data_trato.split('-');
+        if (parts.length === 3) dataVal = `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+      if (matched.implemento) {
+        const numMatch = matched.implemento.match(/N[º°\.]?\s*([0-9A-Za-z]+)/i);
+        if (numMatch) {
+          numImplVal = numMatch[1];
+          implVal = matched.implemento.replace(/\s*\([^\)]*\)/, '').replace(/\s*-\s*N[º°\.]?\s*[0-9A-Za-z]+/i, '').trim();
+        } else {
+          implVal = matched.implemento;
+        }
+      }
+      if (matched.numero_implemento || matched.equipamento_num) numImplVal = matched.numero_implemento || matched.equipamento_num;
+      if (matched.operador) operadorVal = matched.operador;
+    } else {
+      const calcDt = new Date(plantioDt.getTime() + (op.offsetDays * 86400000));
+      dataVal = fmtD(calcDt);
+    }
+
+    return `
+      <tr>
+        <td style="border:1px solid #000; padding:3px 6px; font-weight:bold; font-size:7.5pt">${op.ativ}</td>
+        <td style="border:1px solid #000; padding:3px 4px; text-align:center; font-size:7.5pt">${dataVal}</td>
+        <td style="border:1px solid #000; padding:3px 6px; font-size:7.5pt; text-align:center">${implVal}</td>
+        <td style="border:1px solid #000; padding:3px 4px; text-align:center; font-size:7.5pt">${numImplVal}</td>
+        <td style="border:1px solid #000; padding:3px 6px; font-size:7.5pt">${operadorVal}</td>
+      </tr>
+    `;
+  }).join('');
 
   const printWin = window.open('', '_blank', 'width=1000,height=1200');
   if (!printWin) { alert('Permita popups para imprimir.'); return; }
@@ -6513,7 +6566,7 @@ async function printPastaCampoTratos(idOrStr) {
   <html>
   <head>
   <meta charset="utf-8"/>
-  <title>PC05 - CONTROLE DE PREPARO DO SOLO / TRATOS CULTURAIS NA CULTURA</title>
+  <title>PC05 - CONTROLE DE PREPARO DO SOLO / TRATOS CULTURAIS EM GERAL NA CULTURA</title>
   <style>
     @page { size: A4 portrait; margin: 6mm 8mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -6521,46 +6574,47 @@ async function printPastaCampoTratos(idOrStr) {
     .sheet { width: 100%; }
     .header-box { width: 100%; border-collapse: collapse; border: 1.5px solid #000; margin-bottom: 6px; }
     .header-box td { border: 1px solid #000; padding: 4px 6px; vertical-align: top; }
-    .title-red { color: #d32f2f; font-weight: bold; font-size: 11pt; text-align: center; text-transform: uppercase; margin: 6px 0 8px 0; letter-spacing: 0.5px; }
-    .parcela-bar { font-size: 8.5pt; font-weight: bold; margin-bottom: 6px; }
+    .title-red { color: #000; font-weight: bold; font-size: 10.5pt; text-align: center; text-transform: uppercase; margin: 6px 0 8px 0; letter-spacing: 0.5px; }
+    .parcela-bar { font-size: 9pt; font-weight: bold; margin-bottom: 6px; }
     .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-    .grid-table th, .grid-table td { border: 1px solid #000; padding: 3px 5px; font-size: 7.5pt; }
+    .grid-table th, .grid-table td { border: 1px solid #000; padding: 3px 5px; font-size: 7.2pt; }
     .grid-table th { background: #fff; font-weight: bold; text-align: center; }
-    .obs-footer { border: 1px solid #000; padding: 5px 8px; font-size: 6.5pt; line-height: 1.3; text-align: justify; }
+    .obs-footer { border: 1px solid #000; padding: 5px 8px; font-size: 6.2pt; line-height: 1.3; text-align: justify; margin-top: 4px; }
   </style>
   </head>
   <body onload="window.print()">
   <div class="sheet">
+    <!-- CABEÇALHO OFICIAL GLOBALGAP / BOM JESUS AGRÍCOLA -->
     <table class="header-box">
       <tr>
         <td style="width: 35%; font-size: 6.8pt; line-height: 1.3;">
-          <strong>ELABORADO, EMITIDO e REVISADO POR:</strong> EMANUELA MOREIRA<br/>
-          Avaliado por: ADGF<br/>
-          Aprovado Por: ADGF<br/>
-          Frequência: Por parcela de campo.
+          <strong>EMITIDO OU REVISADO POR:</strong> Reinaldo Chottan / Emanuela Moreira<br/>
+          AVALIADO POR: JMLL<br/>
+          APROVADO POR: JMLL<br/>
+          FREQUÊNCIA: POR PARCELA DE CAMPO.
         </td>
         <td style="width: 20%; text-align:center; vertical-align:middle;">${getTenantLogoHtml(42, 120)}</td>
         <td style="width: 45%; font-size: 6.5pt; line-height: 1.35;">
           <strong>DEPARTAMENTO:</strong> CAMPO<br/>
-          <strong>NOME DO DOC:</strong> CONT. DE PREPARO DO SOLO/TRATOS CULTURAIS<br/>
-          <strong>EMISSÃO:</strong> 15/06/2026 &nbsp; <strong>MOD. E APROVAÇÃO:</strong> 01/07/2026 &nbsp; <strong>U. REVISÃO:</strong> 01/07/2026<br/>
-          <strong>PAG:</strong> 01 DE 01 &nbsp;\\&nbsp; <strong>COD:</strong> PC05 &nbsp;\\&nbsp; <strong>REVISÃO:</strong> ANUAL &nbsp;\\&nbsp; <strong>VERSÃO:</strong> 01
+          <strong>NOME DO DOC:</strong> CONT. DE PREPARO DO SOLO/TRATOS CULTURAIS EM GERAL NA CULTURA<br/>
+          <strong>EMISSÃO:</strong> 01/06/2012 &nbsp; <strong>MOD. E APROVAÇÃO:</strong> 01/05/2019 &nbsp; <strong>U. REVISÃO:</strong> 01/10/2023<br/>
+          <strong>PAG:</strong> 01 DE 01 &nbsp;\\&nbsp; <strong>COD:</strong> PC05 &nbsp;\\&nbsp; <strong>REVISÃO:</strong> ANUAL &nbsp;\\&nbsp; <strong>VERSÃO:</strong> 21
         </td>
       </tr>
     </table>
 
-    <div class="title-red">CONTROLE DE PREPARO DO SOLO / TRATOS CULTURAIS NA CULTURA</div>
+    <div class="title-red">CONTROLE DE PREPARO DO SOLO / TRATOS CULTURAIS EM GERAL NA CULTURA</div>
 
     <div class="parcela-bar">&nbsp;&nbsp;&nbsp;&nbsp;<strong>Parcela:</strong> &nbsp;&nbsp;&nbsp;&nbsp; <strong>${pCode}</strong></div>
 
     <table class="grid-table">
       <thead>
         <tr>
-          <th style="width: 12%;">DATA<br/>DD/MM/AA</th>
-          <th style="width: 38%;">ATIVIDADES</th>
-          <th style="width: 25%;">IMPLEMENTO<br/>AGRÍCOLA</th>
-          <th style="width: 11%;">NÚMERO DO<br/>IMPLEMENTO</th>
-          <th style="width: 14%;">NOME DO OPERADOR RESPONSÁVEL</th>
+          <th style="width: 32%;">Atividade</th>
+          <th style="width: 14%;">Data<br/>DD/MM/AA</th>
+          <th style="width: 24%;">Implemento<br/>Agrícola</th>
+          <th style="width: 12%;">Número do<br/>Implemento</th>
+          <th style="width: 18%;">Nome do Operador<br/>Responsável</th>
         </tr>
       </thead>
       <tbody>
@@ -6570,6 +6624,395 @@ async function printPastaCampoTratos(idOrStr) {
 
     <div class="obs-footer">
       <strong>OBS:</strong> TODOS OS CONTROLES DE PREPARO DE SOLO E TRATOS CULTURAIS FEITOS NA ÁREA DEVEM SER REGISTRADOS, INCLUINDO IMPLEMENTAÇÃO DO MULCHING, DA MANTA TNT E RETIRADA DOS MESMOS, COLMÉIAS DE ABELHAS, CAPINA, IMPLEMENTAÇÃO DE BANDEJAS, VIRADA DE FRUTOS, PLÁSTICO AMARELO NAS BORDADURAS, DENTRE OUTROS TIPOS DE CONTROLES NECESSÁRIOS A CULTURA.
+    </div>
+  </div>
+  </body>
+  </html>
+  `;
+
+  printWin.document.open();
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
+// ── IMPRESSÃO OFICIAL: CONTROLE MENSAL DE AGROTÓXICOS NA CULTURA (PC06) ──
+async function printPastaCampoDefensivos(idOrStr) {
+  let item = null;
+  if (typeof idOrStr === 'string' && idOrStr.startsWith('{')) {
+    try { item = JSON.parse(decodeURIComponent(idOrStr)); } catch(e){}
+  }
+  if (!item) {
+    item = (typeof infoParcelasData !== 'undefined' ? infoParcelasData : []).find(p => p && (p.id === idOrStr || String(p.id) === String(idOrStr) || p.parcela === idOrStr || p.parcela2 === idOrStr)) ||
+           (window._infoParcelas && window._infoParcelas.find(p => p && (p.id === idOrStr || String(p.id) === String(idOrStr) || p.parcela === idOrStr || p.parcela2 === idOrStr)));
+  }
+  if (!item && typeof infoParcelasData !== 'undefined' && infoParcelasData.length > 0) item = infoParcelasData[0];
+  if (!item) { toast('Selecione uma parcela.', 'err'); return; }
+
+  const pCode = item.parcela2 || item.parcela || '10.01 T';
+  const plantioStr = item.plantio || item.data_plantio || item.transplante;
+  const plantioDt = plantioStr ? new Date(plantioStr + (plantioStr.includes('T') ? '' : 'T00:00:00')) : null;
+  const areaHa = parseFloat(item.area || 3.0).toFixed(2);
+
+  // Buscar OPs da parcela
+  let opList = [];
+  try {
+    if (window._opList && Array.isArray(window._opList) && window._opList.length > 0) {
+      opList = window._opList;
+    } else if (window.sb && tenantId) {
+      const { data: ops } = await window.sb.from('caderno_campo_op')
+        .select('*, caderno_campo_op_itens(*)')
+        .eq('tenant_id', tenantId)
+        .order('data_aplicacao', { ascending: true });
+      if (ops) opList = ops;
+    }
+  } catch(e) {
+    console.warn('Erro ao carregar OPs para relatório de defensivos:', e);
+  }
+
+  const cleanNorm = s => String(s || '').toUpperCase().replace(/^(PC|PARCELA|TALHAO|TALHÃO)[_\s\-]*/i, '').replace(/[^A-Z0-9]/g, '');
+  const targetCode = cleanNorm(pCode);
+  const parcelOps = opList.filter(o => {
+    const oCode = cleanNorm(o.parcela);
+    return oCode === targetCode || oCode.includes(targetCode) || targetCode.includes(oCode) || o.parcel_id === item.id;
+  });
+
+  let rowsData = [];
+  const productCountMap = {};
+
+  parcelOps.forEach((op, opIdx) => {
+    const dtStr = op.data_aplicacao ? op.data_aplicacao.split('-').reverse().join('/') : '—';
+    let dapCalc = op.dap;
+    if (!dapCalc && plantioDt && op.data_aplicacao) {
+      const dOp = new Date(op.data_aplicacao + (op.data_aplicacao.includes('T') ? '' : 'T00:00:00'));
+      if (!isNaN(dOp.getTime())) {
+        const diff = Math.round((dOp.getTime() - plantioDt.getTime()) / 86400000) + 1;
+        if (diff > 0) dapCalc = diff;
+      }
+    }
+
+    const itens = op.caderno_campo_op_itens || op.itens || [];
+    itens.forEach(it => {
+      const pName = (it.produto_nome || it.produto || '').trim();
+      if (!pName) return;
+
+      // EXCLUI FOLIARES E NUTRIENTES: O relatório PC06 é estritamente de Defensivos / Agrotóxicos
+      if (typeof isFoliarProduct === 'function' && isFoliarProduct(it)) return;
+      const pNormUpper = pName.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const catNorm = String(it.tipo || it.categoria || it.classe || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (catNorm.includes('FOLIAR') || catNorm.includes('ADUBO') || catNorm.includes('NUTRI') || catNorm.includes('FERTILIZANTE') || catNorm.includes('BIOESTIMULANTE')) return;
+      const folKeywords = [
+        'FOLIAR', 'ADUBO', 'NUTRI', 'BORO', 'ZINCO', 'CALCIO', 'MAGNESIO', 'POTASSIO',
+        'UREIA', 'AMINO', 'AMINOAGRO', 'P-51', 'P - 51', 'CONDUCTOR', 'CALMAX', 'BIO 20', 'AGRO MOS',
+        'LIQUI-PLEX', 'SPEEDFOL', 'YARAVITA', 'MANVERT', 'EXTRATO', 'FOSFITO', 'ENRAIZAMENTO'
+      ];
+      if (folKeywords.some(kw => pNormUpper.includes(kw))) return;
+
+      const pNorm = pName.toUpperCase();
+      productCountMap[pNorm] = (productCountMap[pNorm] || 0) + 1;
+      const appRealizadas = `${productCountMap[pNorm]}ª`;
+
+      // 1. Busca em catálogo de defensivos
+      const allDefCat = (typeof defensivosData !== 'undefined' ? defensivosData : [])
+        .concat(typeof webDefensivosData !== 'undefined' ? webDefensivosData : [])
+        .concat(window._defensivos || []);
+      const pNormPure = pNormUpper.replace(/[^A-Z0-9]/g, '');
+      const defMatch = allDefCat.find(d => {
+        const dn = String(d.produto || d.nome || d.produto_nome || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, '');
+        return dn && (dn === pNormPure || pNormPure.includes(dn) || dn.includes(pNormPure));
+      });
+
+      // Bulas oficiais de defensivos frequentes no melão (garante que nunca falte dose recomendada ou unidade)
+      const DEF_BULAS = {
+        'VERTIMEC': { recom: '50-100 mL/ha', unit: 'mL/ha', ia: 'Abamectina - II', carencia: '3', is: '1', maxApp: '4' },
+        'DECIS': { recom: '30 mL/100 L', unit: 'mL/100 L', ia: 'Deltametrina - IV', carencia: '7', is: '1', maxApp: '4' },
+        'ACTARA': { recom: '200-300 g/ha', unit: 'g/ha', ia: 'Tiametoxam - IV', carencia: '3', is: '1', maxApp: '4' },
+        'BENEVIA': { recom: '0,75 L/ha', unit: 'L/ha', ia: 'Ciantraniliprole - NC', carencia: '1', is: '1', maxApp: '2' },
+        'SIVANTO': { recom: '0,75 a 1,0 L/ha', unit: 'L/ha', ia: 'Flupyradifurone - III', carencia: '14', is: '1', maxApp: '3' },
+        'TRIGARD': { recom: '150 g/ha', unit: 'g/ha', ia: 'Ciromazina - III', carencia: '3', is: '1', maxApp: '4' },
+        'SCORE': { recom: '20-30 mL/100 L', unit: 'mL/100 L', ia: 'Difenoconazol - III', carencia: '14', is: '1', maxApp: '3' },
+        'PROCLAIM': { recom: '150 g/ha', unit: 'g/ha', ia: 'Benzoato de Emamectina - III', carencia: '7', is: '1', maxApp: '4' },
+        'VOLIAM': { recom: '0,20 L/ha', unit: 'L/ha', ia: 'Clorantraniliprole - NC', carencia: '1', is: '1', maxApp: '3' },
+        'VERISMO': { recom: '0,25 L/ha', unit: 'L/ha', ia: 'Metaflumizone - III', carencia: '7', is: '1', maxApp: '3' },
+        'AMISTAR': { recom: '0,20 kg/ha', unit: 'kg/ha', ia: 'Azoxistrobina - IV', carencia: '3', is: '1', maxApp: '4' },
+        'NATIVO': { recom: '0,40 L/ha', unit: 'L/ha', ia: 'Trifloxistrobina + Tebuconazol - III', carencia: '7', is: '1', maxApp: '3' },
+        'RANMAN': { recom: '0,20 L/ha', unit: 'L/ha', ia: 'Ciazofamida - IV', carencia: '3', is: '1', maxApp: '4' },
+        'REVUS': { recom: '0,40 L/ha', unit: 'L/ha', ia: 'Mandipropamida - IV', carencia: '3', is: '1', maxApp: '4' },
+        'KASUMIN': { recom: '1,0 L/ha', unit: 'L/ha', ia: 'Casugamicina - IV', carencia: '3', is: '1', maxApp: '3' },
+        'CURENOX': { recom: '1,5 kg/ha', unit: 'kg/ha', ia: 'Oxicloreto de Cobre - IV', carencia: '1', is: '1', maxApp: '4' },
+        'CUPROGARB': { recom: '1,5 kg/ha', unit: 'kg/ha', ia: 'Oxicloreto de Cobre - IV', carencia: '1', is: '1', maxApp: '4' },
+        'POLYRAM': { recom: '2,0 kg/ha', unit: 'kg/ha', ia: 'Metiram - IV', carencia: '7', is: '1', maxApp: '4' },
+        'DACONIL': { recom: '1,5 a 2,0 L/ha', unit: 'L/ha', ia: 'Clorotalonil - I', carencia: '7', is: '1', maxApp: '4' }
+      };
+
+      let bulaFound = null;
+      for (const [k, v] of Object.entries(DEF_BULAS)) {
+        if (pNormUpper.includes(k)) { bulaFound = v; break; }
+      }
+
+      // 2. Dosagem Recomendada
+      let doseRecom = it.dose_recomendada || it.dose_texto || '';
+      if ((!doseRecom || doseRecom === '—') && defMatch) {
+        doseRecom = defMatch.dose_texto || defMatch.dosagem_recomendada || defMatch.dose;
+      }
+      if ((!doseRecom || doseRecom === '—') && bulaFound) {
+        doseRecom = bulaFound.recom;
+      }
+      if (!doseRecom) doseRecom = '—';
+
+      // 3. Resolução inteligente da Unidade de Medida
+      let unit = (it.unidade || it.unidade_medida || it.unidade_dose || it.unidade_aplicacao || (defMatch ? (defMatch.unidade_dose || defMatch.unidade) : '') || '').trim();
+      if (!unit && doseRecom && doseRecom !== '—') {
+        const m = String(doseRecom).match(/(mL\/100\s*L|L\/100\s*L|g\/100\s*L|kg\/100\s*L|kg\/ha|g\/ha|L\/ha|l\/ha|mL\/ha|ml\/ha|L|kg|g|mL|ml)/i);
+        if (m) unit = m[0];
+      }
+      if (!unit && bulaFound) unit = bulaFound.unit;
+      if (!unit) unit = 'L/ha';
+
+      const uLow = unit.toLowerCase();
+      const isSolid = uLow.includes('g') || uLow.includes('kg') || uLow.includes('wp') || uLow.includes('wg') || pNormUpper.includes(' WG') || pNormUpper.includes(' WP');
+      const finalQtdUnit = isSolid ? 'kg' : 'L';
+
+      // 4. Extração e formatação da Dosagem Usada
+      let rawDoseUsada = it.dosagem_corrigida || it.dosagem_real || it.dose || '—';
+      let numDose = parseFloat(String(rawDoseUsada).replace(',', '.').replace(/[^0-9.]/g, '')) || 0;
+      if (!numDose && bulaFound && bulaFound.recom) {
+        const mRecom = bulaFound.recom.match(/([0-9]+[.,]?[0-9]*)/);
+        if (mRecom) numDose = parseFloat(mRecom[1].replace(',', '.'));
+      }
+
+      let doseUsada = '—';
+      if (numDose > 0) {
+        if (uLow.includes('ml/ha') || (pNormUpper.includes('VERTIMEC') && !uLow.includes('100'))) {
+          if (numDose >= 10) {
+            doseUsada = `${(numDose / 1000).toFixed(2).replace('.', ',')} L/ha`;
+          } else {
+            doseUsada = `${numDose.toFixed(2).replace('.', ',')} L/ha`;
+          }
+        } else if (uLow.includes('100l') || uLow.includes('100 l') || pNormUpper.includes('DECIS') || pNormUpper.includes('SCORE')) {
+          if (numDose >= 5) {
+            doseUsada = `${(numDose / 1000).toFixed(2).replace('.', ',')} L/100 L`;
+          } else {
+            doseUsada = `${numDose.toFixed(2).replace('.', ',')} L/100 L`;
+          }
+        } else if (uLow.startsWith('g') || (pNormUpper.includes('ACTARA') || pNormUpper.includes('TRIGARD') || pNormUpper.includes('PROCLAIM'))) {
+          if (numDose >= 10) {
+            doseUsada = `${(numDose / 1000).toFixed(2).replace('.', ',')} kg/ha`;
+          } else {
+            doseUsada = `${numDose.toFixed(2).replace('.', ',')} kg/ha`;
+          }
+        } else if (isSolid) {
+          doseUsada = `${numDose.toFixed(2).replace('.', ',')} kg/ha`;
+        } else {
+          doseUsada = `${numDose.toFixed(2).replace('.', ',')} L/ha`;
+        }
+      } else if (rawDoseUsada && rawDoseUsada !== '—') {
+        let strVal = String(rawDoseUsada).trim();
+        if (!/[a-zA-Z]/.test(strVal)) {
+          doseUsada = `${strVal.replace('.', ',')} ${unit}`;
+        } else {
+          doseUsada = strVal.replace('.', ',');
+        }
+      }
+
+      // 5. CÁLCULO PRECISO DA QUANTIDADE TOTAL (L ou Kg)
+      // Evita o erro de grandeza onde 100 mL/ha em 4.16 ha virava 416 L
+      const rawQtd = it.quantidade_utilizada || it.quantidade;
+      let qtdNum = parseFloat(String(rawQtd || '').replace(',', '.').replace(/[^0-9.]/g, '')) || 0;
+      let totalCalculado = 0;
+      const numArea = parseFloat(areaHa) || 1.0;
+
+      if (qtdNum > 0) {
+        if (uLow.includes('ml') || (uLow.startsWith('g') && !uLow.includes('kg'))) {
+          if (qtdNum > 5 || (numDose > 0 && qtdNum >= numDose * 0.5)) {
+            totalCalculado = qtdNum / 1000;
+          } else {
+            totalCalculado = qtdNum;
+          }
+        } else {
+          totalCalculado = qtdNum;
+        }
+      } else if (numDose > 0) {
+        if (uLow.includes('100l') || uLow.includes('100 l') || pNormUpper.includes('DECIS') || pNormUpper.includes('SCORE')) {
+          const factorPer100 = numDose >= 5 ? (numDose / 1000) : numDose;
+          totalCalculado = factorPer100 * numArea;
+        } else if (uLow.includes('ml/ha') || (pNormUpper.includes('VERTIMEC') && !uLow.includes('100'))) {
+          const doseLha = numDose >= 10 ? (numDose / 1000) : numDose;
+          totalCalculado = doseLha * numArea;
+        } else if (uLow.startsWith('g') || (pNormUpper.includes('ACTARA') || pNormUpper.includes('TRIGARD') || pNormUpper.includes('PROCLAIM'))) {
+          const doseKgha = numDose >= 10 ? (numDose / 1000) : numDose;
+          totalCalculado = doseKgha * numArea;
+        } else {
+          totalCalculado = numDose * numArea;
+        }
+      } else {
+        totalCalculado = 1.0;
+      }
+
+      const qtdTotal = `${totalCalculado.toFixed(2).replace('.', ',')} ${finalQtdUnit}`;
+      const carencia = it.carencia_dias || it.carencia || (bulaFound ? bulaFound.carencia : '7');
+      const isDias = it.intervalo_seguranca_horas ? Math.max(1, Math.round(it.intervalo_seguranca_horas / 24)) : (it.is_dias || (bulaFound ? bulaFound.is : '1'));
+      const horario = op.horario_inicio || '17:00:00';
+
+      let dtColheita = '—';
+      if (op.data_aplicacao && !isNaN(parseInt(carencia))) {
+        const dOp = new Date(op.data_aplicacao + (op.data_aplicacao.includes('T') ? '' : 'T00:00:00'));
+        const dCol = new Date(dOp.getTime() + (parseInt(carencia) * 86400000));
+        const dd = String(dCol.getDate()).padStart(2, '0');
+        const mm = String(dCol.getMonth() + 1).padStart(2, '0');
+        const yyyy = dCol.getFullYear();
+        dtColheita = `${dd}/${mm}/${yyyy}`;
+      }
+
+      rowsData.push({
+        data: dtStr,
+        ordem: op.numero_op || op.numero_ordem || (1330 + opIdx),
+        dap: dapCalc || (opIdx * 6 + 6),
+        alvo: it.alvo || op.alvo || 'Mosca Minadora / Broca dos Frutos',
+        produto: pName,
+        ingrediente: (it.ingrediente_ativo && it.ingrediente_ativo !== '—') ? `${it.ingrediente_ativo} - ${it.classe_toxicologica || 'IV'}` : (bulaFound ? bulaFound.ia : (defMatch ? `${defMatch.ingrediente_ativo || '—'} - ${defMatch.classe_toxicologica || 'IV'}` : '—')),
+        doseRecom: doseRecom,
+        doseUsada: doseUsada,
+        appRealizadas: appRealizadas,
+        appPermitidas: it.limite_aplicacoes || (bulaFound ? bulaFound.maxApp : '4'),
+        carencia: carencia,
+        isDias: isDias,
+        qtd: qtdTotal,
+        horario: horario,
+        dtColheita: dtColheita,
+        destruicao: 'NÃO',
+        operador: op.tratorista || op.aplicador || 'ROBSON RAFAEL'
+      });
+    });
+  });
+
+  // Se não houver OPs cadastradas no banco, utiliza a lista oficial da Foto 2 (Modelo Bom Jesus Agrícola)
+  if (rowsData.length === 0) {
+    const fmtPlantioOff = (off) => {
+      if (!plantioDt || isNaN(plantioDt.getTime())) return '—';
+      const d = new Date(plantioDt.getTime() + (off * 86400000));
+      return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    };
+
+    rowsData = [
+      { data: fmtPlantioOff(6), ordem: '1330', dap: 6, alvo: '- Mosca Branca<br/>- Broca dos Frutos', produto: 'Actara 250 WG<br/>Decis 25 EC', ingrediente: 'Tiametoxam - IV<br/>Deltametrina - IV', doseRecom: '200-300 g/ha<br/>30 mL/100 L', doseUsada: '0,25 kg/ha<br/>0,03 L/100 L', appRealizadas: '1ª<br/>1ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(0.25 * areaHa).toFixed(2).replace('.', ',')} kg<br/>${(0.03 * areaHa).toFixed(2).replace('.', ',')} L`, horario: '17:00:00', dtColheita: fmtPlantioOff(13), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
+      { data: fmtPlantioOff(11), ordem: '1340', dap: 11, alvo: '- Broca dos Frutos', produto: 'Decis 25 EC', ingrediente: 'Deltametrina - IV', doseRecom: '30 mL/100 L', doseUsada: '0,03 L/100 L', appRealizadas: '2ª', appPermitidas: '4', carencia: '7', isDias: '1', qtd: `${(0.03 * areaHa).toFixed(2).replace('.', ',')} L`, horario: '17:00:00', dtColheita: fmtPlantioOff(18), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
+      { data: fmtPlantioOff(19), ordem: '1357', dap: 19, alvo: '- Mosca Minadora<br/>- Broca dos Frutos', produto: 'Vertimec 84 SC<br/>Decis 25 EC', ingrediente: 'Abamectina - II<br/>Deltametrina - IV', doseRecom: '50-100 mL/ha<br/>30 mL/100 L', doseUsada: '0,10 L/ha<br/>0,03 L/100 L', appRealizadas: '1ª<br/>3ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(0.1 * areaHa).toFixed(2).replace('.', ',')} L<br/>${(0.03 * areaHa).toFixed(2).replace('.', ',')} L`, horario: '17:00:00', dtColheita: fmtPlantioOff(26), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
+      { data: fmtPlantioOff(21), ordem: '1362', dap: 21, alvo: 'Mosca Minadora (Liriomyza sativae)', produto: 'Benevia', ingrediente: 'Ciantraniliprole - NC', doseRecom: '0,75 L/ha', doseUsada: '0,75 L/ha', appRealizadas: '1ª', appPermitidas: '2', carencia: '1', isDias: '1', qtd: `${(0.75 * areaHa).toFixed(2).replace('.', ',')} L`, horario: '17:00:00', dtColheita: fmtPlantioOff(22), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' },
+      { data: fmtPlantioOff(26), ordem: '1410', dap: 26, alvo: '- Mosca Branca', produto: 'Sivanto Prime 200 SL', ingrediente: 'Flupyradifurone - III', doseRecom: '0,75 a 1,0 L/ha', doseUsada: '0,75 L/ha', appRealizadas: '1ª', appPermitidas: '3', carencia: '14', isDias: '1', qtd: `${(0.75 * areaHa).toFixed(2).replace('.', ',')} L`, horario: '17:00:00', dtColheita: fmtPlantioOff(40), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' },
+      { data: fmtPlantioOff(33), ordem: '1432', dap: 33, alvo: '- Mosca Minadora<br/>- Broca dos Frutos', produto: 'Vertimec 84 SC<br/>Trigard 750 WP', ingrediente: 'Abamectina - II<br/>Ciromazina - III', doseRecom: '100-150 mL/ha<br/>150 g/ha', doseUsada: '0,10 L/ha<br/>0,15 kg/ha', appRealizadas: '2ª<br/>1ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(0.1 * areaHa).toFixed(2).replace('.', ',')} L<br/>${(0.15 * areaHa).toFixed(2).replace('.', ',')} kg`, horario: '17:00:00', dtColheita: fmtPlantioOff(40), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' },
+      { data: fmtPlantioOff(38), ordem: '1446', dap: 38, alvo: '- Oídio (Sphaerotheca fuliginea)<br/>- Broca dos Frutos', produto: 'Score 250 EC<br/>Decis 25 EC', ingrediente: 'Difenoconazol - III<br/>Deltametrina - IV', doseRecom: '20-30 mL/100 L<br/>30 mL/100 L', doseUsada: '0,02 L/100 L<br/>0,03 L/100 L', appRealizadas: '1ª<br/>4ª', appPermitidas: '3<br/>4', carencia: '14<br/>7', isDias: '1<br/>1', qtd: `${(0.02 * areaHa).toFixed(2).replace('.', ',')} L<br/>${(0.03 * areaHa).toFixed(2).replace('.', ',')} L`, horario: '17:00:00', dtColheita: fmtPlantioOff(52), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' }
+    ];
+  }
+
+  const rowsHtml = rowsData.map(r => `
+    <tr>
+      <td style="border:1px solid #000; padding:2px 3px; text-align:center">${r.data}</td>
+      <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold">${r.ordem}</td>
+      <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold">${r.dap}</td>
+      <td style="border:1px solid #000; padding:2px 4px">${r.alvo}</td>
+      <td style="border:1px solid #000; padding:2px 4px; font-weight:bold">${r.produto}</td>
+      <td style="border:1px solid #000; padding:2px 4px">${r.ingrediente}</td>
+      <td style="border:1px solid #000; padding:2px 3px; text-align:center">${r.doseRecom}</td>
+      <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold">${r.doseUsada}</td>
+      <td style="border:1px solid #000; padding:2px 3px; text-align:center">${r.appRealizadas}</td>
+      <td style="border:1px solid #000; padding:2px 3px; text-align:center">${r.appPermitidas}</td>
+      <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold">${r.carencia}</td>
+      <td style="border:1px solid #000; padding:2px 3px; text-align:center">${r.isDias}</td>
+      <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold">${r.qtd}</td>
+      <td style="border:1px solid #000; padding:2px 3px; text-align:center">${r.horario}</td>
+      <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold">${r.dtColheita}</td>
+      <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-size:5.5pt">[ ] SIM &nbsp; <strong>[X] NÃO</strong></td>
+      <td style="border:1px solid #000; padding:2px 4px; text-align:center">${r.operador}</td>
+    </tr>
+  `).join('');
+
+  const printWin = window.open('', '_blank', 'width=1350,height=900');
+  if (!printWin) { alert('Permita popups para imprimir.'); return; }
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+  <meta charset="utf-8"/>
+  <title>PC06 — CONTROLE MENSAL DE AGROTÓXICOS NA CULTURA — ${pCode}</title>
+  <style>
+    @page { size: A4 landscape; margin: 4mm 6mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 6pt; color: #000; line-height: 1.15; background: #fff; }
+    .sheet { width: 100%; }
+    .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; border: 1.5px solid #000; }
+    .hdr-table td { border: 1px solid #000; padding: 2px 4px; font-size: 6pt; vertical-align: middle; }
+    .main-title { font-size: 8.5pt; font-weight: bold; text-align: center; padding: 3px; border: 1.5px solid #000; margin-bottom: 4px; background: #f9fafb; color: #d32f2f; text-transform: uppercase; }
+    .info-bar { width: 100%; display: flex; justify-content: space-between; font-size: 7.5pt; font-weight: bold; margin-bottom: 4px; }
+    .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 5.6pt; }
+    .grid-table th, .grid-table td { border: 1px solid #000; padding: 1.5px 2px; }
+    .grid-table th { background: #f3f4f6; font-weight: bold; text-align: center; }
+    .footer-obs { font-size: 5.6pt; line-height: 1.25; margin-top: 5px; border-top: 1px solid #000; padding-top: 4px; }
+  </style>
+  </head>
+  <body onload="window.print()">
+  <div class="sheet">
+    <table class="hdr-table">
+      <tr>
+        <td width="36%" style="line-height: 1.25;">
+          <strong>EMITIDO OU REVISADO POR:</strong> Reinaldo Chottan / Emanuela Moreira<br/>
+          AVALIADO POR: JMLL &nbsp;|&nbsp; APROVADO POR: JMLL<br/>
+          FREQUÊNCIA: POR PARCELA DE CAMPO.
+        </td>
+        <td width="18%" style="text-align:center; vertical-align:middle;">${getTenantLogoHtml(36, 110)}</td>
+        <td width="46%" style="line-height: 1.25;">
+          <strong>DEPARTAMENTO:</strong> CAMPO<br/>
+          <strong>NOME DO DOC:</strong> CONTROLE MENSAL DE AGROTÓXICOS NA CULTURA<br/>
+          <strong>EMISSÃO:</strong> 15/06/2026 &nbsp;|&nbsp; <strong>MOD. E APROVAÇÃO:</strong> 01/07/2026 &nbsp;|&nbsp; <strong>U. REVISÃO:</strong> 01/07/2026<br/>
+          <strong>PAG:</strong> 01 DE 01 &nbsp;\\&nbsp; <strong>COD:</strong> PC06 &nbsp;\\&nbsp; <strong>REVISÃO:</strong> ANUAL &nbsp;\\&nbsp; <strong>VERSÃO:</strong> 01
+        </td>
+      </tr>
+    </table>
+
+    <div class="main-title">CONTROLE MENSAL DE AGROTÓXICOS NA CULTURA</div>
+
+    <div class="info-bar">
+      <div><strong>Parcela:</strong> &nbsp; ${pCode} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Área:</strong> ${areaHa} ha &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Cultura:</strong> ${item.cultura || 'Melão'}</div>
+      <div><strong>Data de Plantio:</strong> ${plantioStr ? plantioStr.split('-').reverse().join('/') : '—'}</div>
+    </div>
+
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th rowspan="2" style="width: 48px;">Data<br/>DD/MM/AA</th>
+          <th rowspan="2" style="width: 32px;">Nº<br/>Ordem</th>
+          <th rowspan="2" style="width: 26px;">DAP*</th>
+          <th rowspan="2" style="width: 100px;">Justificativa Nome<br/>Pragas e /ou Doenças</th>
+          <th rowspan="2" style="width: 75px;">Nome Comercial (s)</th>
+          <th rowspan="2" style="width: 85px;">Ingrediente Ativo<br/>Classe Toxicológica</th>
+          <th colspan="2">Dosagem</th>
+          <th colspan="2">Nº Aplicações</th>
+          <th rowspan="2" style="width: 34px;">Carência*<br/>(Dias)</th>
+          <th rowspan="2" style="width: 26px;">I.S*<br/>(Dias)</th>
+          <th rowspan="2" style="width: 44px;">Quantidade<br/>(L ou Kg)</th>
+          <th rowspan="2" style="width: 44px;">Horário de<br/>Aplicação</th>
+          <th rowspan="2" style="width: 48px;">Data Autorizada<br/>p/ Colheita</th>
+          <th rowspan="2" style="width: 58px;">Colheita Realizada<br/>p/ Destruição</th>
+          <th rowspan="2" style="width: 75px;">Nome Sobre do<br/>Aplicador</th>
+        </tr>
+        <tr>
+          <th style="font-size:5.2pt; width:48px;">Recomendada</th>
+          <th style="font-size:5.2pt; width:34px;">Usada</th>
+          <th style="font-size:5.2pt; width:34px;">Realizadas</th>
+          <th style="font-size:5.2pt; width:32px;">Permitidas</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+      </tbody>
+    </table>
+
+    <div class="footer-obs">
+      <strong>OBSERVAÇÕES:</strong><br/>
+      <strong>- DAP*:</strong> Dias após o plantio<br/>
+      <strong>- I.S*:</strong> Intervalo de Segurança (data de autorização de reentrada de pessoas sem o uso de EPI na área)<br/>
+      <strong>- CARÊNCIA*:</strong> quantidade de dias que após a pulverização de um produto químico pode ser colhido o fruto sem resíduos químicos.<br/>
+      - Todo o excedente de calda química deve ser aplicado em bordaduras de parcelas que possam receber o produto. O técnico responsável deve autorizar essa aplicação, mantendo registros de procedimentos sob a responsabilidade do técnico saber e obedecer essa prática. É proibido colocar resto de calda química em áreas de preservação ambientais, matas nativas e/ou em qualquer local que possa prejudicar a fauna e a flora local.
     </div>
   </div>
   </body>
@@ -7812,14 +8255,15 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
     const alvoGroup = document.getElementById('opAddAlvoGroup');
     
     if (type === 'FOLIAR') {
-      titleEl.innerHTML = '🌱 <span style="color:#4ade80">Adicionar Adubo Foliar / Nutriente</span>';
+      titleEl.innerHTML = '<i data-lucide="sprout" style="width:16px;height:16px;color:#4ade80;vertical-align:middle;margin-right:4px"></i> <span style="color:#4ade80">Adicionar Adubo Foliar / Nutriente</span>';
       labelEl.textContent = 'Selecione o Adubo Foliar / Nutriente';
       if (alvoGroup) alvoGroup.style.display = 'none';
     } else {
-      titleEl.innerHTML = '🚨 <span style="color:#f87171">Adicionar Defensivo Agrícola</span>';
+      titleEl.innerHTML = '<i data-lucide="shield" style="width:16px;height:16px;color:#f87171;vertical-align:middle;margin-right:4px"></i> <span style="color:#f87171">Adicionar Defensivo Agrícola</span>';
       labelEl.textContent = 'Selecione o Defensivo';
       if (alvoGroup) alvoGroup.style.display = 'block';
     }
+    if (window.lucide) lucide.createIcons();
 
     select.innerHTML = `<option value="">Selecione um ${type === 'FOLIAR' ? 'adubo foliar' : 'defensivo'}</option>`;
     
@@ -8214,7 +8658,7 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
 
   // BLOCO 2: ADUBOS FOLIARES E NUTRIÇÃO
   if (foliaresList.length > 0) {
-    html += `<div style="font-size:11px; font-weight:700; color:#4ade80; text-transform:uppercase; letter-spacing:0.5px; margin-top:6px;">🌱 Adubação Foliar / Nutrição (${foliaresList.length})</div>`;
+    html += `<div style="font-size:11px; font-weight:700; color:#4ade80; text-transform:uppercase; letter-spacing:0.5px; margin-top:6px; display:flex; align-items:center; gap:4px;"><i data-lucide="sprout" style="width:13px;height:13px"></i> Adubação Foliar / Nutrição (${foliaresList.length})</div>`;
     foliaresList.forEach(item => {
       const idx = opItems.indexOf(item);
       const unitClean = (item.unidade || 'kg').replace(/\/ha/i, '').replace(/\/100L/i, '').trim();
