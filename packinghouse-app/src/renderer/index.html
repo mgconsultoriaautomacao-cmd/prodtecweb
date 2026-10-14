@@ -13,6 +13,7 @@
 </head>
 
 <body>
+  
   <header class="topbar">
     <div class="brand">
       <img src="../assets/core_agro_logo.png" alt="Core Agro" class="brand-logo" />
@@ -39,6 +40,12 @@
       <button id="btnUnlock"
         style="display:none; background:transparent; border:none; cursor:pointer; font-size:18px; padding: 0 5px;"
         title="Desbloquear Admin"><i data-lucide="lock" style="width:16px; height:16px;"></i></button>
+      <button id="btnHeaderCarrossel" type="button"
+        onclick="window.triggerCollabShowcase && window.triggerCollabShowcase(true)"
+        style="background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.3); color:#93c5fd; padding:5px 12px; font-size:11px; font-weight:700; cursor:pointer; border-radius:6px; display:inline-flex; align-items:center; gap:6px;"
+        title="Alternar Modo Desempenho e Monitoramento (F8)">
+        <i data-lucide="layout-dashboard" style="width:13px; height:13px; color:#60a5fa;"></i> Monitor Desempenho (F8)
+      </button>
       <select id="roleSelect">
         <option value="EMBALADOR">Embalador</option>
         <option value="EMPILHADOR">Empilhador</option>
@@ -51,15 +58,17 @@
 
   <main id="app" class="appMount"></main>
 
-  <!-- Overlay para Modo Carrossel Desempenho (Showcase Colaboradores no Painel a cada 2 min) -->
+  <!-- Overlay para Modo Carrossel Desempenho (Showcase Colaboradores no Painel) -->
   <div id="collabShowcaseOverlay" class="collab-showcase-overlay">
     <div class="showcase-card">
-      
+
       <!-- Top Bar: Ranking, Contador e Controles -->
-      <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+      <div
+        style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <span id="showcaseRankBadge" style="font-size: 12px; padding: 6px 14px; background: rgba(59,130,246,0.2); border: 1px solid var(--blue); border-radius: 20px; font-weight: 800; color: #60a5fa; letter-spacing: 0.5px;">
-            🏆 1º LUGAR NO RANKING
+          <span id="showcaseRankBadge"
+            style="font-size: 11px; padding: 5px 12px; background: rgba(59,130,246,0.18); border: 1px solid var(--blue); border-radius: 6px; font-weight: 800; color: #60a5fa; letter-spacing: 0.5px; text-transform: uppercase;">
+            1º LUGAR NO RANKING
           </span>
           <span id="showcaseSlideCounter" style="font-size: 12px; color: var(--muted); font-weight: 600;">
             Colaborador 1 de 10
@@ -67,27 +76,44 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px;">
-          <button id="showcasePrevBtn" type="button" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px;" title="Anterior (←)">◀</button>
-          <button id="showcasePauseBtn" type="button" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px;" title="Pausar / Retomar">⏸</button>
-          <button id="showcaseNextBtn" type="button" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px;" title="Próximo (→)">▶</button>
-          <button id="showcaseCloseBtn" type="button" style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #f87171; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-left: 6px;" title="Fechar (Esc)">&times;</button>
+          <button id="showcasePrevBtn" type="button"
+            style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px;"
+            title="Anterior (←)"><i data-lucide="chevron-left" style="width:16px; height:16px;"></i></button>
+          <button id="showcasePauseBtn" type="button"
+            style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px;"
+            title="Pausar / Retomar"><i data-lucide="pause" style="width:14px; height:14px;"></i></button>
+          <button id="showcaseNextBtn" type="button"
+            style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px;"
+            title="Próximo (→)"><i data-lucide="chevron-right" style="width:16px; height:16px;"></i></button>
+          <button id="showcaseCloseBtn" type="button"
+            style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #f87171; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-left: 6px;"
+            title="Fechar Painel (Esc)"><i data-lucide="x" style="width:16px; height:16px;"></i></button>
         </div>
       </div>
 
       <!-- Barra de Progresso do Slide -->
-      <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; margin-bottom: 20px;">
-        <div id="showcaseProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--blue), var(--green)); transition: width 0.1s linear;"></div>
+      <div
+        style="width: 100%; height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; margin-bottom: 20px;">
+        <div id="showcaseProgressBar"
+          style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--blue), var(--green)); transition: width 0.1s linear;">
+        </div>
       </div>
 
       <!-- Perfil do Colaborador -->
       <div style="display: flex; align-items: center; gap: 24px; width: 100%; margin-bottom: 22px; text-align: left;">
-        <div id="showcasePhoto" class="showcase-photo" style="width: 105px; height: 105px; min-width: 105px; border-radius: 50%; border: 3px solid var(--blue); box-shadow: 0 0 25px rgba(59,130,246,0.35); background-size: cover; background-position: center; margin-bottom: 0;"></div>
+        <div id="showcasePhoto" class="showcase-photo"
+          style="width: 105px; height: 105px; min-width: 105px; border-radius: 50%; border: 3px solid var(--blue); box-shadow: 0 0 25px rgba(59,130,246,0.35); background-size: cover; background-position: center; margin-bottom: 0;">
+        </div>
         <div style="flex: 1; min-width: 0;">
           <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <h2 id="showcaseName" style="margin: 0; font-size: 26px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Nome do Colaborador</h2>
-            <span id="showcaseRoleBadge" class="badge" style="font-size: 11px; padding: 3px 10px; letter-spacing: 0.5px;">EMBALADOR</span>
+            <h2 id="showcaseName"
+              style="margin: 0; font-size: 26px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              Nome do Colaborador</h2>
+            <span id="showcaseRoleBadge" class="badge"
+              style="font-size: 11px; padding: 3px 10px; letter-spacing: 0.5px;">EMBALADOR</span>
           </div>
-          <div style="font-size: 13px; color: var(--muted); margin-top: 6px; display: flex; gap: 16px; flex-wrap: wrap;">
+          <div
+            style="font-size: 13px; color: var(--muted); margin-top: 6px; display: flex; gap: 16px; flex-wrap: wrap;">
             <span>ID: <strong id="showcaseEmpId" style="color: #fff;">#--</strong></span>
             <span>Meta da Função: <strong id="showcaseTargetVal" style="color: var(--blue);">100 cx/h</strong></span>
             <span>Atingimento: <strong id="showcaseYieldVal" style="color: var(--green);">0%</strong></span>
@@ -96,63 +122,88 @@
       </div>
 
       <!-- Grid de Métricas Principais (Bento Grid) -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; width: 100%; margin-bottom: 18px;">
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 10px; text-align: center;">
-          <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px;">Caixas Líquidas</div>
-          <div id="showcaseBoxesNet" style="font-size: 26px; font-weight: 900; color: #fff; margin-top: 4px;">0 <span style="font-size: 12px; font-weight: 400; color: var(--muted);">cx</span></div>
+      <div
+        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; width: 100%; margin-bottom: 18px;">
+        <div
+          style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 10px; text-align: center;">
+          <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px;">Caixas
+            Líquidas</div>
+          <div id="showcaseBoxesNet" style="font-size: 26px; font-weight: 900; color: #fff; margin-top: 4px;">0 <span
+              style="font-size: 12px; font-weight: 400; color: var(--muted);">cx</span></div>
           <div id="showcaseBoxesRaw" style="font-size: 10px; color: var(--muted); margin-top: 2px;">Bruto: 0 cx</div>
         </div>
 
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 10px; text-align: center;">
-          <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px;">Caixas c/ Erro</div>
-          <div id="showcaseBoxesError" style="font-size: 26px; font-weight: 900; color: var(--muted); margin-top: 4px;">0</div>
+        <div
+          style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 10px; text-align: center;">
+          <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px;">Caixas c/
+            Erro</div>
+          <div id="showcaseBoxesError" style="font-size: 26px; font-weight: 900; color: var(--muted); margin-top: 4px;">
+            0</div>
           <div id="showcaseErrorRate" style="font-size: 10px; color: var(--muted); margin-top: 2px;">Taxa: 0.0%</div>
         </div>
 
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 10px; text-align: center;">
-          <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px;">Qualidade</div>
-          <div id="showcaseQualityVal" style="font-size: 26px; font-weight: 900; color: var(--green); margin-top: 4px;">100%</div>
+        <div
+          style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 10px; text-align: center;">
+          <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px;">Qualidade
+          </div>
+          <div id="showcaseQualityVal" style="font-size: 26px; font-weight: 900; color: var(--green); margin-top: 4px;">
+            100%</div>
           <div style="font-size: 10px; color: var(--muted); margin-top: 2px;">Conformidade</div>
         </div>
 
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 10px; text-align: center;">
-          <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px;">Ritmo Médio</div>
-          <div id="showcasePaceVal" style="font-size: 26px; font-weight: 900; color: var(--blue); margin-top: 4px;">0 <span style="font-size: 12px; font-weight: 400; color: var(--muted);">cx/h</span></div>
+        <div
+          style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 10px; text-align: center;">
+          <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px;">Ritmo
+            Médio</div>
+          <div id="showcasePaceVal" style="font-size: 26px; font-weight: 900; color: var(--blue); margin-top: 4px;">0
+            <span style="font-size: 12px; font-weight: 400; color: var(--muted);">cx/h</span>
+          </div>
           <div style="font-size: 10px; color: var(--muted); margin-top: 2px;">Velocidade atual</div>
         </div>
 
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 10px; text-align: center;">
-          <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px;">Cadência (Gap)</div>
-          <div id="showcaseCadenceVal" style="font-size: 26px; font-weight: 900; color: var(--yellow); margin-top: 4px;">--</div>
+        <div
+          style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 10px; text-align: center;">
+          <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px;">Cadência
+            (Gap)</div>
+          <div id="showcaseCadenceVal"
+            style="font-size: 26px; font-weight: 900; color: var(--yellow); margin-top: 4px;">--</div>
           <div style="font-size: 10px; color: var(--muted); margin-top: 2px;">Tempo entre caixas</div>
         </div>
 
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 10px; text-align: center;">
-          <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px;">Total em Quilos</div>
-          <div id="showcaseTotalKg" style="font-size: 26px; font-weight: 900; color: var(--green-neon); margin-top: 4px;">0 <span style="font-size: 12px; font-weight: 400; color: var(--muted);">kg</span></div>
+        <div
+          style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 10px; text-align: center;">
+          <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px;">Total em
+            Quilos</div>
+          <div id="showcaseTotalKg"
+            style="font-size: 26px; font-weight: 900; color: var(--green-neon); margin-top: 4px;">0 <span
+              style="font-size: 12px; font-weight: 400; color: var(--muted);">kg</span></div>
           <div id="showcaseTotalTon" style="font-size: 10px; color: var(--muted); margin-top: 2px;">0.000 t</div>
         </div>
       </div>
 
       <!-- Detalhamento de Modelos / Calibres Produzidos -->
-      <div id="showcaseModelsRow" style="width: 100%; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 12px 16px; margin-bottom: 18px; text-align: left;">
-        <div style="font-size: 11px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
-          📦 Calibres / Modelos de Caixa Produzidos Hoje
+      <div id="showcaseModelsRow"
+        style="width: 100%; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 12px 16px; margin-bottom: 18px; text-align: left;">
+        <div
+          style="font-size: 11px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+          Modelos e Calibres de Caixa Produzidos Hoje
         </div>
         <div id="showcaseModelsList" style="display: flex; gap: 8px; flex-wrap: wrap;">
           <span class="muted" style="font-size: 12px;">Carregando modelos...</span>
         </div>
       </div>
 
-      <!-- Rodapé / Dica de Atalho -->
-      <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); border-top: 1px solid rgba(255,255,255,0.06); padding-top: 14px;">
-        <div style="display: flex; align-items: center; gap: 6px; color: var(--blue);">
-          <i data-lucide="radio" style="width: 14px; height: 14px;"></i>
-          <span>Terminal ativo • Qualquer bipe de caixa fecha este aviso e processa imediatamente</span>
+      <!-- Rodapé / Status Contínuo -->
+      <div
+        style="width: 100%; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); border-top: 1px solid rgba(255,255,255,0.06); padding-top: 14px;">
+        <div style="display: flex; align-items: center; gap: 6px; color: #38bdf8;">
+          <i data-lucide="activity" style="width: 14px; height: 14px; color: var(--green);"></i>
+          <span id="showcaseLiveStatus">Monitoramento ativo • As leituras e contagens de caixas continuam normalmente em segundo plano</span>
         </div>
-        <div style="display: flex; gap: 10px;">
-          <span>Esc ou clique: fechar</span>
-          <span>F8: alternar carrossel</span>
+        <div style="display: flex; gap: 14px; color: var(--muted);">
+          <span>Esc: Fechar</span>
+          <span>F8: Alternar</span>
+          <span>Espaço: Pausar</span>
         </div>
       </div>
 
@@ -234,14 +285,17 @@
           </div>
 
           <div id="traceContext" style="display: none; flex-direction: column; gap: 6px; margin-top: 8px;">
-            <select id="ctxParcel" style="width: 100%; font-size: 11px; padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text);">
+            <select id="ctxParcel"
+              style="width: 100%; font-size: 11px; padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text);">
               <option value="">Parcela...</option>
             </select>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-              <select id="ctxFruit" style="width: 100%; font-size: 11px; padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text);">
+              <select id="ctxFruit"
+                style="width: 100%; font-size: 11px; padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text);">
                 <option value="">Fruta...</option>
               </select>
-              <select id="ctxVariety" style="width: 100%; font-size: 11px; padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text);">
+              <select id="ctxVariety"
+                style="width: 100%; font-size: 11px; padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text);">
                 <option value="">Variedade...</option>
               </select>
             </div>
@@ -276,20 +330,28 @@
       <!-- Center Column: Top Performer -->
       <section class="card tvCenter"
         style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid var(--blue); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 20px 15px;">
-        <div style="position: absolute; top: -20px; right: -20px; opacity: 0.05; transform: rotate(15deg); pointer-events: none;"><i
-            data-lucide="trophy" style="width:120px; height:120px"></i></div>
+        <div
+          style="position: absolute; top: -20px; right: -20px; opacity: 0.05; transform: rotate(15deg); pointer-events: none;">
+          <i data-lucide="trophy" style="width:120px; height:120px"></i>
+        </div>
         <div class="title"
           style="text-transform: uppercase; color: var(--blue); font-weight: 800; letter-spacing: 2px; text-align: center; margin-bottom: 16px; display:flex; align-items:center; justify-content:center; gap:8px; font-size: 16px;">
-          <i data-lucide="crown" style="width:22px; height:22px; color:var(--yellow)"></i> Top 1 Líder</div>
+          <i data-lucide="crown" style="width:22px; height:22px; color:var(--yellow)"></i> Top 1 Líder
+        </div>
         <div class="leaderWrap" style="flex-direction: column; text-align: center; gap: 14px; width: 100%;">
           <div id="leaderPhoto" class="photo"
             style="width: min(190px, 26vh); height: min(190px, 26vh); border: 4px solid var(--blue); box-shadow: 0 0 30px rgba(59, 130, 246, 0.35); border-radius: 50%; margin: 0 auto; flex-shrink: 0;">
           </div>
           <div style="width: 100%;">
-            <div id="leaderName" style="font-size: clamp(22px, 2.5vw, 34px); font-weight: 900; line-height: 1.2; margin-bottom: 8px; word-break: break-word;">-
+            <div id="leaderName"
+              style="font-size: clamp(22px, 2.5vw, 34px); font-weight: 900; line-height: 1.2; margin-bottom: 8px; word-break: break-word;">
+              -
             </div>
-            <div id="leaderBoxes" style="font-size: clamp(26px, 3.2vw, 42px); font-weight: 900; color: var(--green);">-</div>
-            <div id="leaderProd" style="font-size: clamp(13px, 1.2vw, 17px); color: var(--muted); margin-top: 8px; font-weight: 600;">-</div>
+            <div id="leaderBoxes" style="font-size: clamp(26px, 3.2vw, 42px); font-weight: 900; color: var(--green);">-
+            </div>
+            <div id="leaderProd"
+              style="font-size: clamp(13px, 1.2vw, 17px); color: var(--muted); margin-top: 8px; font-weight: 600;">-
+            </div>
             <div id="leaderQual" style="font-size: clamp(12px, 1vw, 14px); opacity: 0.6; margin-top: 4px;">-</div>
           </div>
         </div>
@@ -314,7 +376,7 @@
 
   <template id="tpl-admin">
     <div class="adminGrid">
-      
+
       <!-- Funcionários -->
       <section class="card glass">
         <div class="card-header-icon">
@@ -382,7 +444,8 @@
           <i data-lucide="tag" style="width:20px; height:20px"></i>
           <div class="title" style="margin:0;">Mapeamento de Etiquetas (Combinados)</div>
         </div>
-        <div class="muted" style="margin-bottom:15px; font-size:12px;">Associe uma etiqueta (ex: da caixa) a um Embalador e Peso específico.</div>
+        <div class="muted" style="margin-bottom:15px; font-size:12px;">Associe uma etiqueta (ex: da caixa) a um
+          Embalador e Peso específico.</div>
         <div class="form-row">
           <div class="form-group">
             <label>Código da Etiqueta</label>
@@ -430,7 +493,8 @@
           </div>
           <div class="form-group" style="flex: 0; flex-direction: row; align-items: flex-end; gap: 10px;">
             <button id="metaSave" type="button" style="height:42px; padding: 0 16px;">Salvar</button>
-            <button id="syncNow" type="button" style="height:42px; padding: 0 16px; background: #334155;">Sincronizar Nuvem</button>
+            <button id="syncNow" type="button" style="height:42px; padding: 0 16px; background: #334155;">Sincronizar
+              Nuvem</button>
           </div>
         </div>
       </section>
@@ -455,7 +519,7 @@
             </div>
             <div id="fruitList" class="list" style="max-height: 150px; overflow-y: auto;"></div>
           </div>
-          
+
           <!-- Variedades -->
           <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 10px;">
             <div class="title" style="font-size: 13px; color:var(--muted); margin-bottom: 8px;">Variedades</div>
@@ -469,7 +533,7 @@
             </div>
             <div id="varList" class="list" style="max-height: 150px; overflow-y: auto;"></div>
           </div>
-          
+
           <!-- Parcelas -->
           <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 10px;">
             <div class="title" style="font-size: 13px; color:var(--muted); margin-bottom: 8px;">Parcelas</div>
@@ -486,7 +550,8 @@
         </div>
 
         <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
-          <div class="title" style="font-size: 13px; color:var(--muted); margin-bottom: 12px;">Vincular Parcela/Fruta/Variedade à Estação</div>
+          <div class="title" style="font-size: 13px; color:var(--muted); margin-bottom: 12px;">Vincular
+            Parcela/Fruta/Variedade à Estação</div>
           <div class="form-row">
             <div class="form-group">
               <label>Parcela</label>
@@ -507,7 +572,7 @@
           <div id="linkList" class="list" style="margin-top: 10px;"></div>
         </div>
       </section>
-      
+
     </div>
   </template>
 
@@ -584,7 +649,8 @@
       <div class="card kpiCard glass">
         <div class="kpiLabel">Qualidade Global</div>
         <div id="kpiQualidadeGlobal" class="kpiValue" style="color:var(--green)">100%</div>
-        <div class="muted" style="font-size:11px; margin-top:4px;">Erros / Penalidades: <span id="kpiTotalErros" style="color:var(--red); font-weight:700">0</span> (<span id="kpiTaxaErro">0%</span>)</div>
+        <div class="muted" style="font-size:11px; margin-top:4px;">Erros / Penalidades: <span id="kpiTotalErros"
+            style="color:var(--red); font-weight:700">0</span> (<span id="kpiTaxaErro">0%</span>)</div>
       </div>
       <div class="card kpiCard glass">
         <div class="kpiLabel">Velocidade Média</div>
@@ -599,7 +665,8 @@
       <div class="card kpiCard glass" id="cardEficiencia">
         <div class="kpiLabel">Eficiência Global</div>
         <div id="kpiEficiencia" class="kpiValue" style="color:var(--blue)">100%</div>
-        <div class="muted" style="font-size:10px; margin-top:4px;">Ativos: <span id="kpiColabAtivos">0</span> func.</div>
+        <div class="muted" style="font-size:10px; margin-top:4px;">Ativos: <span id="kpiColabAtivos">0</span> func.
+        </div>
       </div>
 
 
@@ -620,13 +687,17 @@
       </div>
 
       <!-- Banner Individual do Colaborador (quando selecionado) -->
-      <div id="collabSelectedBanner" class="card glass" style="grid-column: 1 / -1; display: none; background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%); border: 1px solid rgba(59, 130, 246, 0.4); padding: 16px 20px;">
+      <div id="collabSelectedBanner" class="card glass"
+        style="grid-column: 1 / -1; display: none; background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%); border: 1px solid rgba(59, 130, 246, 0.4); padding: 16px 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
           <div style="display: flex; align-items: center; gap: 14px;">
-            <div id="collabBannerPhoto" style="width: 52px; height: 52px; border-radius: 50%; background: #1e293b; background-size: cover; background-position: center; border: 2px solid var(--blue); box-shadow: 0 4px 12px rgba(0,0,0,0.4);"></div>
+            <div id="collabBannerPhoto"
+              style="width: 52px; height: 52px; border-radius: 50%; background: #1e293b; background-size: cover; background-position: center; border: 2px solid var(--blue); box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+            </div>
             <div>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <h3 id="collabBannerName" style="margin: 0; font-size: 17px; font-weight: 700; color: #fff;">Colaborador</h3>
+                <h3 id="collabBannerName" style="margin: 0; font-size: 17px; font-weight: 700; color: #fff;">Colaborador
+                </h3>
                 <span id="collabBannerRole" class="badge" style="font-size: 11px; padding: 2px 8px;">EMBALADOR</span>
               </div>
               <div class="muted" style="font-size: 12px; margin-top: 3px;">
@@ -634,25 +705,30 @@
               </div>
             </div>
           </div>
-          
+
           <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
-            <div style="text-align: center; background: rgba(0,0,0,0.3); padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
+            <div
+              style="text-align: center; background: rgba(0,0,0,0.3); padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
               <div style="font-size: 10px; text-transform: uppercase; color: var(--muted);">Caixas Líquidas</div>
               <div id="collabBannerBoxes" style="font-size: 18px; font-weight: 800; color: #fff;">0 cx</div>
             </div>
-            <div style="text-align: center; background: rgba(0,0,0,0.3); padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
+            <div
+              style="text-align: center; background: rgba(0,0,0,0.3); padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
               <div style="font-size: 10px; text-transform: uppercase; color: var(--muted);">Qualidade</div>
               <div id="collabBannerQuality" style="font-size: 18px; font-weight: 800; color: var(--green);">100%</div>
             </div>
-            <div style="text-align: center; background: rgba(0,0,0,0.3); padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
+            <div
+              style="text-align: center; background: rgba(0,0,0,0.3); padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
               <div style="font-size: 10px; text-transform: uppercase; color: var(--muted);">Ritmo</div>
               <div id="collabBannerPace" style="font-size: 18px; font-weight: 800; color: var(--blue);">0 cx/h</div>
             </div>
-            <div style="text-align: center; background: rgba(0,0,0,0.3); padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
+            <div
+              style="text-align: center; background: rgba(0,0,0,0.3); padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
               <div style="font-size: 10px; text-transform: uppercase; color: var(--muted);">Cadência</div>
               <div id="collabBannerCadence" style="font-size: 18px; font-weight: 800; color: var(--yellow);">--</div>
             </div>
-            <button id="collabBannerClearBtn" type="button" style="background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.4); padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">
+            <button id="collabBannerClearBtn" type="button"
+              style="background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.4); padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">
               ✖ Ver Geral
             </button>
           </div>
@@ -704,15 +780,18 @@
 
       <!-- Tabela Analítica Completa por Colaborador -->
       <div class="card glass" style="grid-column: 1 / -1;">
-        <div class="card-header" style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+        <div class="card-header"
+          style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
           <div class="title" style="display:flex; align-items:center; gap:8px"><i data-lucide="table-properties"
-              style="width:18px; height:18px; color:var(--blue)"></i> Tabela Analítica de Desempenho por Colaborador</div>
+              style="width:18px; height:18px; color:var(--blue)"></i> Tabela Analítica de Desempenho por Colaborador
+          </div>
           <div class="muted" style="font-size:11px;">Métricas consolidadas de produção, erros, qualidade e ritmo</div>
         </div>
         <div style="overflow-x:auto;">
           <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
             <thead>
-              <tr style="border-bottom:1px solid rgba(255,255,255,0.1); color:var(--muted); font-size:11px; text-transform:uppercase;">
+              <tr
+                style="border-bottom:1px solid rgba(255,255,255,0.1); color:var(--muted); font-size:11px; text-transform:uppercase;">
                 <th style="padding:10px 12px;">Colaborador</th>
                 <th style="padding:10px 12px; text-align:center;">Função</th>
                 <th style="padding:10px 12px; text-align:right;">Caixas Líquidas</th>
@@ -723,7 +802,9 @@
               </tr>
             </thead>
             <tbody id="collabAnalyticsTableBody">
-              <tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted);">Aguardando dados...</td></tr>
+              <tr>
+                <td colspan="7" style="text-align:center; padding:20px; color:var(--muted);">Aguardando dados...</td>
+              </tr>
             </tbody>
           </table>
         </div>

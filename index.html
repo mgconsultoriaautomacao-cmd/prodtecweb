@@ -719,6 +719,9 @@
   <div class="nav" onclick="showTab('romaneio',this)"><span class="nav-icon"><i data-lucide="truck"></i></span> Romaneio Expedição</div>
   <div class="nav" onclick="showTab('bulk',this)"><span class="nav-icon"><i data-lucide="shopping-cart"></i></span> Refugo & Vendas</div>
   <div class="nav" onclick="showTab('campo',this)"><span class="nav-icon"><i data-lucide="sprout"></i></span> Caderno de Campo</div>
+  <div class="nav" style="color:#00ffb8;font-weight:800;background:rgba(0,255,184,0.08);border:1px solid rgba(0,255,184,0.25);border-radius:10px;margin-top:6px;cursor:pointer;" onclick="window.open('mapeiro.html','_blank')">
+  <span class="nav-icon"><i data-lucide="scan-barcode"></i></span> Mapeiro Mobile (PWA) ↗
+  </div>
 
   <div class="nav-group">Configurações & Cadastros</div>
   <div class="nav" onclick="showTab('employees',this)"><span class="nav-icon"><i data-lucide="users"></i></span> Funcionários</div>
@@ -1066,7 +1069,12 @@
   <div id="tab-dash" class="tab active">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:15px; flex-wrap:wrap">
   <h1 class="ptitle" style="margin-bottom:0"><i data-lucide="layout-dashboard"></i> Dashboard de Produção</h1>
-  <button onclick="showTab('stops')" class="red" style="font-weight:900; box-shadow:0 0 15px rgba(239,68,68,0.3); display:inline-flex; align-items:center; gap:8px"><i data-lucide="ban" style="width:16px; height:16px; stroke-width:2.5px"></i> REGISTRAR PARADA GERAL</button>
+  <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+    <button onclick="window.open('mapeiro.html','_blank')" style="background:linear-gradient(135deg, #059669 0%, #10b981 100%); color:#ffffff; font-weight:800; border:none; display:inline-flex; align-items:center; gap:8px; box-shadow:0 0 15px rgba(16,185,129,0.3); border-radius:8px; padding:10px 16px; cursor:pointer;" title="Abrir Leitor Contínuo do Mapeiro (PWA)">
+      <i data-lucide="scan-barcode" style="width:16px; height:16px"></i> MAPEIRO MOBILE (PWA) ↗
+    </button>
+    <button onclick="showTab('stops')" class="red" style="font-weight:900; box-shadow:0 0 15px rgba(239,68,68,0.3); display:inline-flex; align-items:center; gap:8px"><i data-lucide="ban" style="width:16px; height:16px; stroke-width:2.5px"></i> REGISTRAR PARADA GERAL</button>
+  </div>
   </div>
   <div class="kgrid">
   <div class="kcard"><div class="klabel">Prod. Total (Período)</div><div id="kpiTotalDia" class="kval">0</div><div class="ksub">caixas embaladas</div></div>
@@ -4902,7 +4910,9 @@
   <div id="e3d-selection-banner">
   <span style="font-size:12px; font-weight:700; color:#22d3ee;" id="e3d-selection-count">0 pallets selecionados</span>
   <div style="display:flex;gap:8px;align-items:center;">
+  <button onclick="e3dSelectAllPallets()" style="font-size:11px; padding:5px 12px; border-radius:6px; background:rgba(34,211,238,0.15); border:1px solid rgba(34,211,238,0.3); color:#22d3ee; cursor:pointer; font-weight:700;">Selecionar Todos</button>
   <button onclick="e3dClearSelection()" style="font-size:11px; padding:5px 10px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer;">Limpar</button>
+  <button id="e3d-delete-batch-btn" onclick="e3dDeleteSelectedPallets()" style="font-size:11px; padding:5px 12px; border-radius:6px; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#f87171; cursor:pointer; font-weight:700;"> Excluir Selecionados</button>
   <button id="e3d-unify-btn" onclick="e3dUnifySelectedPallets()" style="font-size:11px; padding:5px 12px; border-radius:6px; background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; cursor:pointer; font-weight:700; display:none;"> Unificar Pallets</button>
   <button onclick="e3dToggleBatchPanel()" style="font-size:11px; padding:5px 12px; border-radius:6px; background:rgba(34,211,238,0.15); border:1px solid #22d3ee; color:#22d3ee; cursor:pointer; font-weight:700;"> Expedir Selecionados</button>
   </div>
@@ -10099,6 +10109,34 @@ function e3dClearSelection() {
   e3dRenderGrid();
 }
 
+function e3dSelectAllPallets() {
+  e3dSelectedSlots = [];
+  if (e3d && e3d.grid) {
+    e3d.grid.forEach((slot, idx) => {
+      if (slot && slot.status !== E3D_STATUS.EMPTY) {
+        e3dSelectedSlots.push({ key: `packing_${idx}`, idx, gridName: 'packing', slot });
+      }
+    });
+  }
+  if (e3d && e3d.coldGrid) {
+    e3d.coldGrid.forEach((slot, idx) => {
+      if (slot && slot.status !== E3D_STATUS.EMPTY) {
+        e3dSelectedSlots.push({ key: `cold_${idx}`, idx, gridName: 'cold', slot });
+      }
+    });
+  }
+  e3dSelectionMode = true;
+  const btn = $('e3d-select-mode-btn');
+  if (btn) {
+    btn.classList.add('active');
+    btn.innerHTML = '<i data-lucide="x-square" style="width:13px;height:13px"></i> Cancelar Seleção';
+    if (window.lucide) lucide.createIcons();
+  }
+  e3dUpdateSelectionBanner();
+  e3dRenderGrid();
+}
+window.e3dSelectAllPallets = e3dSelectAllPallets;
+
 async function e3dUnifySelectedPallets() {
   if (e3dSelectedSlots.length < 2) {
   toast(' Selecione pelo menos 2 pallets para unificar!', 'warning');
@@ -10796,20 +10834,23 @@ async function initEstoque3D() {
   <div>
   <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
   <div>
-  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Variedade/Caixa</label>
-  <div id="e3d-modal-boxtype" style="font-weight:700; font-size:13px; margin-top:2px">—</div>
+  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Variedade / Tipo Caixa</label>
+  <input type="text" id="e3d-modal-boxtype-inp" class="inp" placeholder="Ex: Melão Amarelo" style="width:100%; padding:6px 8px; border-radius:6px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:12px; font-weight:700; margin-top:2px;">
   </div>
   <div>
-  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Parcela</label>
-  <div id="e3d-modal-parcel" style="font-weight:700; font-size:13px; margin-top:2px">—</div>
+  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Calibre</label>
+  <input type="text" id="e3d-modal-caliber-inp" class="inp" placeholder="Ex: 5, 6, 7, 8, N/I..." style="width:100%; padding:6px 8px; border-radius:6px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:12px; font-weight:700; margin-top:2px;">
   </div>
   <div>
-  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Posição</label>
-  <div id="e3d-modal-pos" style="font-weight:700; font-size:13px; margin-top:2px">—</div>
+  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Parcela / Talhão</label>
+  <input type="text" id="e3d-modal-parcel-inp" class="inp" placeholder="Ex: 01A, PC08..." style="width:100%; padding:6px 8px; border-radius:6px; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:12px; font-weight:700; margin-top:2px;">
   </div>
   <div>
-  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Status</label>
-  <div style="margin-top:2px"><span id="e3d-modal-badge" class="badge" style="background:#3b82f6; font-size:10px; padding:2px 8px; border-radius:4px">—</span></div>
+  <label style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:700">Posição & Status</label>
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-top:5px;">
+    <span id="e3d-modal-pos" style="font-size:11px; font-weight:600; color:var(--muted)">—</span>
+    <span id="e3d-modal-badge" class="badge" style="background:#3b82f6; font-size:10px; padding:2px 8px; border-radius:4px">—</span>
+  </div>
   </div>
   </div>
 
@@ -10880,7 +10921,10 @@ async function initEstoque3D() {
   </div>
 
   <div style="display:flex; justify-content:space-between; gap:12px; margin-top:20px; border-top:1px solid rgba(255,255,255,0.06); padding-top:16px;">
-  <button class="btn sec" onclick="e3dClosePalletModal()" style="padding:8px 16px; border-radius:6px; font-size:12px;">Fechar</button>
+  <div style="display:flex; gap:8px">
+    <button class="btn sec" onclick="e3dClosePalletModal()" style="padding:8px 16px; border-radius:6px; font-size:12px;">Fechar</button>
+    <button class="btn" onclick="e3dDeleteCurrentPallet()" style="padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#f87171; cursor:pointer;"> Excluir Pallet</button>
+  </div>
   <div style="display:flex; gap:12px">
   <button class="btn purple" id="e3d-modal-dispatch-btn" onclick="e3dModalDispatchPallet()" style="padding:8px 16px; border-radius:6px; font-size:12px;"> Expedir</button>
   <button class="btn blue" onclick="e3dSavePalletChanges()" style="padding:8px 16px; border-radius:6px; font-weight:bold; font-size:12px;">Salvar Alterações</button>
@@ -13970,19 +14014,6 @@ async function e3dLoadGridState() {
   e3dLoading = true;
 
   try {
-  const maxPH = parseInt(tenantConfig.packing_capacity) || 20;
-  const maxCR = parseInt(tenantConfig.cold_room_capacity) || 12;
-  e3d.maxPallets = maxPH;
-  e3d.maxColdPallets = maxCR;
-
-  e3d.grid = Array.from({ length: maxPH }, () => ({
-  status: E3D_STATUS.EMPTY, boxes: 0, caliber: null, boxType: '', boxModel: '', parcel: '', label: '', obs: '', palletNum: 0, closedAt: null
-  }));
-  
-  e3d.coldGrid = Array.from({ length: maxCR }, () => ({
-  status: E3D_STATUS.EMPTY, boxes: 0, caliber: null, boxType: '', boxModel: '', parcel: '', label: '', obs: '', palletNum: 0, closedAt: null
-  }));
-
   const { data: dbPallets, error } = await sb.from('pallets')
   .select('*')
   .eq('tenant_id', tenantId)
@@ -13993,6 +14024,21 @@ async function e3dLoadGridState() {
   console.error("Erro ao carregar pallets do Supabase:", error);
   return;
   }
+
+  const countPH = (dbPallets || []).filter(p => p.location === 'PACKING_HOUSE').length;
+  const countCR = (dbPallets || []).filter(p => p.location === 'COLD_ROOM').length;
+  const maxPH = Math.max(parseInt(tenantConfig.packing_capacity) || 20, countPH);
+  const maxCR = Math.max(parseInt(tenantConfig.cold_room_capacity) || 12, countCR);
+  e3d.maxPallets = maxPH;
+  e3d.maxColdPallets = maxCR;
+
+  e3d.grid = Array.from({ length: maxPH }, () => ({
+  status: E3D_STATUS.EMPTY, boxes: 0, caliber: null, boxType: '', boxModel: '', parcel: '', label: '', obs: '', palletNum: 0, closedAt: null
+  }));
+  
+  e3d.coldGrid = Array.from({ length: maxCR }, () => ({
+  status: E3D_STATUS.EMPTY, boxes: 0, caliber: null, boxType: '', boxModel: '', parcel: '', label: '', obs: '', palletNum: 0, closedAt: null
+  }));
 
   e3d.totalBoxes = 0;
   let packingIdx = 0;
@@ -14125,14 +14171,44 @@ function e3dRenderColdTable() {
   <td style="padding:10px">Cal.${slot.caliber || '—'}</td>
   <td style="padding:10px"><small>${slot.boxModel || 'Padrão'}</small></td>
   <td style="padding:10px">${slot.boxes}/${limit} cx</td>
-  <td style="padding:10px">${labelText}</td>
-  <td style="padding:10px">
+  <td style="padding:10px; display:flex; gap:6px;">
+  <button class="btn blue" style="padding:4px 8px;font-size:11px;border-radius:4px" onclick="e3dOpenPalletModalByNum(${slot.palletNum})">Editar</button>
+  <button class="btn" style="padding:4px 8px;font-size:11px;border-radius:4px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#f87171;cursor:pointer;" onclick="e3dDeleteColdPallet('${slot.id}', ${slot.palletNum})">Excluir</button>
   <button class="btn green" style="padding:4px 8px;font-size:11px;border-radius:4px" onclick="e3dDispatchColdPallet('${slot.id}')"> Expedir</button>
   </td>
   </tr>
   `;
   }).join('');
 }
+
+async function e3dDeleteColdPallet(id, pNum) {
+  const pName = pNum ? `P${String(pNum).padStart(2,'0')}` : '';
+  if (!confirm(`Deseja realmente EXCLUIR o pallet ${pName} da câmara fria?\n\nEsta ação liberará a vaga e removerá o pallet permanentemente.`)) return;
+  try {
+    if (id && window.sb) {
+      const { error } = await sb.from('pallets').delete().eq('id', id);
+      if (error) {
+        toast('Erro ao excluir do Supabase: ' + error.message, 'danger');
+        return;
+      }
+    }
+    const cIdx = e3d.coldGrid.findIndex(s => s && ((id && s.id === id) || (pNum && s.palletNum === pNum)));
+    if (cIdx !== -1) {
+      e3d.coldGrid[cIdx] = { status: E3D_STATUS.EMPTY, boxes: 0, caliber: null, boxType: '', boxModel: '', parcel: '', label: '', obs: '', palletNum: 0, closedAt: null, id: null };
+    }
+    toast(`Pallet ${pName} excluído com sucesso!`, 'success');
+    e3dSaveGridState();
+    e3dRenderGrid();
+    e3dRenderColdTable();
+    e3dUpdateKPIs();
+    e3dRenderQueue();
+    await e3dLoadGridState();
+  } catch (err) {
+    console.error('Erro ao excluir pallet da câmara:', err);
+    toast('Erro ao excluir pallet: ' + err.message, 'danger');
+  }
+}
+window.e3dDeleteColdPallet = e3dDeleteColdPallet;
 
 
 async function e3dDispatchColdPallet(id) {
@@ -14427,9 +14503,10 @@ function e3dOpenPalletModal(idx, gridName = 'packing') {
   const col = idx % (gridName === 'packing' ? e3d.cols : e3d.coldCols);
 
   if ($('e3d-modal-title')) $('e3d-modal-title').textContent = `Pallet P${String(slot.palletNum).padStart(2,'0')}`;
-  if ($('e3d-modal-boxtype')) $('e3d-modal-boxtype').textContent = `${slot.boxType || 'Melão'} (${slot.boxModel || e3d.boxType})`;
-  if ($('e3d-modal-parcel')) $('e3d-modal-parcel').textContent = slot.parcel || '—';
-  if ($('e3d-modal-pos')) $('e3d-modal-pos').textContent = `${gridName === 'packing' ? 'Packing House' : 'Câmara Fria'} (F${row} / C${col})`;
+  if ($('e3d-modal-boxtype-inp')) $('e3d-modal-boxtype-inp').value = slot.boxType || slot.boxModel || '';
+  if ($('e3d-modal-caliber-inp')) $('e3d-modal-caliber-inp').value = slot.caliber || '';
+  if ($('e3d-modal-parcel-inp')) $('e3d-modal-parcel-inp').value = slot.parcel || '';
+  if ($('e3d-modal-pos')) $('e3d-modal-pos').textContent = `${gridName === 'packing' ? 'Packing' : 'Câmara'} (F${row}/C${col})`;
   
   // Dynamic labels selection
   const labelSel = $('e3d-modal-label');
@@ -14589,15 +14666,21 @@ async function e3dSavePalletChanges() {
   const slot = gridName === 'packing' ? e3d.grid[idx] : e3d.coldGrid[idx];
   if (!slot) return;
 
-  const label = $('e3d-modal-label').value;
-  const obs = $('e3d-modal-obs').value;
-  const newBoxes = parseInt($('e3d-modal-caixas').value) || 0;
-  const wagon_code = $('e3d-modal-wagon').value.trim();
-  const harvest_date = $('e3d-modal-colheita').value || null;
-  const planting_date = $('e3d-modal-plantio').value || null;
-  const processing_date = $('e3d-modal-processamento').value || null;
+  const newBoxType = $('e3d-modal-boxtype-inp') ? $('e3d-modal-boxtype-inp').value.trim() : slot.boxType;
+  const newCaliber = $('e3d-modal-caliber-inp') ? $('e3d-modal-caliber-inp').value.trim() : slot.caliber;
+  const newParcel = $('e3d-modal-parcel-inp') ? $('e3d-modal-parcel-inp').value.trim() : slot.parcel;
+  const label = $('e3d-modal-label')?.value || '';
+  const obs = $('e3d-modal-obs')?.value || '';
+  const newBoxes = parseInt($('e3d-modal-caixas')?.value) || 0;
+  const wagon_code = $('e3d-modal-wagon')?.value.trim() || '';
+  const harvest_date = $('e3d-modal-colheita')?.value || null;
+  const planting_date = $('e3d-modal-plantio')?.value || null;
+  const processing_date = $('e3d-modal-processamento')?.value || null;
   const isMisto = $('e3d-modal-misto') ? $('e3d-modal-misto').checked : false;
 
+  slot.boxType = newBoxType || slot.boxType;
+  slot.caliber = newCaliber || slot.caliber;
+  slot.parcel = newParcel || slot.parcel;
   slot.label = label;
   slot.obs = obs;
   slot.boxes = newBoxes;
@@ -14610,48 +14693,170 @@ async function e3dSavePalletChanges() {
   // Recalculate status based on boxes and limit
   const limit = e3dGetPalletLimit(slot.boxType, slot.caliber, slot.boxModel);
   if (newBoxes >= limit) {
-  if (label) {
-  slot.status = E3D_STATUS.LABELED;
+    if (label) {
+      slot.status = E3D_STATUS.LABELED;
+    } else {
+      slot.status = E3D_STATUS.CLOSED;
+    }
   } else {
-  slot.status = E3D_STATUS.CLOSED;
-  }
-  } else {
-  slot.status = E3D_STATUS.FORMING;
+    slot.status = E3D_STATUS.FORMING;
   }
 
-  if (slot.id) {
-  const payload = { 
-  label, 
-  obs, 
-  box_count: newBoxes,
-  wagon_code,
-  harvest_date,
-  planting_date,
-  processing_date
-  };
-  let { error } = await sb.from('pallets').update(payload).eq('id',slot.id);
-  if (error && error.message && error.message.includes("'obs' column")) {
-  delete payload.obs;
-  const res = await sb.from('pallets').update(payload).eq('id', slot.id);
-  error = res.error;
-  }
-  
-  if (error) {
-  toast('Erro ao salvar no Supabase: ' + error.message, 'danger');
+  if (slot.id && window.sb) {
+    const payload = { 
+      variety_name: slot.boxType,
+      caliber: slot.caliber,
+      parcel_code: slot.parcel,
+      box_type: slot.boxModel || slot.boxType,
+      label, 
+      obs, 
+      box_count: newBoxes,
+      wagon_code,
+      harvest_date,
+      planting_date,
+      processing_date
+    };
+    let { error } = await sb.from('pallets').update(payload).eq('id', slot.id);
+    if (error && error.message && error.message.includes("'obs' column")) {
+      delete payload.obs;
+      const res = await sb.from('pallets').update(payload).eq('id', slot.id);
+      error = res.error;
+    }
+    
+    if (error) {
+      toast('Erro ao salvar no banco: ' + error.message, 'danger');
+    } else {
+      toast('Pallet atualizado com sucesso!', 'success');
+      e3dClosePalletModal();
+      e3dSaveGridState();
+      e3dRenderGrid();
+      e3dRenderColdTable();
+      e3dUpdateKPIs();
+    }
   } else {
-  toast(' Alterações salvas com sucesso!', 'success');
-  e3dClosePalletModal();
-  e3dSaveGridState();
-  e3dRenderGrid();
-  e3dRenderColdTable();
-  }
-  } else {
-  toast(' Alterações salvas com sucesso!', 'success');
-  e3dClosePalletModal();
-  e3dUpdateKPIs();
-  e3dRenderQueue();
+    toast('Alterações salvas com sucesso!', 'success');
+    e3dClosePalletModal();
+    e3dSaveGridState();
+    e3dRenderGrid();
+    e3dRenderColdTable();
+    e3dUpdateKPIs();
+    e3dRenderQueue();
   }
 }
+
+async function e3dDeleteCurrentPallet() {
+  const idx = e3d.selectedSlot;
+  const gridName = e3d.selectedGrid;
+  if (idx === -1) return;
+
+  const slot = gridName === 'packing' ? e3d.grid[idx] : e3d.coldGrid[idx];
+  if (!slot || slot.status === E3D_STATUS.EMPTY) return;
+
+  const pNum = slot.palletNum ? `P${String(slot.palletNum).padStart(2,'0')}` : `#${idx+1}`;
+  if (!confirm(`Deseja realmente EXCLUIR o pallet ${pNum} (${slot.boxes || 0} caixas)?\n\nEsta ação liberará a vaga no estoque e removerá o pallet permanentemente.`)) {
+    return;
+  }
+
+  try {
+    if (slot.id && window.sb) {
+      const { error } = await sb.from('pallets').delete().eq('id', slot.id);
+      if (error) {
+        console.warn('Erro ao excluir pallet do Supabase:', error);
+        toast('Erro ao excluir pallet: ' + error.message, 'danger');
+        return;
+      }
+    }
+
+    const emptySlot = {
+      status: E3D_STATUS.EMPTY,
+      boxes: 0,
+      caliber: null,
+      boxType: '',
+      boxModel: '',
+      parcel: '',
+      label: '',
+      obs: '',
+      palletNum: 0,
+      closedAt: null,
+      id: null
+    };
+
+    if (gridName === 'packing') {
+      e3d.grid[idx] = emptySlot;
+    } else {
+      e3d.coldGrid[idx] = emptySlot;
+    }
+
+    toast(`Pallet ${pNum} excluído com sucesso!`, 'success');
+    e3dClosePalletModal();
+    e3dSaveGridState();
+    e3dRenderGrid();
+    e3dRenderColdTable();
+    e3dUpdateKPIs();
+    e3dRenderQueue();
+    await e3dLoadGridState();
+  } catch (err) {
+    console.error('Erro ao excluir pallet:', err);
+    toast('Erro inesperado ao excluir pallet.', 'danger');
+  }
+}
+window.e3dDeleteCurrentPallet = e3dDeleteCurrentPallet;
+
+async function e3dDeleteSelectedPallets() {
+  if (!e3dSelectedSlots || e3dSelectedSlots.length === 0) {
+    toast('Selecione pelo menos um pallet para excluir!', 'warning');
+    return;
+  }
+
+  const count = e3dSelectedSlots.length;
+  if (!confirm(`Deseja realmente EXCLUIR os ${count} pallets selecionados?\n\nEsta ação removerá todos os pallets selecionados permanentemente do estoque e liberará suas vagas.`)) {
+    return;
+  }
+
+  try {
+    const idsToDelete = [];
+    e3dSelectedSlots.forEach(item => {
+      const s = item.slot || item;
+      if (s && s.id) idsToDelete.push(s.id);
+
+      const emptySlot = { status: E3D_STATUS.EMPTY, boxes: 0, caliber: null, boxType: '', boxModel: '', parcel: '', label: '', obs: '', palletNum: 0, closedAt: null, id: null };
+      
+      const gridName = item.gridName;
+      const idx = item.idx;
+      if (gridName === 'packing' && idx !== undefined && idx >= 0 && idx < e3d.grid.length) {
+        e3d.grid[idx] = emptySlot;
+      } else if (gridName === 'cold' && idx !== undefined && idx >= 0 && idx < e3d.coldGrid.length) {
+        e3d.coldGrid[idx] = emptySlot;
+      } else {
+        const pIdx = e3d.grid.findIndex(g => g === s || (g && s && g.id && g.id === s.id));
+        if (pIdx !== -1) e3d.grid[pIdx] = emptySlot;
+        const cIdx = e3d.coldGrid.findIndex(g => g === s || (g && s && g.id && g.id === s.id));
+        if (cIdx !== -1) e3d.coldGrid[cIdx] = emptySlot;
+      }
+    });
+
+    if (idsToDelete.length > 0 && window.sb) {
+      const { error } = await sb.from('pallets').delete().in('id', idsToDelete);
+      if (error) {
+        console.error('Erro ao excluir do Supabase:', error);
+        toast('Erro ao excluir do Supabase: ' + error.message, 'danger');
+      }
+    }
+
+    e3dClearSelection();
+    e3dSaveGridState();
+    e3dRenderGrid();
+    e3dRenderColdTable();
+    e3dUpdateKPIs();
+    e3dRenderQueue();
+    await e3dLoadGridState();
+    toast(`${count} pallet(s) excluído(s) com sucesso!`, 'success');
+  } catch (err) {
+    console.error('Erro ao excluir pallets em lote:', err);
+    toast('Erro ao excluir pallets em lote.', 'danger');
+  }
+}
+window.e3dDeleteSelectedPallets = e3dDeleteSelectedPallets;
 
 async function e3dModalDispatchPallet() {
   const idx = e3d.selectedSlot;
@@ -14821,8 +15026,6 @@ function e3dClosePallet(idx) {
   const slot = e3d.grid[idx];
   slot.status = E3D_STATUS.CLOSED;
   slot.closedAt = new Date().toISOString();
-  const pNum = slot.palletNum;
-  toast(` Pallet P${String(pNum).padStart(2,'0')} fechado! ${slot.boxes} cx ${slot.boxType} Cal.${slot.caliber}`, 'success');
 
   e3dSaveGridState();
   e3dUpdateKPIs();
@@ -14881,7 +15084,7 @@ function e3dRenderQueue() {
   const icons = { forming: '', closed: '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;margin-right:4px"></span>', labeled: '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#eab308;margin-right:4px"></span>', dispatching: '' };
   const statusText = { forming: 'Formando', closed: 'Fechado', labeled: 'Etiquetado', dispatching: 'Expedindo' };
   const labelText = slot.label ? (E3D_LABEL_NAMES[slot.label] || slot.label) : '';
-  return `<div class="e3d-queue-item">
+  return `<div class="e3d-queue-item" style="cursor:pointer;" onclick="e3dOpenPalletModalByNum(${slot.palletNum})" title="Clique para abrir, editar ou excluir este pallet">
   <div class="e3d-queue-icon" style="background:rgba(59,130,246,.1)">${icons[slot.status] || '⬜'}</div>
   <div class="e3d-queue-info">
   <div class="e3d-queue-name">Pallet P${String(slot.palletNum).padStart(2,'0')} — Cal.${slot.caliber || '?'}${slot.caliber === E3D_NI_CAL ? ' <span style="background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.35);border-radius:4px;padding:0 5px;font-size:9px;font-weight:800">NÃO IDENTIFICADA</span>' : ''}</div>
@@ -14892,6 +15095,22 @@ function e3dRenderQueue() {
   </div>`;
   }).join('');
 }
+
+function e3dOpenPalletModalByNum(pNum) {
+  if (!pNum) return;
+  const num = parseInt(pNum);
+  let idx = e3d.grid.findIndex(s => s && s.palletNum === num && s.status !== E3D_STATUS.EMPTY);
+  if (idx !== -1) {
+    e3dOpenPalletModal(idx, 'packing');
+    return;
+  }
+  let cIdx = e3d.coldGrid.findIndex(s => s && s.palletNum === num && s.status !== E3D_STATUS.EMPTY);
+  if (cIdx !== -1) {
+    e3dOpenPalletModal(cIdx, 'cold');
+    return;
+  }
+}
+window.e3dOpenPalletModalByNum = e3dOpenPalletModalByNum;
 
 // Listen for ESC key to close modal
 document.addEventListener('keydown', (e) => {

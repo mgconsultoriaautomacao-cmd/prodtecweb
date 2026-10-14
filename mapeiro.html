@@ -3,303 +3,920 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Mapeiro Mobile - PackingHouse</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0f172a">
+  <title>Mapeiro Mobile • Core Agro</title>
+  
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
   <style>
-  :root {
-  --bg: #0f172a;
-  --card: #1e293b;
-  --blue: #3b82f6;
-  --green: #22c55e;
-  --text: #f8fafc;
-  --muted: #94a3b8;
-  }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body { 
-  margin: 0; font-family: 'Inter', system-ui, sans-serif; 
-  background: var(--bg); color: var(--text); 
-  display: flex; flex-direction: column; height: 100vh; overflow: hidden;
-  }
-  header { 
-  padding: 20px; background: var(--card); border-bottom: 1px solid rgba(255,255,255,0.05);
-  display: flex; justify-content: space-between; align-items: center;
-  }
-  .container { flex: 1; overflow-y: auto; padding: 20px; }
-  .card { background: var(--card); border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); }
-  h2 { margin: 0 0 10px 0; font-size: 16px; color: var(--blue); }
-  
-  input, select, button { 
-  width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; 
-  background: #0f172a; color: white; font-size: 14px; margin-bottom: 10px;
-  }
-  button { 
-  background: var(--blue); border: none; font-weight: 700; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  }
-  button:active { opacity: 0.8; transform: scale(0.98); }
-  button.secondary { background: #334155; }
-  button.success { background: var(--green); }
+    :root {
+      --bg: #0b1120;
+      --card: #151f32;
+      --card-border: rgba(255, 255, 255, 0.08);
+      --blue: #38bdf8;
+      --blue-dim: rgba(56, 189, 248, 0.15);
+      --green: #22c55e;
+      --green-dim: rgba(34, 197, 94, 0.18);
+      --red: #ef4444;
+      --red-dim: rgba(239, 68, 68, 0.2);
+      --yellow: #f59e0b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
 
-  #reader { width: 100%; border-radius: 12px; overflow: hidden; background: black; }
-  
-  .log-item { 
-  display: flex; justify-content: space-between; font-size: 12px; 
-  padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); 
-  }
-  .status-badge { 
-  font-size: 10px; padding: 2px 8px; border-radius: 99px; 
-  background: rgba(59, 130, 246, 0.2); color: var(--blue);
-  }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+    }
 
-  #overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: var(--bg); z-index: 100; display: flex;
-  flex-direction: column; justify-content: center; padding: 40px;
-  }
-  .loading-dots:after { content: '...'; animation: dots 1.5s infinite; }
-  @keyframes dots { 0%, 20% { content: '.'; } 40% { content: '..'; } 60% { content: '...'; } }
+    /* Header Superior */
+    header {
+      padding: 12px 16px;
+      background: #0f172a;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+      flex-shrink: 0;
+    }
+    .brand-title {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand-sub {
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .badge-emp {
+      background: var(--blue-dim);
+      border: 1px solid var(--blue);
+      color: var(--blue);
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Container Principal */
+    .viewport {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Área do Scanner em Câmera Contínua */
+    .camera-wrapper {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    #reader {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover;
+    }
+    #reader video {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+    }
+
+    /* Moldura / Retículo da Mira */
+    .scan-reticle {
+      position: absolute;
+      width: 78%;
+      max-width: 310px;
+      height: 180px;
+      border: 2px dashed rgba(56, 189, 248, 0.6);
+      border-radius: 14px;
+      box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .scan-reticle.success-flash {
+      border-color: var(--green);
+      box-shadow: 0 0 35px var(--green), 0 0 0 4000px rgba(0, 0, 0, 0.4);
+    }
+    .scan-reticle.error-flash {
+      border-color: var(--red);
+      box-shadow: 0 0 35px var(--red), 0 0 0 4000px rgba(0, 0, 0, 0.4);
+    }
+    .reticle-label {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+
+    /* Barra Superior Flutuante sobre o Vídeo (HUD) */
+    .camera-hud-top {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      z-index: 15;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .hud-chip {
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--card-border);
+      padding: 6px 12px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .torch-btn {
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid var(--card-border);
+      color: #fff;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .torch-btn.active {
+      background: var(--yellow);
+      color: #000;
+      border-color: var(--yellow);
+    }
+
+    /* Toast Flutuante de Leitura (Instantâneo) */
+    .scan-toast {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      right: 12px;
+      z-index: 15;
+      background: rgba(15, 23, 42, 0.94);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      transition: all 0.25s ease;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    .scan-toast.ok { border-color: var(--green); }
+    .scan-toast.err { border-color: var(--red); }
+
+    /* Painel Inferior de Controle do Palete */
+    .bottom-panel {
+      background: #0f172a;
+      border-top: 1px solid var(--card-border);
+      padding: 12px 16px;
+      z-index: 20;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Linha do Seletor de Empilhador / Estação */
+    .ctrl-row {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 8px;
+    }
+    select, button, input {
+      font-family: inherit;
+      border-radius: 8px;
+      font-size: 13px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #fff;
+      padding: 9px 12px;
+      outline: none;
+    }
+    select {
+      font-weight: 600;
+    }
+    button {
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    button:active { transform: scale(0.97); }
+    .btn-action {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      border: none;
+      color: #fff;
+      padding: 10px;
+    }
+    .btn-finish {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #f87171;
+    }
+    .btn-secondary {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: var(--muted);
+    }
+
+    /* Placar de Caixas no Palete */
+    .pallet-score {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 8px 12px;
+    }
+    .pallet-count-big {
+      font-size: 28px;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1;
+    }
+    .pallet-breakdown {
+      font-size: 11px;
+      color: var(--muted);
+      max-height: 40px;
+      overflow-y: auto;
+      text-align: right;
+    }
+
+    /* Histórico / Drawer */
+    .history-drawer {
+      display: none;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      top: 0;
+      background: rgba(11, 17, 32, 0.98);
+      z-index: 50;
+      padding: 20px;
+      overflow-y: auto;
+      flex-direction: column;
+    }
+    .history-drawer.open { display: flex; }
+    .log-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 12px;
+    }
+
+    /* Overlay de Login */
+    #overlayLogin {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 30px;
+    }
   </style>
 </head>
 <body>
 
-  <div id="overlay">
-  <h1 style="color: var(--blue); font-size: 24px; margin-bottom: 10px;">PackingHouse</h1>
-  <p style="color: var(--muted); margin-bottom: 30px;">Mapeiro Mobile v1.0</p>
-  <div id="loginForm">
-  <input type="email" id="email" placeholder="E-mail">
-  <input type="password" id="password" placeholder="Senha">
-  <button id="btnLogin">Entrar no Sistema</button>
-  </div>
-  <div id="loading" style="display: none;">
-  <p class="loading-dots">Autenticando</p>
-  </div>
+  <!-- Tela de Login / Autenticação Inicial -->
+  <div id="overlayLogin">
+    <div style="text-align: center; margin-bottom: 24px;">
+      <div style="display:inline-flex; align-items:center; justify-content:center; width:56px; height:56px; border-radius:14px; background:rgba(56,189,248,0.15); border:1px solid var(--blue); color:var(--blue); margin-bottom:12px;">
+        <i data-lucide="layers" style="width:28px; height:28px;"></i>
+      </div>
+      <h1 style="color: #fff; font-size: 22px; margin: 0; font-weight: 800;">Mapeiro Mobile</h1>
+      <p style="color: var(--muted); font-size: 13px; margin: 6px 0 0 0;">Lançamento Contínuo de Empilhadores</p>
+    </div>
+
+    <div id="loginForm" style="display: flex; flex-direction: column; gap: 12px;">
+      <input type="email" id="loginEmail" placeholder="E-mail de acesso" />
+      <input type="password" id="loginPassword" placeholder="Senha" />
+      <button id="btnLogin" class="btn-action" style="padding: 12px; font-size: 14px;">
+        <i data-lucide="log-in" style="width:16px; height:16px;"></i> Entrar no Terminal
+      </button>
+    </div>
+
+    <div id="loginLoading" style="display: none; text-align: center; color: var(--blue); font-size: 14px; margin-top: 15px;">
+      <i data-lucide="loader-2" class="spin" style="width:20px; height:20px;"></i> Autenticando...
+    </div>
   </div>
 
+  <!-- Header Superior -->
   <header>
-  <div>
-  <div style="font-weight: 800; font-size: 18px;">MAPEIRO</div>
-  <div id="tenantDisplay" style="font-size: 10px; color: var(--muted);">Carregando...</div>
-  </div>
-  <button id="btnLogout" style="width: auto; padding: 5px 10px; font-size: 10px; margin: 0;" class="secondary">Sair</button>
+    <div>
+      <div class="brand-title">
+        <i data-lucide="layers" style="width:16px; height:16px; color:var(--blue);"></i>
+        <span>MAPEIRO MOBILE</span>
+        <span class="badge-emp">Exclusivo Empilhador</span>
+      </div>
+      <div id="hdrStatus" class="brand-sub">Conectando...</div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button id="btnOpenHistory" class="btn-secondary" style="padding:6px 10px; font-size:11px;" title="Ver Histórico">
+        <i data-lucide="history" style="width:14px; height:14px;"></i>
+      </button>
+      <button id="btnLogout" class="btn-secondary" style="padding:6px 10px; font-size:11px;" title="Sair">
+        <i data-lucide="log-out" style="width:14px; height:14px;"></i>
+      </button>
+    </div>
   </header>
 
-  <div class="container">
-  <div class="card">
-  <h2>Configuração da Linha</h2>
-  <select id="stationId">
-  <option value="ST01">ESTAÇÃO 01</option>
-  <option value="ST02">ESTAÇÃO 02</option>
-  <option value="ST03">ESTAÇÃO 03</option>
-  </select>
+  <!-- Viewport da Câmera Contínua -->
+  <div class="viewport">
+    <div class="camera-wrapper">
+      <div id="reader"></div>
+
+      <!-- Mira / Retículo Central -->
+      <div id="scanReticle" class="scan-reticle">
+        <div class="reticle-label">Aponte para a caixa ou crachá</div>
+      </div>
+
+      <!-- HUD Superior sobre o Vídeo -->
+      <div class="camera-hud-top">
+        <div class="hud-chip">
+          <i data-lucide="video" style="width:13px; height:13px; color:var(--green);"></i>
+          <span id="camStatusText">Câmera Ativa</span>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button id="btnToggleTorch" class="torch-btn" title="Ligar Lanterna">
+            <i data-lucide="flashlight" style="width:16px; height:16px;"></i>
+          </button>
+          <button id="btnSwitchCam" class="torch-btn" title="Inverter Câmera">
+            <i data-lucide="refresh-cw" style="width:16px; height:16px;"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Toast Flutuante com feedback do último bipe -->
+      <div id="scanToast" class="scan-toast" style="display: none;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span id="toastIcon"></span>
+          <div>
+            <div id="toastTitle" style="font-weight: 700;">--</div>
+            <div id="toastSub" style="font-size: 10px; color: var(--muted);">--</div>
+          </div>
+        </div>
+        <div id="toastBadge" style="font-weight: 800; font-size: 11px;"></div>
+      </div>
+    </div>
   </div>
 
-  <div id="stepCollab" class="card">
-  <h2>Passo 1: Quem está empilhando?</h2>
-  <p style="font-size: 12px; color: var(--muted);">Bipe o crachá do Empilhador para começar o lote.</p>
-  <div id="activeCollab" style="display: none; padding: 10px; background: rgba(34, 197, 94, 0.1); border: 1px solid var(--green); border-radius: 8px; margin-bottom: 10px;">
-  <div style="font-size: 10px; color: var(--green);">EMPILHADOR ATIVO:</div>
-  <div id="collabName" style="font-weight: 700; font-size: 16px;">--</div>
-  </div>
-  <button id="btnScanCollab"> BIPAR CRACHÁ</button>
+  <!-- Painel Inferior: Controles de Operação do Palete -->
+  <div class="bottom-panel">
+    <!-- Seletor de Linha / Empilhador Selecionado -->
+    <div class="ctrl-row">
+      <div>
+        <label style="font-size: 10px; color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 2px; display: block;">
+          Empilhador Ativo no Palete:
+        </label>
+        <select id="selEmpilhador" style="width: 100%;">
+          <option value="">Aguardando seleção / bipe...</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size: 10px; color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 2px; display: block;">
+          Estação:
+        </label>
+        <select id="selStation" style="width: 100%;">
+          <option value="ST01">ESTAÇÃO 01</option>
+          <option value="ST02">ESTAÇÃO 02</option>
+          <option value="ST03">ESTAÇÃO 03</option>
+          <option value="ST04">ESTAÇÃO 04</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Placar do Palete -->
+    <div class="pallet-score">
+      <div>
+        <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px;">Caixas Lidas no Palete</div>
+        <div class="pallet-count-big">
+          <span id="palletCount">0</span> <span style="font-size: 12px; font-weight: 500; color: var(--muted);">cx</span>
+        </div>
+      </div>
+      <div id="palletBreakdown" class="pallet-breakdown">
+        Passe a câmera continuamente pelas caixas do palete
+      </div>
+    </div>
+
+    <!-- Ações Rápidas -->
+    <div style="display: flex; gap: 8px;">
+      <button id="btnPauseCam" class="btn-secondary" style="flex: 1; padding: 10px;">
+        <i data-lucide="pause" style="width:14px; height:14px;"></i> Pausar Câmera
+      </button>
+      <button id="btnFinishPallet" class="btn-finish" style="flex: 1.3; padding: 10px;">
+        <i data-lucide="check-circle" style="width:14px; height:14px;"></i> Fechar Palete
+      </button>
+    </div>
   </div>
 
-  <div id="stepBoxes" class="card" style="opacity: 0.5; pointer-events: none;">
-  <h2>Passo 2: Mapear Caixas</h2>
-  <p style="font-size: 12px; color: var(--muted);">Bipe as etiquetas das caixas deste lote.</p>
-  <div id="scanCount" style="font-size: 32px; font-weight: 900; text-align: center; margin: 10px 0;">0</div>
-  <button id="btnScanBox" class="success"> BIPAR CAIXA</button>
-  <button id="btnFinishLote" class="secondary" style="margin-top: 10px;">Finalizar Lote</button>
-  </div>
-
-  <div class="card">
-  <h2>Últimos Envios</h2>
-  <div id="logList">
-  <div class="muted" style="font-size: 12px;">Nenhuma caixa mapeada ainda.</div>
-  </div>
-  </div>
-  </div>
-
-  <!-- Scanner Modal (Hidden by default) -->
-  <div id="scannerModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: black; z-index: 200; padding: 20px;">
-  <div id="reader"></div>
-  <button id="btnCloseScanner" style="margin-top: 20px;" class="secondary">Cancelar</button>
+  <!-- Drawer de Histórico -->
+  <div id="historyDrawer" class="history-drawer">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h2 style="margin:0; font-size:16px; font-weight:800; color:#fff;">Histórico das Últimas Leituras</h2>
+      <button id="btnCloseHistory" class="btn-secondary" style="padding:6px 10px;">Fechar</button>
+    </div>
+    <div id="historyList" style="flex:1;">
+      <div style="text-align:center; padding:20px; color:var(--muted); font-size:12px;">Nenhuma leitura realizada nesta sessão.</div>
+    </div>
   </div>
 
   <script>
-  let sb = null;
-  let user = null;
-  let tenantId = null;
-  let activeCollabBarcode = null;
-  let activeCollabName = null;
-  let scanCounter = 0;
-  let html5QrCode = null;
+    // ── Credenciais Padrão do Supabase ───────────────────────────────────────
+    const SUPABASE_URL = "https://yiigaohjvvieeooxsban.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpaWdhb2hqdnZpZWVvb3hzYmFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MTY1NzksImV4cCI6MjA5MDE5MjU3OX0.CjzcyltkTXHsi0zO7IL-sb5Psy7yMTAnJ7GRQ4maFK8";
 
-  const config = {
-  fps: 10,
-  qrbox: { width: 250, height: 250 },
-  aspectRatio: 1.0
-  };
+    let sb = null;
+    let currentUser = null;
+    let currentTenantId = 'b7ad82dd-dca3-46af-91c6-5d564b7c3cc5';
+    let html5Scanner = null;
+    let isScanningActive = false;
+    let currentCameraFacing = 'environment';
+    let torchEnabled = false;
 
-  async function init() {
-  const savedSession = localStorage.getItem('mapeiro_session');
-  if (savedSession) {
-  const session = JSON.parse(savedSession);
-  setupSupabase(session.url, session.key);
-  checkAuth();
-  }
-  }
+    // Catálogo de colaboradores em memória (atualizado na inicialização)
+    let employeesList = [];
+    let stackersMap = new Map(); // barcode -> employee (ROLE: EMPILHADOR)
+    let packersBarcodes = new Set(); // barcodes com ROLE: EMBALADOR (para BLOQUEIO)
 
-  function setupSupabase(url, key) {
-  sb = window.supabase.createClient(url, key);
-  }
+    // Estado do Palete Atual
+    let palletBoxesCount = 0;
+    let palletByStacker = {}; // empName -> count
+    let recentScans = []; // últimos bipes
+    let lastScannedCode = '';
+    let lastScannedTime = 0;
+    const SCAN_COOLDOWN_SAME_CODE_MS = 1500; // Evita bipar a mesma caixa duas vezes em menos de 1.5s
 
-  async function checkAuth() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-  user = session.user;
-  tenantId = user.user_metadata?.tenant_id;
-  document.getElementById('overlay').style.display = 'none';
-  document.getElementById('tenantDisplay').textContent = `Usuário: ${user.email}`;
-  loadTenantInfo();
-  }
-  }
+    // ── Sintetizador de Áudio Nativo (Web Audio API) ──────────────────────────
+    let audioCtx = null;
+    function playBeep(type = 'success') {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
 
-  async function loadTenantInfo() {
-  // Fetch tenant name if needed
-  }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
 
-  document.getElementById('btnLogin').onclick = async () => {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-  
-  // Hardcoded for development, normally you'd get these from index.html settings
-  const url = "https://yiigaohjvvieeooxsban.supabase.co";
-  const key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpaWdhb2hqdnZpZWVvb3hzYmFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MTY1NzksImV4cCI6MjA5MDE5MjU3OX0.CjzcyltkTXHsi0zO7IL-sb5Psy7yMTAnJ7GRQ4maFK8"; 
+        if (type === 'success') {
+          // Tom agudo limpo de sucesso (1800Hz -> 2400Hz rápido)
+          osc.frequency.setValueAtTime(1800, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(2400, audioCtx.currentTime + 0.08);
+          gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+          osc.start(audioCtx.currentTime);
+          osc.stop(audioCtx.currentTime + 0.09);
+        } else {
+          // Tom grave duplo de bloqueio/erro (300Hz)
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.22);
+          osc.start(audioCtx.currentTime);
+          osc.stop(audioCtx.currentTime + 0.23);
+        }
+      } catch (e) {
+        console.warn('Erro ao reproduzir beep:', e);
+      }
+    }
 
-  document.getElementById('loginForm').style.display = 'none';
-  document.getElementById('loading').style.display = 'block';
+    // ── Inicialização ────────────────────────────────────────────────────────
+    async function initApp() {
+      if (window.lucide) window.lucide.createIcons();
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  setupSupabase(url, key);
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
-  
-  if (error) {
-  alert('Erro: ' + error.message);
-  document.getElementById('loginForm').style.display = 'block';
-  document.getElementById('loading').style.display = 'none';
-  } else {
-  localStorage.setItem('mapeiro_session', JSON.stringify({ url, key }));
-  checkAuth();
-  }
-  };
+      const saved = localStorage.getItem('prodtec_mapeiro_auth');
+      if (saved) {
+        try {
+          const authObj = JSON.parse(saved);
+          currentTenantId = authObj.tenantId || currentTenantId;
+          document.getElementById('overlayLogin').style.display = 'none';
+          document.getElementById('hdrStatus').textContent = `Tenant: ${authObj.email || 'Conectado'}`;
+          await loadEmployeesCatalog();
+          startContinuousCamera();
+          return;
+        } catch (e) {}
+      }
 
-  document.getElementById('btnLogout').onclick = () => {
-  localStorage.removeItem('mapeiro_session');
-  location.reload();
-  };
+      // Se já houver sessão ativa no Supabase
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        handleAuthSuccess(session.user);
+      } else {
+        document.getElementById('overlayLogin').style.display = 'flex';
+      }
+    }
 
-  function openScanner(callback) {
-  document.getElementById('scannerModal').style.display = 'flex';
-  html5QrCode = new Html5Qrcode("reader");
-  html5QrCode.start({ facingMode: "environment" }, config, (text) => {
-  html5QrCode.stop().then(() => {
-  document.getElementById('scannerModal').style.display = 'none';
-  callback(text);
-  });
-  });
-  }
+    function handleAuthSuccess(user) {
+      currentUser = user;
+      currentTenantId = user.user_metadata?.tenant_id || currentTenantId;
+      localStorage.setItem('prodtec_mapeiro_auth', JSON.stringify({
+        email: user.email,
+        tenantId: currentTenantId
+      }));
+      document.getElementById('overlayLogin').style.display = 'none';
+      document.getElementById('hdrStatus').textContent = `Usuário: ${user.email}`;
+      loadEmployeesCatalog();
+      startContinuousCamera();
+    }
 
-  document.getElementById('btnScanCollab').onclick = () => {
-  openScanner(async (barcode) => {
-  // Look up employee
-  const { data, error } = await sb
-  .from('employees')
-  .select('name')
-  .eq('barcode', barcode)
-  .eq('role', 'EMPILHADOR')
-  .eq('active', true)
-  .single();
+    // ── Carrega Catálogo de Funcionários & Identifica Empilhadores vs Embaladores
+    async function loadEmployeesCatalog() {
+      try {
+        const { data: emps, error } = await sb
+          .from('employees')
+          .select('*')
+          .eq('tenant_id', currentTenantId)
+          .eq('active', true);
 
-  if (data) {
-  activeCollabBarcode = barcode;
-  activeCollabName = data.name;
-  document.getElementById('collabName').textContent = data.name;
-  document.getElementById('activeCollab').style.display = 'block';
-  document.getElementById('stepBoxes').style.opacity = '1';
-  document.getElementById('stepBoxes').style.pointerEvents = 'all';
-  } else {
-  alert('Empilhador não encontrado ou inativo.');
-  }
-  });
-  };
+        if (!error && emps) {
+          employeesList = emps;
+          stackersMap.clear();
+          packersBarcodes.clear();
 
-  document.getElementById('btnScanBox').onclick = () => {
-  openScanner(async (barcode) => {
-  await registerScan(barcode);
-  });
-  };
+          const selEmp = document.getElementById('selEmpilhador');
+          selEmp.innerHTML = '<option value="">-- Selecione ou Bipe Crachá --</option>';
 
-  async function registerScan(barcode) {
-  const station = document.getElementById('stationId').value;
-  const now = new Date().toISOString();
+          emps.forEach(e => {
+            const rNorm = String(e.role || '').toUpperCase().trim();
+            const bCode = String(e.barcode || e.id).trim();
 
-  const { error } = await sb
-  .from('production_scans')
-  .insert([{
-  ts: now,
-  station_id: station,
-  role: 'EMPILHADOR',
-  raw_barcode: barcode,
-  employee_barcode: activeCollabBarcode,
-  employee_name: activeCollabName,
-  tenant_id: tenantId
-  }]);
+            const isEmpilhador = rNorm.includes('EMP') || rNorm.includes('STACK');
+            const isEmbalador = rNorm.includes('EMB') || rNorm.includes('PACK');
 
-  if (!error) {
-  scanCounter++;
-  document.getElementById('scanCount').textContent = scanCounter;
-  addLog(barcode, 'Sucesso');
-  // Haptic feedback if available
-  if (window.navigator.vibrate) window.navigator.vibrate(100);
-  } else {
-  alert('Erro ao enviar: ' + error.message);
-  }
-  }
+            if (isEmpilhador) {
+              stackersMap.set(bCode, e);
+              // Também indexa pelo ID numérico / string
+              stackersMap.set(String(e.id), e);
 
-  function addLog(barcode, status) {
-  const list = document.getElementById('logList');
-  if (list.innerHTML.includes('Nenhuma caixa')) list.innerHTML = '';
-  
-  const div = document.createElement('div');
-  div.className = 'log-item';
-  div.innerHTML = `
-  <span>Box: ${barcode}</span>
-  <span class="status-badge">${status}</span>
-  `;
-  list.prepend(div);
-  }
+              const opt = document.createElement('option');
+              opt.value = bCode;
+              opt.textContent = `${e.name} (#${e.id})`;
+              selEmp.appendChild(opt);
+            } else if (isEmbalador) {
+              packersBarcodes.add(bCode);
+              packersBarcodes.add(String(e.id));
+            }
+          });
 
-  document.getElementById('btnFinishLote').onclick = () => {
-  if (confirm('Finalizar este lote?')) {
-  activeCollabBarcode = null;
-  activeCollabName = null;
-  scanCounter = 0;
-  document.getElementById('scanCount').textContent = '0';
-  document.getElementById('activeCollab').style.display = 'none';
-  document.getElementById('stepBoxes').style.opacity = '0.5';
-  document.getElementById('stepBoxes').style.pointerEvents = 'none';
-  }
-  };
+          // Se tiver empilhadores, seleciona o primeiro por padrão
+          const firstStacker = Array.from(stackersMap.values())[0];
+          if (firstStacker) {
+            selEmp.value = String(firstStacker.barcode || firstStacker.id);
+          }
+          console.log(`Mapeiro: ${stackersMap.size} empilhadores carregados, ${packersBarcodes.size} embaladores brecados.`);
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar colaboradores:', err);
+      }
+    }
 
-  document.getElementById('btnCloseScanner').onclick = () => {
-  if (html5QrCode) {
-  html5QrCode.stop().then(() => {
-  document.getElementById('scannerModal').style.display = 'none';
-  });
-  }
-  }
+    // ── Inicialização da Câmera em Modo CONTÍNUO ─────────────────────────────
+    async function startContinuousCamera() {
+      const readerEl = document.getElementById('reader');
+      if (!readerEl) return;
 
-  init();
+      if (html5Scanner) {
+        try {
+          await html5Scanner.stop();
+        } catch (e) {}
+      }
+
+      html5Scanner = new Html5Qrcode("reader");
+      const config = {
+        fps: 15, // Leitura fluida contínua
+        qrbox: { width: 280, height: 160 },
+        aspectRatio: 1.0,
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true
+        }
+      };
+
+      try {
+        await html5Scanner.start(
+          { facingMode: currentCameraFacing },
+          config,
+          onBarcodeDetected,
+          onScanError
+        );
+        isScanningActive = true;
+        document.getElementById('camStatusText').textContent = 'Leitura Contínua Ativa';
+        document.getElementById('scanReticle').style.display = 'flex';
+      } catch (err) {
+        console.error('Falha ao iniciar câmera:', err);
+        document.getElementById('camStatusText').textContent = 'Erro na Câmera';
+        showToast('err', 'Acesso à Câmera', 'Permita o acesso à câmera no navegador.');
+      }
+    }
+
+    function onScanError(errorMessage) {
+      // Ignora frames sem código para manter fluidez contínua
+    }
+
+    // ── PROCESSAMENTO DO CÓDIGO DETECTADO PELA CÂMERA CONTÍNUA ───────────────
+    async function onBarcodeDetected(decodedText) {
+      if (!decodedText) return;
+      const rawCode = decodedText.trim();
+      const now = Date.now();
+
+      // Anti-duplicação por tempo para o mesmo código
+      if (rawCode === lastScannedCode && (now - lastScannedTime) < SCAN_COOLDOWN_SAME_CODE_MS) {
+        return;
+      }
+
+      lastScannedCode = rawCode;
+      lastScannedTime = now;
+
+      // ── REGRA 1: VERIFICA SE É UM CÓDIGO DE EMBALADOR ──────────────────────
+      // Se for crachá de embalador, BRECA imediatamente e NÃO contabiliza!
+      if (packersBarcodes.has(rawCode)) {
+        playBeep('error');
+        if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+        flashReticle('error');
+        showToast('err', 'EMBALADOR BLOQUEADO', `Código #${rawCode} pertence a um Embalador. Mapeiro aceita SOMENTE Empilhadores!`);
+        return;
+      }
+
+      // ── REGRA 2: VERIFICA SE É UM CRACHÁ DE EMPILHADOR ─────────────────────
+      if (stackersMap.has(rawCode)) {
+        const emp = stackersMap.get(rawCode);
+        document.getElementById('selEmpilhador').value = String(emp.barcode || emp.id);
+        playBeep('success');
+        if (navigator.vibrate) navigator.vibrate(60);
+        flashReticle('success');
+        showToast('ok', 'Empilhador Selecionado', `${emp.name} está ativo para o lote.`);
+        return;
+      }
+
+      // ── REGRA 3: É UMA CAIXA DO PALETE ─────────────────────────────────────
+      // Identifica o empilhador responsável (ou o selecionado no dropdown)
+      const selEmpEl = document.getElementById('selEmpilhador');
+      const activeBarcode = selEmpEl.value;
+      const activeEmp = stackersMap.get(activeBarcode) || {
+        id: null,
+        name: selEmpEl.options[selEmpEl.selectedIndex]?.text || 'EMPILHADOR GERAL',
+        barcode: activeBarcode || 'EMP01'
+      };
+
+      // Registra a leitura no Supabase de forma rápida
+      await registerBoxScan(rawCode, activeEmp);
+    }
+
+    async function registerBoxScan(boxBarcode, empObj) {
+      const station = document.getElementById('selStation').value || 'ST01';
+      const nowIso = new Date().toISOString();
+
+      try {
+        playBeep('success');
+        if (navigator.vibrate) navigator.vibrate(70);
+        flashReticle('success');
+
+        // Atualiza contadores locais imediatamente (Feedback instantâneo na tela)
+        palletBoxesCount++;
+        document.getElementById('palletCount').textContent = palletBoxesCount;
+
+        const empName = empObj.name.split(' ')[0] || 'Empilhador';
+        palletByStacker[empName] = (palletByStacker[empName] || 0) + 1;
+        updatePalletBreakdown();
+
+        showToast('ok', `Caixa #${boxBarcode}`, `Empilhador: ${empObj.name} (+1 cx)`);
+        addHistoryItem(boxBarcode, empObj.name, 'Gravado');
+
+        // Envia para o Supabase em background
+        const scanPayload = {
+          ts: nowIso,
+          station_id: station,
+          role: 'EMPILHADOR', // EXCLUSIVO EMPILHADOR
+          raw_barcode: boxBarcode,
+          employee_id: empObj.id || null,
+          employee_barcode: empObj.barcode || String(empObj.id),
+          employee_name: empObj.name,
+          tenant_id: currentTenantId
+        };
+
+        const { error } = await sb.from('production_scans').insert([scanPayload]);
+        if (error) {
+          console.warn('Erro ao subir scan para o Supabase, salvo localmente:', error);
+          saveOfflineScan(scanPayload);
+        }
+      } catch (err) {
+        console.error('Erro ao processar leitura:', err);
+      }
+    }
+
+    function updatePalletBreakdown() {
+      const bdEl = document.getElementById('palletBreakdown');
+      const parts = Object.entries(palletByStacker).map(([name, count]) => `<strong>${name}:</strong> ${count} cx`);
+      bdEl.innerHTML = parts.join(' &nbsp;•&nbsp; ');
+    }
+
+    function flashReticle(status) {
+      const reticle = document.getElementById('scanReticle');
+      reticle.classList.remove('success-flash', 'error-flash');
+      reticle.classList.add(status === 'success' ? 'success-flash' : 'error-flash');
+      setTimeout(() => {
+        reticle.classList.remove('success-flash', 'error-flash');
+      }, 350);
+    }
+
+    let toastTimer = null;
+    function showToast(type, title, sub) {
+      const toast = document.getElementById('scanToast');
+      const tTitle = document.getElementById('toastTitle');
+      const tSub = document.getElementById('toastSub');
+      const tBadge = document.getElementById('toastBadge');
+      const tIcon = document.getElementById('toastIcon');
+
+      toast.className = `scan-toast ${type}`;
+      tTitle.textContent = title;
+      tSub.textContent = sub;
+
+      if (type === 'ok') {
+        tBadge.textContent = 'REGISTRADO';
+        tBadge.style.color = 'var(--green)';
+        tIcon.innerHTML = '<i data-lucide="check-circle-2" style="width:20px;height:20px;color:var(--green)"></i>';
+      } else {
+        tBadge.textContent = 'RECUSADO';
+        tBadge.style.color = 'var(--red)';
+        tIcon.innerHTML = '<i data-lucide="alert-octagon" style="width:20px;height:20px;color:var(--red)"></i>';
+      }
+      if (window.lucide) window.lucide.createIcons();
+
+      toast.style.display = 'flex';
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.style.display = 'none';
+      }, 2500);
+    }
+
+    function addHistoryItem(box, emp, status) {
+      const list = document.getElementById('historyList');
+      if (list.innerHTML.includes('Nenhuma leitura')) list.innerHTML = '';
+
+      const timeStr = new Date().toLocaleTimeString('pt-BR');
+      const div = document.createElement('div');
+      div.className = 'log-row';
+      div.innerHTML = `
+        <div>
+          <div style="font-weight:700; color:#fff;">Cx: ${box}</div>
+          <div style="color:var(--muted); font-size:11px;">${emp} • ${timeStr}</div>
+        </div>
+        <span style="font-size:10px; padding:2px 8px; border-radius:4px; background:rgba(34,197,94,0.15); color:var(--green); font-weight:700;">${status}</span>
+      `;
+      list.prepend(div);
+    }
+
+    function saveOfflineScan(payload) {
+      try {
+        const queue = JSON.parse(localStorage.getItem('mapeiro_offline_scans') || '[]');
+        queue.push(payload);
+        localStorage.setItem('mapeiro_offline_scans', JSON.stringify(queue));
+      } catch (e) {}
+    }
+
+    // ── Botões de Ação ───────────────────────────────────────────────────────
+    // Fechar / Finalizar Palete
+    document.getElementById('btnFinishPallet').onclick = () => {
+      if (palletBoxesCount === 0) {
+        alert('Nenhuma caixa foi lida neste palete.');
+        return;
+      }
+      if (confirm(`Finalizar este palete com ${palletBoxesCount} caixas e iniciar o próximo?`)) {
+        palletBoxesCount = 0;
+        palletByStacker = {};
+        document.getElementById('palletCount').textContent = '0';
+        document.getElementById('palletBreakdown').innerHTML = 'Palete fechado. Pronto para o próximo!';
+        playBeep('success');
+      }
+    };
+
+    // Pausar / Retomar Câmera
+    document.getElementById('btnPauseCam').onclick = async () => {
+      const btn = document.getElementById('btnPauseCam');
+      if (isScanningActive) {
+        if (html5Scanner) await html5Scanner.pause();
+        isScanningActive = false;
+        btn.innerHTML = '<i data-lucide="play" style="width:14px; height:14px;"></i> Retomar Câmera';
+        document.getElementById('camStatusText').textContent = 'Câmera Pausada';
+      } else {
+        if (html5Scanner) await html5Scanner.resume();
+        isScanningActive = true;
+        btn.innerHTML = '<i data-lucide="pause" style="width:14px; height:14px;"></i> Pausar Câmera';
+        document.getElementById('camStatusText').textContent = 'Leitura Contínua Ativa';
+      }
+      if (window.lucide) window.lucide.createIcons();
+    };
+
+    // Alternar Câmera (Traseira / Frontal)
+    document.getElementById('btnSwitchCam').onclick = async () => {
+      currentCameraFacing = currentCameraFacing === 'environment' ? 'user' : 'environment';
+      await startContinuousCamera();
+    };
+
+    // Lanterna / Flash (Torch)
+    document.getElementById('btnToggleTorch').onclick = async () => {
+      const btn = document.getElementById('btnToggleTorch');
+      try {
+        torchEnabled = !torchEnabled;
+        if (html5Scanner && typeof html5Scanner.applyVideoConstraints === 'function') {
+          await html5Scanner.applyVideoConstraints({
+            advanced: [{ torch: torchEnabled }]
+          });
+        }
+        btn.classList.toggle('active', torchEnabled);
+      } catch (e) {
+        alert('Lanterna não suportada nesta câmera.');
+      }
+    };
+
+    // Histórico Drawer
+    document.getElementById('btnOpenHistory').onclick = () => {
+      document.getElementById('historyDrawer').classList.add('open');
+    };
+    document.getElementById('btnCloseHistory').onclick = () => {
+      document.getElementById('historyDrawer').classList.remove('open');
+    };
+
+    // Login Form
+    document.getElementById('btnLogin').onclick = async () => {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      if (!email || !password) return alert('Informe e-mail e senha.');
+
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('loginLoading').style.display = 'block';
+
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) {
+        alert('Falha na autenticação: ' + error.message);
+        document.getElementById('loginForm').style.display = 'flex';
+        document.getElementById('loginLoading').style.display = 'none';
+      } else {
+        handleAuthSuccess(data.user);
+      }
+    };
+
+    // Logout
+    document.getElementById('btnLogout').onclick = () => {
+      if (confirm('Deseja sair do Mapeiro?')) {
+        localStorage.removeItem('prodtec_mapeiro_auth');
+        location.reload();
+      }
+    };
+
+    // Inicia tudo
+    window.addEventListener('DOMContentLoaded', initApp);
   </script>
 </body>
 </html>

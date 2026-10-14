@@ -278,18 +278,53 @@ function _showToastMsg(msg, type = 'ok') {
 
 function isFoliarProduct(d) {
   if (!d) return false;
-  const norm = s => (s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-  const t = norm(d.tipo);
-  const prod = norm(d.produto || d.produto_nome || d.nome);
+  const norm = s => (s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+  const prod = norm(d.produto || d.produto_nome || d.nome || (typeof d === 'string' ? d : ''));
+  const t = norm(d.tipo || d.classe || d.categoria);
   const ia = norm(d.ingrediente_ativo);
   const alvo = norm(d.alvo);
-  return t.includes('FOLIAR') || t.includes('FERTILIZANTE') || t.includes('NUTRI') ||
-    prod.includes('FOLIAR') || prod.includes('ADUBO') || prod.includes('NUTRI') ||
-    prod.includes('P-51') || prod.includes('P - 51') || prod.includes('BORO') ||
-    prod.includes('ZINCO') || prod.includes('CALCIO') || prod.includes('MAGNESIO') ||
-    prod.includes('POTASSIO') || prod.includes('UREIA') || prod.includes('AMINO') ||
-    ia.includes('FOLIAR') || ia.includes('FERTILIZANTE') ||
-    alvo.includes('FOLIAR') || alvo.includes('NUTRI') || alvo.includes('NUTRICAO');
+
+  if (!prod && !t && !ia && !alvo) return false;
+
+  // 1. Checa se o nome exato ou contido existe na base oficial de elementos (100+ adubos)
+  if (DEFAULT_ELEMENTS_DATABASE[prod]) return true;
+  for (const k of Object.keys(DEFAULT_ELEMENTS_DATABASE)) {
+    const kNorm = norm(k);
+    if (kNorm.length >= 3 && (prod.includes(kNorm) || kNorm.includes(prod))) return true;
+  }
+
+  // 2. Palavras-chave amplas e completas de produtos foliares, bioestimulantes e nutrição mineral
+  const foliarKeywords = [
+    'FOLIAR', 'ADUBO', 'NUTRI', 'NUTRICAO', 'NUTRIÇÃO', 'FERTILIZANTE', 'BIOESTIMULANTE',
+    'BORO', 'ZINCO', 'CALCIO', 'CÁLCIO', 'MAGNESIO', 'MAGNÉSIO', 'POTASSIO', 'POTÁSSIO',
+    'UREIA', 'URÉIA', 'AMINO', 'AMINOACIDO', 'AMINOÁCIDO', 'P-51', 'P - 51', 'P51', 'P61', 'P-61', 'P 61',
+    'LIQUI-PLEX', 'LIQUIPLEX', 'CONDUCTOR', 'BIO 20', 'BIO20', 'CALMAX', 'ACTIWAVE', 'AGRO MOS',
+    'AGRUMAX', 'AJIFOL', 'AJIPOWER', 'AMINOAGRO', 'AMINOBOR', 'AMINOMAX', 'BARRIER', 'BENEFIT',
+    'BIOCONTROL', 'BIONUTRI', 'BIOZIME', 'BORAMIN', 'BREXIL', 'CAB MAX', 'CHELAL', 'CODA',
+    'CODAFOL', 'CODAMIM', 'CODAPHOS', 'CODASAL', 'COPPER CROP', 'CROP SET', 'DELFAN', 'DRAKAR',
+    'FOLITEC', 'STIMO', 'SPEEDFOL', 'WUXAL', 'YARAVITA', 'MANVERT', 'ALGAPLANT', 'MICRONUTRIENTE',
+    'MACRONUTRIENTE', 'ACIDO BORICO', 'ÁCIDO BÓRICO', 'SULFATO', 'MOLIBDENIO', 'MOLIBDÊNIO',
+    'COBALTO', 'FERRO', 'MANGANES', 'MANGANÊS', 'EXTRATO DE ALGAS', 'EXTRATO', 'FOSFITO', 'ENRAIZAMENTO'
+  ];
+
+  if (foliarKeywords.some(kw => prod.includes(kw) || t.includes(kw) || ia.includes(kw) || alvo.includes(kw))) {
+    return true;
+  }
+
+  // 3. Checa catálogos de defensivos/foliares em memória
+  const catList = (window._defensivosList || []).concat(window._foliaresList || []).concat(window._estoqueFoliaresList || []);
+  const found = catList.find(c => {
+    const cp = norm(c.nome || c.produto || c.produto_nome);
+    return cp && (cp === prod || prod.includes(cp) || cp.includes(prod));
+  });
+  if (found) {
+    const ft = norm(found.tipo || found.classe || found.categoria);
+    if (ft.includes('FOLIAR') || ft.includes('ADUBO') || ft.includes('NUTRI') || ft.includes('FERTILIZANTE')) {
+      return true;
+    }
+  }
+
+  return false;
 }
 window.isFoliarProduct = isFoliarProduct;
 
@@ -472,7 +507,9 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
   let foliarRows = [];
   try {
     let opList = [];
-    if (window.sb && currentTenantId) {
+    if (window._opList && Array.isArray(window._opList) && window._opList.length > 0) {
+      opList = window._opList;
+    } else if (window.sb && currentTenantId) {
       const { data: ops } = await window.sb.from('caderno_campo_op')
         .select('*, caderno_campo_op_itens(*)')
         .eq('tenant_id', currentTenantId)
@@ -482,58 +519,83 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
       opList = JSON.parse(localStorage.getItem('prodtech_op_records') || '[]');
     }
 
+    // Normalizador estrito e flexível de códigos de parcela
+    const cleanNorm = s => String(s || '').toUpperCase().replace(/^(PC|PARCELA|TALHAO|TALHÃO)[_\s\-]*/i, '').replace(/[^A-Z0-9]/g, '');
+    const targetCodes = [
+      cleanNorm(parcelCode),
+      cleanNorm(item?.parcela2),
+      cleanNorm(item?.parcela),
+      cleanNorm(item?.code),
+      cleanNorm(item?.id)
+    ].filter(Boolean);
+
     const parcelOps = opList.filter(o => {
-      const p1 = (o.parcela && parcelCode && String(o.parcela).trim().toUpperCase() === String(parcelCode).trim().toUpperCase());
-      const p2 = (item && (o.parcel_id == item.id || o.parcela_id == item.id));
-      return p1 || p2;
+      const oCode = cleanNorm(o.parcela);
+      const matchCode = targetCodes.some(tc => tc && (oCode === tc || oCode.includes(tc) || tc.includes(oCode)));
+      const matchId = item && (
+        (o.parcel_id && (o.parcel_id == item.id || o.parcel_id == item.remote_id)) ||
+        (o.parcela_id && (o.parcela_id == item.id || o.parcela_id == item.remote_id))
+      );
+      return matchCode || matchId;
     });
+
     parcelOps.forEach((op, opIdx) => {
       const itens = op.caderno_campo_op_itens || op.itens || [];
-      const foliarItens = itens.filter(it => isFoliarProduct(it) || (it.produto || it.produto_nome || '').toUpperCase().includes('FOLIAR') || (it.produto || it.produto_nome || '').toUpperCase().includes('P-51'));
+      // Filtra produtos foliares, bioestimulantes e nutrientes
+      let foliarItens = itens.filter(it => isFoliarProduct(it));
       
+      // Se não encontrou por filtro foliar mas a OP é de pulverização foliar / nutrição, traz os itens da calda
+      if (foliarItens.length === 0 && itens.length > 0) {
+        const opObs = (op.observacoes || op.alvo || '').toUpperCase();
+        if (opObs.includes('FOLIAR') || opObs.includes('NUTRI') || opObs.includes('ADUBO')) {
+          foliarItens = itens;
+        }
+      }
+
       foliarItens.forEach((fit, fIdx) => {
-        const prodName = fit.produto_nome || fit.produto || fit.nome || 'P - 51';
-        const q = parseFloat(fit.quantidade_utilizada || fit.quantidade || fit.dose_calculada || 5.0) || 5.0;
+        const prodName = (fit.produto_nome || fit.produto || fit.nome || '').trim();
+        if (!prodName) return;
+
+        // Dosagem real por hectare e quantidade total calculada
+        const doseHa = parseFloat(fit.dosagem_corrigida || fit.dosagem_real || fit.dose_calculada || fit.dose || 0) || 0;
+        let q = parseFloat(fit.quantidade_utilizada || fit.quantidade || 0);
+        if (!q && doseHa > 0) {
+          q = parseFloat((doseHa * areaVal).toFixed(3));
+        }
+        if (!q) q = 1.0;
+
         const comp = getElementsComposition(prodName);
         const nutrs = {};
         NUTRIENT_COLUMNS.forEach(col => {
           const pct = (comp[col.key] || 0) / 100;
-          nutrs[col.key] = q * pct;
+          nutrs[col.key] = parseFloat((q * pct).toFixed(4));
         });
+
+        // DAP Real: se não preenchido na OP, calcula a partir da data de plantio
+        let dapCalculado = op.dap;
+        if (!dapCalculado && plantioDt && op.data_aplicacao) {
+          const dtOp = new Date(op.data_aplicacao + (op.data_aplicacao.includes('T') ? '' : 'T00:00:00'));
+          if (!isNaN(dtOp.getTime())) {
+            const diffDays = Math.round((dtOp.getTime() - plantioDt.getTime()) / 86400000) + 1;
+            if (diffDays > 0) dapCalculado = diffDays;
+          }
+        }
 
         foliarRows.push({
           tipo: 'FOLIAR',
           data: op.data_aplicacao ? op.data_aplicacao.split('-').reverse().join('/') : '—',
-          ordem: op.numero_ordem || (opIdx + 1),
-          dap: op.dap || '—',
-          produto: fit.produto || fit.produto_nome || 'P - 51',
+          ordem: op.numero_op || op.numero_ordem || (opIdx + 1),
+          dap: dapCalculado || '—',
+          produto: prodName,
           quantidade: q,
+          dosagem: doseHa > 0 ? `${doseHa} ${fit.unidade || 'L/ha'}` : '—',
           nutrientes: nutrs,
-          operador: op.tratorista || op.aplicador || 'ROBSON RAFAEL'
+          operador: op.tratorista || op.aplicador || op.barrista || op.responsavel || 'ROBSON RAFAEL'
         });
       });
     });
   } catch(e) {
     console.warn('Erro ao calcular foliares:', e);
-  }
-
-  // Fallback padrão foliar se não houver registros
-  if (foliarRows.length === 0) {
-    const compP51 = getElementsComposition('P - 51');
-    const nutrsP51 = {};
-    NUTRIENT_COLUMNS.forEach(col => {
-      nutrsP51[col.key] = 5.0 * ((compP51[col.key] || 0) / 100);
-    });
-    foliarRows.push({
-      tipo: 'FOLIAR',
-      data: plantioDt ? new Date(plantioDt.getTime() + (22 * 86400000)).toLocaleDateString('pt-BR') : '29/07/2026',
-      ordem: 1,
-      dap: 23,
-      produto: 'P - 51',
-      quantidade: 5.0,
-      nutrientes: nutrsP51,
-      operador: 'ROBSON RAFAEL'
-    });
   }
 
   // 4.4. TOTAIS CONSOLIDADOS

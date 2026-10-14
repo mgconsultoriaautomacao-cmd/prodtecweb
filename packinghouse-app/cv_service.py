@@ -526,7 +526,7 @@ def video_loop():
                     if not camera_error_logged:
                         print("❌ Câmera não encontrada (índices 0, 1, 2, 3). Conecte a câmera USB.")
                         camera_error_logged = True
-                    time.sleep(5.0)
+                    time.sleep(20.0)
                     continue
             
             print(f"✅ Câmera no índice {current_index} aberta. Configurando resolução...")

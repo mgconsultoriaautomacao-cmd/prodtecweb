@@ -410,6 +410,10 @@ class MainWindow(QMainWindow):
         settings.setAttribute(QWebEngineSettings.WebAttribute.AllowWindowActivationFromJavaScript, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.AllowRunningInsecureContent, True)
+        # Otimizacoes de renderizacao fluida por hardware (GPU 60fps no Windows / Linux / macOS / Raspberry Pi)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.Accelerated2dCanvasEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.ScrollAnimatorEnabled, False)
         
         self._view.setPage(self._page)
         self.setCentralWidget(self._view)
@@ -485,8 +489,10 @@ class MainWindow(QMainWindow):
         try:
             conn = db_python.get_db()
             sync_service.sync_to_supabase(conn)
-            sync_service.sync_from_supabase(conn, on_auth_error=self._on_sync_auth_error)
-            self._backoff = 20_000
+            new_scans = sync_service.sync_from_supabase(conn, on_auth_error=self._on_sync_auth_error)
+            if new_scans and new_scans > 0:
+                self._api.pushEvent.emit('scan:new', json.dumps({'role': 'EMPILHADOR', 'count': new_scans}))
+            self._backoff = 6_000
             self._api.pushEvent.emit('sync:status', json.dumps({'state': 'synced', 'lastSync': db_python.now_ms()}))
         except Exception as e:
             print(f'Sync: Falha no ciclo: {e}')
@@ -566,18 +572,20 @@ if __name__ == '__main__':
     # Compatibilidade com telas de alta resolução (DPI)
     os.environ.setdefault('QT_AUTO_SCREEN_SCALE_FACTOR', '1')
 
-    # Previne TELA PRETA no QWebEngine em PCs com placas integradas, drivers básicos ou sem GPU dedicada
+    # Configuração de alto desempenho para o QWebEngine (suporta Windows, Linux/Raspberry Pi e macOS)
+    # Habilita aceleração por GPU, rasterização eficiente e desativa throttling desnecessário
     chromium_flags = [
-        '--disable-gpu',
         '--no-sandbox',
-        '--disable-gpu-compositing',
         '--enable-features=NetworkServiceInProcess',
         '--ignore-gpu-blocklist',
-        '--disable-direct-composition',
-        '--enable-software-rasterizer'
+        '--enable-gpu-rasterization',
+        '--enable-zero-copy',
+        '--disable-background-timer-throttling',
+        '--disable-renderer-backgrounding',
+        '--disable-smooth-scrolling',
+        '--num-raster-threads=4',
+        '--enable-accelerated-2d-canvas'
     ]
-    os.environ.setdefault('QT_QUICK_BACKEND', 'software')
-    os.environ.setdefault('QMLSCENE_DEVICE', 'softwarecontext')
     existing_flags = os.environ.get('QTWEBENGINE_CHROMIUM_FLAGS', '')
     os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = f"{existing_flags} {' '.join(chromium_flags)}".strip()
 

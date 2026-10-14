@@ -130,6 +130,7 @@
 
     onSyncAuthError: (cb) => addEventListener('sync:auth-error', cb),
     onSyncStatus: (cb) => addEventListener('sync:status', cb),
+    onScanNew: (cb) => addEventListener('scan:new', cb),
     onUpdateStatus: (cb) => addEventListener('update:status', cb),
     updateCheck: () => callApi('updateCheck'),
     updateRestartAndInstall: () => callApi('updateRestartAndInstall')

@@ -1,3 +1,85 @@
+// ── Utilitários Globais ────────────────────────────────────────────────────────
+const pad = (n) => String(n).padStart(2, '0');
+const esc = (v) =>
+  String(v ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+function fmtClock(d = new Date()) {
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function isoDateToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function startOfDayMs(iso) {
+  if (!iso) iso = isoDateToday();
+  const [y, m, d] = String(iso).split('-').map(Number);
+  return new Date(y, m - 1, d, 0, 0, 0, 0).getTime();
+}
+
+function endOfDayMs(iso) {
+  if (!iso) iso = isoDateToday();
+  const [y, m, d] = String(iso).split('-').map(Number);
+  return new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
+}
+
+function colorByPct(p) {
+  if (Number(p) >= 75) return '#16a34a';
+  if (Number(p) >= 50) return '#eab308';
+  return '#ef4444';
+}
+
+function photoUrl(photoPath) {
+  if (!photoPath) return '';
+  if (
+    photoPath.startsWith('file:') ||
+    photoPath.startsWith('data:') ||
+    photoPath.startsWith('http:') ||
+    photoPath.startsWith('https:')
+  ) return photoPath;
+  return `file://${photoPath}`;
+}
+
+function photoStyle(photoPath, size = 44) {
+  const url = photoUrl(photoPath);
+  const styles = [
+    `width:${size}px`,
+    `height:${size}px`,
+    'border-radius:999px',
+    'background:#1f2937',
+    'background-size:cover',
+    'background-position:center',
+    'flex:0 0 auto',
+    'display:flex',
+    'align-items:center',
+    'justify-content:center',
+    'font-size: 18px'
+  ];
+  if (url) {
+    styles.push(`background-image:url('${url}')`);
+    styles.push('color:transparent');
+  } else {
+    styles.push('color:rgba(255,255,255,0.2)');
+  }
+  return styles.join(';');
+}
+
+window.pad = pad;
+window.esc = esc;
+window.fmtClock = fmtClock;
+window.isoDateToday = isoDateToday;
+window.startOfDayMs = startOfDayMs;
+window.endOfDayMs = endOfDayMs;
+window.colorByPct = colorByPct;
+window.photoUrl = photoUrl;
+window.photoStyle = photoStyle;
+
 window.addEventListener('DOMContentLoaded', () => {
   const $ = (id) => document.getElementById(id);
   const must = (id) => {
@@ -22,34 +104,6 @@ window.addEventListener('DOMContentLoaded', () => {
   const scannerId = 'sc01';
 
   const hasApi = (name) => typeof window.api?.[name] === 'function';
-
-  const esc = (v) =>
-    String(v ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-
-  const pad = (n) => String(n).padStart(2, '0');
-
-  function fmtClock(d = new Date()) {
-    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-  }
-
-  function isoDateToday() {
-    const d = new Date();
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  }
-
-  function startOfDayMs(iso) {
-    const [y, m, d] = iso.split('-').map(Number);
-    return new Date(y, m - 1, d, 0, 0, 0, 0).getTime();
-  }
-  function endOfDayMs(iso) {
-    const [y, m, d] = iso.split('-').map(Number);
-    return new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
-  }
 
   function currentRoute() {
     const h = (location.hash || '').replace('#', '');
@@ -79,46 +133,6 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function colorByPct(p) {
-    if (Number(p) >= 75) return '#16a34a';
-    if (Number(p) >= 50) return '#eab308';
-    return '#ef4444';
-  }
-
-  function photoUrl(photoPath) {
-    if (!photoPath) return '';
-    if (
-      photoPath.startsWith('file:') ||
-      photoPath.startsWith('data:') ||
-      photoPath.startsWith('http:') ||
-      photoPath.startsWith('https:')
-    ) return photoPath;
-    return `file://${photoPath}`;
-  }
-
-  function photoStyle(photoPath, size = 44) {
-    const url = photoUrl(photoPath);
-    const styles = [
-      `width:${size}px`,
-      `height:${size}px`,
-      'border-radius:999px',
-      'background:#1f2937',
-      'background-size:cover',
-      'background-position:center',
-      'flex:0 0 auto',
-      'display:flex',
-      'align-items:center',
-      'justify-content:center',
-      'font-size: 18px'
-    ];
-    if (url) {
-      styles.push(`background-image:url('${url}')`);
-      styles.push('color:transparent');
-    } else {
-      styles.push('color:rgba(255,255,255,0.2)');
-    }
-    return styles.join(';');
-  }
 
   function statusPill(active) {
     return active
@@ -622,10 +636,20 @@ window.addEventListener('DOMContentLoaded', () => {
           // Note: if the backend only returned { ok: true } we still show counted.
           const niTag = res.unidentified ? ' · caixa N/I (mapear no web)' : '';
           status.textContent = `Contado: ${rawBarcode}${res.employee?.name ? ` - ${res.employee.name}` : ''}${niTag}`;
+          
+          // Se o carrossel estiver ativo na tela, atualiza status e dados em segundo plano
+          const scLive = document.getElementById('showcaseLiveStatus');
+          if (scLive) {
+            const empTxt = res.employee?.name ? ` (${res.employee.name})` : '';
+            scLive.innerHTML = `<strong>Última leitura:</strong> ${rawBarcode}${empTxt} • <span style="color:var(--green)">Registrado com sucesso (+1 cx)</span>`;
+          }
+          const scOverlay = document.getElementById('collabShowcaseOverlay');
+          if (scOverlay && scOverlay.classList.contains('active')) {
+            renderShowcaseSlide().catch(() => {});
+          }
         } else {
           status.textContent = `Código não cadastrado: ${rawBarcode}`;
         }
-
 
         await refreshState();
       } catch (err) {
@@ -2493,7 +2517,7 @@ window.changeCvCamera = async function(index) {
   console.log(`[CV Visor] Solicitando mudança de câmera para o índice ${index}`);
   localStorage.setItem('cv_camera_index', index);
   try {
-    const res = await fetch('http://localhost:5000/set_camera', {
+    const res = await fetch('http://127.0.0.1:5000/set_camera', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ index: parseInt(index) })
@@ -2693,7 +2717,7 @@ window.toggleCvRoiEditor = async function() {
   if (cvRoiEditorActive) {
     // Carrega ROIs salvas do servidor antes de abrir
     try {
-      const res = await fetch('http://localhost:5000/get_roi');
+      const res = await fetch('http://127.0.0.1:5000/get_roi');
       if (res.ok) {
         const data = await res.json();
         if (data.roi_fruits) cvRois.fruits = data.roi_fruits;
@@ -2712,7 +2736,7 @@ window.toggleCvRoiEditor = async function() {
     if (saveBtn) {
       saveBtn.onclick = async () => {
         try {
-          const res = await fetch('http://localhost:5000/set_roi', {
+          const res = await fetch('http://127.0.0.1:5000/set_roi', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2753,9 +2777,9 @@ window.toggleCvRoiEditor = async function() {
   }
 };
 
-// Atalho global F8 para o Visor
+// Atalho global F7 para o Visor de Câmeras
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'F8') {
+  if (e.key === 'F7') {
     toggleCvViewer();
   }
 });
@@ -2804,6 +2828,34 @@ if (window.api && window.api.onUpdateStatus) {
   });
 }
 
+// Atualização em Tempo Real de Leituras do Mapeiro (Mobile / Nuvem → Local)
+if (window.api && window.api.onScanNew) {
+  window.api.onScanNew((payload) => {
+    try {
+      const data = typeof payload === 'string' ? JSON.parse(payload) : payload;
+      console.log('[Mapeiro Sync] Novos scans sincronizados:', data);
+
+      // Atualiza os totais e ranking localmente
+      if (typeof refreshTotals === 'function') refreshTotals();
+      if (typeof refreshState === 'function') refreshState();
+
+      // Se a aba Dashboard estiver visível, atualiza as estatísticas
+      const dashTab = document.getElementById('tabDashboard');
+      if (dashTab && dashTab.classList.contains('active')) {
+        const refreshBtn = document.getElementById('dashRefreshBtn');
+        if (refreshBtn) refreshBtn.click();
+      }
+
+      // Se o carrossel estiver aberto na visão de empilhadores, atualiza os dados em background
+      if (typeof showcaseCollabs !== 'undefined' && showcaseCollabs && showcaseCollabs.length > 0) {
+        if (typeof renderShowcaseSlide === 'function') renderShowcaseSlide();
+      }
+    } catch (e) {
+      console.warn('[Mapeiro Sync] Erro no listener onScanNew:', e);
+    }
+  });
+}
+
 // ── Controle Permanente de Foco no Campo de Bipe ─────────────────────────────
 function ensureScanInputFocus() {
   const scanInput = document.getElementById('scanInput');
@@ -2838,14 +2890,16 @@ let showcaseIsPaused = false;
 const SLIDE_DURATION_MS = 8000;
 let slideStartedAt = Date.now();
 
-async function triggerCollabShowcase() {
+async function triggerCollabShowcase(force = false) {
   const overlay = document.getElementById('collabShowcaseOverlay');
   if (!overlay) return;
 
-  // Só exibe se o painel estiver ativo e o leitor não estiver digitando
-  const scanInput = document.getElementById('scanInput');
-  if (!scanInput) return;
-  if (scanInput.value && scanInput.value.trim().length > 0) return;
+  // Se não for acionamento manual (F8 ou botão), só roda no painel com leitor desocupado
+  if (!force) {
+    const scanInput = document.getElementById('scanInput');
+    if (!scanInput) return;
+    if (scanInput.value && scanInput.value.trim().length > 0) return;
+  }
 
   const stationId = window.stationId || 'st01';
   const roleSelect = document.getElementById('roleSelect');
@@ -2870,32 +2924,50 @@ async function triggerCollabShowcase() {
       // Fallback: se ainda não houver caixas registradas hoje, apresenta lista de colaboradores cadastrados
       const emps = await window.api.employeesList();
       if (emps && emps.length > 0) {
-        collabs = emps
-          .filter(e => Number(e.active) === 1 && (!role || e.role === role || e.role === 'AMBOS'))
-          .map(e => ({
-            id: e.id,
-            name: e.name,
-            role: e.role,
-            photoPath: e.photo_path || '',
-            boxes: 0,
-            rawBoxes: 0,
-            penaltyBoxes: 0,
-            errorPct: 0,
-            qualityPct: 100,
-            yieldPct: 0,
-            avgPerHour: 0,
-            target: dsStats.targets ? dsStats.targets[(e.role || '').toLowerCase() === 'empilhador' ? 'stacker' : 'packer'] : 100
-          }));
+        const isMatchRole = (r) => {
+          if (!role || role === 'TODOS' || role === 'AMBOS') return true;
+          const rNorm = String(r || '').toUpperCase();
+          const roleNorm = String(role).toUpperCase();
+          if (rNorm === roleNorm) return true;
+          if ((rNorm === 'EMBALADOR' || rNorm === 'PACKER') && (roleNorm === 'EMBALADOR' || roleNorm === 'PACKER')) return true;
+          if ((rNorm === 'EMPILHADOR' || rNorm === 'STACKER') && (roleNorm === 'EMPILHADOR' || roleNorm === 'STACKER')) return true;
+          return false;
+        };
+
+        let matched = emps.filter(e => Number(e.active) === 1 && isMatchRole(e.role));
+        if (matched.length === 0) matched = emps.filter(e => Number(e.active) === 1);
+
+        const pTarget = dsStats?.targets?.packer || 100;
+        const sTarget = dsStats?.targets?.stacker || 100;
+
+        collabs = matched.map(e => ({
+          id: e.id,
+          name: e.name,
+          role: e.role || 'EMBALADOR',
+          photoPath: e.photo_path || '',
+          boxes: 0,
+          rawBoxes: 0,
+          penaltyBoxes: 0,
+          errorPct: 0,
+          qualityPct: 100,
+          yieldPct: 0,
+          avgPerHour: 0,
+          target: String(e.role || '').toUpperCase().includes('EMP') || String(e.role || '').toUpperCase().includes('STACK') ? sTarget : pTarget
+        }));
       }
     }
 
-    if (!collabs || collabs.length === 0) return;
+    if (!collabs || collabs.length === 0) {
+      console.warn('Carrossel: Nenhum colaborador encontrado para exibir.');
+      return;
+    }
 
     showcaseCollabs = collabs;
     showcaseIndex = 0;
     showcaseIsPaused = false;
 
     overlay.classList.add('active');
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
     setupShowcaseControls();
     await renderShowcaseSlide();
     startSlideTimer();
@@ -2903,6 +2975,7 @@ async function triggerCollabShowcase() {
     console.error('Erro ao iniciar showcase:', err);
   }
 }
+window.triggerCollabShowcase = triggerCollabShowcase;
 
 function startSlideTimer() {
   if (showcaseTimer) clearTimeout(showcaseTimer);
@@ -2910,19 +2983,21 @@ function startSlideTimer() {
 
   slideStartedAt = Date.now();
   const pBar = document.getElementById('showcaseProgressBar');
-  if (pBar) pBar.style.width = '0%';
+  if (pBar) {
+    pBar.style.transition = 'none';
+    pBar.style.width = '0%';
+    void pBar.offsetWidth; // Trigger reflow for transition reset
+    if (!showcaseIsPaused) {
+      pBar.style.transition = `width ${SLIDE_DURATION_MS}ms linear`;
+      pBar.style.width = '100%';
+    }
+  }
 
-  showcaseProgressTimer = setInterval(() => {
-    if (showcaseIsPaused) return;
-    const elapsed = Date.now() - slideStartedAt;
-    const pct = Math.min(100, (elapsed / SLIDE_DURATION_MS) * 100);
-    if (pBar) pBar.style.width = `${pct}%`;
-
-    if (elapsed >= SLIDE_DURATION_MS) {
-      clearInterval(showcaseProgressTimer);
+  showcaseTimer = setTimeout(() => {
+    if (!showcaseIsPaused) {
       nextShowcaseSlide();
     }
-  }, 100);
+  }, SLIDE_DURATION_MS);
 }
 
 async function renderShowcaseSlide() {
@@ -2936,25 +3011,25 @@ async function renderShowcaseSlide() {
   const rankBadge = document.getElementById('showcaseRankBadge');
   if (rankBadge) {
     if (rank === 1) {
-      rankBadge.textContent = '🏆 1º LUGAR NO RANKING';
-      rankBadge.style.background = 'rgba(234, 179, 8, 0.25)';
-      rankBadge.style.borderColor = '#eab308';
-      rankBadge.style.color = '#fde047';
+      rankBadge.textContent = '1º LUGAR NO RANKING';
+      rankBadge.style.background = 'rgba(234, 179, 8, 0.18)';
+      rankBadge.style.borderColor = '#ca8a04';
+      rankBadge.style.color = '#fef08a';
     } else if (rank === 2) {
-      rankBadge.textContent = '🥈 2º LUGAR NO RANKING';
-      rankBadge.style.background = 'rgba(148, 163, 184, 0.2)';
-      rankBadge.style.borderColor = '#94a3b8';
+      rankBadge.textContent = '2º LUGAR NO RANKING';
+      rankBadge.style.background = 'rgba(148, 163, 184, 0.15)';
+      rankBadge.style.borderColor = '#64748b';
       rankBadge.style.color = '#e2e8f0';
     } else if (rank === 3) {
-      rankBadge.textContent = '🥉 3º LUGAR NO RANKING';
-      rankBadge.style.background = 'rgba(217, 119, 6, 0.2)';
-      rankBadge.style.borderColor = '#d97706';
+      rankBadge.textContent = '3º LUGAR NO RANKING';
+      rankBadge.style.background = 'rgba(217, 119, 6, 0.18)';
+      rankBadge.style.borderColor = '#b45309';
       rankBadge.style.color = '#fdba74';
     } else {
-      rankBadge.textContent = `#${rank} NO RANKING GERAL`;
-      rankBadge.style.background = 'rgba(59, 130, 246, 0.2)';
+      rankBadge.textContent = `POSIÇÃO #${rank} NO RANKING`;
+      rankBadge.style.background = 'rgba(59, 130, 246, 0.15)';
       rankBadge.style.borderColor = 'var(--blue)';
-      rankBadge.style.color = '#60a5fa';
+      rankBadge.style.color = '#93c5fd';
     }
   }
 
@@ -3062,11 +3137,10 @@ async function renderShowcaseSlide() {
 function nextShowcaseSlide() {
   showcaseIndex++;
   if (showcaseIndex >= showcaseCollabs.length) {
-    stopCollabShowcase();
-  } else {
-    renderShowcaseSlide();
-    startSlideTimer();
+    showcaseIndex = 0; // Loop contínuo: volta para o 1º colocado sem fechar
   }
+  renderShowcaseSlide();
+  startSlideTimer();
 }
 
 function prevShowcaseSlide() {
@@ -3089,10 +3163,14 @@ function setupShowcaseControls() {
     pauseBtn.onclick = (e) => {
       e.stopPropagation();
       showcaseIsPaused = !showcaseIsPaused;
-      pauseBtn.textContent = showcaseIsPaused ? '▶' : '⏸';
+      pauseBtn.innerHTML = showcaseIsPaused
+        ? '<i data-lucide="play" style="width:14px; height:14px;"></i>'
+        : '<i data-lucide="pause" style="width:14px; height:14px;"></i>';
       pauseBtn.title = showcaseIsPaused ? 'Retomar' : 'Pausar';
+      if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
     };
   }
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
 function stopCollabShowcase() {
@@ -3105,6 +3183,11 @@ function stopCollabShowcase() {
   if (showcaseProgressTimer) {
     clearInterval(showcaseProgressTimer);
     showcaseProgressTimer = null;
+  }
+  const pBar = document.getElementById('showcaseProgressBar');
+  if (pBar) {
+    pBar.style.transition = 'none';
+    pBar.style.width = '0%';
   }
   ensureScanInputFocus();
 }
@@ -3121,7 +3204,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'F8') {
     e.preventDefault();
     if (isActive) stopCollabShowcase();
-    else triggerCollabShowcase();
+    else triggerCollabShowcase(true);
     return;
   }
   if (isActive) {
@@ -3137,12 +3220,20 @@ document.addEventListener('keydown', (e) => {
       e.preventDefault();
       showcaseIsPaused = !showcaseIsPaused;
       const pauseBtn = document.getElementById('showcasePauseBtn');
-      if (pauseBtn) pauseBtn.textContent = showcaseIsPaused ? '▶' : '⏸';
+      if (pauseBtn) {
+        pauseBtn.innerHTML = showcaseIsPaused
+          ? '<i data-lucide="play" style="width:14px; height:14px;"></i>'
+          : '<i data-lucide="pause" style="width:14px; height:14px;"></i>';
+        if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+      }
       return;
     }
-    // Se o leitor de código de barras ou operador digitou qualquer caractere ou Enter, fecha instantaneamente
-    if (e.key.length === 1 || e.key === 'Enter') {
-      stopCollabShowcase();
+    // IMPORTANTE: Se o leitor de código de barras ou operador digitou qualquer caractere ou Enter,
+    // NÃO fecha o carrossel! Mantém o foco no input de leitura do painel para continuar contabilizando
+    // caixas e atualizando dados em background.
+    const scanInput = document.getElementById('scanInput');
+    if (scanInput && document.activeElement !== scanInput) {
+      scanInput.focus();
     }
   }
 });
@@ -3150,8 +3241,7 @@ document.addEventListener('keydown', (e) => {
 const showcaseOverlayEl = document.getElementById('collabShowcaseOverlay');
 if (showcaseOverlayEl) {
   showcaseOverlayEl.onclick = (e) => {
-    // Só fecha se clicou no fundo do overlay, não nos controles internos do card
-    if (e.target === showcaseOverlayEl) stopCollabShowcase();
+    // Não fecha ao clicar fora por acidente — usuário fecha explicitamente no botão [X] ou tecla Esc
   };
 }
 

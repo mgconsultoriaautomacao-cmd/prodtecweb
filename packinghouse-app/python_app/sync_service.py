@@ -432,7 +432,94 @@ def sync_from_supabase(conn: sqlite3.Connection, on_auth_error=None):
                     print(f'Sync [down]: Erro parcel_link: {ex}')
         conn.commit()
 
+    # ── 9. Production Scans (Mapeiro Mobile / Nuvem → Local) ───────────────────
+    new_scans_count = 0
+    try:
+        from datetime import datetime, timezone
+        today_iso = datetime.now(timezone.utc).strftime('%Y-%m-%dT00:00:00Z')
+        r = get(f'/rest/v1/production_scans?ts=gte.{today_iso}&order=ts.asc&limit=5000{tf}')
+        if r.ok:
+            remote_scans = r.json() or []
+            for s in remote_scans:
+                ts_ms = _iso_to_ms(s.get('ts'))
+                raw = str(s.get('raw_barcode') or '').strip()
+                if not ts_ms or not raw:
+                    continue
+
+                # Mapeiro é exclusivo para Empilhadores! Força papel EMPILHADOR
+                emp_role = 'EMPILHADOR'
+                station_id = s.get('station_id') or 'ST01'
+                emp_barcode = str(s.get('employee_barcode') or '').strip()
+                emp_name = str(s.get('employee_name') or '').strip()
+                rem_emp_id = s.get('employee_id')
+
+                # Localiza o funcionário correspondente no banco local
+                emp_row = None
+                if rem_emp_id:
+                    emp_row = conn.execute("SELECT id, role, name FROM employees WHERE remote_id=?", (rem_emp_id,)).fetchone()
+                if not emp_row and emp_barcode:
+                    emp_row = conn.execute("SELECT id, role, name FROM employees WHERE barcode=?", (emp_barcode,)).fetchone()
+                if not emp_row and emp_name:
+                    emp_row = conn.execute("SELECT id, role, name FROM employees WHERE name=?", (emp_name,)).fetchone()
+
+                # Se não encontrou por crachá/nome, tenta encontrar qualquer empilhador ativo
+                if not emp_row:
+                    emp_row = conn.execute("SELECT id, role, name FROM employees WHERE role='EMPILHADOR' AND active=1 LIMIT 1", ()).fetchone()
+
+                # Se mesmo assim não houver nenhum cadastrado localmente, cria o colaborador Empilhador automaticamente
+                if not emp_row:
+                    c_name = emp_name or (f'Empilhador {emp_barcode}' if emp_barcode else 'Empilhador Mapeiro')
+                    c_bc = emp_barcode or f'EMP_{ts_ms}'
+                    cur = conn.execute("""
+                        INSERT INTO employees(name, role, barcode, active, remote_id)
+                        VALUES(?, 'EMPILHADOR', ?, 1, ?)
+                    """, (c_name, c_bc, rem_emp_id))
+                    local_emp_id = cur.lastrowid
+                else:
+                    local_emp_id = emp_row[0]
+
+                # Verifica duplicidade
+                exists = conn.execute(
+                    "SELECT 1 FROM scan_events WHERE ts=? AND raw_barcode=?",
+                    (ts_ms, raw)
+                ).fetchone()
+
+                if not exists:
+                    caliber = s.get('caliber') or 'PADRAO'
+                    weight_id = None
+                    if s.get('weight_name'):
+                        bw_row = conn.execute("SELECT id FROM box_weights WHERE name=?", (s['weight_name'],)).fetchone()
+                        if bw_row:
+                            weight_id = bw_row[0]
+
+                    # Insere registro no scan_events com papel EMPILHADOR
+                    conn.execute("""
+                        INSERT INTO scan_events(ts, station_id, scanner_id, role, employee_id, raw_barcode, weight_id, caliber, synced)
+                        VALUES(?, ?, 'MAPEIRO', 'EMPILHADOR', ?, ?, ?, ?, 1)
+                    """, (ts_ms, station_id, local_emp_id, raw, weight_id, caliber))
+
+                    # Atualiza estatísticas por hora estritamente para EMPILHADOR
+                    hs = ts_ms - (ts_ms % 3_600_000)
+                    conn.execute("""
+                        INSERT INTO hourly_stats(hour_start, station_id, role, employee_id, produced_count, quality_deducted)
+                        VALUES(?, ?, 'EMPILHADOR', ?, 0, 0)
+                        ON CONFLICT(hour_start, station_id, role, employee_id) DO NOTHING
+                    """, (hs, station_id, local_emp_id))
+                    conn.execute("""
+                        UPDATE hourly_stats SET produced_count = produced_count + 1
+                        WHERE hour_start=? AND station_id=? AND role='EMPILHADOR' AND employee_id=?
+                    """, (hs, station_id, local_emp_id))
+
+                    new_scans_count += 1
+
+            if new_scans_count > 0:
+                conn.commit()
+                print(f'Sync [down]: {new_scans_count} novos scans (Mapeiro/Nuvem) sincronizados com sucesso.')
+    except Exception as ex:
+        print(f'Sync [down]: Erro ao baixar scans do Mapeiro: {ex}')
+
     print('Sync [down]: Ciclo de download concluído.')
+    return new_scans_count
 
 
 # ─── Utilitários ──────────────────────────────────────────────────────────────
