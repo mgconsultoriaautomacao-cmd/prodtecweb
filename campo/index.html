@@ -942,6 +942,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   </select>
   </div>
 
+  <div class="section"><div class="section-title" style="display:flex;align-items:center;gap:4px"><i data-lucide="brush" style="width:12px;height:12px"></i> Pincelador / Líder</div></div>
+  <div style="padding:0 16px">
+  <select id="cPincelador">
+  <option value="">— Selecionar Pincelador (Opcional) —</option>
+  </select>
+  </div>
+
   <div class="section"><div class="section-title" style="display:flex;align-items:center;gap:4px"><i data-lucide="truck" style="width:12px;height:12px"></i> Número do Carrocão</div></div>
   <div style="padding:0 16px" id="cCarriageContainer">
   <!-- Will be populated dynamically based on quantity -->
@@ -2319,6 +2326,12 @@ function showScreen(name) {
   if (name === 'infoParcelas') renderInfoParcelas();
   if (name === 'plantios') loadPlantiosScreen();
   if (name === 'mip' || name === 'op') initMipAndOpForm();
+  if (name === 'carrao') {
+    rebuildAllParcelaSelects();
+    if (!parcelas || parcelas.length === 0) {
+      loadInfoParcelas();
+    }
+  }
   if (name === 'fertirrigacao') loadFertSelects();
   if (name === 'idiarn') loadIdiarnSelects();
 
@@ -9714,6 +9727,15 @@ function initCarraoForm() {
     (tractorists.length > 0 ? tractorists : employees).forEach(t => tSel.insertAdjacentHTML('beforeend', `<option value="${t.id}">${t.name}${t.role ? ' ('+t.role+')' : ''}</option>`));
   }
 
+  // 1.1 Carrega pinceladores
+  const pSel = $('cPincelador');
+  if (pSel) {
+    pSel.innerHTML = '<option value="">— Selecionar Pincelador / Líder —</option>';
+    (employees || []).forEach(e => {
+      pSel.insertAdjacentHTML('beforeend', `<option value="${e.name}">${e.name}${e.role ? ' ('+e.role+')' : ''}</option>`);
+    });
+  }
+
   // 2. Carrega operadores de máquina
   const mOpSel = $('cMachineOperator');
   if (mOpSel) {
@@ -9924,6 +9946,9 @@ async function submitCarrao() {
   corte : parseInt($('cCorte').value) || 1,
   fruit_type : cState.fruitName,
   parcel_id : parcelaId || null,
+  parcela : parcela ? (parcela.code || parcela.label) : null,
+  parcel_code : parcela ? (parcela.code || parcela.label) : null,
+  pincelador1 : $('cPincelador')?.value || null,
   variety_id : $('cVariety').value || null,
   tractor_driver : tractor ? tractor.name : null,
   machine_code : cState.machineCode || $('cMachine')?.options[$('cMachine')?.selectedIndex]?.text || null,
@@ -10153,14 +10178,15 @@ async function pushCarrao({ session, workers, carriageIds = [] }) {
   // Resolves physical parcel_id if it was mapped to cycle id or is null
   let resolvedParcelId = session.parcel_id;
   const cycleMatch = (infoParcelasData || []).find(ip => ip.id === session.parcel_id);
-  if (cycleMatch) {
-  resolvedParcelId = cycleMatch.parcel_id;
+  if (cycleMatch && cycleMatch.parcel_id) {
+    resolvedParcelId = cycleMatch.parcel_id;
   }
-  if (!resolvedParcelId && session.parcela) {
-  const pMatch = (dbParcels || []).find(dp => 
-  dp.code.trim().toUpperCase() === session.parcela.trim().toUpperCase()
-  );
-  if (pMatch) resolvedParcelId = pMatch.id;
+  if (!resolvedParcelId && (session.parcela || session.parcel_code)) {
+    const pCodeToMatch = (session.parcela || session.parcel_code).trim().toUpperCase();
+    const pMatch = (dbParcels || []).find(dp => 
+      dp.code && dp.code.trim().toUpperCase() === pCodeToMatch
+    );
+    if (pMatch) resolvedParcelId = pMatch.id;
   }
 
   // Gera UUID v4 no cliente para evitar conflitos de chave
@@ -10196,6 +10222,7 @@ async function pushCarrao({ session, workers, carriageIds = [] }) {
   id: clientUUID(),
   ...session,
   parcel_id: resolvedParcelId || null,
+  parcela: session.parcela || (cycleMatch ? (cycleMatch.parcela2 || cycleMatch.parcela) : null),
   qty_carrocoes: 1, 
   total_value: session.price_per_carrao, 
   value_per_employee: session.price_per_carrao / session.employee_count,

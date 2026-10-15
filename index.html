@@ -3737,6 +3737,189 @@
   </div>
   </div>
 
+  <!-- MODAL: DETALHAMENTO DA EQUIPE DE COLHEITA -->
+  <div id="colheitaEquipeModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:26px; border-radius:18px; width:700px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5)">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px">
+        <div>
+          <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px"><i data-lucide="users" style="width:20px; height:20px; color:var(--blue)"></i> Equipe de Colheita de Campo</h3>
+          <span id="colheitaEquipeSub" style="font-size:12px; color:var(--muted)"></span>
+        </div>
+        <button onclick="closeColheitaEquipeModal()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); border-radius:50%; width:32px; height:32px; cursor:pointer">✕</button>
+      </div>
+
+      <!-- Pincelador Selecionado / Atribuído do Cadastro de Funcionários -->
+      <div style="background:rgba(34,197,94,0.06); border:1px solid rgba(34,197,94,0.25); border-radius:12px; padding:14px; margin-bottom:16px">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+          <label class="flabel" style="margin:0; font-weight:700; color:var(--green); display:flex; align-items:center; gap:6px">
+            <i data-lucide="brush" style="width:14px; height:14px"></i> Pincelador Oficial (Puxado do Cadastro de Funcionários)
+          </label>
+          <span style="font-size:10px; font-weight:800; background:rgba(34,197,94,0.15); color:var(--green); padding:2px 8px; border-radius:8px">AUDITÁVEL</span>
+        </div>
+        <div style="display:flex; gap:8px">
+          <select id="colheitaEquipePinceladorSelect" style="flex:1; padding:8px 12px; border-radius:8px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-weight:600"></select>
+          <button class="btn on" onclick="salvarPinceladorDaEquipe()" style="font-size:12px; padding:8px 14px; background:var(--green); color:#fff; font-weight:700; display:inline-flex; align-items:center; gap:4px">
+            <i data-lucide="check" style="width:14px; height:14px"></i> Salvar Pincelador
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabela com a lista de colaboradores integrantes da equipe -->
+      <div style="margin-bottom:16px">
+        <div style="font-weight:700; font-size:13px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center">
+          <span style="display:flex; align-items:center; gap:6px"><i data-lucide="list" style="width:14px; height:14px; color:var(--muted)"></i> Colaboradores Integrantes da Equipe</span>
+          <span id="colheitaEquipeCount" style="font-size:11px; font-weight:700; color:var(--muted)"></span>
+        </div>
+        <div style="max-height:280px; overflow-y:auto; border:1px solid var(--border); border-radius:10px">
+          <table style="width:100%; border-collapse:collapse; font-size:12px">
+            <thead>
+              <tr style="background:rgba(255,255,255,0.04); border-bottom:1px solid var(--border)">
+                <th style="padding:8px 12px; text-align:left; width:30px">#</th>
+                <th style="padding:8px 12px; text-align:left">Nome do Colaborador</th>
+                <th style="padding:8px 12px; text-align:right">Valor Recebido</th>
+                <th style="padding:8px 12px; text-align:center; width:110px">Definir Pincelador</th>
+              </tr>
+            </thead>
+            <tbody id="colheitaEquipeTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px">
+        <button class="sec" onclick="closeColheitaEquipeModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ALIMENTAR / GERAR ORDEM DE PÓS-COLHEITA -->
+  <div id="alimentarPosColheitaModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:var(--modal-bg); color:var(--modal-text); padding:28px; border-radius:18px; width:780px; max-width:95%; max-height:92vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5)">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px">
+        <div>
+          <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px"><i data-lucide="clipboard-check" style="width:22px; height:22px; color:#8b5cf6"></i> Ordem de Pós-Colheita & Packing House</h3>
+          <span style="font-size:12px; color:var(--muted)">Pré-informações carregadas automaticamente do PWA. Alimente as ordens de carroção e datas manualmente.</span>
+        </div>
+        <button onclick="closeAlimentarPosColheitaModal()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); border-radius:50%; width:32px; height:32px; cursor:pointer">✕</button>
+      </div>
+
+      <input type="hidden" id="posSessionIdRef"/>
+
+      <!-- BLOCO 1: PRÉ-INFORMAÇÃO AUTOMÁTICA DO PWA -->
+      <div style="background:rgba(139,92,246,0.07); border:1px solid rgba(139,92,246,0.25); border-radius:12px; padding:14px; margin-bottom:16px">
+        <div style="font-weight:700; font-size:11.5px; text-transform:uppercase; color:#a78bfa; margin-bottom:8px; display:flex; align-items:center; gap:6px">
+          <i data-lucide="check-circle-2" style="width:14px; height:14px"></i> Dados Automáticos da Colheita (PWA)
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1.2fr; gap:12px">
+          <div>
+            <label class="flabel" style="margin:0 0 2px 0; font-size:11px">Parcela de Origem</label>
+            <input type="text" id="posAutoParcela" readonly style="width:100%; font-weight:800; color:var(--green); background:rgba(0,0,0,0.2)"/>
+          </div>
+          <div>
+            <label class="flabel" style="margin:0 0 2px 0; font-size:11px">Variedade / Cultura</label>
+            <input type="text" id="posAutoVariedade" readonly style="width:100%; font-weight:700; background:rgba(0,0,0,0.2)"/>
+          </div>
+          <div>
+            <label class="flabel" style="margin:0 0 2px 0; font-size:11px">Lote / Rastreabilidade Oficial</label>
+            <input type="text" id="posAutoLote" readonly style="width:100%; font-family:monospace; font-weight:800; color:var(--accent); background:rgba(0,0,0,0.2)"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOCO 2: ALIMENTAÇÃO MANUAL DAS ORDENS DE CARROÇÃO E DATAS -->
+      <div style="margin-bottom:16px">
+        <div style="font-weight:700; font-size:12px; text-transform:uppercase; color:var(--text); margin-bottom:8px; display:flex; align-items:center; gap:6px">
+          <i data-lucide="edit-3" style="width:14px; height:14px; color:var(--blue)"></i> Alimentação Manual da Ordem
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
+          <div>
+            <label class="flabel">Nº da Ordem / Carroção *</label>
+            <input type="text" id="posManualOrdemCarrao" placeholder="Ex: 01, ABJ52, 102..." style="text-transform:uppercase; font-weight:800; width:100%" required/>
+          </div>
+          <div>
+            <label class="flabel">Data da Colheita *</label>
+            <input type="date" id="posManualDataColheita" style="width:100%" required/>
+          </div>
+          <div>
+            <label class="flabel">Data da Aplicação / Pós-Colheita *</label>
+            <input type="date" id="posManualDataAplicacao" style="width:100%" required/>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1.2fr 1.2fr 0.8fr; gap:12px; margin-bottom:12px">
+          <div>
+            <label class="flabel">Pincelador (Cadastro de Funcionários) *</label>
+            <select id="posManualPincelador" style="width:100%"></select>
+          </div>
+          <div>
+            <label class="flabel">Resp. Embalagem / Packing (Funcionários) *</label>
+            <select id="posManualRespEmbalagem" style="width:100%"></select>
+          </div>
+          <div>
+            <label class="flabel">Qtde Carroções</label>
+            <input type="number" id="posManualQtyCarrocoes" min="1" value="1" style="width:100%"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOCO 3: TRATAMENTO DE TALO (MODELO OFICIAL OC:05) -->
+      <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:16px">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+          <div style="font-weight:700; font-size:12px; color:var(--yellow); display:flex; align-items:center; gap:6px">
+            <i data-lucide="shield-check" style="width:14px; height:14px"></i> Tratamento de Talo (Modelo Ficha Oficial OC:05)
+          </div>
+          <span style="font-size:10px; color:var(--muted)">Recomendação: Graduate A+ (4 mL / 1L de Água)</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:12px; margin-bottom:10px">
+          <div>
+            <label class="flabel">Produto Comercial (Fungicida Talo)</label>
+            <select id="posManualProdutoSelect" onchange="onPosManualProdutoChange()" style="width:100%"></select>
+          </div>
+          <div>
+            <label class="flabel">Ingrediente Ativo</label>
+            <input type="text" id="posManualIngredienteAtivo" value="AZOXISTROBINA + FLUDIOXONIL" style="width:100%"/>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1.5fr; gap:12px">
+          <div>
+            <label class="flabel">Dosagem (mL)</label>
+            <input type="number" step="0.1" id="posManualDosagem" value="4.0" style="width:100%"/>
+          </div>
+          <div>
+            <label class="flabel">Volume Água (L)</label>
+            <input type="number" step="0.1" id="posManualVolumeAgua" value="1.0" style="width:100%"/>
+          </div>
+          <div>
+            <label class="flabel">Carência (Dias)</label>
+            <input type="number" id="posManualCarencia" value="0" style="width:100%"/>
+          </div>
+          <div>
+            <label class="flabel">Justificativa / Alvo</label>
+            <input type="text" id="posManualJustificativa" value="ANTRACNOSE / PREVENÇÃO DE FUNGOS" style="width:100%"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- AÇÕES E BOTÕES DE EMISSÃO -->
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
+        <button class="sec" onclick="closeAlimentarPosColheitaModal()">Cancelar</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <button class="btn on" onclick="salvarEEmitirOrdemPacking()" style="font-size:12px; padding:8px 14px; background:var(--blue); color:#fff; display:inline-flex; align-items:center; gap:6px">
+            <i data-lucide="printer" style="width:14px; height:14px"></i> Imprimir Ordem Packing
+          </button>
+          <button class="btn on" onclick="salvarEEmitirFichaOficialOC05()" style="font-size:12px; padding:8px 14px; background:var(--yellow); color:#000; font-weight:800; display:inline-flex; align-items:center; gap:6px">
+            <i data-lucide="file-text" style="width:14px; height:14px"></i> Imprimir Ficha Oficial OC:05
+          </button>
+          <button onclick="salvarRegistroPosColheitaManual()" style="background:var(--green); color:#fff; border:none; padding:8px 18px; border-radius:8px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px">
+            <i data-lucide="save" style="width:14px; height:14px"></i> Salvar Ordem
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: IMPORTAR PLANILHA DE DEFENSIVOS (CSV / EXCEL) -->
   <div id="importDefensivosModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center;">
   <div style="background:var(--modal-bg); color:var(--modal-text); padding:28px; border-radius:18px; width:750px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5)">
@@ -9800,6 +9983,12 @@ async function exportHarvestOrderPDF(sidOrIds) {
   const ip = (_infoParcelas || []).find(x => x.id === s.parcel_id || x.parcel_id === s.parcel_id);
   const pObj = (window._parcels || []).find(x => x.id === s.parcel_id);
   parcDisplay = ip ? (ip.parcela2 || ip.parcela) : (pObj ? pObj.code : '');
+  }
+  if (!parcDisplay && s.julian_lot && s.julian_lot.length >= 4) {
+    const pCodeFromLot = s.julian_lot.substring(1, 4);
+    const pNum = parseInt(pCodeFromLot, 10);
+    const ip = (_infoParcelas || []).find(x => parseInt(x.parcela, 10) === pNum || x.parcela == pCodeFromLot || x.parcela == String(pNum));
+    parcDisplay = ip ? (ip.parcela2 || ip.parcela) : (pNum ? String(pNum) : pCodeFromLot);
   }
   doc.text(String(parcDisplay || '—'), mg + 10, y + 11);
   
@@ -20887,6 +21076,7 @@ async function loadColheitasTable() {
   quantidade_carrocoes: item.quantidade_carrocoes || 0,
   quantidade_caixas: item.quantidade_caixas || 0,
   pincelador1: item.pincelador1 || item.equipe_colheita || '—',
+  workers: [],
   rastreabilidade_codigo: item.rastreabilidade_codigo || '—',
   source: 'manual',
   raw: item
@@ -20902,6 +21092,17 @@ async function loadColheitasTable() {
   const pObj = (window._parcels || []).find(x => x.id === item.parcel_id);
   pName = ip ? (ip.parcela2 || ip.parcela) : (pObj ? pObj.code : '');
   }
+  // Fallback inteligente: recuperar parcela pelo código juliano de rastreabilidade (F PPP V DDD)
+  if (!pName && item.julian_lot && item.julian_lot.length >= 4) {
+    const pCodeFromLot = item.julian_lot.substring(1, 4); // Ex: '013' -> 13
+    const pNum = parseInt(pCodeFromLot, 10);
+    const ip = (_infoParcelas || []).find(x => parseInt(x.parcela, 10) === pNum || x.parcela == pCodeFromLot || x.parcela == String(pNum));
+    pName = ip ? (ip.parcela2 || ip.parcela) : (pNum ? String(pNum) : pCodeFromLot);
+  }
+
+  const workers = item.field_carrao_employees || [];
+  const pinceladorIdentificado = item.pincelador1 || item.pincelador || item.registered_by || (workers[0] ? workers[0].employee_name : 'Equipe de Campo');
+
   return {
   id: item.id,
   data_colheita: item.date,
@@ -20909,7 +21110,8 @@ async function loadColheitasTable() {
   variedade: item.varieties?.name || item.variedade || '—',
   quantidade_carrocoes: item.qty_carrocoes || 1,
   quantidade_caixas: item.qty_caixas || 0,
-  pincelador1: item.field_carrao_employees?.map(e => e.employee_name).join(' / ') || 'Equipe de Campo',
+  pincelador1: pinceladorIdentificado,
+  workers: workers,
   rastreabilidade_codigo: item.julian_lot || '—',
   source: 'PWA (Carroção)',
   raw: item
@@ -20938,25 +21140,319 @@ function renderCcColheitasTable(list) {
 
   tbody.innerHTML = list.map(item => {
   const fmtDate = item.data_colheita ? item.data_colheita.split('-').reverse().join('/') : '—';
-  const itemStr = encodeURIComponent(JSON.stringify(item));
+  const workers = item.workers || (item.raw && item.raw.field_carrao_employees) || [];
+  const isTeam = workers.length > 1;
+  const pinceladorDisplay = item.pincelador1 || item.equipe_colheita || '—';
+
+  let equipeHtml = '';
+  if (isTeam) {
+    equipeHtml = `
+      <div style="font-weight:700; color:var(--text); font-size:12px; display:flex; align-items:center; gap:5px">
+        <span style="background:rgba(34,197,94,0.15); color:var(--green); font-size:9px; font-weight:800; padding:1px 5px; border-radius:4px; letter-spacing:0.5px">PINCELADOR</span>
+        <span style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${pinceladorDisplay}">${pinceladorDisplay}</span>
+      </div>
+      <div style="margin-top:4px">
+        <button type="button" class="btn sec" style="font-size:10.5px; padding:2px 8px; border-radius:12px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; border:1px solid rgba(59,130,246,0.3); background:rgba(59,130,246,0.08); color:var(--blue)" onclick="openColheitaEquipeModal('${item.id}')">
+          <i data-lucide="users" style="width:11px; height:11px"></i> Equipe (${workers.length} colhedores)
+        </button>
+      </div>
+    `;
+  } else {
+    equipeHtml = `
+      <div style="font-weight:600; font-size:12px; display:flex; align-items:center; gap:4px">
+        <i data-lucide="user" style="width:12px; height:12px; color:var(--muted)"></i>
+        <span>${pinceladorDisplay}</span>
+      </div>
+    `;
+  }
+
   return `
   <tr style="border-bottom:1px solid var(--border); font-size:13px">
   <td style="padding:12px 10px; text-align:center"><input type="checkbox" class="chkColheitaOrder" value="${item.id}" style="width:16px; height:16px; cursor:pointer"/></td>
-  <td style="padding:12px 10px; font-weight:700">${fmtDate}</td>
-  <td style="padding:12px 10px; font-weight:800; color:var(--green)">${item.parcela || '—'}</td>
+  <td style="padding:12px 10px; font-weight:700; white-space:nowrap">${fmtDate}</td>
+  <td style="padding:12px 10px; font-weight:800; color:var(--green); font-size:14px">${item.parcela || '—'}</td>
   <td style="padding:12px 10px; font-weight:600">${item.variedade || '—'}</td>
   <td style="padding:12px 10px; text-align:center; font-weight:700">${item.quantidade_carrocoes || 0}</td>
   <td style="padding:12px 10px; text-align:center">${item.quantidade_caixas || '—'}</td>
-  <td style="padding:12px 10px">${item.pincelador1 || item.equipe_colheita || '—'}</td>
-  <td style="padding:12px 10px; text-align:center; font-size:11px; color:var(--muted)">${item.rastreabilidade_codigo || '—'}</td>
+  <td style="padding:12px 10px">${equipeHtml}</td>
+  <td style="padding:12px 10px; text-align:center; font-size:11px; font-family:monospace; font-weight:700; color:var(--accent)">${item.rastreabilidade_codigo || '—'}</td>
   <td style="padding:12px 10px; text-align:center; white-space:nowrap">
-  <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="exportHarvestOrderPDF('${item.id}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Ordem Colheita</button>
+  <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="exportHarvestOrderPDF('${item.id}')" title="Imprimir Ordem de Colheita / Packing individual"><i data-lucide="printer" style="width:12px; height:12px"></i> Ordem Colheita</button>
+  <button class="btn" style="background:#8b5cf6; color:#fff; font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="openAlimentarPosColheitaModal('${item.id}')" title="Alimentar dados manuais e emitir Pós-Colheita"><i data-lucide="clipboard-list" style="width:12px; height:12px"></i> Pós-Colheita</button>
   <button class="danger" style="padding:4px 8px; font-size:11px" onclick="deleteColheitaRecord('${item.id}')">Excluir</button>
   </td>
   </tr>
   `;
   }).join('');
   if (window.lucide) lucide.createIcons();
+}
+
+let _currentColheitaActiveItem = null;
+
+async function ensureEmployeesLoaded() {
+  if (!window._employeesList || window._employeesList.length === 0) {
+    try {
+      const { data: empData } = await sb.from('employees').select('*').eq('tenant_id', tenantId).order('name', { ascending: true });
+      if (empData) window._employeesList = empData;
+    } catch(e) {
+      console.warn('Erro ao carregar funcionários:', e);
+    }
+  }
+  return window._employeesList || [];
+}
+
+async function openColheitaEquipeModal(id) {
+  const item = (_colheitasList || []).find(x => x.id === id);
+  if (!item) return;
+  _currentColheitaActiveItem = item;
+
+  const modal = $('colheitaEquipeModal');
+  if (!modal) return;
+
+  const fmtDate = item.data_colheita ? item.data_colheita.split('-').reverse().join('/') : '—';
+  $('colheitaEquipeSub').textContent = `Parcela: ${item.parcela} • Data: ${fmtDate} • Variedade: ${item.variedade} • Lote: ${item.rastreabilidade_codigo}`;
+
+  const workers = item.workers || (item.raw && item.raw.field_carrao_employees) || [];
+  $('colheitaEquipeCount').textContent = `${workers.length} Colaborador(es) na equipe`;
+
+  const emps = await ensureEmployeesLoaded();
+  const pSel = $('colheitaEquipePinceladorSelect');
+  if (pSel) {
+    pSel.innerHTML = '<option value="">-- Selecione o Pincelador Oficial do Cadastro --</option>' +
+      emps.map(e => `<option value="${e.name}" ${e.name === item.pincelador1 ? 'selected' : ''}>${e.name} (${e.role || 'Operador'})</option>`).join('');
+  }
+
+  const tbody = $('colheitaEquipeTableBody');
+  if (tbody) {
+    if (workers.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:16px; color:var(--muted)">Nenhum colaborador individual vinculado a este registro.</td></tr>`;
+    } else {
+      tbody.innerHTML = workers.map((w, idx) => {
+        const isCurrentPincelador = w.employee_name === item.pincelador1;
+        return `
+          <tr style="border-bottom:1px solid var(--border); ${isCurrentPincelador ? 'background:rgba(34,197,94,0.08); font-weight:700' : ''}">
+            <td style="padding:8px 12px; color:var(--muted)">${idx + 1}</td>
+            <td style="padding:8px 12px; color:var(--text)">
+              ${w.employee_name}
+              ${isCurrentPincelador ? '<span style="margin-left:6px; font-size:9px; background:var(--green); color:#fff; padding:1px 5px; border-radius:4px">PINCELADOR</span>' : ''}
+            </td>
+            <td style="padding:8px 12px; text-align:right; font-weight:700; color:var(--green)">
+              ${w.value_received ? 'R$ ' + Number(w.value_received).toFixed(2).replace('.', ',') : '—'}
+            </td>
+            <td style="padding:8px 12px; text-align:center">
+              <button type="button" class="btn sec" style="font-size:10px; padding:2px 8px; border-radius:4px" onclick="setEmployeeAsPincelador('${w.employee_name.replace(/'/g, "\\'")}')">Definir</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+  }
+
+  modal.style.display = 'flex';
+  if (window.lucide) lucide.createIcons();
+}
+
+function setEmployeeAsPincelador(name) {
+  const pSel = $('colheitaEquipePinceladorSelect');
+  if (pSel) {
+    pSel.value = name;
+  }
+}
+
+function closeColheitaEquipeModal() {
+  const modal = $('colheitaEquipeModal');
+  if (modal) modal.style.display = 'none';
+  _currentColheitaActiveItem = null;
+}
+
+async function salvarPinceladorDaEquipe() {
+  if (!_currentColheitaActiveItem) return;
+  const pSel = $('colheitaEquipePinceladorSelect');
+  const novoPincelador = pSel ? pSel.value : '';
+  if (!novoPincelador) {
+    alert('Selecione um funcionário para definir como Pincelador.');
+    return;
+  }
+
+  _currentColheitaActiveItem.pincelador1 = novoPincelador;
+  if (_currentColheitaActiveItem.raw) {
+    _currentColheitaActiveItem.raw.pincelador1 = novoPincelador;
+    _currentColheitaActiveItem.raw.registered_by = novoPincelador;
+  }
+
+  // Persistir no Supabase
+  try {
+    if (_currentColheitaActiveItem.source === 'PWA (Carroção)') {
+      await sb.from('field_carrao_sessions').update({ registered_by: novoPincelador }).eq('id', _currentColheitaActiveItem.id);
+    } else {
+      await sb.from('caderno_campo_colheita').update({ pincelador1: novoPincelador }).eq('id', _currentColheitaActiveItem.id);
+    }
+  } catch(e) {
+    console.warn('Erro ao atualizar pincelador no banco:', e);
+  }
+
+  toast(' Pincelador atualizado para: ' + novoPincelador, 'ok');
+  closeColheitaEquipeModal();
+  renderCcColheitasTable(_colheitasList);
+}
+
+// ── ORDEM DE PÓS-COLHEITA: MODAL & ALIMENTAÇÃO MANUAL ─────────────────
+async function openAlimentarPosColheitaModal(id) {
+  const item = (_colheitasList || []).find(x => x.id === id);
+  if (!item) return;
+  _currentColheitaActiveItem = item;
+
+  const modal = $('alimentarPosColheitaModal');
+  if (!modal) return;
+
+  $('posSessionIdRef').value = item.id;
+  $('posAutoParcela').value = item.parcela || '—';
+  $('posAutoVariedade').value = item.variedade || 'MELÃO';
+  $('posAutoLote').value = item.rastreabilidade_codigo || '—';
+
+  // Alimentação manual pré-preenchida
+  $('posManualOrdemCarrao').value = item.raw?.carriage_id || item.raw?.carrao_seq || '01';
+  $('posManualDataColheita').value = item.data_colheita || today();
+  $('posManualDataAplicacao').value = item.data_colheita || today();
+  $('posManualQtyCarrocoes').value = item.quantidade_carrocoes || 1;
+
+  // Carrega funcionários no combo do pincelador e resp embalagem
+  const emps = await ensureEmployeesLoaded();
+  const pSel = $('posManualPincelador');
+  const eSel = $('posManualRespEmbalagem');
+
+  if (pSel) {
+    pSel.innerHTML = '<option value="">-- Selecione o Pincelador --</option>' +
+      emps.map(e => `<option value="${e.name}" ${e.name === item.pincelador1 ? 'selected' : ''}>${e.name} (${e.role || 'Operador'})</option>`).join('');
+  }
+  if (eSel) {
+    eSel.innerHTML = '<option value="">-- Selecione o Responsável Embalagem --</option>' +
+      emps.map(e => `<option value="${e.name}">${e.name} (${e.role || 'Packing'})</option>`).join('');
+    if (emps.length > 0) eSel.selectedIndex = 1;
+  }
+
+  // Defensivos (Pós-Colheita / Fungicida)
+  const dSel = $('posManualProdutoSelect');
+  if (dSel) {
+    dSel.innerHTML = `
+      <option value="GRADUATE A+" data-ing="AZOXISTROBINA + FLUDIOXONIL" data-dose="4.0" data-car="0">GRADUATE A+ (Padrão OC:05)</option>
+      <option value="SCHOLAR" data-ing="FLUDIOXONIL" data-dose="3.0" data-car="0">SCHOLAR (Fludioxonil)</option>
+      <option value="TECTO" data-ing="TIABENDAZOL" data-dose="2.0" data-car="0">TECTO (Tiabendazol)</option>
+      <option value="OUTRO" data-ing="" data-dose="0" data-car="0">+ Outro Fungicida...</option>
+    `;
+  }
+
+  modal.style.display = 'flex';
+  if (window.lucide) lucide.createIcons();
+}
+
+function onPosManualProdutoChange() {
+  const sel = $('posManualProdutoSelect');
+  if (!sel) return;
+  const opt = sel.options[sel.selectedIndex];
+  if (opt && opt.dataset) {
+    if ($('posManualIngredienteAtivo')) $('posManualIngredienteAtivo').value = opt.dataset.ing || '';
+    if ($('posManualDosagem')) $('posManualDosagem').value = opt.dataset.dose || '4.0';
+    if ($('posManualCarencia')) $('posManualCarencia').value = opt.dataset.car || '0';
+  }
+}
+
+function closeAlimentarPosColheitaModal() {
+  const modal = $('alimentarPosColheitaModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function salvarRegistroPosColheitaManual() {
+  const parcela = $('posAutoParcela').value;
+  const data_aplicacao = $('posManualDataAplicacao').value;
+  const ordem_carrao = $('posManualOrdemCarrao').value.trim();
+  const produto_nome = $('posManualProdutoSelect').value;
+  const ingrediente_ativo = $('posManualIngredienteAtivo').value.trim();
+  const dosagem_produto = parseFloat($('posManualDosagem').value) || 4.0;
+  const volume_agua = parseFloat($('posManualVolumeAgua').value) || 1.0;
+  const quantidade_carrocoes = parseInt($('posManualQtyCarrocoes').value) || 1;
+  const carencia_dias = parseInt($('posManualCarencia').value) || 0;
+  const operador = $('posManualPincelador').value || $('posManualRespEmbalagem').value || 'Equipe Packing';
+  const justificativa = $('posManualJustificativa').value.trim() || 'TRATAMENTO DE TALO DO MELÃO';
+
+  if (!parcela || !data_aplicacao || !ordem_carrao) {
+    alert('Informe a Parcela, Nº da Ordem do Carroção e a Data da Aplicação.');
+    return;
+  }
+
+  try {
+    const payload = {
+      tenant_id: tenantId,
+      parcela,
+      data_aplicacao,
+      produto_nome,
+      ingrediente_ativo,
+      dosagem_produto,
+      volume_agua,
+      quantidade_carrocoes,
+      carencia_dias,
+      operador,
+      justificativa
+    };
+
+    const { error } = await sb.from('caderno_campo_pos_colheita').insert(payload);
+    if (error) throw error;
+    toast(' Ordem de Pós-Colheita salva com sucesso!', 'ok');
+    closeAlimentarPosColheitaModal();
+    if (typeof loadPosColheitaTable === 'function') loadPosColheitaTable();
+  } catch(e) {
+    alert('Erro ao salvar pós-colheita: ' + (e.message || 'Verifique a conexão.'));
+  }
+}
+
+function salvarEEmitirOrdemPacking() {
+  if (!_currentColheitaActiveItem) return;
+  const ordemCarrao = $('posManualOrdemCarrao').value.trim() || '01';
+  const dataColheita = $('posManualDataColheita').value || _currentColheitaActiveItem.data_colheita;
+  const pincelador = $('posManualPincelador').value || _currentColheitaActiveItem.pincelador1;
+  const respEmbalagem = $('posManualRespEmbalagem').value || 'Packing House';
+
+  if (_currentColheitaActiveItem.raw) {
+    _currentColheitaActiveItem.raw.carrao_seq = ordemCarrao;
+    _currentColheitaActiveItem.raw.date = dataColheita;
+    _currentColheitaActiveItem.raw.registered_by = pincelador;
+    _currentColheitaActiveItem.raw.ph_inspector_name = respEmbalagem;
+  }
+  _currentColheitaActiveItem.pincelador1 = pincelador;
+  _currentColheitaActiveItem.data_colheita = dataColheita;
+
+  exportHarvestOrderPDF(_currentColheitaActiveItem.id);
+}
+
+function salvarEEmitirFichaOficialOC05() {
+  if (!_currentColheitaActiveItem) return;
+  const pCode = $('posAutoParcela').value;
+  const varNome = $('posAutoVariedade').value;
+  const dataAplicacao = $('posManualDataAplicacao').value;
+  const carrocoes = $('posManualQtyCarrocoes').value;
+  const prodNome = $('posManualProdutoSelect').value;
+  const iAtivo = $('posManualIngredienteAtivo').value;
+  const dosagem = $('posManualDosagem').value;
+  const volumeAgua = $('posManualVolumeAgua').value;
+  const carencia = $('posManualCarencia').value;
+  const justificativa = $('posManualJustificativa').value;
+  const pincelador = $('posManualPincelador').value || 'ANTONIO KERGINILDO';
+
+  const mockItem = {
+    parcela: pCode,
+    variedade: varNome,
+    data_aplicacao: dataAplicacao,
+    quantidade_carrocoes: carrocoes,
+    produto_nome: prodNome,
+    ingrediente_ativo: iAtivo,
+    dosagem_produto: dosagem,
+    volume_agua: volumeAgua,
+    carencia_dias: carencia,
+    justificativa: justificativa,
+    operador: pincelador
+  };
+
+  printPosColheitaReport(encodeURIComponent(JSON.stringify(mockItem)));
 }
 
 function toggleSelectAllColheitas(master) {
