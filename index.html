@@ -6078,7 +6078,7 @@ async function refreshRanking(){
     const eMs = new Date(e + 'T23:59:59.999').getTime();
     [scans, audits, stops] = await Promise.all([
       sbFetchAll(sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')).order('ts',{ascending:false})),
-      sbFetchAll(sb.from('quality_audits').select('*').eq('tenant_id',tenantId).gte('ts',sMs).lte('ts',eMs)).catch(()=>[]),
+      sbFetchAll(sb.from('quality_audits').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'))).catch(()=>[]),
       sbFetchAll(sb.from('global_stops').select('*').eq('tenant_id',tenantId).gte('start_ts',s).lte('start_ts',e+'T23:59:59Z')).catch(()=>[])
     ]);
     window._currentStops = stops || [];
@@ -6629,7 +6629,7 @@ async function refreshDash(){
   const eMs = new Date(e + 'T23:59:59.999').getTime();
   const [stopsRes, auditsRes, harvestRes] = await Promise.all([
     sb.from('global_stops').select('*').eq('tenant_id', tenantId).gte('start_ts', s).lte('start_ts', e+'T23:59:59Z'),
-    sbFetchAll(sb.from('quality_audits').select('*').eq('tenant_id', tenantId).gte('ts', sMs).lte('ts', eMs)).catch(()=>[]),
+    sbFetchAll(sb.from('quality_audits').select('*').eq('tenant_id', tenantId).gte('ts', toISO(s)).lte('ts', toISO(e, '23:59:59'))).catch(()=>[]),
     sb.from('field_carrao_sessions').select('*, parcels(code), varieties(name)').eq('tenant_id',tenantId).gte('date',s).lte('date',e)
   ]);
   const stops = stopsRes?.data || [];
@@ -7516,7 +7516,7 @@ async function openEmpDrawer(idOrName) {
   const empBarcode = emp.barcode ? String(emp.barcode).trim() : '0';
   const empName = emp.name ? String(emp.name).trim() : '';
 
-  let scanQuery = sb.from('production_scans').select('ts, weight_kg, role, raw_barcode, employee_name').eq('tenant_id', tenantId).gte('ts', startIso).lte('ts', endIso);
+  let scanQuery = sb.from('production_scans').select('ts, weight_kg, role, raw_barcode, employee_name').eq('tenant_id', tenantId).gte('ts', toISO(sDateOnly)).lte('ts', toISO(eDateOnly, '23:59:59'));
   if (emp.barcode && emp.name) {
     scanQuery = scanQuery.or(`raw_barcode.eq.${empBarcode},employee_name.eq.${empName}`);
   } else if (emp.barcode) {
@@ -7525,22 +7525,38 @@ async function openEmpDrawer(idOrName) {
     scanQuery = scanQuery.eq('employee_name', empName);
   }
 
+  // Coleta todos os códigos de barras possíveis do colaborador (inclusive se houver mapeamento no packing)
+  const targetBarcodes = new Set();
+  if (emp.barcode) targetBarcodes.add(String(emp.barcode).trim());
+  if (window._barcodeMappings && Array.isArray(window._barcodeMappings)) {
+    window._barcodeMappings.forEach(bm => {
+      if ((bm.employee_id && bm.employee_id === emp.id) || (bm.employee_name && bm.employee_name === emp.name)) {
+        if (bm.barcode) targetBarcodes.add(String(bm.barcode).trim());
+      }
+    });
+  }
+  const barcodesList = Array.from(targetBarcodes);
+
   let qualityQuery = sb.from('quality_audits').select('*').eq('tenant_id', tenantId);
-  if (emp.barcode && emp.id) {
-    qualityQuery = qualityQuery.or(`employee_barcode.eq.${empBarcode},employee_id.eq.${emp.id}`);
-  } else if (emp.barcode) {
-    qualityQuery = qualityQuery.eq('employee_barcode', empBarcode);
-  } else if (emp.id) {
-    qualityQuery = qualityQuery.eq('employee_id', emp.id);
+  if (barcodesList.length === 1) {
+    qualityQuery = qualityQuery.eq('employee_barcode', barcodesList[0]);
+  } else if (barcodesList.length > 1) {
+    qualityQuery = qualityQuery.in('employee_barcode', barcodesList);
+  } else {
+    qualityQuery = qualityQuery.eq('employee_barcode', empBarcode || '0');
   }
 
   let absenceQuery = sb.from('employee_absences').select('*').eq('tenant_id', tenantId).gte('date', sDateOnly).lte('date', eDateOnly);
-  if (emp.barcode) {
+  if (barcodesList.length === 1) {
+    absenceQuery = absenceQuery.eq('employee_barcode', barcodesList[0]);
+  } else if (barcodesList.length > 1) {
+    absenceQuery = absenceQuery.in('employee_barcode', barcodesList);
+  } else if (emp.barcode) {
     absenceQuery = absenceQuery.eq('employee_barcode', empBarcode);
   }
 
   const [qAudits, qAbs, allScans, qFieldServices, qCarraoServices] = await Promise.all([
-    qualityQuery.gte('ts', startMs).lte('ts', endMs).then(r => r).catch(() => ({ data: [] })),
+    qualityQuery.gte('ts', toISO(sDateOnly)).lte('ts', toISO(eDateOnly, '23:59:59')).then(r => r).catch(() => ({ data: [] })),
     absenceQuery.then(r => r).catch(() => ({ data: [] })),
     sbFetchAll(scanQuery.order('ts', {ascending: true})).catch(() => []),
     sb.from('field_service_employees').select('*, field_services(*)').eq('employee_id', emp.id).then(r => r).catch(() => ({ data: [] })),
@@ -7878,7 +7894,78 @@ async function openEmpDrawer(idOrName) {
   `;
 
   document.getElementById('drAbsences').innerHTML = '';
+
+  // Atualiza dinamicamente as barras de KPI superiores (Produtividade vs Meta e Tempo Interrompido)
+  const drProdValEl = document.getElementById('drProdVal');
+  const drProdFillEl = document.getElementById('drProdFill');
+  const drProdMetaDescEl = document.getElementById('drProdMetaDesc');
+  const drIdleValEl = document.getElementById('drIdleVal');
+  const drIdleFillEl = document.getElementById('drIdleFill');
+  const drIdleDescEl = document.getElementById('drIdleDesc');
+
+  if (isPackingRole || totalBoxes > 0) {
+    const prodColor = prodScore >= 90 ? 'var(--green)' : (prodScore >= 60 ? 'var(--yellow)' : 'var(--red)');
+    if (drProdValEl) {
+      drProdValEl.textContent = `${prodScore}%`;
+      drProdValEl.style.color = prodColor;
+    }
+    if (drProdFillEl) {
+      drProdFillEl.style.width = `${Math.min(100, prodScore)}%`;
+      drProdFillEl.style.background = prodColor;
+    }
+    if (drProdMetaDescEl) {
+      drProdMetaDescEl.textContent = `Baseado na meta de ${prodTarget} cx (${Math.round(prodTarget / numDaysInPeriod)} cx/dia) • ${netBoxesCount} cx líquidas`;
+    }
+
+    if (drIdleValEl) {
+      drIdleValEl.textContent = `${idleDetails.totalMinutes} min`;
+      drIdleValEl.style.color = stabClass === 'good' ? 'var(--green)' : stabClass === 'warn' ? 'var(--yellow)' : 'var(--red)';
+    }
+    if (drIdleFillEl) {
+      const idlePercent = Math.min(100, Math.round((idleDetails.totalMinutes / Math.max(1, totalWorkMin || 540)) * 100));
+      drIdleFillEl.style.width = `${idlePercent}%`;
+      drIdleFillEl.style.background = stabClass === 'good' ? 'var(--green)' : stabClass === 'warn' ? 'var(--yellow)' : 'var(--red)';
+    }
+    if (drIdleDescEl) {
+      drIdleDescEl.textContent = `Protocolo: ${idleDetails.gaps.length} pausa(s) > 10 min • Gap médio: ${idleDetails.avgGapMinutes} min`;
+    }
+  } else if (totalFieldOps > 0) {
+    if (drProdValEl) {
+      drProdValEl.textContent = `${totalFieldOps} ops`;
+      drProdValEl.style.color = 'var(--green)';
+    }
+    if (drProdFillEl) {
+      drProdFillEl.style.width = `${Math.min(100, totalFieldOps * 10)}%`;
+      drProdFillEl.style.background = 'var(--green)';
+    }
+    if (drProdMetaDescEl) {
+      drProdMetaDescEl.textContent = `Total de apontamentos de campo no período: ${totalFieldOps} serviços`;
+    }
+    if (drIdleValEl) {
+      drIdleValEl.textContent = '—';
+      drIdleValEl.style.color = 'var(--muted)';
+    }
+    if (drIdleFillEl) {
+      drIdleFillEl.style.width = '0%';
+    }
+    if (drIdleDescEl) {
+      drIdleDescEl.textContent = 'Apontamentos por área/tarefa executada';
+    }
+  }
   } else {
+  const drProdValEl = document.getElementById('drProdVal');
+  const drProdFillEl = document.getElementById('drProdFill');
+  const drProdMetaDescEl = document.getElementById('drProdMetaDesc');
+  const drIdleValEl = document.getElementById('drIdleVal');
+  const drIdleFillEl = document.getElementById('drIdleFill');
+  const drIdleDescEl = document.getElementById('drIdleDesc');
+  if (drProdValEl) { drProdValEl.textContent = '0%'; drProdValEl.style.color = 'var(--muted)'; }
+  if (drProdFillEl) drProdFillEl.style.width = '0%';
+  if (drProdMetaDescEl) drProdMetaDescEl.textContent = 'Sem lançamentos no período';
+  if (drIdleValEl) { drIdleValEl.textContent = '0 min'; drIdleValEl.style.color = 'var(--muted)'; }
+  if (drIdleFillEl) drIdleFillEl.style.width = '0%';
+  if (drIdleDescEl) drIdleDescEl.textContent = 'Sem atividade registrada';
+
   document.getElementById('drTotals').innerHTML = `
   <div style="color:var(--muted); text-align:center; padding:30px">Nenhuma atividade registrada para este colaborador no período selecionado.</div>
   `;
@@ -27134,7 +27221,7 @@ function renderEstoqueSaldosTable(list) {
   <div id="drProdVal" class="kpi-value-pbi" style="color:var(--green)">0%</div>
   </div>
   <div class="pbi-gauge-bg"><div id="drProdFill" class="pbi-gauge-fill" style="width:0%"></div></div>
-  <p style="font-size:10px; color:var(--muted)">Baseado na meta média de 150 cx/dia</p>
+  <p id="drProdMetaDesc" style="font-size:10px; color:var(--muted)">Baseado na meta média de 150 cx/dia</p>
   </div>
 
   <div class="pbi-card" style="margin-bottom:20px">
@@ -27143,7 +27230,7 @@ function renderEstoqueSaldosTable(list) {
   <div id="drIdleVal" class="kpi-value-pbi" style="color:var(--orange)">0 min</div>
   </div>
   <div class="pbi-gauge-bg"><div id="drIdleFill" class="pbi-gauge-fill" style="width:0%; background:var(--orange)"></div></div>
-  <p style="font-size:10px; color:var(--muted)">Protocolo: Soma de intervalos > 10 min entre bipes</p>
+  <p id="drIdleDesc" style="font-size:10px; color:var(--muted)">Protocolo: Soma de intervalos > 10 min entre bipes</p>
   </div>
 
   <div id="drTotals" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px"></div>
