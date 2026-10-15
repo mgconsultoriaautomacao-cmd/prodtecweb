@@ -2647,46 +2647,56 @@ async function doLogin() {
   btn.disabled = true; btn.textContent = 'Entrando...';
   
   if (email && !email.includes('@')) {
-  email = email + '@coopyfrutas.com';
+    email = email + '@coopyfrutas.com';
   }
   
   let data = null, error = null;
-  if (isOnline) {
   try {
-  const res = await sb.auth.signInWithPassword({ email, password: pass });
-  data = res.data;
-  error = res.error;
+    const res = await sb.auth.signInWithPassword({ email, password: pass });
+    data = res.data;
+    error = res.error;
+    if (!error && data?.user) {
+      isOnline = true;
+      if (typeof updateOnlineDots === 'function') updateOnlineDots();
+    }
   } catch (e) {
-  error = e;
-  }
+    error = e;
   }
 
-  const isNetworkError = error && (error.message?.includes('fetch') || error.message?.includes('NetworkError') || error.status === 0 || !isOnline);
-  if (!isOnline || isNetworkError) {
-  const cachedUser = localStorage.getItem('prodtech_user');
-  const cachedHash = localStorage.getItem('prodtech_password_hash');
-  if (cachedUser && cachedHash) {
-  const u = JSON.parse(cachedUser);
-  const typedEmail = email.toLowerCase();
-  const typedHash = await sha256(pass);
-  const cachedEmail = u.email.toLowerCase();
-  if ((cachedEmail === typedEmail || cachedEmail.split('@')[0] === typedEmail.split('@')[0]) && typedHash === cachedHash) {
-  await selectTenantAndContinueOffline(true);
-  btn.disabled = false; btn.textContent = 'Entrar';
-  return;
-  }
-  }
-  err.textContent = isOnline ? 'Erro de rede. Verifique sua conexão ou tente novamente.' : 'Sem conexão. E-mail ou senha incorretos para login offline.';
-  err.style.display = 'block';
-  btn.disabled = false; btn.textContent = 'Entrar';
-  return;
+  // Falha real de rede/conexão física
+  const isNetworkFailure = !navigator.onLine || (error && (error.name === 'TypeError' || error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError') || error.status === 0));
+
+  if (isNetworkFailure) {
+    const cachedUser = localStorage.getItem('prodtech_user');
+    const cachedHash = localStorage.getItem('prodtech_password_hash');
+    if (cachedUser && cachedHash) {
+      const u = JSON.parse(cachedUser);
+      const typedEmail = email.toLowerCase();
+      const typedHash = await sha256(pass);
+      const cachedEmail = (u.email || '').toLowerCase();
+      if ((cachedEmail === typedEmail || cachedEmail.split('@')[0] === typedEmail.split('@')[0]) && typedHash === cachedHash) {
+        await selectTenantAndContinueOffline(true);
+        btn.disabled = false; btn.textContent = 'Entrar';
+        return;
+      }
+    }
+    err.textContent = navigator.onLine ? 'Erro de rede. Verifique sua conexão ou tente novamente.' : 'Sem conexão. E-mail ou senha incorretos para login offline.';
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Entrar';
+    return;
   }
 
   if (error) {
-  err.textContent = 'Email ou senha incorretos.';
-  err.style.display = 'block';
-  btn.disabled = false; btn.textContent = 'Entrar';
-  return;
+    if (error.status >= 500) {
+      err.textContent = 'Erro no servidor de autenticação (HTTP ' + error.status + '). Execute a correção SQL (FIX_USERS_AUTH.sql) no Supabase.';
+    } else if (error.message?.includes('Email not confirmed')) {
+      err.textContent = 'E-mail do usuário ainda não confirmado.';
+    } else {
+      err.textContent = 'Email ou senha incorretos.';
+    }
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Entrar';
+    return;
   }
   
   const passHash = await sha256(pass);

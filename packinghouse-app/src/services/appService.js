@@ -92,7 +92,15 @@ function createAppService(db) {
 
     if (error) {
       console.error('[AuthLogin] Erro Supabase:', error);
-      return { ok: false, error: error.message };
+      let errMsg = error.message || 'Erro de autenticação.';
+      if (error.status >= 500) {
+        errMsg = 'Erro no servidor Supabase (HTTP ' + error.status + '). Execute a correção SQL (FIX_USERS_AUTH.sql) no Supabase.';
+      } else if (error.message?.includes('Email not confirmed')) {
+        errMsg = 'E-mail deste usuário ainda não foi confirmado no sistema.';
+      } else if (error.message?.includes('Invalid login credentials')) {
+        errMsg = 'E-mail ou senha incorretos.';
+      }
+      return { ok: false, error: errMsg };
     }
     
     console.log('[AuthLogin] Sucesso Auth. Verificando Tenant para UID:', data.user.id);

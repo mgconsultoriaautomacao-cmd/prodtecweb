@@ -5525,25 +5525,33 @@ async function doLogin(){
   err.style.display = 'none'; btn.disabled = true; btn.textContent = 'Entrando...';
   
   if (email && !email.includes('@')) {
-  email = email + '@coopyfrutas.com';
+    email = email + '@coopyfrutas.com';
   }
   
   try {
-  const {data, error} = await sb.auth.signInWithPassword({email, password: pass});
-  if (error) {
-  const isNet = error.message?.includes('fetch') || error.message?.includes('NetworkError') || error.status === 0 || error.status >= 500;
-  err.textContent = isNet ? 'Erro de conexão com o servidor. Verifique sua internet.' : 'E-mail/Usuário ou senha incorretos.';
-  err.style.display = 'block';
-  btn.disabled = false;
-  btn.textContent = 'Entrar';
-  return;
-  }
-  await afterLogin(data.user);
+    const {data, error} = await sb.auth.signInWithPassword({email, password: pass});
+    if (error) {
+      const isNet = !navigator.onLine || error.name === 'TypeError' || error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError') || error.status === 0;
+      if (isNet) {
+        err.textContent = 'Erro de conexão com a internet. Verifique sua rede.';
+      } else if (error.status >= 500) {
+        err.textContent = 'Erro de autenticação no Supabase (HTTP ' + error.status + '): Execute a correção SQL (FIX_USERS_AUTH.sql) no painel do Supabase.';
+      } else if (error.message?.includes('Email not confirmed')) {
+        err.textContent = 'E-mail do usuário não confirmado no sistema.';
+      } else {
+        err.textContent = 'E-mail/Usuário ou senha incorretos.';
+      }
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+      return;
+    }
+    await afterLogin(data.user);
   } catch(e) {
-  err.textContent = 'Erro ao conectar ao servidor. Verifique sua conexão.';
-  err.style.display = 'block';
-  btn.disabled = false;
-  btn.textContent = 'Entrar';
+    err.textContent = 'Erro ao conectar ao servidor. Verifique sua conexão.';
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
   }
 }
 
