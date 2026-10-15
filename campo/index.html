@@ -886,7 +886,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 
   <div class="section"><div class="section-title">Data</div></div>
   <div style="padding:0 16px">
-  <input type="date" id="cDate">
+  <input type="date" id="cDate" onchange="updateCampoJulianPreview()">
   </div>
 
   <div class="section"><div class="section-title">Turno</div></div>
@@ -908,7 +908,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   </select>
   </div>
 
-  <div class="section"><div class="section-title">Variedade</div></div>
+  <div class="section" style="display:flex; justify-content:space-between; align-items:center;">
+    <div class="section-title">Variedade</div>
+    <div id="cJulianPreview" style="font-size:11px; font-weight:800; color:var(--orange); font-family:monospace; background:rgba(249,115,22,0.12); padding:2px 8px; border-radius:6px; border:1px solid rgba(249,115,22,0.3)">Lote: —</div>
+  </div>
   <div style="padding:0 16px">
   <select id="cVariety" onchange="onVarietyChange()">
   <option value="">— Selecionar Variedade —</option>
@@ -3122,19 +3125,96 @@ function updateVarietyFilter() {
 
   // Se a parcela tiver apenas 1 variedade cadastrada, seleciona-a automaticamente!
   if (filteredVars.length === 1) {
-  vSel.value = filteredVars[0].id;
-  onVarietyChange();
+    vSel.value = filteredVars[0].id;
+    onVarietyChange();
+  } else {
+    updateCampoJulianPreview();
   }
   }
 }
 
+// ════════════════════════════════════════════════════════════════════════
+// MOTOR DE RASTREABILIDADE & AUDITORIA (GlobalG.A.P. / MAPA / Coopyfrutas)
+// 1 = Melão Amarelo
+// 2 = Melão pele de sapo
+// 6 = Bambino e Orange
+// 7 = Melancia Quetzali
+// 8 = Melancia grande (Beladona, Durlinda, Lola, Scarlet)
+// 9 = Mini melancia (expert, Mielheart, serval)
+// ════════════════════════════════════════════════════════════════════════
+function getFruitTrackCode(varietyName, fruitName) {
+  const v = (varietyName || '').toString().trim().toUpperCase();
+  const f = (fruitName || '').toString().trim().toUpperCase();
+
+  // 1. Regras diretas por Variedades Oficiais
+  if (v.includes('QUETZALI')) return '7';
+  if (v.includes('EXPERT') || v.includes('MIELHEART') || v.includes('SERVAL') || v.includes('MINI')) return '9';
+  if (v.includes('BELADONA') || v.includes('DURLINDA') || v.includes('LOLA') || v.includes('SCARLET')) return '8';
+  if (v.includes('BAMBINO') || v.includes('ORANGE') || v.includes('CANTALOUPE')) return '6';
+  if (v.includes('SAPO') || v.includes('PELE DE SAPO') || v.includes('RICURA') || v.includes('SANCHO')) return '2';
+  if (v.includes('AMARELO') || v.includes('GLADIAL') || v.includes('GOLDEX') || v.includes('NATAL') || v.includes('10-00') || v.includes('GOLDMINE')) return '1';
+
+  // 2. Procura em cache de variedades salvas no sistema
+  if (Array.isArray(varieties) && varieties.length > 0) {
+    const foundVar = varieties.find(x => x.name && x.name.toUpperCase() === v);
+    if (foundVar && foundVar.track_code) return String(foundVar.track_code).trim();
+  }
+
+  // 3. Procura em cache de frutas salvas no sistema
+  if (Array.isArray(fruits) && fruits.length > 0) {
+    const foundFruit = fruits.find(x => x.name && x.name.toUpperCase() === f);
+    if (foundFruit && foundFruit.track_code) return String(foundFruit.track_code).trim();
+  }
+
+  // 4. Regras por Categoria da Fruta
+  if (f.includes('MINI')) return '9';
+  if (f.includes('MELANCIA')) return '8';
+  if (f.includes('SAPO')) return '2';
+  if (f.includes('ORANGE') || f.includes('BAMBINO')) return '6';
+  if (f.includes('AMARELO') || f.includes('MELAO') || f.includes('MELÃO')) return '1';
+
+  return '1';
+}
+
+function updateCampoJulianPreview() {
+  const el = $('cJulianPreview');
+  if (!el) return;
+  const pId = $('cParcela')?.value;
+  const vId = $('cVariety')?.value;
+  const dateStr = $('cDate')?.value;
+
+  const parcela = (parcelas || []).find(p => p.id == pId);
+  const variety = (varieties || []).find(v => v.id == vId);
+
+  const farmRaw = window.farmCode || (window.tenantConfig && window.tenantConfig.farm_code) || '4';
+  const F = String(farmRaw).replace(/\D/g, '').slice(-1) || '4';
+  const PPP = String(parcela?.code || '0').replace(/\D/g,'').padStart(3, '0').slice(-3);
+  const V = getFruitTrackCode(variety?.name, cState?.fruitName || variety?.fruits?.name);
+
+  let d = new Date();
+  if (dateStr) {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  }
+  const dayOfYear = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+  const DDD = String(dayOfYear).padStart(3, '0').slice(-3);
+
+  const lot = `${F}${PPP}${V}${DDD}`;
+  el.textContent = `Lote: ${lot}`;
+  el.title = `F:${F} Parcela:${PPP} Fruta:${V} Juliano:${DDD}`;
+}
+
 function onVarietyChange() {
   const vId = $('cVariety')?.value;
-  if (!vId) return;
+  if (!vId) {
+    updateCampoJulianPreview();
+    return;
+  }
   const v = varieties.find(x => x.id == vId);
   if (v && v.fruit_id) {
-  setFruit(v.fruit_id);
+    setFruit(v.fruit_id);
   }
+  updateCampoJulianPreview();
 }
 
 let fruits = [];
@@ -9792,17 +9872,22 @@ async function submitCarrao() {
   const total = cQty * price;
   const perEmp = total / cState.workers.size;
 
-  // Novo Código Juliano: F PPP V DDD
+  // Novo Código Juliano Oficial de Auditoria: F PPP V DDD
   // F: Farm Code, PPP: Parcela (3 digitos), V: Variety Code, DDD: Julian Day (3 digitos)
-  const now = new Date();
-  const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
-  const parcela = parcelas.find(p => p.id == parcelaId);
-  const variety = varieties.find(v => v.id == $('cVariety').value);
+  let dColheita = new Date();
+  if (date) {
+    const parts = date.split('-');
+    if (parts.length === 3) dColheita = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  }
+  const dayOfYear = Math.floor((dColheita - new Date(dColheita.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+  const parcela = (parcelas || []).find(p => p.id == parcelaId);
+  const variety = (varieties || []).find(v => v.id == $('cVariety').value);
   
-  const F = window.farmCode || '4';
-  const PPP = String(parcela?.code || '0').replace(/\D/g,'').padStart(3, '0');
-  const V = String(variety?.track_code || '1');
-  const DDD = String(dayOfYear).padStart(3, '0');
+  const farmRaw = window.farmCode || (window.tenantConfig && window.tenantConfig.farm_code) || '4';
+  const F = String(farmRaw).replace(/\D/g, '').slice(-1) || '4';
+  const PPP = String(parcela?.code || '0').replace(/\D/g,'').padStart(3, '0').slice(-3);
+  const V = getFruitTrackCode(variety?.name, cState.fruitName || variety?.fruits?.name);
+  const DDD = String(dayOfYear).padStart(3, '0').slice(-3);
   
   const julianLot = `${F}${PPP}${V}${DDD}`;
 

@@ -35,6 +35,26 @@ function colorByPct(p) {
   return '#ef4444';
 }
 
+function getFruitTrackCode(varietyName, fruitName) {
+  const v = (varietyName || '').toString().trim().toUpperCase();
+  const f = (fruitName || '').toString().trim().toUpperCase();
+
+  if (v.includes('QUETZALI')) return '7';
+  if (v.includes('EXPERT') || v.includes('MIELHEART') || v.includes('SERVAL') || v.includes('MINI')) return '9';
+  if (v.includes('BELADONA') || v.includes('DURLINDA') || v.includes('LOLA') || v.includes('SCARLET')) return '8';
+  if (v.includes('BAMBINO') || v.includes('ORANGE') || v.includes('CANTALOUPE')) return '6';
+  if (v.includes('SAPO') || v.includes('PELE DE SAPO') || v.includes('RICURA') || v.includes('SANCHO')) return '2';
+  if (v.includes('AMARELO') || v.includes('GLADIAL') || v.includes('GOLDEX') || v.includes('NATAL') || v.includes('10-00') || v.includes('GOLDMINE')) return '1';
+
+  if (f.includes('MINI')) return '9';
+  if (f.includes('MELANCIA')) return '8';
+  if (f.includes('SAPO')) return '2';
+  if (f.includes('ORANGE') || f.includes('BAMBINO')) return '6';
+  if (f.includes('AMARELO') || f.includes('MELAO') || f.includes('MELÃO')) return '1';
+
+  return '1';
+}
+
 function photoUrl(photoPath) {
   if (!photoPath) return '';
   if (
@@ -929,19 +949,23 @@ window.addEventListener('DOMContentLoaded', () => {
         </div>
       `).join('') || '<div class="muted">Nenhum peso.</div>';
 
-      fruitList.innerHTML = fruits.map(f => `
+      fruitList.innerHTML = fruits.map(f => {
+        const code = f.track_code || getFruitTrackCode('', f.name);
+        return `
         <div style="display:flex;justify-content:space-between;padding:4px 0;">
-          <span>${esc(f.name)} ${statusPill(f.active)}</span>
+          <span><b style="color:var(--accent,#38bdf8);margin-right:6px;font-family:monospace">[${code}]</b>${esc(f.name)} ${statusPill(f.active)}</span>
           <button type="button" class="fruitDel" data-id="${f.id}" style="padding:2px 6px">×</button>
         </div>
-      `).join('');
+      `;}).join('');
 
-      varList.innerHTML = varieties.map(v => `
+      varList.innerHTML = varieties.map(v => {
+        const code = v.track_code || getFruitTrackCode(v.name, '');
+        return `
         <div style="display:flex;justify-content:space-between;padding:4px 0;">
-          <span>${esc(v.name)} ${statusPill(v.active)}</span>
+          <span><b style="color:var(--accent,#38bdf8);margin-right:6px;font-family:monospace">[${code}]</b>${esc(v.name)} ${statusPill(v.active)}</span>
           <button type="button" class="varDel" data-id="${v.id}" style="padding:2px 6px">×</button>
         </div>
-      `).join('');
+      `;}).join('');
 
       parcelList.innerHTML = parcels.map(p => `
         <div style="display:flex;justify-content:space-between;padding:4px 0;">

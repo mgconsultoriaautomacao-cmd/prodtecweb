@@ -3609,18 +3609,18 @@
   <div>
   <label class="flabel">Parcela Colhida *</label>
   <select id="colheitaParcelaSelect" onchange="onColheitaParcelaChange()" style="width:100%"></select>
-  <input type="text" id="colheitaParcelaCustom" placeholder="Ou digite o nome/número da parcela..." style="text-transform:uppercase; width:100%; margin-top:4px; display:none"/>
+  <input type="text" id="colheitaParcelaCustom" oninput="updateColheitaRastreabilidadeAuto()" onchange="updateColheitaRastreabilidadeAuto()" placeholder="Ou digite o nome/número da parcela..." style="text-transform:uppercase; width:100%; margin-top:4px; display:none"/>
   </div>
   <div>
   <label class="flabel">Data da Colheita *</label>
-  <input type="date" id="colheitaData" required style="width:100%"/>
+  <input type="date" id="colheitaData" onchange="updateColheitaRastreabilidadeAuto()" required style="width:100%"/>
   </div>
   </div>
 
   <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
   <div>
   <label class="flabel">Variedade *</label>
-  <input type="text" id="colheitaVariedade" placeholder="Ex: GOLDMINE" style="text-transform:uppercase; width:100%" required/>
+  <input type="text" id="colheitaVariedade" oninput="updateColheitaRastreabilidadeAuto()" onchange="updateColheitaRastreabilidadeAuto()" placeholder="Ex: MIELHEART, LOLA, GOLDEX..." style="text-transform:uppercase; width:100%" required/>
   </div>
   <div>
   <label class="flabel">Qtde Carroções *</label>
@@ -3645,9 +3645,16 @@
   </div>
   </div>
 
-  <div style="margin-bottom:12px">
-  <label class="flabel">Código de Rastreabilidade / Lote</label>
-  <input type="text" id="colheitaRastreabilidade" placeholder="Ex: LOTE-P33G-2026-001" style="text-transform:uppercase; width:100%"/>
+  <div style="margin-bottom:12px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:12px">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px">
+    <label class="flabel" style="margin:0; font-weight:700; color:var(--text)">Código Oficial de Rastreabilidade / Lote (Auditável)</label>
+    <span id="colheitaRastreabilidadeBadge" style="font-size:10px; font-weight:800; background:rgba(34,197,94,0.15); color:var(--green); padding:2px 8px; border-radius:12px; border:1px solid rgba(34,197,94,0.3)">PADRÃO: [F][PPP][V][DDD]</span>
+  </div>
+  <input type="text" id="colheitaRastreabilidade" placeholder="Ex: 40339287" style="text-transform:uppercase; width:100%; font-family:monospace; font-size:15px; font-weight:800; letter-spacing:1.5px; color:var(--accent); background:rgba(0,0,0,0.25)"/>
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px; font-size:10px; color:var(--muted)">
+    <span><b>1:</b> Melão Amarelo · <b>2:</b> Pele de Sapo · <b>6:</b> Bambino/Orange · <b>7:</b> Quetzali · <b>8:</b> Melancia Gr. · <b>9:</b> Mini Melancia</span>
+    <button type="button" class="sec" style="padding:2px 6px; font-size:10px" onclick="updateColheitaRastreabilidadeAuto(true)">Recalcular</button>
+  </div>
   </div>
 
   <div style="margin-bottom:16px">
@@ -8432,6 +8439,14 @@ async function loadFruits(){
   try {
   const {data, error}=await sb.from('fruits').select('*').eq('tenant_id',tenantId).eq('active',true).order('name');
   if(error) throw error;
+  window._fruits = data || [];
+  // Auto-preencher códigos de rastreabilidade para auditoria se estiverem vazios
+  (data||[]).forEach(f => {
+    if (!f.track_code && typeof getFruitTrackCode === 'function') {
+      const code = getFruitTrackCode('', f.name);
+      if (code) { f.track_code = code; sb.from('fruits').update({track_code: code}).eq('id', f.id).then(()=>{}); }
+    }
+  });
   simpleList('fruit','fruitList','Fruta','name')(data);
   const sel = $('linkFruit');
   const varFruitSel = $('varFruit');
@@ -8464,6 +8479,14 @@ async function loadVarieties(){
     window._varieties = data || [];
     try { localStorage.setItem('prodtech_varieties', JSON.stringify(window._varieties)); } catch(e) {}
     
+    // Auto-preencher códigos de rastreabilidade para auditoria se estiverem vazios
+    (data||[]).forEach(v => {
+      if (!v.track_code && typeof getFruitTrackCode === 'function') {
+        const code = getFruitTrackCode(v.name, v.fruits?.name);
+        if (code) { v.track_code = code; sb.from('varieties').update({track_code: code}).eq('id', v.id).then(()=>{}); }
+      }
+    });
+
     const varListEl = $('varList');
     if (varListEl) {
       varListEl.innerHTML = (data||[]).map(v => `
@@ -8592,7 +8615,8 @@ async function loadLinks(){
 async function addFruit(){
   const n=$('fruitName').value.trim(), p=$('fruitPrice').value;
   if(!n)return;
-  const {error}=await sb.from('fruits').insert([{name:n,active:true,tenant_id:tenantId, value_per_carrao: parseFloat(p)||0}]);
+  const tCode = typeof getFruitTrackCode === 'function' ? getFruitTrackCode('', n) : '1';
+  const {error}=await sb.from('fruits').insert([{name:n,active:true,tenant_id:tenantId, value_per_carrao: parseFloat(p)||0, track_code: tCode}]);
   if(error) alert('Erro: ' + error.message);
   else { $('fruitName').value=''; $('fruitPrice').value=''; loadFruits(); }
 }
@@ -8600,7 +8624,9 @@ async function addVariety(){
   const n=$('varName').value.trim();
   const fId=$('varFruit').value;
   if(!n)return;
-  const {error}=await sb.from('varieties').insert([{name:n,active:true,tenant_id:tenantId, fruit_id: fId || null}]);
+  const fruitObj = (window._fruits || []).find(f => f.id == fId);
+  const tCode = typeof getFruitTrackCode === 'function' ? getFruitTrackCode(n, fruitObj?.name) : '1';
+  const {error}=await sb.from('varieties').insert([{name:n,active:true,tenant_id:tenantId, fruit_id: fId || null, track_code: tCode}]);
   if(error) alert('Erro: ' + error.message);
   else { $('varName').value=''; loadVarieties(); }
 }
@@ -20908,6 +20934,103 @@ async function openNewColheitaModal() {
   $('colheitaObs').value = '';
 
   modal.style.display = 'flex';
+  updateColheitaRastreabilidadeAuto(true);
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// MOTOR DE RASTREABILIDADE & AUDITORIA (GlobalG.A.P. / MAPA / Coopyfrutas)
+// 1 = Melão Amarelo
+// 2 = Melão pele de sapo
+// 6 = Bambino e Orange
+// 7 = Melancia Quetzali
+// 8 = Melancia grande (Beladona, Durlinda, Lola, Scarlet)
+// 9 = Mini melancia (expert, Mielheart, serval)
+// ════════════════════════════════════════════════════════════════════════
+function getFruitTrackCode(varietyName, fruitName) {
+  const v = (varietyName || '').toString().trim().toUpperCase();
+  const f = (fruitName || '').toString().trim().toUpperCase();
+
+  // 1. Regras diretas por Variedades Oficiais
+  if (v.includes('QUETZALI')) return '7';
+  if (v.includes('EXPERT') || v.includes('MIELHEART') || v.includes('SERVAL') || v.includes('MINI')) return '9';
+  if (v.includes('BELADONA') || v.includes('DURLINDA') || v.includes('LOLA') || v.includes('SCARLET')) return '8';
+  if (v.includes('BAMBINO') || v.includes('ORANGE') || v.includes('CANTALOUPE')) return '6';
+  if (v.includes('SAPO') || v.includes('PELE DE SAPO') || v.includes('RICURA') || v.includes('SANCHO')) return '2';
+  if (v.includes('AMARELO') || v.includes('GLADIAL') || v.includes('GOLDEX') || v.includes('NATAL') || v.includes('10-00') || v.includes('GOLDMINE')) return '1';
+
+  // 2. Procura em cache de variedades salvas no sistema
+  if (window._varieties && window._varieties.length > 0) {
+    const foundVar = window._varieties.find(x => x.name && x.name.toUpperCase() === v);
+    if (foundVar && foundVar.track_code) return String(foundVar.track_code).trim();
+  }
+
+  // 3. Procura em cache de frutas salvas no sistema
+  if (window._fruits && window._fruits.length > 0) {
+    const foundFruit = window._fruits.find(x => x.name && x.name.toUpperCase() === f);
+    if (foundFruit && foundFruit.track_code) return String(foundFruit.track_code).trim();
+  }
+
+  // 4. Regras por Categoria da Fruta
+  if (f.includes('MINI')) return '9';
+  if (f.includes('MELANCIA')) return '8';
+  if (f.includes('SAPO')) return '2';
+  if (f.includes('ORANGE') || f.includes('BAMBINO')) return '6';
+  if (f.includes('AMARELO') || f.includes('MELAO') || f.includes('MELÃO')) return '1';
+
+  return '1'; // Padrão seguro
+}
+
+function generateAuditTraceCode(parcelaStr, varietyStr, dateStr, fruitStr) {
+  // F: Código da Fazenda (1 dígito)
+  const farmRaw = (window.tenantConfig && window.tenantConfig.farm_code) || window.farmCode || '4';
+  const F = String(farmRaw).replace(/\D/g, '').slice(-1) || '4';
+
+  // PPP: Parcela com 3 dígitos (ex: 56 O -> 056, 33 -> 033, 5 -> 005)
+  const numMatches = String(parcelaStr || '').match(/\d+/);
+  const pNum = numMatches ? parseInt(numMatches[0], 10) : 0;
+  const PPP = String(pNum).padStart(3, '0').slice(-3);
+
+  // V: Código da fruta / variedade (1 dígito)
+  const V = getFruitTrackCode(varietyStr, fruitStr);
+
+  // DDD: Dia Juliano da colheita (3 dígitos)
+  let d = new Date();
+  if (dateStr) {
+    const parts = String(dateStr).split('T')[0].split('-');
+    if (parts.length === 3) {
+      d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    } else {
+      d = new Date(dateStr);
+    }
+  }
+  const startOfYear = new Date(d.getFullYear(), 0, 0);
+  const diff = d - startOfYear;
+  const oneDay = 1000 * 60 * 60 * 24;
+  const dayOfYear = Math.floor(diff / oneDay);
+  const DDD = String(dayOfYear).padStart(3, '0').slice(-3);
+
+  return `${F}${PPP}${V}${DDD}`;
+}
+
+function updateColheitaRastreabilidadeAuto(force = false) {
+  const rInput = $('colheitaRastreabilidade');
+  if (!rInput) return;
+
+  const pSel = $('colheitaParcelaSelect')?.value;
+  const pCustom = $('colheitaParcelaCustom')?.value;
+  const parcela = (pSel === 'OUTRO' ? pCustom : pSel) || '';
+  const variedade = $('colheitaVariedade')?.value || '';
+  const data_colheita = $('colheitaData')?.value || '';
+
+  if (parcela || variedade || force) {
+    const generated = generateAuditTraceCode(parcela, variedade, data_colheita);
+    const cur = (rInput.value || '').trim();
+    // Atualiza se estiver vazio, forçado, código antigo LOT- ou código numérico de 8 dígitos gerado
+    if (force || !cur || cur.startsWith('LOT-') || rInput.dataset.autoGenerated === 'true' || /^\d{8}$/.test(cur)) {
+      rInput.value = generated;
+      rInput.dataset.autoGenerated = 'true';
+    }
+  }
 }
 
 function onColheitaParcelaChange() {
@@ -20915,18 +21038,20 @@ function onColheitaParcelaChange() {
   if (!sel) return;
   const customInput = $('colheitaParcelaCustom');
   if (sel.value === 'OUTRO') {
-  if (customInput) {
-  customInput.style.display = 'block';
-  customInput.focus();
-  }
-  $('colheitaVariedade').value = '';
-  return;
+    if (customInput) {
+      customInput.style.display = 'block';
+      customInput.focus();
+    }
+    $('colheitaVariedade').value = '';
+    updateColheitaRastreabilidadeAuto();
+    return;
   }
   if (customInput) customInput.style.display = 'none';
   const opt = sel.options[sel.selectedIndex];
   if (opt && opt.dataset.vars) {
-  $('colheitaVariedade').value = opt.dataset.vars.split(',')[0].trim();
+    $('colheitaVariedade').value = opt.dataset.vars.split(',')[0].trim();
   }
+  updateColheitaRastreabilidadeAuto();
 }
 
 function onColheitaPinceladorChange(num) {
@@ -20934,10 +21059,10 @@ function onColheitaPinceladorChange(num) {
   const customInput = $(`colheitaPincelador${num}Custom`);
   if (!sel || !customInput) return;
   if (sel.value === 'OUTRO') {
-  customInput.style.display = 'block';
-  customInput.focus();
+    customInput.style.display = 'block';
+    customInput.focus();
   } else {
-  customInput.style.display = 'none';
+    customInput.style.display = 'none';
   }
 }
 
@@ -20950,9 +21075,9 @@ async function saveNewColheitaRecord() {
   const pSel = $('colheitaParcelaSelect').value;
   let parcela = '';
   if (pSel === 'OUTRO') {
-  parcela = ($('colheitaParcelaCustom')?.value || '').toUpperCase().trim();
+    parcela = ($('colheitaParcelaCustom')?.value || '').toUpperCase().trim();
   } else {
-  parcela = pSel;
+    parcela = pSel;
   }
 
   const data_colheita = $('colheitaData').value;
@@ -20966,53 +21091,57 @@ async function saveNewColheitaRecord() {
   const p2Sel = $('colheitaPincelador2').value;
   let pincelador2 = p2Sel === 'OUTRO' ? ($('colheitaPincelador2Custom')?.value || '').trim() : p2Sel;
 
-  const rastreabilidade_codigo = $('colheitaRastreabilidade').value.toUpperCase().trim();
+  // Garante a geração do código de auditoria F PPP V DDD se o usuário não digitou ou se estava genérico
+  let rastreabilidade_codigo = $('colheitaRastreabilidade').value.toUpperCase().trim();
+  if (!rastreabilidade_codigo || rastreabilidade_codigo.startsWith('LOT-')) {
+    rastreabilidade_codigo = generateAuditTraceCode(parcela, variedade, data_colheita);
+  }
   const observacoes = $('colheitaObs').value;
 
   if (!parcela) {
-  alert('Por favor, informe ou selecione a Parcela Colhida.');
-  return;
+    alert('Por favor, informe ou selecione a Parcela Colhida.');
+    return;
   }
   if (!data_colheita) {
-  alert('Por favor, informe a Data da Colheita.');
-  return;
+    alert('Por favor, informe a Data da Colheita.');
+    return;
   }
   if (quantidade_carrocoes <= 0) {
-  alert('Por favor, informe a Quantidade de Carroções (deve ser um número maior que zero).');
-  return;
+    alert('Por favor, informe a Quantidade de Carroções (deve ser um número maior que zero).');
+    return;
   }
 
   try {
-  const basePayload = {
-  tenant_id: tenantId,
-  parcela,
-  data_colheita,
-  variedade: variedade || 'MELÃO',
-  quantidade_carrocoes: 1, // split into 1 cart per row
-  quantidade_caixas: Math.round(quantidade_caixas / quantidade_carrocoes) || 0,
-  pincelador1: pincelador1 || 'Equipe de Campo',
-  pincelador2,
-  equipe_colheita: [pincelador1, pincelador2].filter(Boolean).join(' / ') || 'Equipe de Campo',
-  observacoes
-  };
+    const basePayload = {
+      tenant_id: tenantId,
+      parcela,
+      data_colheita,
+      variedade: variedade || 'MELÃO',
+      quantidade_carrocoes: 1, // split into 1 cart per row
+      quantidade_caixas: Math.round(quantidade_caixas / quantidade_carrocoes) || 0,
+      pincelador1: pincelador1 || 'Equipe de Campo',
+      pincelador2,
+      equipe_colheita: [pincelador1, pincelador2].filter(Boolean).join(' / ') || 'Equipe de Campo',
+      observacoes
+    };
 
-  const inserts = [];
-  for (let i = 0; i < quantidade_carrocoes; i++) {
-  const lotSuffix = quantidade_carrocoes > 1 ? `-${i + 1}` : '';
-  inserts.push({
-  ...basePayload,
-  rastreabilidade_codigo: (rastreabilidade_codigo || `LOT-${parcela}-${data_colheita.replace(/-/g, '')}`) + lotSuffix
-  });
-  }
+    const inserts = [];
+    for (let i = 0; i < quantidade_carrocoes; i++) {
+      const lotSuffix = quantidade_carrocoes > 1 ? `-${i + 1}` : '';
+      inserts.push({
+        ...basePayload,
+        rastreabilidade_codigo: rastreabilidade_codigo + lotSuffix
+      });
+    }
 
-  const { error } = await sb.from('caderno_campo_colheita').insert(inserts);
-  if (error) throw error;
+    const { error } = await sb.from('caderno_campo_colheita').insert(inserts);
+    if (error) throw error;
 
-  toast(' Colheitas salvas com sucesso! ', 'ok');
-  closeNewColheitaModal();
-  await loadColheitasTable();
+    toast(' Colheitas salvas com sucesso! Código: ' + rastreabilidade_codigo, 'ok');
+    closeNewColheitaModal();
+    await loadColheitasTable();
   } catch (e) {
-  alert('Erro ao salvar colheita: ' + (e.message || 'Verifique a conexão.'));
+    alert('Erro ao salvar colheita: ' + (e.message || 'Verifique a conexão.'));
   }
 }
 
