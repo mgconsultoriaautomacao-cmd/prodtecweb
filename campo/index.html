@@ -9686,40 +9686,55 @@ function onRegisteredByChange(sel) {
   }
 }
 
+function isHarvestWorker(e) {
+  if (!e || e.active === false) return false;
+  const r = (e.role || '').toUpperCase();
+  if (r.includes('COLHED') || r.includes('TRABALHADOR') || r.includes('AGRICOLA') || r.includes('AUXILIAR DE CAMPO') || r.includes('CAMPO')) {
+    return true;
+  }
+  const excluded = ['EMBALADOR', 'PACKER', 'EMPILHADOR', 'STACKER', 'FATURISTA', 'RH', 'ADMINISTRADOR', 'NUTRICIONISTA', 'MESTRE', 'PEDREIRO'];
+  if (excluded.some(ex => r.includes(ex))) return false;
+  return true;
+}
+
+function getHarvestEmployees() {
+  return (employees || []).filter(e => isHarvestWorker(e));
+}
+
 function initCarraoForm() {
   $('cDate').value = today();
   renderCFruitList();
-  renderCEmpList(employees.filter(e => e.role && e.role.toUpperCase() === 'COLHEDOR'));
+  renderCEmpList(getHarvestEmployees());
 
   // 1. Carrega tratoristas
   const tSel = $('cTractor');
   if (tSel) {
-  tSel.innerHTML = '<option value="">— Selecionar Tratorista —</option>';
-  const tractorists = employees.filter(e => e.role && ['TRATORISTA', 'OPERADOR'].includes(e.role.toUpperCase()));
-  (tractorists.length > 0 ? tractorists : employees).forEach(t => tSel.insertAdjacentHTML('beforeend', `<option value="${t.id}">${t.name}</option>`));
+    tSel.innerHTML = '<option value="">— Selecionar Tratorista —</option>';
+    const tractorists = (employees || []).filter(e => e.active !== false && e.role && (e.role.toUpperCase().includes('TRATORISTA') || e.role.toUpperCase().includes('OPERADOR')));
+    (tractorists.length > 0 ? tractorists : employees).forEach(t => tSel.insertAdjacentHTML('beforeend', `<option value="${t.id}">${t.name}${t.role ? ' ('+t.role+')' : ''}</option>`));
   }
 
   // 2. Carrega operadores de máquina
   const mOpSel = $('cMachineOperator');
   if (mOpSel) {
-  mOpSel.innerHTML = '<option value="">— Selecionar Operador da Máquina (Opcional) —</option>';
-  const machineOps = employees.filter(e => e.role && ['OPERADOR', 'TRATORISTA'].includes(e.role.toUpperCase()));
-  (machineOps.length > 0 ? machineOps : employees).forEach(m => mOpSel.insertAdjacentHTML('beforeend', `<option value="${m.name}">${m.name} (${m.role || 'Operador'})</option>`));
-  mOpSel.insertAdjacentHTML('beforeend', '<option value="OUTRO">+ Outro Operador...</option>');
+    mOpSel.innerHTML = '<option value="">— Selecionar Operador da Máquina (Opcional) —</option>';
+    const machineOps = (employees || []).filter(e => e.active !== false && e.role && (e.role.toUpperCase().includes('OPERADOR') || e.role.toUpperCase().includes('TRATORISTA')));
+    (machineOps.length > 0 ? machineOps : employees).forEach(m => mOpSel.insertAdjacentHTML('beforeend', `<option value="${m.name}">${m.name} (${m.role || 'Operador'})</option>`));
+    mOpSel.insertAdjacentHTML('beforeend', '<option value="OUTRO">+ Outro Operador...</option>');
   }
 
   // 3. Carrega e preenche responsável logado automaticamente
   const regSel = $('cRegisteredBy');
   const loggedUserName = (user && user.email) ? user.email.split('@')[0].toUpperCase() : (window.currentInspector || 'ADMIN');
   if (regSel) {
-  regSel.innerHTML = `<option value="${loggedUserName}">${loggedUserName} (Usuário Logado)</option>`;
-  (employees || []).forEach(e => {
-  if (e.name.toUpperCase() !== loggedUserName) {
-  regSel.insertAdjacentHTML('beforeend', `<option value="${e.name}">${e.name}</option>`);
-  }
-  });
-  regSel.insertAdjacentHTML('beforeend', '<option value="OUTRO">+ Digitar Outro Responsável...</option>');
-  regSel.value = loggedUserName;
+    regSel.innerHTML = `<option value="${loggedUserName}">${loggedUserName} (Usuário Logado)</option>`;
+    (employees || []).forEach(e => {
+      if (e.name.toUpperCase() !== loggedUserName) {
+        regSel.insertAdjacentHTML('beforeend', `<option value="${e.name}">${e.name}</option>`);
+      }
+    });
+    regSel.insertAdjacentHTML('beforeend', '<option value="OUTRO">+ Digitar Outro Responsável...</option>');
+    regSel.value = loggedUserName;
   }
 }
 
@@ -9750,7 +9765,7 @@ function renderCEmpList(list) {
   <div class="emp-avatar">${e.name[0].toUpperCase()}</div>
   <div>
   <div class="emp-name">${e.name}</div>
-  <div style="font-size:11px;color:var(--muted)">${e.role}</div>
+  <div style="font-size:11px;color:var(--muted)">${e.barcode ? 'Cartão: ' + e.barcode + ' • ' : ''}${e.role}</div>
   </div>
   <div class="emp-check">${cState.workers.has(String(e.id))?'':''}</div>
   </div>
@@ -9758,8 +9773,15 @@ function renderCEmpList(list) {
 }
 
 function filterCEmp() {
-  const q = $('cEmpSearch').value.toLowerCase();
-  renderCEmpList(employees.filter(e => e.role && e.role.toUpperCase() === 'COLHEDOR' && e.name.toLowerCase().includes(q)));
+  const q = ($('cEmpSearch').value || '').trim().toLowerCase();
+  if (!q) {
+    renderCEmpList(getHarvestEmployees());
+  } else {
+    renderCEmpList((employees || []).filter(e => 
+      e.active !== false && 
+      (e.name.toLowerCase().includes(q) || (e.barcode && String(e.barcode).toLowerCase().includes(q)) || (e.role && e.role.toLowerCase().includes(q)))
+    ));
+  }
 }
 
 function toggleCWorker(id, name) {
@@ -9768,24 +9790,25 @@ function toggleCWorker(id, name) {
   else cState.workers.set(id, name);
   const el = document.querySelector(`.emp-item[data-id="${id}"]`);
   if (el) {
-  el.classList.toggle('on', cState.workers.has(id));
-  el.querySelector('.emp-check').textContent = cState.workers.has(id) ? '' : '';
+    el.classList.toggle('on', cState.workers.has(id));
+    el.querySelector('.emp-check').textContent = cState.workers.has(id) ? '' : '';
   }
   updateCalcPreview();
 }
 
 function toggleAllCEmp() {
-  const filtered = employees.filter(e => e.role && e.role.toUpperCase() === 'COLHEDOR' && document.querySelector(`.emp-item[data-id="${e.id}"]`));
-  const allOn = filtered.every(e => cState.workers.has(String(e.id)));
-  filtered.forEach(e => {
-  const sid = String(e.id);
-  if (allOn) cState.workers.delete(sid);
-  else cState.workers.set(sid, e.name);
-  const el = document.querySelector(`.emp-item[data-id="${sid}"]`);
-  if (el) {
-  el.classList.toggle('on', !allOn);
-  el.querySelector('.emp-check').textContent = !allOn ? '' : '';
-  }
+  const renderedIds = Array.from(document.querySelectorAll('#cEmpList .emp-item')).map(el => el.dataset.id);
+  const targetEmps = (employees || []).filter(e => renderedIds.includes(String(e.id)));
+  const allOn = targetEmps.length > 0 && targetEmps.every(e => cState.workers.has(String(e.id)));
+  targetEmps.forEach(e => {
+    const sid = String(e.id);
+    if (allOn) cState.workers.delete(sid);
+    else cState.workers.set(sid, e.name);
+    const el = document.querySelector(`.emp-item[data-id="${sid}"]`);
+    if (el) {
+      el.classList.toggle('on', !allOn);
+      el.querySelector('.emp-check').textContent = !allOn ? '' : '';
+    }
   });
   updateCalcPreview();
 }
@@ -10252,9 +10275,9 @@ function resetCForm() {
   cQty = 1; $('cQtyVal').textContent = 1;
   cState.workers.clear();
   $('cRegisteredBy').value = '';
-  $('cEmpSearch').value = '';
-  // Somente COLHEDOR no reset
-  renderCEmpList(employees.filter(e => e.role && e.role.toUpperCase() === 'COLHEDOR'));
+  if ($('cEmpSearch')) $('cEmpSearch').value = '';
+  // Renderiza colaboradores de colheita no reset
+  renderCEmpList(getHarvestEmployees());
   updateCalcPreview();
   renderCarriageSelectors();
 }
