@@ -535,21 +535,9 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
   const plantioStr = item ? (item.plantio || item.transplante || item.data_plantio1) : null;
   const plantioDt = plantioStr ? new Date(plantioStr + (plantioStr.includes('T') ? '' : 'T00:00:00')) : null;
 
-  // 4.1. FUNDAÇÃO (Adubação de Base)
-  const fundacaoItems = [
-    { produto: 'ADUBO 06-24-12', quantidade: 500 * areaVal, unidade: 'kg' } // 500 kg/ha padrão
-  ];
-
+  // 4.1. FUNDAÇÃO (Não utilizada pelo produtor — 100% via Fertirrigação e Foliar)
   const fundacaoNutrientes = {};
   NUTRIENT_COLUMNS.forEach(col => { fundacaoNutrientes[col.key] = 0; });
-  
-  fundacaoItems.forEach(it => {
-    const comp = getElementsComposition(it.produto);
-    NUTRIENT_COLUMNS.forEach(col => {
-      const pct = (comp[col.key] || 0) / 100;
-      fundacaoNutrientes[col.key] += (it.quantidade * pct);
-    });
-  });
 
   // 4.2. FERTIRRIGAÇÃO (Lançamentos Reais ou Protocolo DAP)
   let fertRows = [];
@@ -805,7 +793,7 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
   const totalFoliar = {};
   const totalGeral = {};
   NUTRIENT_COLUMNS.forEach(col => {
-    totalFert[col.key] = (fundacaoNutrientes[col.key] || 0);
+    totalFert[col.key] = 0;
     totalFoliar[col.key] = 0;
     totalGeral[col.key] = 0;
   });
@@ -852,17 +840,6 @@ async function printPastaCampoResumoElementos(parcelIdOrCode) {
 
   const fmtVal = v => (v != null && v > 0) ? v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-';
 
-  // Linha de Fundação
-  const fundCols = NUTRIENT_COLUMNS.map(c => `<td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold">${fmtVal(data.fundacaoNutrientes[c.key])}</td>`).join('');
-  const fundacaoRowHtml = `
-    <tr style="background:#fafafa">
-      <td style="border:1px solid #000; padding:2px 3px; font-weight:bold; text-align:center">Fundação**</td>
-      <td style="border:1px solid #000; padding:2px 3px; text-align:center">-</td>
-      <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold">0</td>
-      ${fundCols}
-    </tr>
-  `;
-
   // Linhas de Fertirrigação
   let fertRowsHtml = data.fertRows.map((r, i) => {
     const cols = NUTRIENT_COLUMNS.map(c => `<td style="border:1px solid #000; padding:2px 3px; text-align:center">${fmtVal(r.nutrientes[c.key])}</td>`).join('');
@@ -889,7 +866,7 @@ async function printPastaCampoResumoElementos(parcelIdOrCode) {
   <html>
   <head>
   <meta charset="utf-8"/>
-  <title>PC08 — CONTROLE DO USO DE FERTILIZANTES GERAL (FUNDAÇÃO, FERTIRRIGAÇÃO E FOLIAR)</title>
+  <title>PC08 — CONTROLE DO USO DE FERTILIZANTES GERAL (FERTIRRIGAÇÃO E FOLIAR)</title>
   <style>
     @page { size: A4 landscape; margin: 4mm 6mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -919,14 +896,14 @@ async function printPastaCampoResumoElementos(parcelIdOrCode) {
         <td width="18%" style="text-align:center; vertical-align:middle;">${getTenantLogoHtml(36, 110)}</td>
         <td width="46%" style="line-height: 1.25;">
           <strong>DEPARTAMENTO:</strong> CAMPO<br/>
-          <strong>NOME DO DOC:</strong> CONT. DO USO DE FERTILIZANTES (FUNDAÇÃO, FERTIRRIGAÇÃO E FOLIAR)<br/>
+          <strong>NOME DO DOC:</strong> CONT. DO USO DE FERTILIZANTES (FERTIRRIGAÇÃO E FOLIAR)<br/>
           <strong>EMISSÃO:</strong> 15/06/2026 &nbsp;|&nbsp; <strong>MOD. E APROVAÇÃO:</strong> 01/07/2026 &nbsp;|&nbsp; <strong>U. REVISÃO:</strong> 01/07/2026<br/>
           <strong>PAG:</strong> 01 DE 02 &nbsp;\\&nbsp; <strong>COD:</strong> PC08 &nbsp;\\&nbsp; <strong>REVISÃO:</strong> ANUAL &nbsp;\\&nbsp; <strong>VERSÃO:</strong> 01
         </td>
       </tr>
     </table>
 
-    <div class="main-title">CONTROLE DO USO DE FERTILIZANTES GERAL (FUNDAÇÃO, FERTIRRIGAÇÃO E FOLIAR) NA CULTURA</div>
+    <div class="main-title">CONTROLE DO USO DE FERTILIZANTES GERAL (FERTIRRIGAÇÃO E FOLIAR) NA CULTURA</div>
 
     <div class="info-bar">
       <div><strong>PARCELA:</strong> ${parcelCode} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>ÁREA TOTAL:</strong> ${areaHa} ha</div>
@@ -946,7 +923,6 @@ async function printPastaCampoResumoElementos(parcelIdOrCode) {
         </tr>
       </thead>
       <tbody>
-        ${fundacaoRowHtml}
         ${fertRowsHtml}
         <tr style="background:#eef2ff; font-weight:bold;">
           <td colspan="3" style="text-align:right; padding-right:4px;">TOTAL FERT (FERTIRRIGAÇÃO):</td>
@@ -964,10 +940,7 @@ async function printPastaCampoResumoElementos(parcelIdOrCode) {
     </table>
 
     <div class="footer-obs">
-      <div style="display:flex; justify-content:space-between;">
-        <span>*DAP: dias após o plantio</span>
-        <span>** Fundação = Composto Orgânico + Adubo Químico de Fundação (Ex: 06-24-12)</span>
-      </div>
+      <div><span>*DAP: dias após o plantio</span></div>
       <div><strong>VAZÃO DO GOTEJADOR:</strong> 1,8 L/H. &nbsp;&nbsp;&nbsp;&nbsp; <strong>VAZÃO DA BOMBA INJETORA:</strong> 3,00 L/H.</div>
     </div>
 

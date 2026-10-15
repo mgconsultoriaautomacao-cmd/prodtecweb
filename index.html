@@ -2622,7 +2622,7 @@
   <button onclick="printPastaCampoDefensivos($('webElementosParcelSelect')?.value)" class="btn sec" style="font-size:12px; padding:8px 14px; display:inline-flex; align-items:center; gap:6px; background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3)" title="Imprimir Controle Mensal de Agrotóxicos na Cultura (PC06)"><i data-lucide="shield" style="width:14px; height:14px;"></i> Imprimir Defensivos PC06 (A4)</button>
   </div>
   </div>
-  <p style="color:var(--muted); font-size:12px; margin-bottom:20px">Consolidação nutricional de todos os fertilizantes e produtos foliares aplicados na parcela (Fundação + Fertirrigação + Pulverização Foliar). Formato oficial GlobalGAP.</p>
+  <p style="color:var(--muted); font-size:12px; margin-bottom:20px">Consolidação nutricional de todos os fertilizantes e produtos foliares aplicados na parcela (Fertirrigação + Pulverização Foliar). Formato oficial GlobalGAP.</p>
   
   <!-- Seletor de Parcela -->
   <div class="fbar" style="margin-bottom:20px; padding:16px; gap:12px">
@@ -2650,7 +2650,7 @@
     <div class="kcard green">
       <div class="klabel">Fósforo Total (P₂O₅)</div>
       <div class="kval green" id="elemVal_P2O5">0,00 kg</div>
-      <div class="ksub">Fundação + Fert</div>
+      <div class="ksub">Fertirrigação + Foliar</div>
     </div>
     <div class="kcard orange">
       <div class="klabel">Potássio Total (K₂O)</div>
@@ -2670,14 +2670,13 @@
   <thead>
   <tr style="border-bottom:1px solid var(--border); background:var(--table-header-bg)">
   <th style="padding:10px 14px; text-align:left">Nutriente / Elemento</th>
-  <th style="padding:10px 14px; text-align:center">Fundação (kg)</th>
   <th style="padding:10px 14px; text-align:center">Fertirrigação (kg)</th>
   <th style="padding:10px 14px; text-align:center">Foliar (kg/L)</th>
   <th style="padding:10px 14px; text-align:center; font-weight:800; color:var(--text)">TOTAL ABSORVIDO NO CICLO (kg)</th>
   </tr>
   </thead>
   <tbody id="ccElementosTableBody">
-  <tr><td colspan="5" style="text-align:center; padding:20px; color:var(--muted)">Selecione uma parcela para carregar o resumo de elementos.</td></tr>
+  <tr><td colspan="4" style="text-align:center; padding:20px; color:var(--muted)">Selecione uma parcela para carregar o resumo de elementos.</td></tr>
   </tbody>
   </table>
   </div>
@@ -16762,8 +16761,7 @@ async function onWebElementosParcelChange() {
     const tbody = $('ccElementosTableBody');
     if (tbody && window.NUTRIENT_COLUMNS) {
       tbody.innerHTML = NUTRIENT_COLUMNS.map(col => {
-        const fund = res.fundacaoNutrientes[col.key] || 0;
-        const fert = (res.totalFert[col.key] || 0) - fund;
+        const fert = res.totalFert[col.key] || 0;
         const fol = res.totalFoliar[col.key] || 0;
         const tot = res.totalGeral[col.key] || 0;
         const isDestaque = ['n', 'p2o5', 'k2o', 'cao', 'mgo', 'so3'].includes(col.key);
@@ -16771,7 +16769,6 @@ async function onWebElementosParcelChange() {
         return `
           <tr style="border-bottom:1px solid var(--border); ${isDestaque ? 'background:rgba(255,255,255,0.02); font-weight:600' : ''}">
             <td style="padding:10px 14px; color:var(--text)"><strong>${col.label}</strong></td>
-            <td style="padding:10px 14px; text-align:center">${fund > 0 ? fund.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—'}</td>
             <td style="padding:10px 14px; text-align:center">${fert > 0 ? fert.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—'}</td>
             <td style="padding:10px 14px; text-align:center">${fol > 0 ? fol.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—'}</td>
             <td style="padding:10px 14px; text-align:center; font-weight:800; color:${tot > 0 ? 'var(--blue)' : 'var(--muted)'}">${tot > 0 ? tot.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' kg' : '—'}</td>
