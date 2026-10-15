@@ -281,6 +281,15 @@ class ApiChannel(QObject):
         d = json.loads(p or '{}')
         return self._ok(app_service.daily_finalize(d.get('stationId', 'ST01'), d.get('date'), self._force_sync_fn))
 
+    # ── Atualização Remota (Portabilidade sem Pen Drive) ──────────────────────
+    @pyqtSlot(result=str)
+    def systemCheckUpdate(self):
+        return self._ok(app_service.system_check_update())
+
+    @pyqtSlot(result=str)
+    def systemApplyUpdate(self):
+        return self._ok(app_service.system_apply_update())
+
     # ── Sync ──────────────────────────────────────────────────────────────────
     @pyqtSlot(result=str)
     def syncNow(self):

@@ -1079,13 +1079,16 @@
   <div class="kgrid">
   <div class="kcard"><div class="klabel">Prod. Total (Período)</div><div id="kpiTotalDia" class="kval">0</div><div class="ksub">caixas embaladas</div></div>
   <div class="kcard green"><div class="klabel">Total em Quilos</div><div id="kpiTotalKg" class="kval green">0</div><div class="ksub">kg processados</div></div>
+  <div class="kcard" style="border-left:3px solid var(--green)"><div class="klabel">Qualidade Global</div><div id="kpiQualidadeDash" class="kval green">100%</div><div class="ksub"><span id="kpiErrosDash" style="color:var(--red);font-weight:700">0</span> cx penalizadas</div></div>
   <div class="kcard yellow"><div class="klabel">Velocidade Média</div><div id="kpiCadencia" class="kval yellow">--</div><div class="ksub"><span id="kpiMediaHora">0</span> cx/h média</div></div>
+  <div class="kcard blue"><div class="klabel">Atingimento da Meta</div><div id="kpiMetaAtingimentoDash" class="kval blue">--</div><div class="ksub">Meta: <span id="kpiMetaValorDash">100</span> cx/h</div></div>
+  <div class="kcard" style="border-left:3px solid var(--yellow)"><div class="klabel">Ociosidade Média</div><div id="kpiOciosidadeDash" class="kval yellow">0 min</div><div class="ksub">pausas &gt; 10 min</div></div>
   <div class="kcard orange" id="topPerformerCard" style="display:none; cursor:pointer; grid-column: span 1" onclick="openEmpDrawer(this.dataset.barcode)">
-  <div class="klabel" style="display:flex; align-items:center; gap:6px"><i data-lucide="trophy" style="width:14px; height:14px; color:var(--orange)"></i> Destaque</div>
+  <div class="klabel" style="display:flex; align-items:center; gap:6px"><i data-lucide="trophy" style="width:14px; height:14px; color:var(--orange)"></i> Destaque (Performance)</div>
   <div style="display:flex; align-items:center; gap:10px; margin-top:5px">
   <div id="topPerformerAvatar" class="avatar-ring" style="width:40px; height:40px; border-color:var(--orange); font-size:14px"></div>
   <div>
-  <div id="topPerformerName" class="kval orange" style="font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100px">--</div>
+  <div id="topPerformerName" class="kval orange" style="font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:130px">--</div>
   <div id="topPerformerStats" class="ksub">0 cx</div>
   </div>
   </div>
@@ -1257,7 +1260,7 @@
   </div>
   <div class="kgrid">
   <div class="kcard orange">
-  <div class="klabel" style="display:flex; align-items:center; gap:6px"><i data-lucide="trophy" style="width:14px; height:14px; color:var(--orange)"></i> Top Performer</div>
+  <div class="klabel" style="display:flex; align-items:center; gap:6px"><i data-lucide="trophy" style="width:14px; height:14px; color:var(--orange)"></i> Top Performer (Líder)</div>
   <div style="display:flex; align-items:center; gap:10px; margin-top:5px">
   <div id="rankTopAvatar" class="avatar-ring" style="width:40px; height:40px; border-color:var(--orange); font-size:14px"></div>
   <div>
@@ -1268,6 +1271,9 @@
   </div>
   <div class="kcard"><div class="klabel" id="lblRankKpiTotal">Total de Caixas</div><div id="rankKpiTotal" class="kval">0</div><div class="ksub" id="subRankKpiTotal">no período selecionado</div></div>
   <div class="kcard green"><div class="klabel" id="lblRankKpiMedia">Média por Pessoa</div><div id="rankKpiMedia" class="kval green">0</div><div class="ksub" id="subRankKpiMedia">caixas / colaborador</div></div>
+  <div class="kcard" style="border-left:3px solid var(--green)"><div class="klabel">Qualidade Média</div><div id="rankKpiQualidade" class="kval green">100%</div><div class="ksub">taxa de conformidade</div></div>
+  <div class="kcard blue"><div class="klabel">Produtividade vs Meta</div><div id="rankKpiProdutividade" class="kval blue">--</div><div class="ksub">atingimento da equipe</div></div>
+  <div class="kcard" style="border-left:3px solid var(--yellow)"><div class="klabel">Ociosidade Média</div><div id="rankKpiOciosidade" class="kval yellow">0 min</div><div class="ksub">pausas &gt; 10 min</div></div>
   </div>
   <div class="card"><div class="title" id="lblRankChartTitle"><i data-lucide="user"></i> Caixas por Colaborador</div><div class="ch tall"><canvas id="chartRankCollab"></canvas></div></div>
   <div class="card"><div class="title" id="lblRankGridTitle"><i data-lucide="bar-chart-3"></i> Detalhamento Individual</div><div id="rankGrid" class="rgrid" style="margin-top:10px"></div></div>
@@ -4502,13 +4508,18 @@
   </div>
   </div>
   <div class="card" style="border-left:3px solid var(--yellow)">
-  <div class="title"><i data-lucide="clock" class="btn-i"></i> Carga Horária</div>
-  <p style="font-size:11px; color:var(--muted); margin-bottom:12px">Configure o expediente e intervalo de almoço. Scans fora do horário não contam como ociosidade.</p>
-  <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px">
+  <div class="title"><i data-lucide="clock" class="btn-i"></i> Carga Horária, Intervalos e Metas Operacionais</div>
+  <p style="font-size:11px; color:var(--muted); margin-bottom:12px">Configure o expediente, intervalos de almoço e merenda, e a tolerância de ociosidade (pausas abaixo desse tempo não sofrem desconto).</p>
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:12px">
   <div><label class="flabel">Início Expediente</label><input type="time" id="cfgWorkStart" value="07:00"/></div>
   <div><label class="flabel">Fim Expediente</label><input type="time" id="cfgWorkEnd" value="17:00"/></div>
   <div><label class="flabel">Almoço Início</label><input type="time" id="cfgLunchStart" value="11:30"/></div>
   <div><label class="flabel">Almoço Fim</label><input type="time" id="cfgLunchEnd" value="13:00"/></div>
+  <div><label class="flabel">Merenda Início</label><input type="time" id="cfgSnackStart" value="09:00"/></div>
+  <div><label class="flabel">Merenda Fim</label><input type="time" id="cfgSnackEnd" value="09:15"/></div>
+  <div><label class="flabel" title="Intervalos menores ou iguais a esse tempo não geram desconto">Tolerância Ociosidade (min)</label><input type="number" id="cfgIdleThreshold" value="10" placeholder="10"/></div>
+  <div><label class="flabel">Meta Embalador (cx/h)</label><input type="number" id="cfgTargetPacker" value="100" placeholder="100"/></div>
+  <div><label class="flabel">Meta Empilhador (cx/h)</label><input type="number" id="cfgTargetStacker" value="100" placeholder="100"/></div>
   </div>
   </div>
   <div class="card" id="cardEvoApi" style="display:none">
@@ -6055,65 +6066,85 @@ async function refreshRanking(){
   const type = window._rankType || 'PACKING';
   
   if (type === 'PACKING') {
-  let data = [];
+  let scans = [], audits = [], stops = [];
   try {
-    data = await sbFetchAll(sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')).order('ts',{ascending:false}));
+    const sMs = new Date(s + 'T00:00:00').getTime();
+    const eMs = new Date(e + 'T23:59:59.999').getTime();
+    [scans, audits, stops] = await Promise.all([
+      sbFetchAll(sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')).order('ts',{ascending:false})),
+      sbFetchAll(sb.from('quality_audits').select('*').eq('tenant_id',tenantId).gte('ts',sMs).lte('ts',eMs)).catch(()=>[]),
+      sbFetchAll(sb.from('global_stops').select('*').eq('tenant_id',tenantId).gte('start_ts',s).lte('start_ts',e+'T23:59:59Z')).catch(()=>[])
+    ]);
+    window._currentStops = stops || [];
   } catch(err) { console.error('Error in refreshRanking:', err); return; }
   
   // Apply client side filters if selected
-  let filteredData = data || [];
+  let filteredData = scans || [];
   if (selectedRole) {
-  filteredData = filteredData.filter(x => x.role === selectedRole);
+    filteredData = filteredData.filter(x => x.role === selectedRole);
   }
   if (targetBarcode) {
-  filteredData = filteredData.filter(x => x.employee_barcode === targetBarcode);
+    filteredData = filteredData.filter(x => x.employee_barcode === targetBarcode);
   }
   
-  buildRankingGrid(filteredData, 'rankGrid');
+  // Constrói grid e consolida métricas pelos 3 Pilares (Qualidade, Produtividade vs Meta, Volume)
+  const rankedCollabs = buildRankingGrid(filteredData, 'rankGrid', audits);
   
-  const eb = {};
-  filteredData.forEach(x => { eb[x.employee_name] = (eb[x.employee_name] || 0) + 1; });
-  const sorted = Object.entries(eb).sort((a,b) => b[1] - a[1]);
-  const top10 = sorted.slice(0, 10);
+  // Atualiza KPIs da aba Ranking
+  const totalNetBoxes = rankedCollabs.reduce((acc, c) => acc + c.boxes, 0);
+  const avgBoxes = rankedCollabs.length ? Math.round(totalNetBoxes / rankedCollabs.length) : 0;
+  const avgQuality = rankedCollabs.length ? Math.round(rankedCollabs.reduce((acc, c) => acc + c.qualityPct, 0) / rankedCollabs.length) : 100;
+  const avgYield = rankedCollabs.length ? Math.round(rankedCollabs.reduce((acc, c) => acc + c.yieldPct, 0) / rankedCollabs.length) : 0;
+  const avgIdle = rankedCollabs.length ? Math.round(rankedCollabs.reduce((acc, c) => acc + c.idleMinutes, 0) / rankedCollabs.length) : 0;
   
-  // Update Ranking KPIs
-  const totalBoxes = filteredData.length;
-  const avgBoxes = sorted.length ? Math.round(totalBoxes / sorted.length) : 0;
-  $('rankKpiTotal').textContent = totalBoxes.toLocaleString();
-  $('rankKpiMedia').textContent = avgBoxes.toLocaleString();
+  if ($('rankKpiTotal')) $('rankKpiTotal').textContent = totalNetBoxes.toLocaleString();
+  if ($('rankKpiMedia')) $('rankKpiMedia').textContent = avgBoxes.toLocaleString();
+  if ($('rankKpiQualidade')) {
+    $('rankKpiQualidade').textContent = `${avgQuality}%`;
+    $('rankKpiQualidade').style.color = avgQuality >= 95 ? 'var(--green)' : (avgQuality >= 85 ? 'var(--yellow)' : 'var(--red)');
+  }
+  if ($('rankKpiProdutividade')) {
+    $('rankKpiProdutividade').textContent = avgYield > 0 ? `${avgYield}%` : '--';
+    $('rankKpiProdutividade').style.color = avgYield >= 100 ? 'var(--green)' : (avgYield >= 80 ? 'var(--blue)' : 'var(--yellow)');
+  }
+  if ($('rankKpiOciosidade')) {
+    $('rankKpiOciosidade').textContent = `${avgIdle} min`;
+  }
   
-  if(sorted[0]) {
-  const [name, boxes] = sorted[0];
-  const emp = _employees.find(e => e.name === name);
-  $('rankTopName').textContent = name.split(' ')[0];
-  $('rankTopStats').textContent = boxes + ' caixas';
-  $('rankTopAvatar').innerHTML = safePhotoUrl(emp?.photo_path) ? `<img src="${safePhotoUrl(emp.photo_path)}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : '';
-  $('rankTopAvatar').innerHTML += name[0];
+  // Top 1 Performer por Score
+  if (rankedCollabs[0]) {
+    const top = rankedCollabs[0];
+    const emp = _employees.find(e => e.name === top.name || e.barcode === top.barcode);
+    $('rankTopName').textContent = top.name.split(' ')[0];
+    $('rankTopStats').textContent = `${top.boxes} cx • ${top.qualityPct}% qual • Score ${Math.round(top.score)}`;
+    $('rankTopAvatar').innerHTML = safePhotoUrl(emp?.photo_path) ? `<img src="${safePhotoUrl(emp.photo_path)}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : '';
+    $('rankTopAvatar').innerHTML += top.name[0];
 
-  const topCard = $('rankTopName').closest('.kcard');
-  if (topCard) {
-  topCard.style.cursor = 'pointer';
-  topCard.onclick = () => openEmpDrawer(emp?.barcode || name);
-  }
+    const topCard = $('rankTopName').closest('.kcard');
+    if (topCard) {
+      topCard.style.cursor = 'pointer';
+      topCard.onclick = () => openEmpDrawer(emp?.barcode || top.name);
+    }
   } else {
-  $('rankTopName').textContent = '--';
-  $('rankTopStats').textContent = '0 caixas';
-  $('rankTopAvatar').innerHTML = '';
+    $('rankTopName').textContent = '--';
+    $('rankTopStats').textContent = '0 caixas';
+    $('rankTopAvatar').innerHTML = '';
 
-  const topCard = $('rankTopName').closest('.kcard');
-  if (topCard) {
-  topCard.style.cursor = 'default';
-  topCard.onclick = null;
-  }
+    const topCard = $('rankTopName').closest('.kcard');
+    if (topCard) {
+      topCard.style.cursor = 'default';
+      topCard.onclick = null;
+    }
   }
 
+  const top10 = rankedCollabs.slice(0, 10);
   mkChart('chartRankCollab', {
-  type: 'bar',
-  data: {
-  labels: top10.map(e => e[0].split(' ')[0]),
-  datasets: [{ label: 'Caixas', data: top10.map(e => e[1]) }]
-  },
-  options: { indexAxis: 'y' }
+    type: 'bar',
+    data: {
+      labels: top10.map(e => e.name.split(' ')[0]),
+      datasets: [{ label: 'Caixas', data: top10.map(e => e.boxes) }]
+    },
+    options: { indexAxis: 'y' }
   });
   } else {
   // Field Service Mode!
@@ -6588,60 +6619,88 @@ async function refreshDash(){
     prevScans = await sbFetchAll(sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(ps)).lte('ts',toISO(pe,'23:59:59')));
   } catch(err) { console.error('Error fetching prevScans:', err); }
   
-  const { data: stops } = await sb.from('global_stops').select('*').eq('tenant_id', tenantId).gte('start_ts', s).lte('start_ts', e+'T23:59:59Z');
-  window._currentStops = stops || [];
+  const sMs = new Date(s + 'T00:00:00').getTime();
+  const eMs = new Date(e + 'T23:59:59.999').getTime();
+  const [stopsRes, auditsRes, harvestRes] = await Promise.all([
+    sb.from('global_stops').select('*').eq('tenant_id', tenantId).gte('start_ts', s).lte('start_ts', e+'T23:59:59Z'),
+    sbFetchAll(sb.from('quality_audits').select('*').eq('tenant_id', tenantId).gte('ts', sMs).lte('ts', eMs)).catch(()=>[]),
+    sb.from('field_carrao_sessions').select('*, parcels(code), varieties(name)').eq('tenant_id',tenantId).gte('date',s).lte('date',e)
+  ]);
+  const stops = stopsRes?.data || [];
+  const audits = auditsRes || [];
+  const harvest = harvestRes?.data || [];
+  window._currentStops = stops;
   updateStopBanner();
-
-  // Dados de Campo (Carrocões) - incluindo parcela e variedade
-  const {data:harvest} = await sb.from('field_carrao_sessions').select('*, parcels(code), varieties(name)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
 
   const safeScans = scans || [];
   const packerScans = safeScans.filter(s=>s.role==='PACKER' || s.role==='EMBALADOR');
   const kg = packerScans.reduce((a,x)=>a+(x.weight_kg||0),0);
 
-  $('kpiTotalDia').textContent = packerScans.length;
+  // Calcula penalidades totais no período
+  const totalPenalties = audits.reduce((sum, q) => sum + Number(q.penalty_boxes || 0), 0);
+  const rawCount = packerScans.length;
+  const netCount = Math.max(0, rawCount - totalPenalties);
+  const globalQual = rawCount > 0 ? Math.round(Math.max(0, 100 - (totalPenalties / rawCount * 100)) * 10) / 10 : 100.0;
+
+  $('kpiTotalDia').textContent = netCount.toLocaleString();
   $('kpiTotalKg').textContent = (kg/1000).toFixed(1)+' Ton';
 
-  if(packerScans.length>1){
-  const sorted=[...packerScans].sort((a,b)=>new Date(a.ts)-new Date(b.ts));
-  const gaps=[];
-  for(let i=1;i<sorted.length;i++){
-  const diff=(new Date(sorted[i].ts)-new Date(sorted[i-1].ts))/1000;
-  if(diff<600) gaps.push(diff);
+  if ($('kpiQualidadeDash')) {
+    $('kpiQualidadeDash').textContent = `${globalQual}%`;
+    $('kpiQualidadeDash').style.color = globalQual >= 95 ? 'var(--green)' : (globalQual >= 85 ? 'var(--yellow)' : 'var(--red)');
   }
-  const avgGap=gaps.length?gaps.reduce((a,b)=>a+b,0)/gaps.length:0;
-  $('kpiCadencia').textContent = avgGap>0?(avgGap<60?avgGap.toFixed(0)+'s':(avgGap/60).toFixed(1)+'min'):'--';
-  $('kpiMediaHora').textContent = avgGap>0?Math.round(3600/avgGap):'--';
+  if ($('kpiErrosDash')) {
+    $('kpiErrosDash').textContent = totalPenalties;
   }
 
-  buildRankingGrid(safeScans, 'collabDetailList');
+  // Meta Horária
+  const targetPacker = parseFloat(tenantConfig.target_per_hour_packer || $('cfgTargetPacker')?.value || 100);
+  if ($('kpiMetaValorDash')) $('kpiMetaValorDash').textContent = targetPacker;
+
+  let teamAvgHourly = 0;
+  if(packerScans.length>1){
+    const sorted=[...packerScans].sort((a,b)=>new Date(a.ts)-new Date(b.ts));
+    const gaps=[];
+    for(let i=1;i<sorted.length;i++){
+      const diff=(new Date(sorted[i].ts)-new Date(sorted[i-1].ts))/1000;
+      if(diff<600) gaps.push(diff);
+    }
+    const avgGap=gaps.length?gaps.reduce((a,b)=>a+b,0)/gaps.length:0;
+    teamAvgHourly = avgGap > 0 ? Math.round(3600/avgGap) : 0;
+    $('kpiCadencia').textContent = avgGap>0?(avgGap<60?avgGap.toFixed(0)+'s':(avgGap/60).toFixed(1)+'min'):'--';
+    $('kpiMediaHora').textContent = teamAvgHourly > 0 ? teamAvgHourly : '--';
+  }
+
+  const yieldPct = targetPacker > 0 && teamAvgHourly > 0 ? Math.round((teamAvgHourly / targetPacker) * 100) : 0;
+  if ($('kpiMetaAtingimentoDash')) {
+    $('kpiMetaAtingimentoDash').textContent = yieldPct > 0 ? `${yieldPct}%` : '--';
+    $('kpiMetaAtingimentoDash').style.color = yieldPct >= 100 ? 'var(--green)' : (yieldPct >= 80 ? 'var(--blue)' : 'var(--yellow)');
+  }
+
+  const rankedCollabs = buildRankingGrid(safeScans, 'collabDetailList', audits);
   buildDashCharts(safeScans, packerScans, s, e, prevScans, harvest);
   buildWeightDetail(packerScans);
 
-  const eb = {};
-  packerScans.forEach(x => { 
-  let displayName = x.employee_name;
-  if(!displayName || displayName.includes('-')) {
-  const emp = _employees.find(e => e.barcode === x.employee_barcode);
-  if(emp) displayName = emp.name;
+  // Ociosidade Média da Equipe
+  const avgTeamIdle = rankedCollabs.length ? Math.round(rankedCollabs.reduce((a, c) => a + c.idleMinutes, 0) / rankedCollabs.length) : 0;
+  if ($('kpiOciosidadeDash')) {
+    $('kpiOciosidadeDash').textContent = `${avgTeamIdle} min`;
+    $('kpiOciosidadeDash').style.color = avgTeamIdle > 30 ? 'var(--red)' : (avgTeamIdle > 15 ? 'var(--yellow)' : 'var(--green)');
   }
-  if(!displayName) displayName = x.employee_barcode || 'Desconhecido';
-  eb[displayName] = (eb[displayName] || 0) + 1; 
-  });
-  
-  const top = Object.entries(eb).sort((a,b) => b[1] - a[1])[0];
-  if(top) {
-  const [name, boxes] = top;
-  const emp = _employees.find(e => e.name === name);
-  const cardEl = $('topPerformerCard');
-  cardEl.style.display = 'block';
-  cardEl.dataset.barcode = emp?.barcode || emp?.id || name || '';
-  cardEl.onclick = () => openEmpDrawer(emp?.barcode || emp?.id || name);
-  $('topPerformerName').textContent = name;
-  $('topPerformerStats').textContent = boxes + ' caixas';
-  $('topPerformerAvatar').innerHTML = safePhotoUrl(emp?.photo_path) ? `<img src="${safePhotoUrl(emp.photo_path)}" onerror="this.outerHTML='${name[0]}'">` : name[0];
+
+  // Destaque (Top 1 Performer por Score)
+  if (rankedCollabs && rankedCollabs[0]) {
+    const top = rankedCollabs[0];
+    const emp = _employees.find(e => e.name === top.name || e.barcode === top.barcode);
+    const cardEl = $('topPerformerCard');
+    cardEl.style.display = 'block';
+    cardEl.dataset.barcode = emp?.barcode || emp?.id || top.name || '';
+    cardEl.onclick = () => openEmpDrawer(emp?.barcode || emp?.id || top.name);
+    $('topPerformerName').textContent = top.name;
+    $('topPerformerStats').textContent = `${top.boxes} cx • ${top.qualityPct}% qual • Score ${Math.round(top.score)}`;
+    $('topPerformerAvatar').innerHTML = safePhotoUrl(emp?.photo_path) ? `<img src="${safePhotoUrl(emp.photo_path)}" onerror="this.outerHTML='${top.name[0]}'">` : top.name[0];
   } else {
-  $('topPerformerCard').style.display = 'none';
+    $('topPerformerCard').style.display = 'none';
   }
 }
 
@@ -6764,58 +6823,135 @@ function buildWeightDetail(scans){
   if (window.lucide) lucide.createIcons();
 }
 
-function buildRankingGrid(scans, containerId){
+function buildRankingGrid(scans, containerId, audits = []){
   const eb={};
   scans.forEach(x=>{
-  let displayName = x.employee_name;
-  if(!displayName || displayName.includes('-')) {
-  const emp = _employees.find(e => e.barcode === x.employee_barcode);
-  if(emp) displayName = emp.name;
-  }
-  if(!displayName) displayName = x.employee_barcode || 'Desconhecido';
+    let displayName = x.employee_name;
+    if(!displayName || displayName.includes('-')) {
+      const emp = _employees.find(e => e.barcode === x.employee_barcode);
+      if(emp) displayName = emp.name;
+    }
+    if(!displayName) displayName = x.employee_barcode || 'Desconhecido';
 
-  if(!eb[displayName]) eb[displayName] = { boxes: 0, kg: 0, scans: [] };
-  eb[displayName].boxes++;
-  eb[displayName].kg += (x.weight_kg || 0);
-  eb[displayName].scans.push(x);
+    if(!eb[displayName]) eb[displayName] = { rawBoxes: 0, kg: 0, scans: [], barcode: x.employee_barcode, role: x.role };
+    eb[displayName].rawBoxes++;
+    eb[displayName].kg += (x.weight_kg || 0);
+    eb[displayName].scans.push(x);
+    if (!eb[displayName].barcode && x.employee_barcode) eb[displayName].barcode = x.employee_barcode;
   });
-  const sorted=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes).slice(0,12);
-  const el=$(containerId);
-  if(!el)return;
 
-  window._lastEmpStats = Object.fromEntries(Object.entries(eb).map(([name, d]) => {
-  const idle = calculateIdleTime(d.scans, window._currentStops || []);
-  return [name.trim().toLowerCase(), { 
-  employee_name: name, 
-  boxes: d.boxes, 
-  kg: d.kg,
-  idleTime: idle,
-  qualityIssues: 0 
-  }];
-  }));
+  const targetPacker = parseFloat(tenantConfig.target_per_hour_packer || $('cfgTargetPacker')?.value || 100);
+  const targetStacker = parseFloat(tenantConfig.target_per_hour_stacker || $('cfgTargetStacker')?.value || 100);
 
-  el.innerHTML=sorted.map(([name,d],i)=>{
-  // Busca mais robusta: tenta por nome exato, depois por nome sem espaços, depois por barcode do primeiro scan
-  const emp = _employees.find(e => 
-  e.name.trim().toLowerCase() === name.trim().toLowerCase() || 
-  e.barcode === d.scans[0]?.employee_barcode
-  );
-  const photo = safePhotoUrl(emp?.photo_path);
-  const barcode = emp?.barcode || d.scans[0]?.employee_barcode || name;
-  return `
-  <div class="rcard pbi-card clickable-emp" onclick="openEmpDrawer('${barcode}')" style="display:flex; align-items:center; gap:10px; margin-bottom:6px">
-  <div class="avatar-ring" style="width:36px; height:36px; font-size:12px; position:relative">${photo ? `<img src="${photo}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()">` : ''}${name[0]}</div>
-  <div style="flex:1; min-width:0">
-  <div style="font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div>
-  <div style="font-size:10px;color:var(--muted)">${d.kg.toFixed(1)} kg total</div>
-  </div>
-  <div style="text-align:right">
-  <div style="font-size:16px;font-weight:800;color:var(--blue)">${d.boxes}</div>
-  <div style="font-size:8px;color:var(--muted)">CAIXAS</div>
-  </div>
-  <div style="font-size:16px;width:26px;text-align:center">${i<3?MEDALS[i]:'#'+(i+1)}</div>
-  </div>
-  `}).join('')||'<div style="color:var(--muted);padding:20px;text-align:center;grid-column:1/-1">Nenhum dado.</div>';
+  // Calcula para cada colaborador os 3 pilares
+  const collabs = Object.entries(eb).map(([name, d]) => {
+    const emp = _employees.find(e => e.name?.trim().toLowerCase() === name.trim().toLowerCase() || (e.barcode && e.barcode === d.barcode));
+    const barcode = emp?.barcode || d.barcode || name;
+    const role = emp?.role || d.role || 'EMBALADOR';
+    const isStacker = String(role).toUpperCase().includes('EMP') || String(role).toUpperCase().includes('STACK');
+    const targetPerHour = isStacker ? targetStacker : targetPacker;
+
+    // Penalidades de qualidade vinculadas
+    const empAudits = (audits || []).filter(q => (q.employee_barcode && q.employee_barcode === barcode) || (emp && q.employee_id === emp.id));
+    const penalties = empAudits.reduce((sum, q) => sum + Number(q.penalty_boxes || 0), 0);
+    const netBoxes = Math.max(0, d.rawBoxes - penalties);
+    const qualityPct = d.rawBoxes > 0 ? Math.round(Math.max(0, 100 - (penalties / d.rawBoxes * 100)) * 10) / 10 : 100.0;
+
+    // Ociosidade e jornada ativa
+    const idleMinutes = calculateIdleTime(d.scans, window._currentStops || []);
+    let hoursActive = 1;
+    if (d.scans.length >= 2) {
+      const sortedScans = [...d.scans].sort((a,b) => new Date(a.ts) - new Date(b.ts));
+      const firstTs = new Date(sortedScans[0].ts).getTime();
+      const lastTs = new Date(sortedScans[sortedScans.length - 1].ts).getTime();
+      const grossHours = Math.max(0.5, (lastTs - firstTs) / 3600000);
+      const idleHours = idleMinutes / 60;
+      hoursActive = Math.max(0.5, grossHours - idleHours);
+    }
+    const cadencePerHour = Math.round((netBoxes / hoursActive) * 10) / 10;
+    const yieldPct = targetPerHour > 0 ? Math.round((cadencePerHour / targetPerHour * 100)) : 0;
+
+    // Score Ponderado (3 Pilares: Qualidade 40%, Produtividade 35%, Volume 25%)
+    const volScore = Math.min(100.0, (netBoxes / (targetPerHour * hoursActive) * 100.0));
+    let score = (qualityPct * 0.40) + (Math.min(120.0, yieldPct) * 0.35) + (volScore * 0.25);
+    if (qualityPct < 85.0) {
+      score *= (qualityPct / 100.0);
+    }
+    score = Math.round(score * 10) / 10;
+
+    return {
+      name,
+      barcode,
+      role,
+      boxes: netBoxes,
+      rawBoxes: d.rawBoxes,
+      penalties,
+      kg: d.kg,
+      qualityPct,
+      idleMinutes,
+      cadencePerHour,
+      targetPerHour,
+      yieldPct,
+      score,
+      scans: d.scans,
+      photoPath: emp?.photo_path
+    };
+  });
+
+  // Ordena pelo Score de Performance (desempate por caixas líquidas)
+  collabs.sort((a, b) => b.score !== a.score ? b.score - a.score : b.boxes - a.boxes);
+
+  window._lastEmpStats = Object.fromEntries(collabs.map(c => [
+    c.name.trim().toLowerCase(),
+    {
+      employee_name: c.name,
+      boxes: c.boxes,
+      rawBoxes: c.rawBoxes,
+      kg: c.kg,
+      idleTime: c.idleMinutes,
+      qualityIssues: c.penalties,
+      qualityPct: c.qualityPct,
+      yieldPct: c.yieldPct,
+      score: c.score
+    }
+  ]));
+
+  const el = $(containerId);
+  if (!el) return collabs;
+
+  el.innerHTML = collabs.slice(0, 20).map((c, i) => {
+    const photo = safePhotoUrl(c.photoPath);
+    const ringColor = c.qualityPct >= 95 ? 'var(--green)' : (c.qualityPct >= 85 ? 'var(--yellow)' : 'var(--red)');
+    const scoreColor = c.score >= 90 ? '#60a5fa' : (c.score >= 75 ? 'var(--green)' : 'var(--yellow)');
+
+    return `
+    <div class="rcard pbi-card clickable-emp" onclick="openEmpDrawer('${c.barcode || c.name}')" style="display:flex; align-items:center; gap:12px; margin-bottom:8px; padding:10px 14px;">
+      <div style="font-size:16px; font-weight:800; width:28px; text-align:center; color:${i < 3 ? 'var(--orange)' : 'var(--muted)'};">
+        ${i < 3 ? MEDALS[i] : '#' + (i + 1)}
+      </div>
+      <div class="avatar-ring" style="width:40px; height:40px; font-size:13px; position:relative; border-color:${ringColor}; flex-shrink:0;">
+        ${photo ? `<img src="${photo}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;border-radius:50%" onerror="this.remove()">` : ''}${c.name[0]}
+      </div>
+      <div style="flex:1; min-width:0">
+        <div style="font-weight:700; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:flex; align-items:center; gap:6px;">
+          ${c.name}
+          <span style="font-size:10px; font-weight:600; padding:1px 6px; border-radius:4px; background:rgba(255,255,255,0.06); color:var(--muted)">${c.role}</span>
+        </div>
+        <div style="font-size:11px; color:var(--muted); display:flex; gap:10px; margin-top:3px; flex-wrap:wrap;">
+          <span>Qualidade: <strong style="color:${ringColor}">${c.qualityPct}%</strong> ${c.penalties > 0 ? `(${c.penalties} erros)` : ''}</span>
+          <span>Produtiv.: <strong style="color:var(--text)">${c.yieldPct}%</strong> (${c.cadencePerHour} cx/h)</span>
+          <span>Ocios.: <strong style="color:${c.idleMinutes > 30 ? 'var(--red)' : 'var(--muted)'}">${c.idleMinutes} min</strong></span>
+        </div>
+      </div>
+      <div style="text-align:right; flex-shrink:0;">
+        <div style="font-size:17px; font-weight:800; color:var(--blue)">${c.boxes} <span style="font-size:11px; font-weight:400; color:var(--muted)">cx</span></div>
+        <div style="font-size:10px; font-weight:700; color:${scoreColor}">Score: ${Math.round(c.score)}</div>
+      </div>
+    </div>
+    `;
+  }).join('') || '<div style="color:var(--muted);padding:20px;text-align:center;grid-column:1/-1">Nenhum dado encontrado para o período.</div>';
+
+  return collabs;
 }
 function buildFieldRankingGrid(sorted, containerId) {
   const el = $(containerId);
@@ -7383,9 +7519,13 @@ async function openEmpDrawer(idOrName) {
     scanQuery = scanQuery.eq('employee_name', empName);
   }
 
-  let qualityQuery = sb.from('quality_audits').select('penalty_boxes').eq('tenant_id', tenantId);
-  if (emp.barcode) {
+  let qualityQuery = sb.from('quality_audits').select('*').eq('tenant_id', tenantId);
+  if (emp.barcode && emp.id) {
+    qualityQuery = qualityQuery.or(`employee_barcode.eq.${empBarcode},employee_id.eq.${emp.id}`);
+  } else if (emp.barcode) {
     qualityQuery = qualityQuery.eq('employee_barcode', empBarcode);
+  } else if (emp.id) {
+    qualityQuery = qualityQuery.eq('employee_id', emp.id);
   }
 
   let absenceQuery = sb.from('employee_absences').select('*').eq('tenant_id', tenantId).gte('date', sDateOnly).lte('date', eDateOnly);
@@ -7541,13 +7681,64 @@ async function openEmpDrawer(idOrName) {
   }).join('')}</div></div>`;
   }
   
+  const rawScansCount = allScans.length;
+  const netBoxesCount = Math.max(0, rawScansCount - qualityCount);
+  const indQualityPct = rawScansCount > 0 ? Math.round(Math.max(0, 100 - (qualityCount / rawScansCount * 100)) * 10) / 10 : 100.0;
+  const qualColor = indQualityPct >= 95 ? 'var(--green)' : (indQualityPct >= 85 ? 'var(--yellow)' : 'var(--red)');
+
+  // Score individual nos 3 Pilares
+  const indYieldPct = prodScore;
+  const indVolScore = Math.min(100, Math.round((netBoxesCount / Math.max(1, prodTarget)) * 100));
+  let indScore = (indQualityPct * 0.40) + (Math.min(120, indYieldPct) * 0.35) + (indVolScore * 0.25);
+  if (indQualityPct < 85.0) indScore *= (indQualityPct / 100.0);
+  indScore = Math.round(indScore * 10) / 10;
+
+  // Lista de auditorias e defeitos
+  const empAudits = qAudits.data || [];
+  let qaHtml = '';
+  if (empAudits.length > 0) {
+    qaHtml = `
+    <div class="pbi-card" style="margin-bottom:16px; padding:15px; border-left:3px solid var(--red);">
+      <div class="klabel" style="margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+        <span style="display:flex; align-items:center; gap:6px;"><i data-lucide="alert-triangle" style="width:14px; height:14px; color:var(--red)"></i> Auditorias de Qualidade e Defeitos (${empAudits.length})</span>
+        <span style="color:var(--red); font-weight:700;">-${qualityCount} cx penalizadas</span>
+      </div>
+      <div style="max-height:130px; overflow-y:auto;">
+        ${empAudits.map(q => {
+          const dt = q.ts ? new Date(typeof q.ts === 'number' ? q.ts : q.ts).toLocaleString('pt-BR') : '--';
+          return `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); font-size:11px;">
+            <div>
+              <span style="font-weight:700; color:#fff;">${esc(q.issue_type || 'Defeito')}</span>
+              ${q.reason ? `<span style="color:var(--muted); font-size:10px;"> - ${esc(q.reason)}</span>` : ''}
+              <div style="color:var(--muted); font-size:9px;">${dt} ${q.inspector_name ? `• Inspetor: ${esc(q.inspector_name)}` : ''}</div>
+            </div>
+            <div style="font-weight:800; color:var(--red); font-size:12px;">-${q.penalty_boxes || 0} cx</div>
+          </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+    `;
+  }
+
   packingStatsHtml = `
   <div style="margin-bottom: 12px; font-weight:800; font-size:12px; color:var(--muted); letter-spacing:0.05em; display:flex; align-items:center; gap:6px"><i data-lucide="box" style="width:14px; height:14px; color:var(--blue)"></i> MÉTRICAS DO PACKING HOUSE</div>
-  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:16px">
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:12px; margin-bottom:16px">
   <div class="pbi-card" style="padding:15px">
   <div class="klabel" style="font-size:9px">Produção Líquida</div>
-  <div class="kpi-value-pbi" style="font-size:20px">${Math.round(totalBoxes)} <span style="font-size:10px">cx</span></div>
+  <div class="kpi-value-pbi" style="font-size:20px">${Math.round(netBoxesCount)} <span style="font-size:10px">cx</span></div>
   <div style="font-size:9px; color:${prodScore>90?'var(--green)':prodScore>60?'var(--yellow)':'var(--red)'}">${prodScore}% da Meta (${prodTarget} cx)</div>
+  </div>
+  <div class="pbi-card" style="padding:15px; border-left:3px solid ${qualColor};">
+  <div class="klabel" style="font-size:9px">Qualidade & Conformidade</div>
+  <div class="kpi-value-pbi" style="font-size:20px; color:${qualColor}">${indQualityPct}%</div>
+  <div style="font-size:9px; color:var(--muted)">${qualityCount > 0 ? `<span style="color:var(--red); font-weight:700;">${qualityCount} cx com erro</span>` : '100% aprovado'}</div>
+  </div>
+  <div class="pbi-card" style="padding:15px">
+  <div class="klabel" style="font-size:9px">Score Performance (3 Pilares)</div>
+  <div class="kpi-value-pbi" style="font-size:20px; color:#60a5fa">${Math.round(indScore)} <span style="font-size:10px">/ 100</span></div>
+  <div style="font-size:9px; color:var(--muted)">Qualidade + Meta + Volume</div>
   </div>
   <div class="pbi-card" style="padding:15px">
   <div class="klabel" style="font-size:9px">Valor Produzido</div>
@@ -7557,7 +7748,7 @@ async function openEmpDrawer(idOrName) {
   </div>
   <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:10px; margin-bottom:16px">
   <div class="pbi-card" style="padding:10px;text-align:center">
-  <div class="klabel" style="font-size:8px">Ociosidade</div>
+  <div class="klabel" style="font-size:8px">Ociosidade (&gt; 10 min)</div>
   <div style="font-weight:900;font-size:16px;color:${stabClass==='good'?'var(--green)':stabClass==='warn'?'var(--yellow)':'var(--red)'}">${idleDetails.totalMinutes} min</div>
   <div class="idle-bar"><div class="fill ${stabClass}" style="width:${Math.min(100,idleDetails.totalMinutes)}%"></div></div>
   </div>
@@ -7567,11 +7758,12 @@ async function openEmpDrawer(idOrName) {
   <div style="font-size:8px;color:var(--muted)">${idleDetails.gaps.length} pausas</div>
   </div>
   <div class="pbi-card" style="padding:10px;text-align:center">
-  <div class="klabel" style="font-size:8px">Jornada</div>
+  <div class="klabel" style="font-size:8px">Jornada Ativa</div>
   <div style="font-weight:900;font-size:16px;color:var(--blue)">${workPct}%</div>
   <div style="font-size:8px;color:var(--muted)">${activeMin}/${totalWorkMin} min</div>
   </div>
   </div>
+  ${qaHtml}
   <div class="pbi-card" style="margin-bottom:16px; padding:15px; overflow:hidden">
   <div class="klabel" style="margin-bottom:10px">Cadência (Caixas/Hora)</div>
   <div style="width:100%; height:140px"><canvas id="drHourlyChart"></canvas></div>
@@ -7701,53 +7893,78 @@ function isInLunchBreak(timestamp) {
   return hhmm >= (lsH * 60 + lsM) && hhmm <= (leH * 60 + leM);
 }
 
-function getLunchOverlap(start, end) {
+function getBreakOverlap(start, end) {
   const lunchStart = tenantConfig.lunch_start_time || '11:30';
   const lunchEnd = tenantConfig.lunch_end_time || '13:00';
+  const snackStart = tenantConfig.snack_start_time || '09:00';
+  const snackEnd = tenantConfig.snack_end_time || '09:15';
+
   const [lsH, lsM] = lunchStart.split(':').map(Number);
   const [leH, leM] = lunchEnd.split(':').map(Number);
+  const [ssH, ssM] = snackStart.split(':').map(Number);
+  const [seH, seM] = snackEnd.split(':').map(Number);
   
   const day = new Date(start);
   const lunchStartMs = new Date(day.getFullYear(), day.getMonth(), day.getDate(), lsH, lsM).getTime();
   const lunchEndMs = new Date(day.getFullYear(), day.getMonth(), day.getDate(), leH, leM).getTime();
+  const snackStartMs = new Date(day.getFullYear(), day.getMonth(), day.getDate(), ssH, ssM).getTime();
+  const snackEndMs = new Date(day.getFullYear(), day.getMonth(), day.getDate(), seH, seM).getTime();
   
-  const overlapStart = Math.max(start.getTime(), lunchStartMs);
-  const overlapEnd = Math.min(end.getTime(), lunchEndMs);
-  
-  return overlapEnd > overlapStart ? (overlapEnd - overlapStart) / 1000 : 0;
+  let overlapSec = 0;
+  // Almoço
+  const lOStart = Math.max(start.getTime(), lunchStartMs);
+  const lOEnd = Math.min(end.getTime(), lunchEndMs);
+  if (lOEnd > lOStart) overlapSec += (lOEnd - lOStart) / 1000;
+
+  // Merenda (09:00 - 09:15)
+  const sOStart = Math.max(start.getTime(), snackStartMs);
+  const sOEnd = Math.min(end.getTime(), snackEndMs);
+  if (sOEnd > sOStart) overlapSec += (sOEnd - sOStart) / 1000;
+
+  return overlapSec;
+}
+
+function getLunchOverlap(start, end) {
+  return getBreakOverlap(start, end);
 }
 
 function calculateIdleTime(scans, globalStops = []) {
   if (scans.length < 2) return 0;
   const sorted = [...scans].sort((a,b) => new Date(a.ts) - new Date(b.ts));
   let totalIdleSeconds = 0;
-  const thresholdSeconds = 300; // 5 minutos
+  const thresholdMin = Number(tenantConfig.idle_threshold_min) || 10;
+  const thresholdSeconds = thresholdMin * 60; // Padrão: 10 minutos (600 segundos)
   
   for (let i = 1; i < sorted.length; i++) {
-  const start = new Date(sorted[i-1].ts);
-  const end = new Date(sorted[i].ts);
-  const isSameDay = start.getFullYear() === end.getFullYear() && 
-                    start.getMonth() === end.getMonth() && 
-                    start.getDate() === end.getDate();
-  if (!isSameDay) continue;
+    const start = new Date(sorted[i-1].ts);
+    const end = new Date(sorted[i].ts);
+    const isSameDay = start.getFullYear() === end.getFullYear() && 
+                      start.getMonth() === end.getMonth() && 
+                      start.getDate() === end.getDate();
+    if (!isSameDay) continue;
 
-  const diff = (end - start) / 1000;
-  if (diff > thresholdSeconds) {
-  let overlapSeconds = 0;
-  (globalStops || []).forEach(gs => {
-  const gsStart = new Date(gs.start_ts);
-  const gsEnd = gs.end_ts ? new Date(gs.end_ts) : new Date();
-  const intersectStart = Math.max(start.getTime(), gsStart.getTime());
-  const intersectEnd = Math.min(end.getTime(), gsEnd.getTime());
-  if (intersectEnd > intersectStart) overlapSeconds += (intersectEnd - intersectStart) / 1000;
-  });
-  
-  const lunchOverlap = getLunchOverlap(start, end);
-  const effectiveIdle = diff - overlapSeconds - lunchOverlap;
-  if (effectiveIdle > thresholdSeconds) {
-  totalIdleSeconds += (effectiveIdle - thresholdSeconds);
-  }
-  }
+    const diff = (end - start) / 1000;
+    // Se a pausa bruta for menor que o limite configurado, não desconta
+    if (diff <= thresholdSeconds) continue;
+
+    // Desconta Paradas Gerais
+    let overlapSeconds = 0;
+    (globalStops || []).forEach(gs => {
+      const gsStart = new Date(gs.start_ts);
+      const gsEnd = gs.end_ts ? new Date(gs.end_ts) : new Date();
+      const intersectStart = Math.max(start.getTime(), gsStart.getTime());
+      const intersectEnd = Math.min(end.getTime(), gsEnd.getTime());
+      if (intersectEnd > intersectStart) overlapSeconds += (intersectEnd - intersectStart) / 1000;
+    });
+    
+    // Desconta Almoço e Merenda
+    const breakOverlap = getBreakOverlap(start, end);
+    const effectiveIdle = diff - overlapSeconds - breakOverlap;
+
+    // Conforme regra: apenas intervalos que superem 10 minutos sofrem desconto
+    if (effectiveIdle > thresholdSeconds) {
+      totalIdleSeconds += (effectiveIdle - thresholdSeconds);
+    }
   }
   return Math.round(totalIdleSeconds / 60);
 }
@@ -7757,38 +7974,39 @@ function calculateIdleDetails(scans, globalStops = []) {
   const gaps = [];
   if (scans.length < 2) return { totalMinutes: 0, gaps, avgGapMinutes: 0 };
   const sorted = [...scans].sort((a,b) => new Date(a.ts) - new Date(b.ts));
-  const thresholdSeconds = 300;
+  const thresholdMin = Number(tenantConfig.idle_threshold_min) || 10;
+  const thresholdSeconds = thresholdMin * 60; // 10 minutos
   
   for (let i = 1; i < sorted.length; i++) {
-  const start = new Date(sorted[i-1].ts);
-  const end = new Date(sorted[i].ts);
-  const isSameDay = start.getFullYear() === end.getFullYear() && 
-                    start.getMonth() === end.getMonth() && 
-                    start.getDate() === end.getDate();
-  if (!isSameDay) continue;
+    const start = new Date(sorted[i-1].ts);
+    const end = new Date(sorted[i].ts);
+    const isSameDay = start.getFullYear() === end.getFullYear() && 
+                      start.getMonth() === end.getMonth() && 
+                      start.getDate() === end.getDate();
+    if (!isSameDay) continue;
 
-  const diff = (end - start) / 1000;
-  if (diff > thresholdSeconds) {
-  const lunchOverlap = getLunchOverlap(start, end);
-  let stopOverlap = 0;
-  (globalStops || []).forEach(gs => {
-  const gsStart = new Date(gs.start_ts);
-  const gsEnd = gs.end_ts ? new Date(gs.end_ts) : new Date();
-  const is = Math.max(start.getTime(), gsStart.getTime());
-  const ie = Math.min(end.getTime(), gsEnd.getTime());
-  if (ie > is) stopOverlap += (ie - is) / 1000;
-  });
-  
-  const effectiveSeconds = diff - lunchOverlap - stopOverlap;
-  if (effectiveSeconds > thresholdSeconds) {
-  gaps.push({
-  from: sorted[i-1].ts,
-  to: sorted[i].ts,
-  minutes: Math.round(effectiveSeconds / 60),
-  isLunch: lunchOverlap > diff * 0.5
-  });
-  }
-  }
+    const diff = (end - start) / 1000;
+    if (diff > thresholdSeconds) {
+      const breakOverlap = getBreakOverlap(start, end);
+      let stopOverlap = 0;
+      (globalStops || []).forEach(gs => {
+        const gsStart = new Date(gs.start_ts);
+        const gsEnd = gs.end_ts ? new Date(gs.end_ts) : new Date();
+        const is = Math.max(start.getTime(), gsStart.getTime());
+        const ie = Math.min(end.getTime(), gsEnd.getTime());
+        if (ie > is) stopOverlap += (ie - is) / 1000;
+      });
+      
+      const effectiveSeconds = diff - breakOverlap - stopOverlap;
+      if (effectiveSeconds > thresholdSeconds) {
+        gaps.push({
+          from: sorted[i-1].ts,
+          to: sorted[i].ts,
+          minutes: Math.round(effectiveSeconds / 60),
+          isLunch: breakOverlap > diff * 0.4
+        });
+      }
+    }
   }
   
   const totalMinutes = gaps.reduce((a, g) => a + g.minutes, 0);
@@ -8824,11 +9042,16 @@ async function loadSettings(){
   }
   updateTenantBadge();
 
-  // Work Hours
+  // Work Hours & Operations
   if($('cfgWorkStart')) $('cfgWorkStart').value=data.work_start_time||'07:00';
   if($('cfgWorkEnd')) $('cfgWorkEnd').value=data.work_end_time||'17:00';
   if($('cfgLunchStart')) $('cfgLunchStart').value=data.lunch_start_time||'11:30';
   if($('cfgLunchEnd')) $('cfgLunchEnd').value=data.lunch_end_time||'13:00';
+  if($('cfgSnackStart')) $('cfgSnackStart').value=data.snack_start_time||'09:00';
+  if($('cfgSnackEnd')) $('cfgSnackEnd').value=data.snack_end_time||'09:15';
+  if($('cfgIdleThreshold')) $('cfgIdleThreshold').value=data.idle_threshold_min||10;
+  if($('cfgTargetPacker')) $('cfgTargetPacker').value=data.target_per_hour_packer||100;
+  if($('cfgTargetStacker')) $('cfgTargetStacker').value=data.target_per_hour_stacker||100;
 
   // Carregar lista de empresas
   const {data: allTenants} = await sb.from('tenants').select('*').order('name');
@@ -8917,6 +9140,11 @@ async function saveSettings(){
   work_end_time:$('cfgWorkEnd')?.value||'17:00',
   lunch_start_time:$('cfgLunchStart')?.value||'11:30',
   lunch_end_time:$('cfgLunchEnd')?.value||'13:00',
+  snack_start_time:$('cfgSnackStart')?.value||'09:00',
+  snack_end_time:$('cfgSnackEnd')?.value||'09:15',
+  idle_threshold_min:parseFloat($('cfgIdleThreshold')?.value)||10,
+  target_per_hour_packer:parseFloat($('cfgTargetPacker')?.value)||100,
+  target_per_hour_stacker:parseFloat($('cfgTargetStacker')?.value)||100,
   // New fields
   logo_url: window._tenantLogoBase64 || null,
   endereco: $('cfgEndereco')?.value?.trim() || null,

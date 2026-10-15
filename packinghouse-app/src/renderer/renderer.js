@@ -2233,6 +2233,17 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Extra references moved to Admin Tab
 
+    const cfgTargetPacker = $('cfgTargetPacker');
+    const cfgTargetStacker = $('cfgTargetStacker');
+    const cfgLunchStart = $('cfgLunchStart');
+    const cfgLunchEnd = $('cfgLunchEnd');
+    const cfgSnackStart = $('cfgSnackStart');
+    const cfgSnackEnd = $('cfgSnackEnd');
+    const cfgIdleThreshold = $('cfgIdleThreshold');
+    const btnCheckSystemUpdate = $('btnCheckSystemUpdate');
+    const btnApplySystemUpdate = $('btnApplySystemUpdate');
+    const cfgUpdateInfo = $('cfgUpdateInfo');
+
     async function load() {
       const cfg = await window.api.configGetAll();
 
@@ -2246,8 +2257,60 @@ window.addEventListener('DOMContentLoaded', () => {
       cfgAdminPass.value = cfg.admin_password || '';
       cfgCultureType.value = cfg.culture_type || 'MAMAO';
       cfgCvEnabled.checked = cfg.cv_enabled === true || cfg.cv_enabled === 'true' || cfg.cv_enabled === '1';
+
+      if (cfgTargetPacker) cfgTargetPacker.value = cfg.target_per_hour_packer || 100;
+      if (cfgTargetStacker) cfgTargetStacker.value = cfg.target_per_hour_stacker || 100;
+      if (cfgLunchStart) cfgLunchStart.value = cfg.lunch_start_time || '11:30';
+      if (cfgLunchEnd) cfgLunchEnd.value = cfg.lunch_end_time || '13:00';
+      if (cfgSnackStart) cfgSnackStart.value = cfg.snack_start_time || '09:00';
+      if (cfgSnackEnd) cfgSnackEnd.value = cfg.snack_end_time || '09:15';
+      if (cfgIdleThreshold) cfgIdleThreshold.value = cfg.idle_threshold_min || 10;
     }
 
+    if (btnCheckSystemUpdate) {
+      btnCheckSystemUpdate.onclick = async () => {
+        try {
+          if (cfgUpdateInfo) cfgUpdateInfo.textContent = 'Verificando atualizações no GitHub...';
+          btnCheckSystemUpdate.disabled = true;
+          const res = await window.api.systemCheckUpdate();
+          btnCheckSystemUpdate.disabled = false;
+          if (res.ok) {
+            if (res.hasUpdate) {
+              if (cfgUpdateInfo) cfgUpdateInfo.innerHTML = '<span style="color:var(--yellow); font-weight:700">Nova versão encontrada no GitHub!</span>';
+              if (btnApplySystemUpdate) btnApplySystemUpdate.style.display = 'inline-block';
+            } else {
+              if (cfgUpdateInfo) cfgUpdateInfo.innerHTML = '<span style="color:var(--green); font-weight:700">Sistema já está na versão mais recente.</span>';
+              if (btnApplySystemUpdate) btnApplySystemUpdate.style.display = 'none';
+            }
+          } else {
+            if (cfgUpdateInfo) cfgUpdateInfo.textContent = 'Falha ao verificar: ' + (res.error || 'Erro desconhecido');
+          }
+        } catch (e) {
+          btnCheckSystemUpdate.disabled = false;
+          if (cfgUpdateInfo) cfgUpdateInfo.textContent = 'Erro ao consultar: ' + e.message;
+        }
+      };
+    }
+
+    if (btnApplySystemUpdate) {
+      btnApplySystemUpdate.onclick = async () => {
+        try {
+          if (cfgUpdateInfo) cfgUpdateInfo.textContent = 'Baixando atualizações do GitHub... Aguarde.';
+          btnApplySystemUpdate.disabled = true;
+          const res = await window.api.systemApplyUpdate();
+          btnApplySystemUpdate.disabled = false;
+          if (res.ok) {
+            alert(res.message || 'Atualizado com sucesso! Reinicie o aplicativo.');
+            if (cfgUpdateInfo) cfgUpdateInfo.innerHTML = '<span style="color:var(--green)">Atualizado com sucesso!</span>';
+          } else {
+            alert('Erro ao atualizar: ' + (res.error || 'Falha no git pull'));
+          }
+        } catch (e) {
+          btnApplySystemUpdate.disabled = false;
+          alert('Erro ao atualizar: ' + e.message);
+        }
+      };
+    }
 
     cfgSave.onclick = async () => {
       await window.api.configSet({
@@ -2260,14 +2323,19 @@ window.addEventListener('DOMContentLoaded', () => {
         terminal_mode: cfgTerminalMode.value,
         admin_password: cfgAdminPass.value.trim(),
         culture_type: cfgCultureType.value,
-        cv_enabled: cfgCvEnabled.checked
+        cv_enabled: cfgCvEnabled.checked,
+        target_per_hour_packer: cfgTargetPacker ? cfgTargetPacker.value : 100,
+        target_per_hour_stacker: cfgTargetStacker ? cfgTargetStacker.value : 100,
+        lunch_start_time: cfgLunchStart ? cfgLunchStart.value : '11:30',
+        lunch_end_time: cfgLunchEnd ? cfgLunchEnd.value : '13:00',
+        snack_start_time: cfgSnackStart ? cfgSnackStart.value : '09:00',
+        snack_end_time: cfgSnackEnd ? cfgSnackEnd.value : '09:15',
+        idle_threshold_min: cfgIdleThreshold ? cfgIdleThreshold.value : 10
       });
 
-
-      cfgStatus.textContent = 'Configurações salvas.';
+      cfgStatus.textContent = 'Configurações salvas com sucesso.';
       await load();
       await initShell();
-      location.reload(); // Reload for terminal mode to take full effect reliably
     };
 
     cfgSyncNow.onclick = async () => {
@@ -2916,9 +2984,11 @@ async function triggerCollabShowcase(force = false) {
       endMs: todayEMs
     });
 
-    let collabs = (dsStats && dsStats.collaboratorStats && dsStats.collaboratorStats.length > 0)
-      ? [...dsStats.collaboratorStats]
-      : [];
+    let collabs = [];
+    if (dsStats && dsStats.collaboratorStats && dsStats.collaboratorStats.length > 0) {
+      const packersOnly = dsStats.collaboratorStats.filter(c => !c.role || c.role.toUpperCase().includes('EMBALADOR') || c.role.toUpperCase().includes('PACKER'));
+      collabs = packersOnly.length > 0 ? packersOnly : [...dsStats.collaboratorStats];
+    }
 
     if (collabs.length === 0) {
       // Fallback: se ainda não houver caixas registradas hoje, apresenta lista de colaboradores cadastrados
@@ -3230,16 +3300,7 @@ document.addEventListener('keydown', (e) => {
       }
       return;
     }
-    // Se o operador ou leitor de código de barras bipar (Enter), encerra o carrossel imediatamente
-    // para exibir a tela de contagem com a leitura processada em primeiro plano.
-    if (e.key === 'Enter') {
-      stopCollabShowcase();
-      const scanInput = document.getElementById('scanInput');
-      if (scanInput) {
-        scanInput.focus();
-      }
-      return;
-    }
+    // O leitor de código de barras continua lendo e bipando em background normalmente sem fechar o carrossel
     const scanInput = document.getElementById('scanInput');
     if (scanInput && document.activeElement !== scanInput) {
       scanInput.focus();
@@ -3250,20 +3311,19 @@ document.addEventListener('keydown', (e) => {
 const showcaseOverlayEl = document.getElementById('collabShowcaseOverlay');
 if (showcaseOverlayEl) {
   showcaseOverlayEl.onclick = (e) => {
-    // Não fecha ao clicar fora por acidente — usuário fecha no botão [X], no término da lista ou tecla Esc/Enter
+    // Não fecha ao clicar fora por acidente — fecha no botão [X], término da lista ou tecla Esc
   };
 }
 
-// Inicia carrossel de desempenho a cada 2 minutos automaticamente no Painel
+// Inicia carrossel de desempenho a cada 5 minutos automaticamente no Painel
 setInterval(() => {
   const scanInput = document.getElementById('scanInput');
   const overlay = document.getElementById('collabShowcaseOverlay');
-  const painelView = document.getElementById('view-painel');
-  const isPainelVisible = painelView && painelView.style.display !== 'none';
-  if (scanInput && overlay && isPainelVisible && !overlay.classList.contains('active')) {
+  const isPainelActive = scanInput && (window.location.hash === '#/painel' || window.location.hash === '' || !window.location.hash);
+  if (isPainelActive && overlay && !overlay.classList.contains('active')) {
     triggerCollabShowcase();
   }
-}, 2 * 60 * 1000);
+}, 5 * 60 * 1000);
 
 
 

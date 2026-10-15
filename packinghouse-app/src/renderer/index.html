@@ -898,8 +898,36 @@
           <span style="font-size: 11px; font-weight: 700; color: var(--blue);">ATIVAR VISÃO COMPUTACIONAL</span>
         </label>
       </div>
-      <div class="row" style="margin-top:10px">
+      <div class="row" style="margin-top:14px; gap: 10px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+        <div style="font-weight:700; width:100%; font-size:12px; color:var(--blue); margin-bottom:4px;">Parâmetros Operacionais e Metas</div>
+        <label style="flex:1">
+          <span style="display:block;font-size:10px;color:var(--muted);margin-bottom:2px">META EMBALADOR (cx/h)</span>
+          <input id="cfgTargetPacker" type="number" placeholder="100" style="width:100%" />
+        </label>
+        <label style="flex:1">
+          <span style="display:block;font-size:10px;color:var(--muted);margin-bottom:2px">META EMPILHADOR (cx/h)</span>
+          <input id="cfgTargetStacker" type="number" placeholder="100" style="width:100%" />
+        </label>
+        <label style="flex:1">
+          <span style="display:block;font-size:10px;color:var(--muted);margin-bottom:2px">ALMOÇO (INÍCIO - FIM)</span>
+          <div style="display:flex; gap:4px">
+            <input id="cfgLunchStart" type="time" value="11:30" style="flex:1" />
+            <input id="cfgLunchEnd" type="time" value="13:00" style="flex:1" />
+          </div>
+        </label>
+        <label style="flex:1">
+          <span style="display:block;font-size:10px;color:var(--muted);margin-bottom:2px">MERENDA (INÍCIO - FIM)</span>
+          <div style="display:flex; gap:4px">
+            <input id="cfgSnackStart" type="time" value="09:00" style="flex:1" />
+            <input id="cfgSnackEnd" type="time" value="09:15" style="flex:1" />
+          </div>
+        </label>
+        <label style="flex:1">
+          <span style="display:block;font-size:10px;color:var(--muted);margin-bottom:2px">TOLERÂNCIA OCIOSIDADE</span>
+          <input id="cfgIdleThreshold" type="number" placeholder="10" value="10" style="width:100%" title="Intervalos abaixo desse tempo em minutos não sofrem desconto" />
+        </label>
       </div>
+
       <div class="row" style="margin-top:10px">
         <label style="flex:1">
           <span style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px">MODO DESTE TERMINAL</span>
@@ -912,6 +940,15 @@
           <span style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px">SENHA ADMINISTRATIVA</span>
           <input id="cfgAdminPass" type="password" placeholder="Vazio = Sem senha" style="width:100%" />
         </label>
+      </div>
+
+      <div class="row" style="margin-top:14px; gap: 10px; background: rgba(59,130,246,0.06); padding: 12px; border-radius: 8px; border: 1px solid rgba(59,130,246,0.2); align-items:center;">
+        <div style="flex:1">
+          <div style="font-weight:700; font-size:12px; color:#60a5fa;">Atualizações do Sistema (Sem Pen Drive)</div>
+          <div style="font-size:11px; color:var(--muted); margin-top:2px;" id="cfgUpdateInfo">Sincronize com a nuvem do GitHub à distância</div>
+        </div>
+        <button id="btnCheckSystemUpdate" type="button" class="secondary" style="font-size:11px; padding:6px 12px;">Verificar Atualização</button>
+        <button id="btnApplySystemUpdate" type="button" style="display:none; background:var(--green); font-size:11px; padding:6px 12px;">Atualizar Agora</button>
       </div>
       <div class="row" style="margin-top:15px; border-top: 1px solid rgba(255,255,255,.1); padding-top:15px;">
         <div style="font-weight:600;width:100%;margin-bottom:8px;">Supabase Sync</div>

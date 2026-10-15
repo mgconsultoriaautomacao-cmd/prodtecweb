@@ -141,6 +141,8 @@
     onScanNew: (cb) => addEventListener('scan:new', cb),
     onUpdateStatus: (cb) => addEventListener('update:status', cb),
     updateCheck: () => callApi('updateCheck'),
-    updateRestartAndInstall: () => callApi('updateRestartAndInstall')
+    updateRestartAndInstall: () => callApi('updateRestartAndInstall'),
+    systemCheckUpdate: () => callApi('systemCheckUpdate'),
+    systemApplyUpdate: () => callApi('systemApplyUpdate')
   };
 })();

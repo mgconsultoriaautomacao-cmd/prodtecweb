@@ -605,25 +605,40 @@ def state_get(station_id='ST01', role='EMBALADOR') -> dict:
         ),0)) DESC, e.name ASC
     """, (ds, de, ds, st, rl, ds, de))
 
-    top10 = []
-    for r in rows[:10]:
+    candidates = []
+    for r in rows:
         produced = int(r.get('produced_count') or 0)
         deducted = int(r.get('quality_deducted') or 0)
         hours_active = max(1, int(r.get('hours_active') or 1))
         target_for_emp = hourly_target * hours_active
         net_produced = max(0, produced - deducted)
-        quality_pct = round((net_produced / produced * 100) * 10) / 10 if produced > 0 else 100
-        productivity_pct = round((net_produced / target_for_emp * 100) * 10) / 10 if target_for_emp > 0 else 0
+        quality_pct = round((net_produced / produced * 100) * 10) / 10 if produced > 0 else 100.0
+        productivity_pct = round((net_produced / target_for_emp * 100) * 10) / 10 if target_for_emp > 0 else 0.0
 
-        top10.append({
+        # Score Ponderado (3 Pilares): Qualidade (40%), Produtividade vs Meta (35%), Volume de Caixas (25%)
+        vol_score = min(100.0, (net_produced / target_for_emp * 100.0)) if target_for_emp > 0 else 0.0
+        score = (quality_pct * 0.40) + (min(120.0, productivity_pct) * 0.35) + (vol_score * 0.25)
+        # Redutor de qualidade severo para quem tem muitos erros (< 85%)
+        if quality_pct < 85.0:
+            score *= (quality_pct / 100.0)
+        score = round(score, 1)
+
+        candidates.append({
             'id': r['id'],
             'name': r['name'],
             'photoPath': r.get('photo_path') or '',
             'produced': net_produced,
+            'rawProduced': produced,
+            'penaltyBoxes': deducted,
             'qualityPct': quality_pct,
             'productivityPct': productivity_pct,
+            'score': score,
             'fraudPenalty': 0
         })
+
+    # Ordena pelo Score de Performance; desempate por caixas líquidas
+    candidates.sort(key=lambda x: (x['score'], x['produced']), reverse=True)
+    top10 = candidates[:10]
 
     return {'role': rl, 'leader': top10[0] if top10 else None, 'top10': top10, 'targetPerHour': hourly_target}
 
@@ -818,16 +833,15 @@ def dashboard_get_stats(station_id='ST01', start_ms=0, end_ms=0, employee_id=Non
 
     collab = _all(f"""
         SELECT e.id, e.name, e.photo_path as photoPath, e.role,
-               MAX(0, COUNT(se.id) - COALESCE((SELECT SUM(penalty_boxes) FROM quality_audits WHERE employee_id=e.id AND ts BETWEEN ? AND ?),0)) as boxes,
+               COUNT(se.id) as raw_boxes,
                SUM(COALESCE(bw.weight_kg,0)) as kg,
                COALESCE((SELECT SUM(penalty_boxes) FROM quality_audits WHERE employee_id=e.id AND ts BETWEEN ? AND ?),0) as penalty_boxes
         FROM employees e JOIN scan_events se ON se.employee_id=e.id
         LEFT JOIN box_weights bw ON bw.id=se.weight_id
         WHERE se.station_id=? AND se.ts BETWEEN ? AND ? {emp_where_se}
         GROUP BY e.id, e.name, e.photo_path, e.role
-        ORDER BY (COUNT(se.id) - COALESCE((SELECT SUM(penalty_boxes) FROM quality_audits WHERE employee_id=e.id AND ts BETWEEN ? AND ?),0)) DESC
         LIMIT 100
-    """, [s, e, s, e, st, s, e] + emp_param + [s, e])
+    """, [s, e, st, s, e] + emp_param)
 
     box_stats = _all(f"""
         SELECT COALESCE(bw.name,'SEM PESO') as label, COUNT(se.id) as boxes, SUM(COALESCE(bw.weight_kg,0)) as kg
@@ -868,7 +882,8 @@ def dashboard_get_stats(station_id='ST01', start_ms=0, end_ms=0, employee_id=Non
     duration = e - s
     prev = _get(f"SELECT COUNT(*) as n FROM scan_events se WHERE se.station_id=? AND se.employee_id IS NOT NULL AND se.ts BETWEEN ? AND ? {emp_where_se}", [st, s - duration, s] + emp_param)
 
-    net_boxes = max(0, int((total_stats or {}).get('totalBoxes') or 0) - penalty_count)
+    raw_total_boxes = int((total_stats or {}).get('totalBoxes') or 0)
+    net_boxes = max(0, raw_total_boxes - penalty_count)
     hours_active = max(1, round((e - s) / 3_600_000))
     avg_per_hour = round(net_boxes / hours_active)
 
@@ -893,22 +908,28 @@ def dashboard_get_stats(station_id='ST01', start_ms=0, end_ms=0, employee_id=Non
             if gaps:
                 avg_scan_gap = round(sum(gaps) / len(gaps), 1)
 
-    raw_total_boxes = int((total_stats or {}).get('totalBoxes') or 0)
     total_audited = max(1, raw_total_boxes + penalty_count) if (raw_total_boxes + penalty_count) > 0 else 0
     global_error_pct = round((penalty_count / total_audited * 100), 1) if total_audited > 0 else 0.0
     global_quality_pct = round(max(0.0, 100.0 - global_error_pct), 1)
 
     def enrich_collab(c):
         target = t_stacker if c.get('role') == 'EMPILHADOR' else t_packer
-        raw = int(c.get('boxes') or 0)
+        raw = int(c.get('raw_boxes') or 0)
         pen = int(c.get('penalty_boxes') or 0)
         net = max(0, raw - pen)
-        tot_c = max(raw, net + pen)
-        c_qual = round((net / tot_c * 100), 1) if tot_c > 0 else 100.0
-        c_err = round((pen / tot_c * 100), 1) if tot_c > 0 else 0.0
+        tot_c = max(raw, 1)
+        c_qual = round(max(0.0, 100.0 - (pen / tot_c * 100.0)), 1) if raw > 0 else 100.0
+        c_err = round((pen / tot_c * 100.0), 1) if raw > 0 else 0.0
         c_avg = round(net / hours_active, 1) if hours_active > 0 else net
         c_target_tot = target * hours_active if hours_active > 0 else target
-        c_yield = round((net / c_target_tot * 100), 1) if c_target_tot > 0 else 0.0
+        c_yield = round((net / c_target_tot * 100.0), 1) if c_target_tot > 0 else 0.0
+
+        # Score Ponderado (3 Pilares): Qualidade (40%), Produtividade vs Meta (35%), Volume de Caixas (25%)
+        vol_score = min(100.0, (net / c_target_tot * 100.0)) if c_target_tot > 0 else 0.0
+        score = (c_qual * 0.40) + (min(120.0, c_yield) * 0.35) + (vol_score * 0.25)
+        if c_qual < 85.0:
+            score *= (c_qual / 100.0)
+        score = round(score, 1)
 
         return {
             **c,
@@ -919,11 +940,15 @@ def dashboard_get_stats(station_id='ST01', start_ms=0, end_ms=0, employee_id=Non
             'yieldPct': c_yield,
             'qualityPct': c_qual,
             'errorPct': c_err,
-            'avgPerHour': c_avg
+            'avgPerHour': c_avg,
+            'score': score
         }
 
+    enriched_collabs = [enrich_collab(c) for c in collab]
+    enriched_collabs.sort(key=lambda x: (x['score'], x['boxes']), reverse=True)
+
     return {
-        'collaboratorStats': [enrich_collab(c) for c in collab],
+        'collaboratorStats': enriched_collabs,
         'boxTypeStats': box_stats,
         'parcelStats': parcel_stats,
         'hourlyCollab': hourly_collab,
@@ -940,7 +965,35 @@ def dashboard_get_stats(station_id='ST01', start_ms=0, end_ms=0, employee_id=Non
         'avgScanGapSec': avg_scan_gap,
         'targets': {'packer': t_packer, 'stacker': t_stacker},
         'comparison': {'current': int((current or {}).get('n') or 0), 'previous': int((prev or {}).get('n') or 0)},
-        'packerTotal': sum(int(c.get('boxes') or 0) for c in collab if c.get('role') == 'EMBALADOR'),
-        'stackerTotal': sum(int(c.get('boxes') or 0) for c in collab if c.get('role') == 'EMPILHADOR'),
+        'packerTotal': sum(int(c.get('boxes') or 0) for c in enriched_collabs if c.get('role') == 'EMBALADOR'),
+        'stackerTotal': sum(int(c.get('boxes') or 0) for c in enriched_collabs if c.get('role') == 'EMPILHADOR'),
         'isMelonMode': is_melon,
     }
+
+
+# ─── Atualização Remota (Portabilidade sem Pen Drive) ─────────────────────────
+def system_check_update() -> dict:
+    import subprocess
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    try:
+        subprocess.run(['git', 'fetch', 'origin'], cwd=str(repo_root), capture_output=True, text=True, timeout=15)
+        res = subprocess.run(['git', 'status', '-uno'], cwd=str(repo_root), capture_output=True, text=True, timeout=10)
+        output = res.stdout or ''
+        has_update = 'behind' in output.lower()
+        return {'ok': True, 'hasUpdate': has_update, 'details': output}
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}
+
+
+def system_apply_update() -> dict:
+    import subprocess
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    try:
+        res = subprocess.run(['git', 'pull', '--no-edit', 'origin', 'main'], cwd=str(repo_root), capture_output=True, text=True, timeout=40)
+        if res.returncode == 0:
+            return {'ok': True, 'message': 'Sistema atualizado com sucesso! Reinicie o aplicativo para aplicar as melhorias.', 'output': res.stdout}
+        else:
+            return {'ok': False, 'error': res.stderr or res.stdout}
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}
+
