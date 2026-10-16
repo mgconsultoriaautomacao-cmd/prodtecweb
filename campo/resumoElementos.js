@@ -1072,6 +1072,15 @@ async function printPastaCampoFoliares(parcelIdOrCode) {
       <strong>OBS:</strong> As quantidades dos elementos constituintes dos fertilizantes desta ficha devem ser registrados na pág 2 da planilha COD: PC08. Devem-se somar todos os fertilizantes aplicados para se chegar ao valor total absorvido pela cultura.
       <br/>*DAP: Dias após o plantio.
     </div>
+
+    <!-- ASSINATURA DA RESPONSÁVEL TÉCNICA -->
+    <div style="display:flex; justify-content:flex-end; margin-top:14px;">
+      <div style="text-align:center; width:340px;">
+        <div style="border-bottom:1px solid #000; margin-bottom:4px; height:28px;"></div>
+        <div style="font-weight:bold; font-size:7.5pt;">${rtNome}</div>
+        <div style="font-size:6.5pt; color:#222;">Engª. Agrônoma &nbsp;|&nbsp; Responsável Técnica</div>
+      </div>
+    </div>
   </div>
   </body>
   </html>
