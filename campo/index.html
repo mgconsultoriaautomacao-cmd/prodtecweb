@@ -3281,6 +3281,8 @@ let varieties = [];
   .eq('tenant_id', tenantId)
   .order('created_at', { ascending: false });
   infoParcelasData = (data || []).sort((a, b) => (a.parcela2 || '').localeCompare(b.parcela2 || ''));
+  window.infoParcelasData = infoParcelasData;
+  window._infoParcelas = infoParcelasData;
 
   // Rebuild parcelas list from info_parcelas (ativos) for all module selects
   // Each unique parcela2 + info_parcelas.id becomes an entry for selection
@@ -3543,7 +3545,7 @@ let varieties = [];
   function addVariedadeRow(
     nomeVal = '', loteVal = '', qtdVal = '', linhasVal = '', dataVal = '', areaVal = '',
     fornecedorVal = '', dataCompraVal = '', nfVal = '', termoVal = '', purezaVal = '99%',
-    germinacaoVal = '90%', tratDefVal = 'Maxim XL', tratDosVal = '200 mL/100kg'
+    germinacaoVal = '90%', tratDef1Val = '', tratDos1Val = '', tratDef2Val = '', tratDos2Val = ''
   ) {
   if (variedadeRowCount >= 10) { toast('Máximo de 10 variedades por plantio', 'err'); return; }
   variedadeRowCount++;
@@ -3557,7 +3559,7 @@ let varieties = [];
   <span style="font-size:11px; font-weight:800; color:var(--yellow); text-transform:uppercase; letter-spacing:0.5px">Variedade ${idx}</span>
   <span id="plAreaVarBadge${idx}" style="font-size:11px; font-weight:700; color:#3b82f6; background:rgba(59,130,246,0.14); border:1px solid rgba(59,130,246,0.3); padding:2px 8px; border-radius:6px">0,00 ha</span>
   </div>
-  ${idx > 1 ? `<button type="button" onclick="removeVariedadeRow(${idx})" style="position:absolute;top:10px;right:10px;width:24px;height:24px;border-radius:50%;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.2);color:var(--red);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center"></button>` : ''}
+  ${idx > 1 ? `<button type="button" onclick="removeVariedadeRow(${idx})" style="position:absolute;top:10px;right:10px;width:24px;height:24px;border-radius:50%;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.2);color:var(--red);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>` : ''}
   
   <!-- Linha 1: Dados Agronômicos no Campo -->
   <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; align-items:end; margin-bottom:10px">
@@ -3579,10 +3581,10 @@ let varieties = [];
   </div>
   </div>
 
-  <!-- Linha 2: Rastreabilidade e Identificação da Semente (PC03) Individual por Variedade -->
+  <!-- Linha 2: Rastreabilidade da Semente e Tratamento da Muda (PC03) Individual por Variedade -->
   <div style="background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.2); border-radius:10px; padding:10px 12px; margin-top:6px">
   <div style="font-size:10px; font-weight:800; color:var(--green); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:5px">
-    <i data-lucide="shield-check" style="width:13px;height:13px"></i> Identificação da Semente (PC03) — Variedade ${idx}
+    <i data-lucide="shield-check" style="width:13px;height:13px"></i> Identificação da Semente &amp; Tratamento da Muda (PC03) — Variedade ${idx}
   </div>
   <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:8px; align-items:end">
     <div class="form-field" style="margin:0">
@@ -3618,12 +3620,20 @@ let varieties = [];
       <input id="plGerminacaoVar${idx}" type="text" placeholder="Ex: 90%" value="${germinacaoVal || '90%'}">
     </div>
     <div class="form-field" style="margin:0">
-      <label class="field-label">Defensivo Semente</label>
-      <input id="plTratDefVar${idx}" type="text" placeholder="Ex: Maxim XL" value="${tratDefVal || 'Maxim XL'}">
+      <label class="field-label" style="color:#38bdf8; font-weight:700">Tratamento Muda — Defensivo 1</label>
+      <input id="plTratDef1Var${idx}" type="text" placeholder="Ex: Cruiser 350 FS" value="${tratDef1Val || ''}">
     </div>
     <div class="form-field" style="margin:0">
-      <label class="field-label">Dosagem Tratamento</label>
-      <input id="plTratDosVar${idx}" type="text" placeholder="Ex: 200 mL/100kg" value="${tratDosVal || '200 mL/100kg'}">
+      <label class="field-label" style="color:#38bdf8; font-weight:700">Dosagem 1</label>
+      <input id="plTratDos1Var${idx}" type="text" placeholder="Ex: 100 mL / 1000 mudas" value="${tratDos1Val || ''}">
+    </div>
+    <div class="form-field" style="margin:0">
+      <label class="field-label" style="color:#38bdf8; font-weight:700">Tratamento Muda — Defensivo 2</label>
+      <input id="plTratDef2Var${idx}" type="text" placeholder="Ex: Maxim XL" value="${tratDef2Val || ''}">
+    </div>
+    <div class="form-field" style="margin:0">
+      <label class="field-label" style="color:#38bdf8; font-weight:700">Dosagem 2</label>
+      <input id="plTratDos2Var${idx}" type="text" placeholder="Ex: 50 mL / 1000 mudas" value="${tratDos2Val || ''}">
     </div>
   </div>
   </div>
@@ -3662,7 +3672,7 @@ let varieties = [];
   $('variedadesContainer').innerHTML = '';
 
   if (editId) {
-  const item = infoParcelasData.find(x => x.id === editId);
+  const item = (infoParcelasData || []).find(x => String(x.id) === String(editId)) || (window._infoParcelas || []).find(x => String(x.id) === String(editId));
   if (!item) return;
   title.textContent = 'Editar Plantio';
   editIdInput.value = editId;
@@ -3723,8 +3733,10 @@ let varieties = [];
         termo: ext.termo || item[`termo${colSuffix}`] || (i === 0 ? item.termo : '') || '',
         pureza: ext.pureza || (i === 0 ? '99%' : i === 1 ? '98%' : '98%'),
         germinacao: ext.germinacao || (i === 0 ? '90%' : i === 1 ? '85%' : '85%'),
-        tratDef: ext.tratamento_def || item.defensivo_semente || 'Maxim XL',
-        tratDos: ext.tratamento_dos || item.dosagem_semente || '200 mL/100kg'
+        tratDef1: ext.trat_muda_def1 || ext.tratamento_def || item.defensivo_semente || '',
+        tratDos1: ext.trat_muda_dos1 || ext.tratamento_dos || item.dosagem_semente || '',
+        tratDef2: ext.trat_muda_def2 || '',
+        tratDos2: ext.trat_muda_dos2 || ''
       });
     }
   }
@@ -3733,7 +3745,7 @@ let varieties = [];
   else varsArr.forEach(v => addVariedadeRow(
     v.nome, v.lote, v.qtd, v.linhas, v.data, v.area,
     v.fornecedor, v.dataCompra, v.nf, v.termo, v.pureza, v.germinacao,
-    v.tratDef, v.tratDos
+    v.tratDef1, v.tratDos1, v.tratDef2, v.tratDos2
   ));
 
   } else {
@@ -4041,8 +4053,10 @@ let varieties = [];
   const termoV = $(`plTermoVar${i}`)?.value?.trim() || null;
   const purezaV = $(`plPurezaVar${i}`)?.value?.trim() || '99%';
   const germinacaoV = $(`plGerminacaoVar${i}`)?.value?.trim() || '90%';
-  const tratDefV = $(`plTratDefVar${i}`)?.value?.trim() || 'Maxim XL';
-  const tratDosV = $(`plTratDosVar${i}`)?.value?.trim() || '200 mL/100kg';
+  const tratDef1V = $(`plTratDef1Var${i}`)?.value?.trim() || $(`plTratDefVar${i}`)?.value?.trim() || '';
+  const tratDos1V = $(`plTratDos1Var${i}`)?.value?.trim() || $(`plTratDosVar${i}`)?.value?.trim() || '';
+  const tratDef2V = $(`plTratDef2Var${i}`)?.value?.trim() || '';
+  const tratDos2V = $(`plTratDos2Var${i}`)?.value?.trim() || '';
 
   varsData.push({
   nome,
@@ -4057,8 +4071,12 @@ let varieties = [];
   termo: termoV,
   pureza: purezaV,
   germinacao: germinacaoV,
-  tratamento_def: tratDefV,
-  tratamento_dos: tratDosV
+  trat_muda_def1: tratDef1V,
+  trat_muda_dos1: tratDos1V,
+  trat_muda_def2: tratDef2V,
+  trat_muda_dos2: tratDos2V,
+  tratamento_def: tratDef1V,
+  tratamento_dos: tratDos1V
   });
   }
   }
@@ -4092,7 +4110,7 @@ let varieties = [];
   }
   }
 
-  // Serializar metadados completos de sementes por variedade em bloco JSON no obs para garantia de 100% de persistência
+  // Serializar metadados completos de sementes e tratamento da muda por variedade em bloco JSON no obs
   const rawObs = ($('plObs')?.value?.trim() || '').replace(/<!--SEMENTES_EXT:[\s\S]*?-->/g, '').trim();
   const sementesMeta = varsData.map(v => ({
     nome: v.nome,
@@ -4104,8 +4122,12 @@ let varieties = [];
     qtd: v.qtd,
     pureza: v.pureza,
     germinacao: v.germinacao,
-    tratamento_def: v.tratamento_def,
-    tratamento_dos: v.tratamento_dos
+    trat_muda_def1: v.trat_muda_def1,
+    trat_muda_dos1: v.trat_muda_dos1,
+    trat_muda_def2: v.trat_muda_def2,
+    trat_muda_dos2: v.trat_muda_dos2,
+    tratamento_def: v.trat_muda_def1,
+    tratamento_dos: v.trat_muda_dos1
   }));
   const finalObs = (rawObs ? (rawObs + '\n') : '') + `<!--SEMENTES_EXT:${JSON.stringify(sementesMeta)}-->`;
 
@@ -6042,6 +6064,63 @@ function printPastaCampoOrdemPulv(itemStr) {
   printWin.document.close();
 }
 
+// Helper universal para resolver parcela por ID, código ou objeto (com suporte a memória e Supabase)
+async function resolveParcelaItem(idOrStr) {
+  if (!idOrStr) return null;
+  if (typeof idOrStr === 'object' && idOrStr !== null) return idOrStr;
+  
+  if (typeof idOrStr === 'string' && idOrStr.trim().startsWith('{')) {
+    try { return JSON.parse(decodeURIComponent(idOrStr)); } catch(e){}
+    try { return JSON.parse(idOrStr); } catch(e){}
+  }
+  
+  const target = String(idOrStr).trim();
+  const targetLower = target.toLowerCase();
+
+  const memorySources = [
+    (typeof infoParcelasData !== 'undefined' ? infoParcelasData : null),
+    window.infoParcelasData,
+    window._infoParcelas,
+    (typeof webInfoParcelasData !== 'undefined' ? webInfoParcelasData : null),
+    window.webInfoParcelasData,
+    window.plantiosData
+  ];
+
+  for (const list of memorySources) {
+    if (Array.isArray(list) && list.length > 0) {
+      const found = list.find(x => x && (
+        String(x.id).trim() === target ||
+        String(x.parcela2 || '').trim().toLowerCase() === targetLower ||
+        String(x.parcela || '').trim().toLowerCase() === targetLower
+      ));
+      if (found) return found;
+    }
+  }
+
+  // Fallback no Supabase se não encontrou em memória
+  if (typeof sb !== 'undefined' && sb) {
+    try {
+      let q = sb.from('info_parcelas').select('*');
+      if (/^\d+$/.test(target)) {
+        q = q.or(`id.eq.${target},parcela2.eq.${target},parcela.eq.${target}`);
+      } else {
+        q = q.or(`parcela2.eq.${target},parcela.eq.${target}`);
+      }
+      if (typeof tenantId !== 'undefined' && tenantId) {
+        q = q.eq('tenant_id', tenantId);
+      }
+      const { data, error } = await q.limit(1);
+      if (!error && data && data.length > 0) {
+        return data[0];
+      }
+    } catch(err) {
+      console.warn('Erro ao resolver parcela no Supabase:', err);
+    }
+  }
+
+  return null;
+}
+
 // ── UTILITÁRIO: EXTRAÇÃO COMPLETA DE DADOS DE SEMENTES POR VARIEDADE (PC03) ──
 function extractParcelaSementesVars(item) {
   if (!item) return [];
@@ -6073,8 +6152,10 @@ function extractParcelaSementesVars(item) {
       const dataCompra = ext.data_compra || semeadura || dataPlantio || (i === 0 ? item.plantio : '') || null;
       const pureza = ext.pureza || (i === 0 ? '99%' : i === 1 ? '98%' : '98%');
       const germinacao = ext.germinacao || (i === 0 ? '90%' : i === 1 ? '85%' : '85%');
-      const tratDef = ext.tratamento_def || item.defensivo_semente || 'Maxim XL';
-      const tratDos = ext.tratamento_dos || item.dosagem_semente || '200 mL/100kg';
+      const tratDef1 = ext.trat_muda_def1 || ext.tratamento_def || item.defensivo_semente || '';
+      const tratDos1 = ext.trat_muda_dos1 || ext.tratamento_dos || item.dosagem_semente || '';
+      const tratDef2 = ext.trat_muda_def2 || '';
+      const tratDos2 = ext.trat_muda_dos2 || '';
 
       result.push({
         idx: i + 1,
@@ -6091,8 +6172,12 @@ function extractParcelaSementesVars(item) {
         dataCompra,
         pureza,
         germinacao,
-        tratDef,
-        tratDos
+        tratDef1,
+        tratDos1,
+        tratDef2,
+        tratDos2,
+        tratDef: tratDef1,
+        tratDos: tratDos1
       });
     }
   }
@@ -6113,8 +6198,12 @@ function extractParcelaSementesVars(item) {
       dataCompra: item.semeadura || item.plantio || null,
       pureza: '99%',
       germinacao: '90%',
-      tratDef: item.defensivo_semente || 'Maxim XL',
-      tratDos: item.dosagem_semente || '200 mL/100kg'
+      tratDef1: item.defensivo_semente || '',
+      tratDos1: item.dosagem_semente || '',
+      tratDef2: '',
+      tratDos2: '',
+      tratDef: item.defensivo_semente || '',
+      tratDos: item.dosagem_semente || ''
     });
   }
 
@@ -6122,22 +6211,15 @@ function extractParcelaSementesVars(item) {
 }
 
 // ── MODAL SELETOR DE IMPRESSÃO PC03 (EVITA TER 10 BOTÕES NA TELA) ──
-function openSementesPrintSelector(idOrStr) {
-  let item = null;
-  if (typeof idOrStr === 'string' && idOrStr.startsWith('{')) {
-    try { item = JSON.parse(decodeURIComponent(idOrStr)); } catch(e){}
-  }
-  if (!item) {
-    const list = (typeof infoParcelasData !== 'undefined' ? infoParcelasData : []) || window._infoParcelas || [];
-    item = list.find(x => x && (x.id === idOrStr || x.parcela2 === idOrStr || x.parcela === idOrStr));
-  }
+async function openSementesPrintSelector(idOrStr) {
+  const item = await resolveParcelaItem(idOrStr);
   if (!item) { toast('Parcela não encontrada.', 'err'); return; }
 
   const vars = extractParcelaSementesVars(item);
 
   // Se tiver apenas 1 variedade, imprime direto sem abrir modal desnecessário
   if (vars.length <= 1) {
-    printPastaCampoSementes(item, 'ALL');
+    await printPastaCampoSementes(item, 'ALL');
     return;
   }
 
@@ -6211,24 +6293,17 @@ function openSementesPrintSelector(idOrStr) {
   if (window.lucide) lucide.createIcons();
 }
 
-function execSementesPrint(id) {
+async function execSementesPrint(id) {
   const modal = document.getElementById('modalSementesPrintSelector');
   if (modal) modal.style.display = 'none';
   const mode = document.querySelector('input[name="sementesPrintMode"]:checked')?.value || 'ALL';
   const varIdx = parseInt(document.getElementById('selSementesVarIdx')?.value || '0', 10);
-  printPastaCampoSementes(id, mode, varIdx);
+  await printPastaCampoSementes(id, mode, varIdx);
 }
 
 // ── IMPRESSÃO OFICIAL: IDENTIFICAÇÃO DE SEMENTE, MUDAS, ADUB. DE FUND. (PC03) ──
 async function printPastaCampoSementes(idOrStr, mode = 'ALL', varIdx = 0) {
-  let item = null;
-  if (typeof idOrStr === 'string' && idOrStr.startsWith('{')) {
-    try { item = JSON.parse(decodeURIComponent(idOrStr)); } catch(e){}
-  }
-  if (!item) {
-    const list = (typeof infoParcelasData !== 'undefined' ? infoParcelasData : []) || window._infoParcelas || [];
-    item = list.find(x => x && (x.id === idOrStr || x.parcela === idOrStr || x.parcela2 === idOrStr));
-  }
+  const item = await resolveParcelaItem(idOrStr);
   if (!item) { toast('Parcela não encontrada.', 'err'); return; }
 
   const pCode = item.parcela2 || item.parcela || '10';
@@ -6283,53 +6358,16 @@ async function printPastaCampoSementes(idOrStr, mode = 'ALL', varIdx = 0) {
           <td style="border:1px solid #000; padding:5px 4px; text-align:center; font-size:7pt">${qtdFmt}</td>
           <td style="border:1px solid #000; padding:5px 4px; text-align:center; font-size:7pt">${v.pureza || '98%'}</td>
           <td style="border:1px solid #000; padding:5px 4px; text-align:center; font-size:7pt">${v.germinacao || '90%'}</td>
-          <td style="border:1px solid #000; padding:5px 4px; text-align:center; font-size:7pt">${v.tratDef || 'Maxim XL'}</td>
-          <td style="border:1px solid #000; padding:5px 4px; text-align:center; font-size:7pt">${v.tratDos || '200 mL/100kg'}</td>
-        </tr>
-      `;
-    }).join('');
-
-    // Tabela 2: Fundação e Cobertura (mínimo 5 linhas na folha oficial)
-    const fundacaoRows = [...varGroup];
-    while (fundacaoRows.length < 5) fundacaoRows.push(null);
-
-    const fundacaoRowsHtml = fundacaoRows.map((f, idx) => {
-      if (!f) {
-        return `
-          <tr>
-            <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">-</td>
-            <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">&nbsp;</td>
-            <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">&nbsp;</td>
-            <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">&nbsp;</td>
-            <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">-</td>
-            <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">-</td>
-            <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">-</td>
-            <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">-</td>
-            <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">-</td>
-          </tr>
-        `;
-      }
-      const isFirst = idx === 0;
-      const isSecond = idx === 1;
-      const fmtDate = f.dataPlantio ? f.dataPlantio.split('-').reverse().join('/') : (item.plantio ? item.plantio.split('-').reverse().join('/') : '—');
-      const numOrdem = isFirst ? 'Nº da ordem:' : '';
-      const epoca = 'Antes do Plantio';
-      const adubo = isFirst ? 'ADUBO 06-24-12' : (isSecond ? 'MAP' : '-');
-      const qtdKg = isFirst ? '1.500' : '-';
-      const equip = isFirst ? 'Adubadeira' : '-';
-      const metodo = isFirst ? 'Mecânico' : '-';
-
-      return `
-        <tr>
-          <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">${fmtDate}</td>
-          <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">${numOrdem}</td>
-          <td style="border:1px solid #000; padding:4px 6px; font-weight:bold; font-size:7.5pt; text-align:center">${f.nome}</td>
-          <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">${epoca}</td>
-          <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">${adubo}</td>
-          <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">${qtdKg}</td>
-          <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">${equip}</td>
-          <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">${metodo}</td>
-          <td style="border:1px solid #000; padding:4px 6px; text-align:center; font-size:7.5pt">-</td>
+          <td style="border:1px solid #000; padding:4px 3px; font-size:6.8pt; line-height:1.2; text-align:left">
+            ${v.tratDef1 ? `<div><strong>1:</strong> ${v.tratDef1}</div>` : ''}
+            ${v.tratDef2 ? `<div style="margin-top:2px"><strong>2:</strong> ${v.tratDef2}</div>` : ''}
+            ${!v.tratDef1 && !v.tratDef2 ? '<div style="text-align:center">—</div>' : ''}
+          </td>
+          <td style="border:1px solid #000; padding:4px 3px; font-size:6.8pt; line-height:1.2; text-align:center">
+            ${v.tratDos1 ? `<div><strong>1:</strong> ${v.tratDos1}</div>` : ''}
+            ${v.tratDos2 ? `<div style="margin-top:2px"><strong>2:</strong> ${v.tratDos2}</div>` : ''}
+            ${!v.tratDos1 && !v.tratDos2 ? '—' : ''}
+          </td>
         </tr>
       `;
     }).join('');
@@ -6351,7 +6389,7 @@ async function printPastaCampoSementes(idOrStr, mode = 'ALL', varIdx = 0) {
           <td style="width: 25%; text-align:center; vertical-align:middle;">${getTenantLogoHtml(42, 120)}</td>
           <td style="width: 43%; font-size: 6.5pt; line-height: 1.35;">
             <strong>DEPARTAMENTO:</strong> CAMPO<br/>
-            <strong>NOME DO DOC:</strong> IDENTIFICAÇÃO DE SEMENTE, MUDAS, ADUB. DE FUND.<br/>
+            <strong>NOME DO DOC:</strong> IDENTIFICAÇÃO DE SEMENTE E MUDAS<br/>
             <strong>EMISSÃO:</strong> 15/06/2026 &nbsp; <strong>MOD. E APROVAÇÃO:</strong> 01/07/2026 &nbsp; <strong>U. REVISÃO:</strong> 01/07/2026<br/>
             <strong>PAG:</strong> ${pagAtual} DE ${pagTotal} &nbsp;\\&nbsp; <strong>COD:</strong> PC03 &nbsp;\\&nbsp; <strong>REVISÃO:</strong> ANUAL &nbsp;\\&nbsp; <strong>VERSÃO:</strong> 01
           </td>
@@ -6360,8 +6398,8 @@ async function printPastaCampoSementes(idOrStr, mode = 'ALL', varIdx = 0) {
 
       <div class="parcela-bar">&nbsp;&nbsp;&nbsp;&nbsp;<strong>Parcela:</strong> &nbsp;&nbsp;&nbsp;&nbsp; <strong>${pCode}</strong></div>
 
-      <!-- SEÇÃO 1: IDENTIFICAÇÃO DA SEMENTE -->
-      <div class="title-red">IDENTIFICAÇÃO DA SEMENTE</div>
+      <!-- SEÇÃO 1: IDENTIFICAÇÃO DA SEMENTE E TRATAMENTO DA MUDA -->
+      <div class="title-red">IDENTIFICAÇÃO DA SEMENTE E TRATAMENTO DA MUDA</div>
       <table class="grid-table">
         <thead>
           <tr>
@@ -6374,11 +6412,11 @@ async function printPastaCampoSementes(idOrStr, mode = 'ALL', varIdx = 0) {
             <th rowspan="2" style="width: 7%;">Qnt. Sem.</th>
             <th rowspan="2" style="width: 6%;">Pureza%</th>
             <th rowspan="2" style="width: 7%;">Germinação<br/>DIAS</th>
-            <th colspan="2" style="width: 22%;">Tratamento da Semente</th>
+            <th colspan="2" style="width: 24%;">Tratamento da Muda</th>
           </tr>
           <tr>
-            <th style="width: 13%;">Nome do Defensivo</th>
-            <th style="width: 9%;">Dosagem</th>
+            <th style="width: 14%;">Defensivos (1 e 2)</th>
+            <th style="width: 10%;">Dosagem</th>
           </tr>
         </thead>
         <tbody>
@@ -6386,40 +6424,25 @@ async function printPastaCampoSementes(idOrStr, mode = 'ALL', varIdx = 0) {
         </tbody>
       </table>
 
-      <div class="obs-text">
+      <div class="obs-text" style="font-size: 6.8pt; line-height: 1.35; margin: 8px 0; border: 1px dashed #94a3b8; padding: 8px 10px; border-radius: 6px; background: #fafafa;">
         <strong>OBS:</strong> O CFO - CERTIFICADO FITOSSANITÁRIO DE ORIGEM DA SEMENTE E O DOC. QUE A SEMENTE NÃO É GENETICAMENTE MODIFICADA DEVE SER COBRADO AO FORNECEDOR, SENDO OS MESMO ARQUIVADOS NA PASTA RESERVADA A ESSE FIM. NESTA MESMA PASTA ENCONTRA-SE DOCUMENTOS QUE COMPROVAM A RESISTÊNCIA DE PRAGAS E DOENÇAS NAS VARIEDADES. O ENVELOPE OU ROTULO DA EMBALAGEM DA SEMENTE DEVE SER COLADO NA PASTA DE CAMPO.
       </div>
-      <div class="obs-extra">OBS EXTRA:</div>
 
-      <!-- SEÇÃO 2: CONTROLE DO USO DE MATÉRIA ORGÂNICA, FERTILIZANTES NA FUNDAÇÃO E EM COBERTURA -->
-      <div class="title-red">CONTROLE DO USO DE MATÉRIA ORGÂNICA, FERTILIZANTES NA FUNDAÇÃO E EM COBERTURA</div>
-      <table class="grid-table">
-        <thead>
-          <tr>
-            <th style="width: 9%;">DATA &nbsp; DD/MM/AAAA</th>
-            <th style="width: 12%;">Nº da<br/>Ordem de Adubação</th>
-            <th style="width: 13%;">Variedade</th>
-            <th style="width: 11%;">Época de<br/>Aplicação</th>
-            <th style="width: 14%;">Nome<br/>Comercial</th>
-            <th style="width: 10%;">Quant. Com.<br/>Kg / Parcela</th>
-            <th style="width: 11%;">Equipamento<br/>Utilizado</th>
-            <th style="width: 9%;">Método de<br/>Aplicação</th>
-            <th style="width: 11%;">Nome do Operador<br/>Responsável</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${fundacaoRowsHtml}
-        </tbody>
-      </table>
-
-      <div class="obs-text">
-        <strong>OBS:</strong> TODO PRODUTO APLICADO NAS PARCELAS DE CAMPO DEVEM SER REGISTRADOS EM PLANILHAS ESPECÍFICAS E ESTAREM PRESCRITOS POR TÉCNICO CREDENCIADO.
+      <!-- ESPAÇO RESERVADO PARA ANEXAR O ENVELOPE / RÓTULO DA EMBALAGEM DA SEMENTE -->
+      <div style="flex: 1; min-height: 60mm; border: 1.5px dashed #94a3b8; border-radius: 8px; padding: 12px; margin: 8px 0; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #f8fafc;">
+        <div style="font-size: 8pt; font-weight: bold; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">
+          ESPAÇO RESERVADO PARA ANEXAR O ENVELOPE / RÓTULO DA EMBALAGEM DA SEMENTE
+        </div>
+        <div style="font-size: 6.8pt; color: #64748b; margin-top: 4px;">
+          (Conforme exigência do CFO GlobalGAP — Colar rótulo da semente ou comprovante arquivado nesta folha)
+        </div>
       </div>
-      <div class="obs-extra" style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:8px;">
-        <div><strong>OBS EXTRA:</strong></div>
-        <div style="text-align:center; min-width:260px; border-top:1px solid #000; padding-top:4px; font-size:7pt">
+
+      <div class="obs-extra" style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:8px; padding-top:6px;">
+        <div style="font-size:7.5pt;"><strong>OBS EXTRA:</strong> ________________________________________________________________</div>
+        <div style="text-align:center; min-width:270px; border-top:1px solid #000; padding-top:4px; font-size:7.5pt">
           <strong>IVANOSCA MARTINS DE OLIVEIRA CUNHA</strong><br/>
-          <span style="font-size:6.5pt; color:#444">Engª Agrônoma | RT — CREA 2100995243</span>
+          <span style="font-size:6.8pt; color:#444">Engª Agrônoma | RT — CREA 2100995243</span>
         </div>
       </div>
     </div>
@@ -6431,7 +6454,7 @@ async function printPastaCampoSementes(idOrStr, mode = 'ALL', varIdx = 0) {
   <html>
   <head>
   <meta charset="utf-8"/>
-  <title>PC03 - IDENTIFICAÇÃO DE SEMENTE, MUDAS, ADUB. DE FUND. — ${pCode}</title>
+  <title>PC03 - IDENTIFICAÇÃO DE SEMENTE E MUDAS — ${pCode}</title>
   <style>
     @page { size: A4 landscape; margin: 6mm 8mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
