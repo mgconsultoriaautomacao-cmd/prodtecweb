@@ -531,7 +531,16 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
   }
 
   const parcelCode = item ? (item.parcela2 || (item.parcela ? item.parcela + (item.letra || '') : '')) : '';
-  const areaVal = parseFloat(item && item.area ? item.area : 3.0) || 1.0;
+  let areaVal = 1.0;
+  if (item) {
+    if (typeof window.extractNormalizedParcelVarieties === 'function') {
+      const norm = window.extractNormalizedParcelVarieties(item);
+      if (norm && norm.totalArea > 0) areaVal = norm.totalArea;
+      else areaVal = parseFloat(item.area || item.area_ha || 3.0) || 1.0;
+    } else {
+      areaVal = parseFloat(item.area || item.area_ha || 3.0) || 1.0;
+    }
+  }
   const plantioStr = item ? (item.plantio || item.transplante || item.data_plantio1) : null;
   const plantioDt = plantioStr ? new Date(plantioStr + (plantioStr.includes('T') ? '' : 'T00:00:00')) : null;
 

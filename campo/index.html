@@ -3472,7 +3472,11 @@ let varieties = [];
   ${vars.map(v => `<span style="font-size:11px; background:rgba(16,185,129,0.1); color:var(--green); border:1px solid rgba(16,185,129,0.2); padding:2px 8px; border-radius:6px; font-weight:600">${v}</span>`).join('')}
   </div>
   <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; font-size:11px; color:var(--muted2)">
-  <span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="ruler" style="width:12px;height:12px"></i> ${p.area ? p.area + ' ha' : '—'}</span>
+  ${(() => {
+    const norm = typeof extractNormalizedParcelVarieties === 'function' ? extractNormalizedParcelVarieties(p) : null;
+    const areaStr = (norm && norm.totalArea > 0) ? norm.totalArea.toFixed(2) : (p.area ? parseFloat(p.area).toFixed(2) : '—');
+    return `<span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="ruler" style="width:12px;height:12px"></i> ${areaStr !== '—' ? areaStr + ' ha' : '—'}</span>`;
+  })()}
   <span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="sprout" style="width:12px;height:12px"></i> Transpl: ${p.transplante ? fmtDate(p.transplante) : (p.plantio ? fmtDate(p.plantio) : '—')}</span>
   <span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="calendar" style="width:12px;height:12px"></i> Prev: ${p.previsao_colheita ? fmtDate(p.previsao_colheita) : '—'}</span>
   </div>
@@ -3493,53 +3497,179 @@ let varieties = [];
   if (window.lucide) lucide.createIcons();
   }
 
+  // Normalização e extração precisa de variedades e áreas individuais
+  function extractNormalizedParcelVarieties(item) {
+    if (!item) return { vars: [], totalLinhas: 0, totalArea: 0 };
+    
+    let sementesExt = [];
+    if (item.obs && item.obs.includes('<!--SEMENTES_EXT:')) {
+      try {
+        const m = item.obs.match(/<!--SEMENTES_EXT:([\s\S]*?)-->/);
+        if (m && m[1]) sementesExt = JSON.parse(m[1]);
+      } catch(e) {}
+    }
+
+    const rawVars = [];
+    for (let i = 0; i < 10; i++) {
+      const ext = sementesExt[i] || {};
+      const colSuffix = i === 0 ? '' : (i + 1);
+      const nome = (item[`variedade${colSuffix}`] || ext.nome || (i === 0 ? item.variedade1 : '') || '').trim().toUpperCase();
+      if (nome) {
+        rawVars.push({
+          idx: i + 1,
+          nome: nome,
+          lote: ext.lote || item[`lote${colSuffix}`] || (i === 0 ? item.lote : '') || '',
+          qtd: ext.qtd || item[`quantidade${colSuffix}`] || (i === 0 ? item.quantidade : '') || '',
+          linhas: parseFloat(item[`linhas${i+1}`] || (i === 0 ? item.linhas1 : 0)) || 0,
+          tamanhoLinha: parseFloat(item[`tamanho_linha${i+1}`] || item.tamanho_linha || 0) || 0,
+          data: item[`data_plantio${i+1}`] || (i === 0 ? item.data_plantio1 || item.transplante || item.plantio : '') || '',
+          area: parseFloat(item[`area${i+1}`] || (i === 0 ? item.area1 : 0)) || 0,
+          fornecedor: ext.fornecedor || (i === 0 ? item.fornecedor : (i === 1 ? item.fornecedor2 || item.fornecedor : '')) || '',
+          dataCompra: ext.data_compra || (i === 0 ? item.semeadura || item.plantio : '') || '',
+          nf: ext.nf || item[`nf${colSuffix}`] || (i === 0 ? item.nf : '') || '',
+          termo: ext.termo || item[`termo${colSuffix}`] || (i === 0 ? item.termo : '') || '',
+          pureza: ext.pureza || (i === 0 ? '99%' : '98%'),
+          germinacao: ext.germinacao || (i === 0 ? '90%' : '85%'),
+          tratDef1: ext.trat_muda_def1 || ext.tratamento_def || item.defensivo_semente || '',
+          tratDos1: ext.trat_muda_dos1 || ext.tratamento_dos || item.dosagem_semente || '',
+          tratDef2: ext.trat_muda_def2 || '',
+          tratDos2: ext.trat_muda_dos2 || '',
+          semeadura: ext.semeadura || item[`semeadura${colSuffix}`] || (i === 0 ? item.semeadura : '') || '',
+          previsao: item[`previsao_colheita${i+1}`] || (i === 0 ? item.previsao_colheita1 || item.previsao_colheita : '') || ''
+        });
+      }
+    }
+
+    const tamLinhaPadrao = parseFloat(item.tamanho_linha || 0);
+    const mainArea = parseFloat(item.area || item.area_ha || 0);
+    const mainLinhas = parseFloat(item.linhas || 0);
+
+    if (rawVars.length === 0) {
+      return { vars: [], totalLinhas: mainLinhas, totalArea: mainArea };
+    }
+
+    if (rawVars.length === 1) {
+      const v = rawVars[0];
+      if (v.linhas <= 0 && mainLinhas > 0) v.linhas = mainLinhas;
+      if (v.tamanhoLinha <= 0 && tamLinhaPadrao > 0) v.tamanhoLinha = tamLinhaPadrao;
+      if (v.area <= 0) {
+        if (mainArea > 0) v.area = mainArea;
+        else if (v.linhas > 0 && v.tamanhoLinha > 0) v.area = (v.linhas * v.tamanhoLinha) / 5000;
+      }
+      const finalArea = v.area > 0 ? parseFloat(v.area.toFixed(2)) : mainArea;
+      const finalLinhas = v.linhas > 0 ? v.linhas : mainLinhas;
+      v.area = finalArea;
+      return { vars: [v], totalLinhas: finalLinhas, totalArea: finalArea };
+    }
+
+    // Múltiplas variedades (2, 3 ou mais)
+    rawVars.forEach(v => {
+      if (v.tamanhoLinha <= 0 && tamLinhaPadrao > 0) v.tamanhoLinha = tamLinhaPadrao;
+    });
+
+    const somaLinhasOutras = rawVars.slice(1).reduce((sum, v) => sum + (v.linhas > 0 ? v.linhas : 0), 0);
+    const v1 = rawVars[0];
+    if (v1.linhas <= 0 || v1.linhas === mainLinhas) {
+      if (mainLinhas > somaLinhasOutras) {
+        v1.linhas = mainLinhas - somaLinhasOutras;
+      }
+    }
+
+    rawVars.slice(1).forEach(v => {
+      if (v.area <= 0 && v.linhas > 0 && v.tamanhoLinha > 0) {
+        v.area = parseFloat(((v.linhas * v.tamanhoLinha) / 5000).toFixed(2));
+      }
+    });
+    const somaAreaOutras = rawVars.slice(1).reduce((sum, v) => sum + (v.area > 0 ? v.area : 0), 0);
+
+    // Evitar que Variedade 1 retenha indevidamente a área total da parcela
+    const isV1AreaAnomala = (
+      v1.area <= 0 ||
+      (mainArea > 0 && somaAreaOutras > 0 && (
+        Math.abs(v1.area - mainArea) < 0.05 ||
+        v1.area >= mainArea ||
+        (v1.area + somaAreaOutras) >= (mainArea * 1.25)
+      ))
+    );
+
+    if (isV1AreaAnomala) {
+      if (v1.linhas > 0 && v1.tamanhoLinha > 0) {
+        v1.area = parseFloat(((v1.linhas * v1.tamanhoLinha) / 5000).toFixed(2));
+      } else if (mainArea > somaAreaOutras) {
+        v1.area = parseFloat((mainArea - somaAreaOutras).toFixed(2));
+      }
+    }
+
+    let totalLinhas = 0;
+    let totalArea = 0;
+    rawVars.forEach(v => {
+      totalLinhas += (v.linhas || 0);
+      totalArea += (v.area || 0);
+    });
+
+    totalArea = parseFloat(totalArea.toFixed(2));
+    return { vars: rawVars, totalLinhas, totalArea };
+  }
+  window.extractNormalizedParcelVarieties = extractNormalizedParcelVarieties;
+
   function calcAreaHectares(isManualAreaEdit = false) {
-  const tamanhoLinha = parseFloat($('plTamanhoLinha')?.value) || 0;
-  let totalArea = 0;
-  let totalLinhas = 0;
+    const tamanhoLinha = parseFloat($('plTamanhoLinha')?.value) || 0;
+    let totalArea = 0;
+    let totalLinhas = 0;
 
-  for (let i = 1; i <= 10; i++) {
-  const linhasEl = $(`plLinhas${i}`);
-  const areaEl = $(`plAreaVar${i}`);
-  const badgeEl = $(`plAreaVarBadge${i}`);
-  const linhasVar = parseFloat(linhasEl?.value) || 0;
-  
-  let areaVar = 0;
-  if (isManualAreaEdit && areaEl && areaEl.value !== '') {
-  areaVar = parseFloat(areaEl.value) || 0;
-  } else if (linhasVar > 0) {
-  areaVar = (tamanhoLinha > 0) ? (linhasVar * tamanhoLinha) / 5000 : 0;
-  if (areaEl) areaEl.value = areaVar > 0 ? areaVar.toFixed(2) : '';
-  } else if (areaEl && areaEl.value !== '') {
-  areaVar = parseFloat(areaEl.value) || 0;
+    for (let i = 1; i <= 10; i++) {
+      const row = $(`varRow${i}`);
+      if (!row) continue;
+
+      const linhasEl = $(`plLinhas${i}`);
+      const areaEl = $(`plAreaVar${i}`);
+      const badgeEl = $(`plAreaVarBadge${i}`);
+      const linhasVar = parseFloat(linhasEl?.value) || 0;
+      
+      let areaVar = 0;
+      if (isManualAreaEdit && areaEl && areaEl.value !== '') {
+        areaVar = parseFloat(areaEl.value) || 0;
+      } else if (linhasVar > 0 && tamanhoLinha > 0) {
+        areaVar = (linhasVar * tamanhoLinha) / 5000;
+        if (areaEl) areaEl.value = areaVar > 0 ? areaVar.toFixed(2) : '';
+      } else if (areaEl && areaEl.value !== '') {
+        areaVar = parseFloat(areaEl.value) || 0;
+      }
+
+      if (linhasVar > 0) totalLinhas += linhasVar;
+      if (areaVar > 0) {
+        totalArea += areaVar;
+        if (badgeEl) badgeEl.textContent = `${areaVar.toFixed(2)} ha`;
+      } else {
+        if (badgeEl) badgeEl.textContent = '0,00 ha';
+      }
+    }
+
+    if (totalLinhas === 0) {
+      totalLinhas = parseFloat($('plFileiras')?.value) || 0;
+      if (totalArea === 0 && totalLinhas > 0 && tamanhoLinha > 0) {
+        totalArea = (totalLinhas * tamanhoLinha) / 5000;
+      }
+    } else {
+      if ($('plFileiras')) $('plFileiras').value = totalLinhas;
+    }
+
+    const areaInput = $('plArea');
+    const hint = $('plAreaHint');
+    if (areaInput && totalArea > 0) {
+      areaInput.value = totalArea.toFixed(2);
+    }
+    if (hint) {
+      hint.textContent = ` Total: ${totalLinhas} linhas | Área Total Soma Variedades: ${totalArea.toFixed(2)} ha`;
+    }
   }
 
-  if (linhasVar > 0) totalLinhas += linhasVar;
-  if (areaVar > 0) {
-  totalArea += areaVar;
-  if (badgeEl) badgeEl.textContent = `${areaVar.toFixed(2)} ha`;
-  } else {
-  if (badgeEl) badgeEl.textContent = '0,00 ha';
-  }
-  }
-
-  if (totalLinhas === 0) {
-  totalLinhas = parseFloat($('plFileiras')?.value) || 0;
-  if (totalArea === 0 && totalLinhas > 0 && tamanhoLinha > 0) {
-  totalArea = (totalLinhas * tamanhoLinha) / 5000;
-  }
-  } else {
-  if ($('plFileiras')) $('plFileiras').value = totalLinhas;
-  }
-
-  const areaInput = $('plArea');
-  const hint = $('plAreaHint');
-  if (areaInput && totalArea > 0) {
-  areaInput.value = totalArea.toFixed(2);
-  }
-  if (hint) {
-  hint.textContent = ` Total: ${totalLinhas} linhas | Área Total Soma Variedades: ${totalArea.toFixed(2)} ha`;
-  }
+  function removeVariedadeRow(idx) {
+    const row = $(`varRow${idx}`);
+    if (row) {
+      row.remove();
+      calcAreaHectares();
+    }
   }
 
   function addVariedadeRow(
@@ -3665,7 +3795,7 @@ let varieties = [];
   });
   updateParcela2Preview();
   $('plPrevisaoHint').textContent = '';
-  if ($('plAreaHint')) $('plAreaHint').textContent = ' Cálculo automático: (Linhas × Tamanho da Linha) / 5.000';
+  if ($('plAreaHint')) $('plAreaHint').textContent = ' Cálculo automático por variedade: (Linhas × Tamanho da Linha) / 5.000';
 
   // Init variedades com 1 row
   variedadeRowCount = 0;
@@ -3685,10 +3815,8 @@ let varieties = [];
 
   if (item.cultura) selectCultura(item.cultura);
 
-  $('plFileiras').value = item.linhas || '';
   $('plTamanhoLinha').value = item.tamanho_linha || '';
   $('plEspacamento').value = item.espacamento || '';
-  $('plArea').value = item.area || '';
   $('plSemeadura').value = item.semeadura || '';
   $('plTransplante').value = item.transplante || item.plantio || '';
   $('plPrevisao').value = item.previsao_colheita || '';
@@ -3704,49 +3832,21 @@ let varieties = [];
   $('plProdutosMuda').value = item.produtos_muda || '';
   
   // Limpar metadados JSON do obs visível
-  let sementesExt = [];
-  if (item.obs && item.obs.includes('<!--SEMENTES_EXT:')) {
-    try {
-      const m = item.obs.match(/<!--SEMENTES_EXT:([\s\S]*?)-->/);
-      if (m && m[1]) sementesExt = JSON.parse(m[1]);
-    } catch(e) {}
-  }
   $('plObs').value = (item.obs || '').replace(/<!--SEMENTES_EXT:[\s\S]*?-->/g, '').trim();
 
-  // Load variedades com linhas, data de plantio, área e dados de sementes individuais
-  const varsArr = [];
-  for (let i = 0; i < 10; i++) {
-    const ext = sementesExt[i] || {};
-    const colSuffix = i === 0 ? '' : (i + 1);
-    const nome = item[`variedade${colSuffix}`] || ext.nome;
-    if (nome) {
-      varsArr.push({
-        nome: nome,
-        lote: ext.lote || item[`lote${colSuffix}`] || (i === 0 ? item.lote : '') || '',
-        qtd: ext.qtd || item[`quantidade${colSuffix}`] || (i === 0 ? item.quantidade : '') || '',
-        linhas: item[`linhas${i+1}`] || (i === 0 ? item.linhas1 || item.linhas : '') || '',
-        data: item[`data_plantio${i+1}`] || (i === 0 ? item.data_plantio1 || item.transplante || item.plantio : '') || '',
-        area: item[`area${i+1}`] || (i === 0 ? item.area1 || item.area : '') || '',
-        fornecedor: ext.fornecedor || (i === 0 ? item.fornecedor : (i === 1 ? item.fornecedor2 || item.fornecedor : '')) || '',
-        dataCompra: ext.data_compra || (i === 0 ? item.semeadura || item.plantio : '') || '',
-        nf: ext.nf || item[`nf${colSuffix}`] || (i === 0 ? item.nf : '') || '',
-        termo: ext.termo || item[`termo${colSuffix}`] || (i === 0 ? item.termo : '') || '',
-        pureza: ext.pureza || (i === 0 ? '99%' : i === 1 ? '98%' : '98%'),
-        germinacao: ext.germinacao || (i === 0 ? '90%' : i === 1 ? '85%' : '85%'),
-        tratDef1: ext.trat_muda_def1 || ext.tratamento_def || item.defensivo_semente || '',
-        tratDos1: ext.trat_muda_dos1 || ext.tratamento_dos || item.dosagem_semente || '',
-        tratDef2: ext.trat_muda_def2 || '',
-        tratDos2: ext.trat_muda_dos2 || ''
-      });
-    }
-  }
+  // Load variedades normalizadas com hectares e linhas individuais corretas
+  const normData = extractNormalizedParcelVarieties(item);
+  const varsArr = normData.vars;
 
   if (varsArr.length === 0) addVariedadeRow();
   else varsArr.forEach(v => addVariedadeRow(
-    v.nome, v.lote, v.qtd, v.linhas, v.data, v.area,
+    v.nome, v.lote, v.qtd, v.linhas > 0 ? v.linhas : '', v.data, v.area > 0 ? v.area.toFixed(2) : '',
     v.fornecedor, v.dataCompra, v.nf, v.termo, v.pureza, v.germinacao,
     v.tratDef1, v.tratDos1, v.tratDef2, v.tratDos2
   ));
+
+  if ($('plFileiras')) $('plFileiras').value = normData.totalLinhas > 0 ? normData.totalLinhas : (item.linhas || '');
+  if ($('plArea')) $('plArea').value = normData.totalArea > 0 ? normData.totalArea.toFixed(2) : (item.area || '');
 
   } else {
   title.textContent = 'Novo Plantio';
@@ -3773,20 +3873,9 @@ let varieties = [];
   const printWin = window.open('', '_blank', 'width=950,height=1250');
   if (!printWin) { toast('Permita popups no navegador para imprimir.', 'err'); return; }
 
-  const varsData = [
-  { nome: item.variedade, lote: item.lote, qtd: item.quantidade, linhas: item.linhas1 || item.linhas, data: item.data_plantio1 || item.plantio, area: item.area1 },
-  { nome: item.variedade2, lote: item.lote2, qtd: item.quantidade2, linhas: item.linhas2, data: item.data_plantio2, area: item.area2 },
-  { nome: item.variedade3, lote: item.lote3, qtd: item.quantidade3, linhas: item.linhas3, data: item.data_plantio3, area: item.area3 },
-  { nome: item.variedade4, lote: item.lote4, qtd: item.quantidade4, linhas: item.linhas4, data: item.data_plantio4, area: item.area4 },
-  { nome: item.variedade5, lote: item.lote5, qtd: item.quantidade5, linhas: item.linhas5, data: item.data_plantio5, area: item.area5 },
-  { nome: item.variedade6, lote: item.lote6, qtd: item.quantidade6, linhas: item.linhas6, data: item.data_plantio6, area: item.area6 },
-  { nome: item.variedade7, lote: item.lote7, qtd: item.quantidade7, linhas: item.linhas7, data: item.data_plantio7, area: item.area7 },
-  { nome: item.variedade8, lote: item.lote8, qtd: item.quantidade8, linhas: item.linhas8, data: item.data_plantio8, area: item.area8 },
-  { nome: item.variedade9, lote: item.lote9, qtd: item.quantidade9, linhas: item.linhas9, data: item.data_plantio9, area: item.area9 },
-  { nome: item.variedade10, lote: item.lote10, qtd: item.quantidade10, linhas: item.linhas10, data: item.data_plantio10, area: item.area10 },
-  ].filter(v => v.nome);
+  const normData = extractNormalizedParcelVarieties(item);
+  const varsData = normData.vars;
 
-  const tamLinha = item.tamanho_linha || 0;
   let totalLinhas = 0;
   let totalSementes = 0;
   let totalAreaCalculada = 0;
@@ -3794,12 +3883,12 @@ let varieties = [];
   const variedadesRowsHtml = varsData.map((v, i) => {
   const lin = v.linhas || 0;
   const qtdSem = v.qtd || 0;
-  const areaCalc = v.area || (tamLinha > 0 && lin > 0 ? (lin * tamLinha) / 5000 : 0);
+  const areaCalc = v.area || 0;
   totalLinhas += lin;
   totalSementes += qtdSem;
   totalAreaCalculada += areaCalc;
 
-  const dtPlantio = v.data ? new Date(v.data + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  const dtPlantio = v.data ? new Date(v.data + (v.data.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('pt-BR') : '—';
 
   return `
   <tr>
@@ -3814,7 +3903,7 @@ let varieties = [];
   `;
   }).join('');
 
-  const areaFinal = totalAreaCalculada > 0 ? totalAreaCalculada.toFixed(2) : (item.area || '—');
+  const areaFinal = normData.totalArea > 0 ? normData.totalArea.toFixed(2) : (totalAreaCalculada > 0 ? totalAreaCalculada.toFixed(2) : (item.area || '—'));
   const dtPlantioItem = item.plantio ? new Date(item.plantio + 'T12:00:00') : null;
   const anoStr = dtPlantioItem ? `${dtPlantioItem.getFullYear()}/${dtPlantioItem.getFullYear() + 1}` : new Date().getFullYear();
 
@@ -4038,13 +4127,20 @@ let varieties = [];
 
   // Collect ate 10 variedades com dados agronômicos e de sementes individuais
   const varsData = [];
+  let sumAreaVars = 0;
+  let sumLinhasVars = 0;
+
   for (let i = 1; i <= 10; i++) {
+  const row = $(`varRow${i}`);
+  if (!row) continue;
   const nome = $(`plVar${i}`)?.value?.trim().toUpperCase();
   if (nome) {
   const linhasV = parseInt($(`plLinhas${i}`)?.value) || null;
   const dataV = $(`plDataPlantio${i}`)?.value || null;
   const areaVInput = parseFloat($(`plAreaVar${i}`)?.value);
-  const areaV = !isNaN(areaVInput) ? areaVInput : ((linhasV && tamanhoL > 0) ? parseFloat(((linhasV * tamanhoL) / 5000).toFixed(2)) : null);
+  const areaV = !isNaN(areaVInput) && areaVInput > 0 ? areaVInput : ((linhasV && tamanhoL > 0) ? parseFloat(((linhasV * tamanhoL) / 5000).toFixed(2)) : null);
+  if (linhasV) sumLinhasVars += linhasV;
+  if (areaV) sumAreaVars += areaV;
   const loteV = $(`plLote${i}`)?.value?.trim() || null;
   const qtdV = parseInt($(`plQtd${i}`)?.value) || null;
   const fornecedorV = $(`plFornecedorVar${i}`)?.value?.trim() || null;
@@ -4085,7 +4181,9 @@ let varieties = [];
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px"></div> Salvando...';
 
-  const areaVal = parseFloat($('plArea').value) || null;
+  const formAreaVal = parseFloat($('plArea').value) || null;
+  const finalAreaTotal = sumAreaVars > 0 ? parseFloat(sumAreaVars.toFixed(2)) : formAreaVal;
+  const finalLinhasTotal = sumLinhasVars > 0 ? sumLinhasVars : (parseInt($('plFileiras').value) || null);
 
   let physicalParcelId = null;
   if (isOnline) {
@@ -4148,11 +4246,11 @@ let varieties = [];
   variedade8: varsData[7]?.nome || null, lote8: varsData[7]?.lote || null, quantidade8: varsData[7]?.qtd || null, linhas8: varsData[7]?.linhas || null, data_plantio8: varsData[7]?.data_plantio || null, area8: varsData[7]?.area || null,
   variedade9: varsData[8]?.nome || null, lote9: varsData[8]?.lote || null, quantidade9: varsData[8]?.qtd || null, linhas9: varsData[8]?.linhas || null, data_plantio9: varsData[8]?.data_plantio || null, area9: varsData[8]?.area || null,
   variedade10: varsData[9]?.nome || null, lote10: varsData[9]?.lote || null, quantidade10: varsData[9]?.qtd || null, linhas10: varsData[9]?.linhas || null, data_plantio10: varsData[9]?.data_plantio || null, area10: varsData[9]?.area || null,
-  linhas: parseInt($('plFileiras').value) || null,
+  linhas: finalLinhasTotal,
   tamanho_linha: tamanhoL || null,
   espacamento: parseFloat($('plEspacamento').value) || null,
-  area: areaVal,
-  area_ha: areaVal,
+  area: finalAreaTotal,
+  area_ha: finalAreaTotal,
   semeadura: $('plSemeadura').value || null,
   transplante: $('plTransplante').value || null,
   plantio: $('plPlantio').value || $('plTransplante').value || null,
@@ -5411,53 +5509,16 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
   let plantioDates = [];
   let prevColheitaDates = [];
 
-  const varPropKeys = ['variedade', 'variedade1', 'variedade2', 'variedade3', 'variedade4', 'variedade5', 'variedade6', 'variedade7', 'variedade8', 'variedade9', 'variedade10', 'cultivar', 'cultivares'];
-
   matches.forEach(m => {
-    let rowArea = 0;
-    let hasSubAreas = false;
-    for (let i = 1; i <= 10; i++) {
-      const aVal = parseFloat(m[`area${i}`]);
-      if (!isNaN(aVal) && aVal > 0) {
-        rowArea += aVal;
-        hasSubAreas = true;
-      }
-    }
-    if (!hasSubAreas) {
-      const mainA = parseFloat(m.area || m.area_ha || 0);
-      if (!isNaN(mainA) && mainA > 0) rowArea = mainA;
-    }
-    totalArea += rowArea;
+    const norm = extractNormalizedParcelVarieties(m);
+    totalArea += (norm.totalArea || 0);
 
-    if (Array.isArray(m.variedades)) {
-      m.variedades.forEach(v => {
-        if (v) {
-          const cv = String(v).trim().toUpperCase();
-          if (cv && !varietiesSet.has(cv)) {
-            varietiesSet.add(cv);
-            const mArea = parseFloat(m.area || m.area_ha || rowArea);
-            varietiesWithArea.push({ nome: cv, area: (!isNaN(mArea) && mArea > 0) ? mArea.toFixed(2) : '—' });
-          }
-        }
-      });
-    }
-
-    varPropKeys.forEach((vk, idx) => {
-      const vVal = m[vk];
-      if (vVal) {
-        const areaKey = idx === 0 ? 'area' : (m[`area${idx+1}`] ? `area${idx+1}` : `area${idx}`);
-        const mArea = parseFloat(m[areaKey] || (idx === 0 ? m.area1 || m.area : 0));
-
-        String(vVal).split(/[,;/+]+/).forEach(v => {
-          const cv = v.trim().toUpperCase();
-          if (cv && !varietiesSet.has(cv)) {
-            varietiesSet.add(cv);
-            const calcArea = (!isNaN(mArea) && mArea > 0) ? mArea.toFixed(2) : ((!isNaN(rowArea) && rowArea > 0) ? rowArea.toFixed(2) : '—');
-            varietiesWithArea.push({
-              nome: cv,
-              area: calcArea
-            });
-          }
+    norm.vars.forEach(v => {
+      if (v.nome && !varietiesSet.has(v.nome)) {
+        varietiesSet.add(v.nome);
+        varietiesWithArea.push({
+          nome: v.nome,
+          area: v.area > 0 ? v.area.toFixed(2) : '—'
         });
       }
     });
@@ -5468,26 +5529,11 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
   });
 
   if (typeof parcelInput === 'object') {
-    if (Array.isArray(parcelInput.variedades)) {
-      parcelInput.variedades.forEach(v => {
-        if (v) {
-          const cv = String(v).trim().toUpperCase();
-          if (cv && !varietiesSet.has(cv)) {
-            varietiesSet.add(cv);
-            varietiesWithArea.push({ nome: cv, area: '—' });
-          }
-        }
-      });
-    }
-    varPropKeys.forEach(vk => {
-      if (parcelInput[vk]) {
-        String(parcelInput[vk]).split(/[,;/+]+/).forEach(v => {
-          const cv = v.trim().toUpperCase();
-          if (cv && !varietiesSet.has(cv)) {
-            varietiesSet.add(cv);
-            varietiesWithArea.push({ nome: cv, area: '—' });
-          }
-        });
+    const normObj = extractNormalizedParcelVarieties(parcelInput);
+    normObj.vars.forEach(v => {
+      if (v.nome && !varietiesSet.has(v.nome)) {
+        varietiesSet.add(v.nome);
+        varietiesWithArea.push({ nome: v.nome, area: v.area > 0 ? v.area.toFixed(2) : '—' });
       }
     });
   }
@@ -6124,63 +6170,30 @@ async function resolveParcelaItem(idOrStr) {
 // ── UTILITÁRIO: EXTRAÇÃO COMPLETA DE DADOS DE SEMENTES POR VARIEDADE (PC03) ──
 function extractParcelaSementesVars(item) {
   if (!item) return [];
-  let sementesExt = [];
-  if (item.obs && item.obs.includes('<!--SEMENTES_EXT:')) {
-    try {
-      const m = item.obs.match(/<!--SEMENTES_EXT:([\s\S]*?)-->/);
-      if (m && m[1]) sementesExt = JSON.parse(m[1]);
-    } catch(e) {
-      console.warn('Erro ao decodificar sementesExt:', e);
-    }
-  }
-
-  const result = [];
-  for (let i = 0; i < 10; i++) {
-    const ext = sementesExt[i] || {};
-    const colSuffix = i === 0 ? '' : (i + 1);
-    const nome = (item[`variedade${colSuffix}`] || ext.nome || '').trim().toUpperCase();
-    if (nome) {
-      const lote = ext.lote || item[`lote${colSuffix}`] || (i === 0 ? item.lote : '') || '—';
-      const qtd = ext.qtd || item[`quantidade${colSuffix}`] || (i === 0 ? item.quantidade : '') || null;
-      const linhas = item[`linhas${i+1}`] || (i === 0 ? item.linhas1 || item.linhas : '') || null;
-      const area = item[`area${i+1}`] || (i === 0 ? item.area1 || item.area : '') || null;
-      const dataPlantio = item[`data_plantio${i+1}`] || (i === 0 ? item.data_plantio1 || item.transplante || item.plantio : '') || null;
-      const semeadura = ext.semeadura || item[`semeadura${colSuffix}`] || (i === 0 ? item.semeadura : '') || null;
-      const nf = ext.nf || item[`nf${colSuffix}`] || (i === 0 ? item.nf : '') || '—';
-      const termo = ext.termo || item[`termo${colSuffix}`] || (i === 0 ? item.termo : '') || '—';
-      const fornecedor = ext.fornecedor || (i === 0 ? item.fornecedor : (i === 1 ? item.fornecedor2 || item.fornecedor : item.fornecedor)) || '—';
-      const dataCompra = ext.data_compra || semeadura || dataPlantio || (i === 0 ? item.plantio : '') || null;
-      const pureza = ext.pureza || (i === 0 ? '99%' : i === 1 ? '98%' : '98%');
-      const germinacao = ext.germinacao || (i === 0 ? '90%' : i === 1 ? '85%' : '85%');
-      const tratDef1 = ext.trat_muda_def1 || ext.tratamento_def || item.defensivo_semente || '';
-      const tratDos1 = ext.trat_muda_dos1 || ext.tratamento_dos || item.dosagem_semente || '';
-      const tratDef2 = ext.trat_muda_def2 || '';
-      const tratDos2 = ext.trat_muda_dos2 || '';
-
-      result.push({
-        idx: i + 1,
-        nome,
-        lote,
-        qtd,
-        linhas,
-        area,
-        dataPlantio,
-        semeadura,
-        nf,
-        termo,
-        fornecedor,
-        dataCompra,
-        pureza,
-        germinacao,
-        tratDef1,
-        tratDos1,
-        tratDef2,
-        tratDos2,
-        tratDef: tratDef1,
-        tratDos: tratDos1
-      });
-    }
-  }
+  const normData = extractNormalizedParcelVarieties(item);
+  return normData.vars.map(v => ({
+    idx: v.idx,
+    nome: v.nome,
+    lote: v.lote || '—',
+    qtd: v.qtd || null,
+    linhas: v.linhas > 0 ? v.linhas : null,
+    area: v.area > 0 ? v.area : null,
+    dataPlantio: v.data || null,
+    semeadura: v.semeadura || null,
+    nf: v.nf || '—',
+    termo: v.termo || '—',
+    fornecedor: v.fornecedor || '—',
+    dataCompra: v.dataCompra || null,
+    pureza: v.pureza || '99%',
+    germinacao: v.germinacao || '90%',
+    tratDef1: v.tratDef1 || '',
+    tratDos1: v.tratDos1 || '',
+    tratDef2: v.tratDef2 || '',
+    tratDos2: v.tratDos2 || '',
+    tratDef: v.tratDef1 || '',
+    tratDos: v.tratDos1 || ''
+  }));
+}
 
   if (result.length === 0 && item.variedade) {
     result.push({
