@@ -1821,15 +1821,16 @@
   <th style="text-align:left; padding:12px">Cultura</th>
   <th style="text-align:left; padding:12px">Variedades</th>
   <th style="text-align:center; padding:12px">Área (ha)</th>
+  <th style="text-align:center; padding:12px">Semeadura</th>
   <th style="text-align:center; padding:12px">Transplante</th>
   <th style="text-align:center; padding:12px">Previsão Colheita</th>
-  <th style="text-align:center; padding:12px">IDIARN / Termo</th>
+  <th style="text-align:center; padding:12px">UP / Termo</th>
   <th style="text-align:center; padding:12px">Status</th>
-  <th style="text-align:center; padding:12px">Ações</th>
+  <th style="text-align:center; padding:12px; min-width:320px">Ações</th>
   </tr>
   </thead>
   <tbody id="webPlantiosTableBody">
-  <tr><td colspan="10" style="text-align:center; padding:20px; color:var(--muted)">Carregando plantios...</td></tr>
+  <tr><td colspan="11" style="text-align:center; padding:20px; color:var(--muted)">Carregando plantios...</td></tr>
   </tbody>
   </table>
   </div>
@@ -18101,6 +18102,22 @@ function filterWebPlantios() {
   renderWebPlantiosTable(filtered);
 }
 
+function handlePlantioPrintAction(selectEl, id) {
+  if (!selectEl || !id) return;
+  const val = selectEl.value;
+  selectEl.value = '';
+  if (!val) return;
+  if (val === 'pc01') printPastaCampoCapa(id);
+  else if (val === 'pc03') openSementesPrintSelector(id);
+  else if (val === 'pc04') printPastaCampoCalendario(id);
+  else if (val === 'pc05') printPastaCampoTratos(id);
+  else if (val === 'pc06') printPastaCampoDefensivos(id);
+  else if (val === 'pc07') printPastaCampoFertirrigacao(id);
+  else if (val === 'pc08') printPastaCampoResumoElementos(id);
+  else if (val === 'pc09') printPastaCampoFoliares(id);
+  else if (val === 'idiarn') printPastaCampoIdiarn(id);
+}
+
 function renderWebPlantiosTable(data) {
   const tbody = $('webPlantiosTableBody');
   const counter = $('webPlCounter');
@@ -18110,82 +18127,141 @@ function renderWebPlantiosTable(data) {
   if (counter) counter.textContent = `Exibindo ${data.length} de ${webInfoParcelasData.length} plantio(s) • ${totalAtivos} ativos no total`;
 
   if (!data || data.length === 0) {
-  tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--muted)">Nenhum plantio encontrado com os filtros selecionados.</td></tr>`;
-  return;
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:30px; color:var(--muted)">Nenhum plantio encontrado com os filtros selecionados.</td></tr>`;
+    return;
   }
 
   const fmtDate = d => {
-  if (!d) return '—';
-  const dt = new Date(d + (d.includes('T') ? '' : 'T00:00:00'));
-  return dt.toLocaleDateString('pt-BR');
+    if (!d) return '—';
+    const dt = new Date(d + (d.includes('T') ? '' : 'T00:00:00'));
+    return dt.toLocaleDateString('pt-BR');
   };
 
   const cultBadge = c => {
-  if (c === 'MELÃO') return '<span style="font-size:11px; background:rgba(245,158,11,0.15); color:var(--yellow); border:1px solid rgba(245,158,11,0.3); padding:3px 8px; border-radius:6px; font-weight:700; display:inline-flex; align-items:center; gap:4px"><i data-lucide="sun" style="width:12px;height:12px"></i> MELÃO</span>';
-  if (c === 'MELANCIA') return '<span style="font-size:11px; background:rgba(236,72,153,0.15); color:#ec4899; border:1px solid rgba(236,72,153,0.3); padding:3px 8px; border-radius:6px; font-weight:700; display:inline-flex; align-items:center; gap:4px"><i data-lucide="circle-dot" style="width:12px;height:12px"></i> MELANCIA</span>';
-  if (c === 'MAMÃO') return '<span style="font-size:11px; background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:6px; font-weight:700; display:inline-flex; align-items:center; gap:4px"><i data-lucide="apple" style="width:12px;height:12px"></i> MAMÃO</span>';
-  return `<span style="font-size:11px; background:rgba(255,255,255,0.06); color:var(--muted); padding:3px 8px; border-radius:6px">${c || 'OUTROS'}</span>`;
+    if (c === 'MELÃO') return '<span style="font-size:11px; background:rgba(245,158,11,0.15); color:var(--yellow); border:1px solid rgba(245,158,11,0.3); padding:3px 8px; border-radius:6px; font-weight:700; display:inline-flex; align-items:center; gap:4px"><i data-lucide="sun" style="width:12px;height:12px"></i> MELÃO</span>';
+    if (c === 'MELANCIA') return '<span style="font-size:11px; background:rgba(236,72,153,0.15); color:#ec4899; border:1px solid rgba(236,72,153,0.3); padding:3px 8px; border-radius:6px; font-weight:700; display:inline-flex; align-items:center; gap:4px"><i data-lucide="circle-dot" style="width:12px;height:12px"></i> MELANCIA</span>';
+    if (c === 'MAMÃO') return '<span style="font-size:11px; background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:6px; font-weight:700; display:inline-flex; align-items:center; gap:4px"><i data-lucide="apple" style="width:12px;height:12px"></i> MAMÃO</span>';
+    return `<span style="font-size:11px; background:rgba(255,255,255,0.06); color:var(--muted); padding:3px 8px; border-radius:6px">${c || 'OUTROS'}</span>`;
   };
 
   tbody.innerHTML = data.map(p => {
-  const isAtivo = p.ativo !== false;
-  const vars = [p.variedade, p.variedade2, p.variedade3, p.variedade4, p.variedade5, p.variedade6, p.variedade7, p.variedade8, p.variedade9, p.variedade10].filter(Boolean);
+    const isAtivo = p.ativo !== false;
+    
+    // Normalização das variedades e cálculo exato da área real
+    const norm = typeof extractNormalizedParcelVarieties === 'function' 
+      ? extractNormalizedParcelVarieties(p) 
+      : { totalArea: parseFloat(p.area) || 0, varieties: [] };
+    
+    // Desduplicar variedades para exibição em badges limpas (sem repetições do mesmo nome)
+    const uniqueVars = [];
+    const seenVars = new Set();
+    if (norm.varieties && norm.varieties.length > 0) {
+      norm.varieties.forEach(v => {
+        const name = (v.nome || '').trim();
+        const key = name.toUpperCase();
+        if (name && !seenVars.has(key)) {
+          seenVars.add(key);
+          uniqueVars.push(name);
+        }
+      });
+    } else {
+      [p.variedade, p.variedade2, p.variedade3, p.variedade4, p.variedade5, p.variedade6, p.variedade7, p.variedade8, p.variedade9, p.variedade10]
+        .filter(Boolean)
+        .forEach(v => {
+          const name = String(v).trim();
+          const key = name.toUpperCase();
+          if (name && !seenVars.has(key)) {
+            seenVars.add(key);
+            uniqueVars.push(name);
+          }
+        });
+    }
 
-  // Cálculo de dias restantes
-  let diasBadge = '';
-  if (p.previsao_colheita) {
-  const hoje = new Date();
-  const prev = new Date(p.previsao_colheita + 'T00:00:00');
-  const dias = Math.ceil((prev - hoje) / 86400000);
-  if (dias > 0) {
-  diasBadge = `<div style="font-size:10px; color:var(--yellow); font-weight:700; margin-top:2px">${dias}d restantes</div>`;
-  } else {
-  diasBadge = `<div style="font-size:10px; color:var(--red); font-weight:700; margin-top:2px">Vencido / Pronto</div>`;
-  }
-  }
+    const areaVal = (norm.totalArea > 0) ? norm.totalArea : (parseFloat(p.area) || parseFloat(p.area_ha) || 0);
+    const displayArea = areaVal > 0 ? areaVal.toFixed(2) + ' ha' : '—';
 
-  return `
-  <tr style="border-bottom:1px solid var(--border); opacity:${isAtivo ? 1 : 0.6}">
-  <td style="padding:12px; text-align:center"><input type="checkbox" class="chkPlantioCapa" value="${p.id}" style="width:16px; height:16px; cursor:pointer"/></td>
-  <td style="padding:12px; font-weight:800; color:var(--text)">${esc(p.parcela2 || p.parcela || '—')}</td>
-  <td style="padding:12px">${cultBadge(p.cultura)}</td>
-  <td style="padding:12px">
-  <div style="display:flex; flex-wrap:wrap; gap:4px">
-  ${vars.map(v => `<span style="font-size:11px; background:rgba(16,185,129,0.08); color:var(--green); border:1px solid rgba(16,185,129,0.2); padding:2px 7px; border-radius:6px; font-weight:600">${esc(v)}</span>`).join('')}
-  </div>
-  </td>
-  <td style="padding:12px; text-align:center; font-weight:700">${p.area ? p.area + ' ha' : '—'}</td>
-  <td style="padding:12px; text-align:center">${p.transplante ? fmtDate(p.transplante) : (p.plantio ? fmtDate(p.plantio) : '—')}</td>
-  <td style="padding:12px; text-align:center">
-  <div style="font-weight:700">${p.previsao_colheita ? fmtDate(p.previsao_colheita) : '—'}</div>
-  ${diasBadge}
-  </td>
-  <td style="padding:12px; text-align:center; font-size:11px; color:var(--muted)">
-  ${p.idiarn ? `<div>IDIARN: <strong>${esc(p.idiarn)}</strong></div>` : ''}
-  ${p.termo ? `<div>Termo: <strong>${esc(p.termo)}</strong></div>` : ''}
-  ${!p.idiarn && !p.termo ? '—' : ''}
-  </td>
-  <td style="padding:12px; text-align:center">
-  ${isAtivo 
-  ? '<span style="font-size:10px; background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); padding:2px 7px; border-radius:6px; font-weight:700">ATIVO</span>'
-  : '<span style="font-size:10px; background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.3); padding:2px 7px; border-radius:6px; font-weight:700">ENCERRADO</span>'
-  }
-  </td>
-  <td style="padding:12px; text-align:center; white-space:nowrap">
-  <button onclick="printPastaCampoCapa('${p.id}')" class="btn on" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:12px; height:12px"></i> Capa (PC01)</button>
-  <button onclick="openSementesPrintSelector('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:12px; height:12px"></i> Sementes (PC03)</button>
-  <button onclick="printPastaCampoCalendario('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(124,58,237,0.15); color:#8b5cf6; border:1px solid rgba(124,58,237,0.3)"><i data-lucide="calendar" style="width:12px; height:12px"></i> Calendário (PC04)</button>
-  <button onclick="printPastaCampoTratos('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:12px; height:12px"></i> Tratos (PC05)</button>
-  <button onclick="printPastaCampoFertirrigacao(\'${p.id}\')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(6,182,212,0.15); color:#06b6d4; border:1px solid rgba(6,182,212,0.3)"><i data-lucide="droplet" style="width:12px; height:12px"></i> Fertirrigação (PC07)</button>
-  <button onclick="printPastaCampoResumoElementos('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(139,92,246,0.15); color:#a78bfa; border:1px solid rgba(139,92,246,0.3)"><i data-lucide="flask-conical" style="width:12px; height:12px"></i> Elementos (PC08)</button>
-  <button onclick="printPastaCampoFoliares('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(34,197,94,0.15); color:#4ade80; border:1px solid rgba(34,197,94,0.3)"><i data-lucide="printer" style="width:12px; height:12px"></i> Foliares (PC09)</button>
-  <button onclick="printPastaCampoDefensivos('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3)" title="Imprimir Controle Mensal de Agrotóxicos na Cultura (PC06)"><i data-lucide="shield" style="width:12px; height:12px"></i> Defensivos (PC06)</button>
-  <button onclick="printPastaCampoIdiarn('${p.id}')" class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(234,88,12,0.15); color:#ea580c; border:1px solid rgba(234,88,12,0.3)"><i data-lucide="file-check" style="width:12px; height:12px"></i> Ficha IDIARN</button>
-  <button onclick="openWebPlantioModal('${p.id}')" class="sec" style="padding:4px 8px; font-size:11px; margin-right:3px; display:inline-flex; align-items:center; gap:4px" title="Editar"><i data-lucide="edit-3" style="width:13px;height:13px"></i> Editar</button>
-  <button onclick="deleteWebPlantio('${p.id}')" class="danger" style="padding:4px 8px; font-size:11px; display:inline-flex; align-items:center; gap:4px; background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:var(--red); border-radius:6px; cursor:pointer" title="Excluir Definitivamente"><i data-lucide="trash-2" style="width:13px;height:13px"></i> Excluir</button>
-  </td>
-  </tr>
-  `;
+    // Cálculo de dias restantes da previsão de colheita
+    let diasBadge = '';
+    if (p.previsao_colheita) {
+      const hoje = new Date();
+      const prev = new Date(p.previsao_colheita + 'T00:00:00');
+      const dias = Math.ceil((prev - hoje) / 86400000);
+      if (dias > 0) {
+        diasBadge = `<div style="font-size:10px; color:var(--yellow); font-weight:700; margin-top:2px">${dias}d restantes</div>`;
+      } else {
+        diasBadge = `<div style="font-size:10px; color:var(--red); font-weight:700; margin-top:2px">Vencido / Pronto</div>`;
+      }
+    }
+
+    // Status (Ativo, Colhido, Encerrado)
+    let statusBadge = '';
+    const isColhido = String(p.status || '').toUpperCase() === 'COLHIDO' || p.colhido === true;
+    if (isColhido) {
+      statusBadge = '<span style="font-size:10px; background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.3); padding:3px 8px; border-radius:6px; font-weight:700">COLHIDO</span>';
+    } else if (!isAtivo) {
+      statusBadge = '<span style="font-size:10px; background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.3); padding:3px 8px; border-radius:6px; font-weight:700">ENCERRADO</span>';
+    } else {
+      statusBadge = '<span style="font-size:10px; background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:6px; font-weight:700">ATIVO</span>';
+    }
+
+    const dataSemeadura = p.semeadura || p.data_semeadura;
+    const dataTransplante = p.transplante || p.plantio;
+    const upCode = p.idiarn || p.up;
+
+    return `
+    <tr style="border-bottom:1px solid var(--border); opacity:${isAtivo ? 1 : 0.65}">
+      <td style="padding:12px; text-align:center"><input type="checkbox" class="chkPlantioCapa" value="${p.id}" style="width:16px; height:16px; cursor:pointer"/></td>
+      <td style="padding:12px; font-weight:800; color:var(--text); white-space:nowrap">${esc(p.parcela2 || p.parcela || '—')}</td>
+      <td style="padding:12px">${cultBadge(p.cultura)}</td>
+      <td style="padding:12px">
+        <div style="display:flex; flex-wrap:wrap; gap:4px">
+          ${uniqueVars.length > 0 
+            ? uniqueVars.map(v => `<span style="font-size:11px; background:rgba(16,185,129,0.08); color:var(--green); border:1px solid rgba(16,185,129,0.2); padding:2px 7px; border-radius:6px; font-weight:600">${esc(v)}</span>`).join('') 
+            : '<span style="color:var(--muted); font-size:11px">—</span>'}
+        </div>
+      </td>
+      <td style="padding:12px; text-align:center; font-weight:800; color:var(--text); white-space:nowrap">${displayArea}</td>
+      <td style="padding:12px; text-align:center; font-size:12px; white-space:nowrap">${dataSemeadura ? fmtDate(dataSemeadura) : '—'}</td>
+      <td style="padding:12px; text-align:center; font-size:12px; white-space:nowrap">${dataTransplante ? fmtDate(dataTransplante) : '—'}</td>
+      <td style="padding:12px; text-align:center; white-space:nowrap">
+        <div style="font-weight:700; font-size:12px">${p.previsao_colheita ? fmtDate(p.previsao_colheita) : '—'}</div>
+        ${diasBadge}
+      </td>
+      <td style="padding:12px; text-align:center; font-size:11px; color:var(--muted); white-space:nowrap">
+        ${upCode ? `<div>UP: <strong style="color:var(--text)">${esc(upCode)}</strong></div>` : ''}
+        ${p.termo ? `<div>Termo: <strong style="color:var(--text)">${esc(p.termo)}</strong></div>` : ''}
+        ${!upCode && !p.termo ? '—' : ''}
+      </td>
+      <td style="padding:12px; text-align:center; white-space:nowrap">
+        ${statusBadge}
+      </td>
+      <td style="padding:10px 12px; text-align:center; white-space:nowrap">
+        <div style="display:inline-flex; align-items:center; gap:5px; flex-wrap:nowrap">
+          <button onclick="openWebPlantioModal('${p.id}')" class="btn on" style="font-size:11px; padding:6px 10px; display:inline-flex; align-items:center; gap:4px; font-weight:700; cursor:pointer" title="Editar Informações da Parcela e Variedades">
+            <i data-lucide="edit-3" style="width:13px;height:13px"></i> Editar
+          </button>
+          <button onclick="printPastaCampoCapa('${p.id}')" class="btn sec" style="font-size:11px; padding:6px 9px; display:inline-flex; align-items:center; gap:3px; background:rgba(16,185,129,0.12); color:var(--green); border:1px solid rgba(16,185,129,0.3); font-weight:600; cursor:pointer" title="Imprimir Capa da Pasta de Campo (PC01)">
+            <i data-lucide="printer" style="width:12px; height:12px"></i> Capa
+          </button>
+          <select onchange="handlePlantioPrintAction(this, '${p.id}')" style="font-size:11px; padding:5px 7px; background:rgba(255,255,255,0.06); color:var(--text); border:1px solid var(--border); border-radius:6px; cursor:pointer; font-weight:600; outline:none; max-width:135px" title="Mais Fichas para Impressão">
+            <option value="" selected>Fichas PC...</option>
+            <option value="pc01">Capa (PC01)</option>
+            <option value="pc03">Sementes (PC03)</option>
+            <option value="pc04">Calendário (PC04)</option>
+            <option value="pc05">Tratos Culturais (PC05)</option>
+            <option value="pc06">Defensivos (PC06)</option>
+            <option value="pc07">Fertirrigação (PC07)</option>
+            <option value="pc08">Resumo Elementos (PC08)</option>
+            <option value="pc09">Aplicações Foliares (PC09)</option>
+            <option value="idiarn">Ficha Oficial UP</option>
+          </select>
+          <button onclick="deleteWebPlantio('${p.id}')" class="btn danger" style="padding:6px 8px; font-size:11px; display:inline-flex; align-items:center; justify-content:center; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:var(--red); border-radius:6px; cursor:pointer" title="Excluir Definitivamente">
+            <i data-lucide="trash-2" style="width:13px;height:13px"></i>
+          </button>
+        </div>
+      </td>
+    </tr>
+    `;
   }).join('');
 
   if (window.lucide) lucide.createIcons();

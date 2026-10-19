@@ -3432,10 +3432,32 @@ let varieties = [];
   };
 
   container.innerHTML = data.map(p => {
-  const idx = infoParcelasData.findIndex(x => x.id === p.id);
-  const vars = [p.variedade, p.variedade2, p.variedade3, p.variedade4, p.variedade5]
-  .filter(Boolean);
   const isAtivo = p.ativo !== false;
+
+  const norm = typeof extractNormalizedParcelVarieties === 'function' ? extractNormalizedParcelVarieties(p) : null;
+  const uniqueVars = [];
+  const seenVars = new Set();
+  if (norm && norm.varieties && norm.varieties.length > 0) {
+    norm.varieties.forEach(v => {
+      const name = (v.nome || '').trim();
+      const key = name.toUpperCase();
+      if (name && !seenVars.has(key)) {
+        seenVars.add(key);
+        uniqueVars.push(name);
+      }
+    });
+  } else {
+    [p.variedade, p.variedade2, p.variedade3, p.variedade4, p.variedade5, p.variedade6, p.variedade7, p.variedade8, p.variedade9, p.variedade10]
+      .filter(Boolean)
+      .forEach(v => {
+        const name = String(v).trim();
+        const key = name.toUpperCase();
+        if (name && !seenVars.has(key)) {
+          seenVars.add(key);
+          uniqueVars.push(name);
+        }
+      });
+  }
 
   // Dias restantes para colheita
   let diasRestantesHtml = '';
@@ -3449,6 +3471,10 @@ let varieties = [];
   diasRestantesHtml = `<span style="font-size:10px; background:rgba(239,68,68,0.12); color:var(--red); border:1px solid rgba(239,68,68,0.2); padding:2px 7px; border-radius:6px; font-weight:700">Pronto / Vencido</span>`;
   }
   }
+
+  const areaStr = (norm && norm.totalArea > 0) ? norm.totalArea.toFixed(2) : (p.area ? parseFloat(p.area).toFixed(2) : '—');
+  const dataSemeadura = p.semeadura || p.data_semeadura;
+  const upCode = p.idiarn || p.up;
 
   return `
   <div class="ip-card" style="opacity:${isAtivo ? 1 : 0.55}; position:relative">
@@ -3469,26 +3495,25 @@ let varieties = [];
   </div>
   <div style="font-weight:800; font-size:17px; margin-bottom:4px; color:var(--text)">${p.parcela2 || p.parcela || '—'}</div>
   <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px">
-  ${vars.map(v => `<span style="font-size:11px; background:rgba(16,185,129,0.1); color:var(--green); border:1px solid rgba(16,185,129,0.2); padding:2px 8px; border-radius:6px; font-weight:600">${v}</span>`).join('')}
+  ${uniqueVars.map(v => `<span style="font-size:11px; background:rgba(16,185,129,0.1); color:var(--green); border:1px solid rgba(16,185,129,0.2); padding:2px 8px; border-radius:6px; font-weight:600">${v}</span>`).join('')}
   </div>
-  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; font-size:11px; color:var(--muted2)">
-  ${(() => {
-    const norm = typeof extractNormalizedParcelVarieties === 'function' ? extractNormalizedParcelVarieties(p) : null;
-    const areaStr = (norm && norm.totalArea > 0) ? norm.totalArea.toFixed(2) : (p.area ? parseFloat(p.area).toFixed(2) : '—');
-    return `<span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="ruler" style="width:12px;height:12px"></i> ${areaStr !== '—' ? areaStr + ' ha' : '—'}</span>`;
-  })()}
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11px; color:var(--muted2); margin-bottom:6px">
+  <span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="ruler" style="width:12px;height:12px"></i> Área: <strong>${areaStr !== '—' ? areaStr + ' ha' : '—'}</strong></span>
+  ${dataSemeadura ? `<span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="calendar" style="width:12px;height:12px"></i> Semeio: ${fmtDate(dataSemeadura)}</span>` : ''}
   <span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="sprout" style="width:12px;height:12px"></i> Transpl: ${p.transplante ? fmtDate(p.transplante) : (p.plantio ? fmtDate(p.plantio) : '—')}</span>
   <span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="calendar" style="width:12px;height:12px"></i> Prev: ${p.previsao_colheita ? fmtDate(p.previsao_colheita) : '—'}</span>
+  ${upCode ? `<span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="file-check" style="width:12px;height:12px"></i> UP: <strong>${esc(upCode)}</strong></span>` : ''}
+  ${p.termo ? `<span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="file-text" style="width:12px;height:12px"></i> Termo: <strong>${esc(p.termo)}</strong></span>` : ''}
   </div>
   <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; padding-top:6px; border-top:1px dashed var(--border2)">
-  <button onclick="event.stopPropagation(); printPastaCampoCapa('${p.id}')" style="font-size:10px; padding:3px 6px; border-radius:6px; background:rgba(16,185,129,0.12); color:var(--green); border:1px solid rgba(16,185,129,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:10px;height:10px"></i> Capa (PC01)</button>
-  <button onclick="event.stopPropagation(); openSementesPrintSelector('${p.id}')" style="font-size:10px; padding:3px 6px; border-radius:6px; background:var(--card2); color:var(--text); border:1px solid var(--border2); cursor:pointer; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:10px;height:10px"></i> Sementes (PC03)</button>
-  <button onclick="event.stopPropagation(); printPastaCampoCalendario('${p.id}')" style="font-size:10px; padding:3px 6px; border-radius:6px; background:rgba(124,58,237,0.12); color:#8b5cf6; border:1px solid rgba(124,58,237,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:2px"><i data-lucide="calendar" style="width:10px;height:10px"></i> Calendário (PC04)</button>
-  <button onclick="event.stopPropagation(); printPastaCampoTratos('${p.id}')" style="font-size:10px; padding:3px 6px; border-radius:6px; background:var(--card2); color:var(--text); border:1px solid var(--border2); cursor:pointer; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:10px;height:10px"></i> Tratos (PC05)</button>
-  <button onclick="event.stopPropagation(); printPastaCampoFertirrigacao('${p.id}')" style="font-size:10px; padding:3px 6px; border-radius:6px; background:rgba(6,182,212,0.12); color:#06b6d4; border:1px solid rgba(6,182,212,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:10px;height:10px"></i> Fert (PC07)</button>
-  <button onclick="event.stopPropagation(); printPastaCampoResumoElementos('${p.id}')" style="font-size:10px; padding:3px 6px; border-radius:6px; background:rgba(139,92,246,0.12); color:#a78bfa; border:1px solid rgba(139,92,246,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:10px;height:10px"></i> Elementos (PC08)</button>
-  <button onclick="event.stopPropagation(); printPastaCampoFoliares('${p.id}')" style="font-size:10px; padding:3px 6px; border-radius:6px; background:rgba(34,197,94,0.12); color:#4ade80; border:1px solid rgba(34,197,94,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:2px"><i data-lucide="printer" style="width:10px;height:10px"></i> Foliares (PC09)</button>
-  <button onclick="event.stopPropagation(); printPastaCampoDefensivos('${p.id}')" style="font-size:10px; padding:3px 6px; border-radius:6px; background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:2px"><i data-lucide="shield" style="width:10px;height:10px"></i> Defensivos (PC06)</button>
+  <button onclick="event.stopPropagation(); printPastaCampoCapa('${p.id}')" style="font-size:10px; padding:4px 8px; border-radius:6px; background:rgba(16,185,129,0.12); color:var(--green); border:1px solid rgba(16,185,129,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:3px; font-weight:600"><i data-lucide="printer" style="width:11px;height:11px"></i> Capa (PC01)</button>
+  <button onclick="event.stopPropagation(); openSementesPrintSelector('${p.id}')" style="font-size:10px; padding:4px 8px; border-radius:6px; background:var(--card2); color:var(--text); border:1px solid var(--border2); cursor:pointer; display:inline-flex; align-items:center; gap:3px"><i data-lucide="printer" style="width:11px;height:11px"></i> Sementes (PC03)</button>
+  <button onclick="event.stopPropagation(); printPastaCampoCalendario('${p.id}')" style="font-size:10px; padding:4px 8px; border-radius:6px; background:rgba(124,58,237,0.12); color:#8b5cf6; border:1px solid rgba(124,58,237,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:3px"><i data-lucide="calendar" style="width:11px;height:11px"></i> Calendário (PC04)</button>
+  <button onclick="event.stopPropagation(); printPastaCampoTratos('${p.id}')" style="font-size:10px; padding:4px 8px; border-radius:6px; background:var(--card2); color:var(--text); border:1px solid var(--border2); cursor:pointer; display:inline-flex; align-items:center; gap:3px"><i data-lucide="printer" style="width:11px;height:11px"></i> Tratos (PC05)</button>
+  <button onclick="event.stopPropagation(); printPastaCampoFertirrigacao('${p.id}')" style="font-size:10px; padding:4px 8px; border-radius:6px; background:rgba(6,182,212,0.12); color:#06b6d4; border:1px solid rgba(6,182,212,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:3px"><i data-lucide="printer" style="width:11px;height:11px"></i> Fert (PC07)</button>
+  <button onclick="event.stopPropagation(); printPastaCampoResumoElementos('${p.id}')" style="font-size:10px; padding:4px 8px; border-radius:6px; background:rgba(139,92,246,0.12); color:#a78bfa; border:1px solid rgba(139,92,246,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:3px"><i data-lucide="printer" style="width:11px;height:11px"></i> Elementos (PC08)</button>
+  <button onclick="event.stopPropagation(); printPastaCampoFoliares('${p.id}')" style="font-size:10px; padding:4px 8px; border-radius:6px; background:rgba(34,197,94,0.12); color:#4ade80; border:1px solid rgba(34,197,94,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:3px"><i data-lucide="printer" style="width:11px;height:11px"></i> Foliares (PC09)</button>
+  <button onclick="event.stopPropagation(); printPastaCampoDefensivos('${p.id}')" style="font-size:10px; padding:4px 8px; border-radius:6px; background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.25); cursor:pointer; display:inline-flex; align-items:center; gap:3px"><i data-lucide="shield" style="width:11px;height:11px"></i> Defensivos (PC06)</button>
   </div>
   </div>
   `;
