@@ -17369,15 +17369,22 @@ let webVariedadeRowCount = 0;
 
 function showCcTab(tab) {
   ['plantios','colheitas','mip','noc','op','defreg','foliares','calagem','fert','elementos','tratos','mudas','pos','idiarn'].forEach(t => {
-  const pane = $(`ccTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
-  const btn = $(`ccTab${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
-  if (pane) pane.style.display = (tab === t) ? 'block' : 'none';
-  if (btn) btn.className = (tab === t) ? 'btn on' : 'btn sec';
+    const pane = $(`ccTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+    const btn = $(`ccTab${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
+    if (pane) pane.style.display = (tab === t) ? 'block' : 'none';
+    if (btn) btn.className = (tab === t) ? 'btn on' : 'btn sec';
   });
 
+  // Garantir que a base de parcelas mestras esteja pronta para os filtros dinâmicos
+  if ((!window.webInfoParcelasData || window.webInfoParcelasData.length === 0) && tab !== 'plantios') {
+    if (typeof loadWebPlantios === 'function') {
+      try { loadWebPlantios(); } catch(e) {}
+    }
+  }
+
   try {
-  if (tab === 'plantios') {
-    loadWebPlantios();
+    if (tab === 'plantios') {
+      loadWebPlantios();
   } else if (tab === 'colheitas') {
     loadColheitasTable();
   } else if (tab === 'mip') {
@@ -17585,10 +17592,11 @@ async function onWebElementosParcelChange() {
 
 async function loadMipTable() {
   try {
-    const { data: mipData, error: mipError } = await sb.from('caderno_campo_mip')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .order('data_vistoria', { ascending: false });
+    const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id);
+    let q = sb.from('caderno_campo_mip').select('*').order('data_vistoria', { ascending: false });
+    if (tId) q = q.eq('tenant_id', tId);
+    const { data: mipData, error: mipError } = await q;
+
     if (!mipError && mipData) {
       const unpacked = mipData.map(item => {
         if (item.observacoes && typeof item.observacoes === 'string') {
@@ -17611,7 +17619,6 @@ async function loadMipTable() {
         }
         return item;
       });
-      renderCcMipTable(unpacked);
       _mipRecords = unpacked;
       populateCcMipParcelFilter();
       filterCcMipList();
@@ -17630,11 +17637,13 @@ async function loadMipTable() {
 
 async function loadOpTable() {
   try {
-    const { data: opData, error: opError } = await sb.from('caderno_campo_op')
+    const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id);
+    let q = sb.from('caderno_campo_op')
       .select('*, caderno_campo_op_itens(*)')
-      .eq('tenant_id', tenantId)
       .order('data_aplicacao', { ascending: true })
       .order('created_at', { ascending: true });
+    if (tId) q = q.eq('tenant_id', tId);
+    const { data: opData, error: opError } = await q;
     
     if (!opError && opData) {
       // Atribuir número sequencial cronológico fixo (OP 1, OP 2, OP 3...)
@@ -17664,13 +17673,44 @@ async function loadOpTable() {
 // FILTROS & BUSCA DINÂMICA POR PARCELA NO CADERNO DE CAMPO
 // ═══════════════════════════════════════════════════════════════════════
 
-function getCcUniqueParcels(list, key = 'parcela') {
+function getAllCcParcels(specificList = [], key = 'parcela') {
   const set = new Set();
-  (list || []).forEach(item => {
-    const p = item[key] || item.parcela2 || item.parcela;
-    if (p && String(p).trim() && String(p).trim() !== '—') set.add(String(p).trim());
+  
+  // 1. Parcelas cadastradas da fazenda (webInfoParcelasData, _infoParcelas, window._parcels)
+  const farmList = (window.webInfoParcelasData && window.webInfoParcelasData.length > 0)
+    ? window.webInfoParcelasData
+    : (window._infoParcelas && window._infoParcelas.length > 0 ? window._infoParcelas : (typeof _infoParcelas !== 'undefined' ? _infoParcelas : []));
+  
+  (farmList || []).forEach(p => {
+    const code = p.parcela2 || (p.parcela ? (p.parcela + (p.letra ? ' ' + p.letra : '')) : '');
+    if (code && String(code).trim() && String(code).trim() !== '—') {
+      set.add(String(code).trim());
+    }
   });
+
+  (window._parcels || []).forEach(p => {
+    if (p.code && String(p.code).trim() && String(p.code).trim() !== '—') {
+      set.add(String(p.code).trim());
+    }
+  });
+
+  // 2. Parcelas presentes nos registros específicos da tabela
+  (specificList || []).forEach(item => {
+    const p = item[key] || item.parcela2 || item.parcela || item.parcel_code;
+    if (p && String(p).trim() && String(p).trim() !== '—') {
+      set.add(String(p).trim());
+    }
+  });
+
   return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+}
+
+function matchCcParcela(itemParcel, filterVal) {
+  if (!filterVal || String(filterVal).trim() === '') return true;
+  if (!itemParcel) return false;
+  const p = String(itemParcel).toLowerCase().trim().replace(/[\s\-_]/g, '');
+  const f = String(filterVal).toLowerCase().trim().replace(/[\s\-_]/g, '');
+  return p === f || p.includes(f) || f.includes(p);
 }
 
 // 1. FILTRO DE ORDENS DE PULVERIZAÇÃO (O.P)
@@ -17678,24 +17718,24 @@ function populateCcOpParcelFilter() {
   const sel = $('ccOpFilterParcela');
   if (!sel) return;
   const currentVal = sel.value;
-  const parcels = getCcUniqueParcels(window._opList || [], 'parcela');
+  const parcels = getAllCcParcels(window._opList || [], 'parcela');
   
   sel.innerHTML = '<option value="">Todas as Parcelas</option>' +
     parcels.map(p => `<option value="${p}">${p}</option>`).join('');
   if (currentVal && parcels.includes(currentVal)) sel.value = currentVal;
+  else sel.value = '';
 }
 
 function filterCcOpList() {
-  const selParcel = ($('ccOpFilterParcela')?.value || '').toLowerCase().trim();
+  const selParcel = ($('ccOpFilterParcela')?.value || '').trim();
   const search = ($('ccOpSearchInput')?.value || '').toLowerCase().trim();
   const rawList = window._opList || [];
 
   const filtered = rawList.filter(item => {
-    const pCode = (item.parcela || '').toLowerCase().trim();
-    if (selParcel && pCode !== selParcel) return false;
+    if (selParcel && !matchCcParcela(item.parcela, selParcel)) return false;
 
     if (search) {
-      const matchParcel = pCode.includes(search);
+      const matchParcel = (item.parcela || '').toLowerCase().includes(search);
       const matchOp = (item.op_cod || '').toLowerCase().includes(search) || String(item.numero_op || '').includes(search);
       const matchCult = (item.cultura || '').toLowerCase().includes(search) || (item.variedade || '').toLowerCase().includes(search);
       const matchTrator = (item.tratorista || item.aplicador || '').toLowerCase().includes(search);
@@ -17734,26 +17774,26 @@ function populateCcMipParcelFilter() {
   const sel = $('ccMipFilterParcela');
   if (!sel) return;
   const currentVal = sel.value;
-  const parcels = getCcUniqueParcels(window._mipRecords || [], 'parcela');
+  const parcels = getAllCcParcels(window._mipRecords || [], 'parcela');
   
   sel.innerHTML = '<option value="">Todas as Parcelas</option>' +
     parcels.map(p => `<option value="${p}">${p}</option>`).join('');
   if (currentVal && parcels.includes(currentVal)) sel.value = currentVal;
+  else sel.value = '';
 }
 
 function filterCcMipList() {
-  const selParcel = ($('ccMipFilterParcela')?.value || '').toLowerCase().trim();
+  const selParcel = ($('ccMipFilterParcela')?.value || '').trim();
   const search = ($('ccMipSearchInput')?.value || '').toLowerCase().trim();
   const rawList = window._mipRecords || [];
 
   const filtered = rawList.filter(item => {
-    const pCode = (item.parcela || '').toLowerCase().trim();
-    if (selParcel && pCode !== selParcel) return false;
+    if (selParcel && !matchCcParcela(item.parcela, selParcel)) return false;
 
     if (search) {
-      const matchParcel = pCode.includes(search);
+      const matchParcel = (item.parcela || '').toLowerCase().includes(search);
       const matchVar = (item.variedade || '').toLowerCase().includes(search);
-      const matchMon = (item.monitor || item.responsavel || item.tecnico || '').toLowerCase().includes(search);
+      const matchMon = (item.responsavel_mip || item.monitor || item.responsavel || item.tecnico || '').toLowerCase().includes(search);
       const matchObs = (item.obs_texto || item.observacoes || '').toLowerCase().includes(search);
       const matchPragas = (item.pragas_json ? JSON.stringify(item.pragas_json) : '').toLowerCase().includes(search);
       const matchDoencas = (item.doencas_json ? JSON.stringify(item.doencas_json) : '').toLowerCase().includes(search);
@@ -17779,24 +17819,24 @@ function populateCcColheitaParcelFilter() {
   const sel = $('ccColheitaFilterParcela');
   if (!sel) return;
   const currentVal = sel.value;
-  const parcels = getCcUniqueParcels(window._colheitasList || [], 'parcela');
+  const parcels = getAllCcParcels(window._colheitasList || [], 'parcela');
   
   sel.innerHTML = '<option value="">Todas as Parcelas</option>' +
     parcels.map(p => `<option value="${p}">${p}</option>`).join('');
   if (currentVal && parcels.includes(currentVal)) sel.value = currentVal;
+  else sel.value = '';
 }
 
 function filterCcColheitasList() {
-  const selParcel = ($('ccColheitaFilterParcela')?.value || '').toLowerCase().trim();
+  const selParcel = ($('ccColheitaFilterParcela')?.value || '').trim();
   const search = ($('ccColheitaSearchInput')?.value || '').toLowerCase().trim();
   const rawList = window._colheitasList || [];
 
   const filtered = rawList.filter(item => {
-    const pCode = (item.parcela || '').toLowerCase().trim();
-    if (selParcel && pCode !== selParcel) return false;
+    if (selParcel && !matchCcParcela(item.parcela, selParcel)) return false;
 
     if (search) {
-      const matchParcel = pCode.includes(search);
+      const matchParcel = (item.parcela || '').toLowerCase().includes(search);
       const matchVar = (item.variedade || '').toLowerCase().includes(search);
       const matchLote = (item.rastreabilidade_codigo || '').toLowerCase().includes(search);
       const matchEq = (item.pincelador1 || item.equipe_colheita || '').toLowerCase().includes(search);
@@ -17823,24 +17863,24 @@ function populateCcPosParcelFilter() {
   const sel = $('ccPosFilterParcela');
   if (!sel) return;
   const currentVal = sel.value;
-  const parcels = getCcUniqueParcels(window._posColheitaList || [], 'parcela');
+  const parcels = getAllCcParcels(window._posColheitaList || [], 'parcela');
   
   sel.innerHTML = '<option value="">Todas as Parcelas</option>' +
     parcels.map(p => `<option value="${p}">${p}</option>`).join('');
   if (currentVal && parcels.includes(currentVal)) sel.value = currentVal;
+  else sel.value = '';
 }
 
 function filterCcPosList() {
-  const selParcel = ($('ccPosFilterParcela')?.value || '').toLowerCase().trim();
+  const selParcel = ($('ccPosFilterParcela')?.value || '').trim();
   const search = ($('ccPosSearchInput')?.value || '').toLowerCase().trim();
   const rawList = window._posColheitaList || [];
 
   const filtered = rawList.filter(item => {
-    const pCode = (item.parcela || '').toLowerCase().trim();
-    if (selParcel && pCode !== selParcel) return false;
+    if (selParcel && !matchCcParcela(item.parcela, selParcel)) return false;
 
     if (search) {
-      const matchParcel = pCode.includes(search);
+      const matchParcel = (item.parcela || '').toLowerCase().includes(search);
       const matchProd = (item.produto_nome || '').toLowerCase().includes(search);
       const matchIng = (item.ingrediente_ativo || '').toLowerCase().includes(search);
       const matchOp = (item.operador || item.manipulador || '').toLowerCase().includes(search);
@@ -17867,24 +17907,24 @@ function populateCcFertParcelFilter() {
   const sel = $('ccFertFilterParcela');
   if (!sel) return;
   const currentVal = sel.value;
-  const parcels = getCcUniqueParcels(window._fertList || [], 'parcela');
+  const parcels = getAllCcParcels(window._fertList || [], 'parcela');
   
   sel.innerHTML = '<option value="">Todas as Parcelas</option>' +
     parcels.map(p => `<option value="${p}">${p}</option>`).join('');
   if (currentVal && parcels.includes(currentVal)) sel.value = currentVal;
+  else sel.value = '';
 }
 
 function filterCcFertList() {
-  const selParcel = ($('ccFertFilterParcela')?.value || '').toLowerCase().trim();
+  const selParcel = ($('ccFertFilterParcela')?.value || '').trim();
   const search = ($('ccFertSearchInput')?.value || '').toLowerCase().trim();
   const rawList = window._fertList || [];
 
   const filtered = rawList.filter(item => {
-    const pCode = (item.parcela || '').toLowerCase().trim();
-    if (selParcel && pCode !== selParcel) return false;
+    if (selParcel && !matchCcParcela(item.parcela, selParcel)) return false;
 
     if (search) {
-      const matchParcel = pCode.includes(search);
+      const matchParcel = (item.parcela || '').toLowerCase().includes(search);
       const matchRec = (item.receita || '').toLowerCase().includes(search);
       const matchOp = (item.operador || '').toLowerCase().includes(search);
       const matchFerts = (item.fertilizantes || '').toLowerCase().includes(search);
@@ -17911,24 +17951,24 @@ function populateCcTratosParcelFilter() {
   const sel = $('ccTratosFilterParcela');
   if (!sel) return;
   const currentVal = sel.value;
-  const parcels = getCcUniqueParcels(window._tratosList || [], 'parcela');
+  const parcels = getAllCcParcels(window._tratosList || [], 'parcela');
   
   sel.innerHTML = '<option value="">Todas as Parcelas</option>' +
     parcels.map(p => `<option value="${p}">${p}</option>`).join('');
   if (currentVal && parcels.includes(currentVal)) sel.value = currentVal;
+  else sel.value = '';
 }
 
 function filterCcTratosList() {
-  const selParcel = ($('ccTratosFilterParcela')?.value || '').toLowerCase().trim();
+  const selParcel = ($('ccTratosFilterParcela')?.value || '').trim();
   const search = ($('ccTratosSearchInput')?.value || '').toLowerCase().trim();
   const rawList = window._tratosList || [];
 
   const filtered = rawList.filter(item => {
-    const pCode = (item.parcela || '').toLowerCase().trim();
-    if (selParcel && pCode !== selParcel) return false;
+    if (selParcel && !matchCcParcela(item.parcela, selParcel)) return false;
 
     if (search) {
-      const matchParcel = pCode.includes(search);
+      const matchParcel = (item.parcela || '').toLowerCase().includes(search);
       const matchAtiv = (item.atividade || '').toLowerCase().includes(search);
       const matchImp = (item.implemento || '').toLowerCase().includes(search);
       const matchOp = (item.operador || '').toLowerCase().includes(search);
@@ -17954,17 +17994,18 @@ function populateCcMudasParcelFilter() {
   const sel = $('ccMudasFilterParcela');
   if (!sel) return;
   const currentVal = sel.value;
-  const parcels = getCcUniqueParcels(window.webInfoParcelasData || [], 'parcela2');
+  const parcels = getAllCcParcels(window.webInfoParcelasData || [], 'parcela2');
   
   sel.innerHTML = '<option value="">Todas as Parcelas</option>' +
     parcels.map(p => `<option value="${p}">${p}</option>`).join('');
   if (currentVal && parcels.includes(currentVal)) sel.value = currentVal;
+  else sel.value = '';
 }
 
 function openSementesPrintSelectorFromCcMudas() {
   const selParcel = ($('ccMudasFilterParcela')?.value || '').trim();
   if (selParcel) {
-    const found = (window.webInfoParcelasData || []).find(x => (x.parcela2 || x.parcela || '') === selParcel);
+    const found = (window.webInfoParcelasData || []).find(x => matchCcParcela(x.parcela2 || x.parcela || '', selParcel));
     if (found) {
       openSementesPrintSelector(found.id);
       return;
@@ -17973,22 +18014,21 @@ function openSementesPrintSelectorFromCcMudas() {
   const rawList = (window.webInfoParcelasData || []).filter(x => x.ativo !== false);
   if (rawList.length === 0) return alert('Nenhum plantio ativo disponível para impressão.');
   
-  // Se não tiver selecionado no filtro, abre para o primeiro da lista
   openSementesPrintSelector(rawList[0].id);
 }
 
 function filterCcMudasList() {
-  const selParcel = ($('ccMudasFilterParcela')?.value || '').toLowerCase().trim();
+  const selParcel = ($('ccMudasFilterParcela')?.value || '').trim();
   const search = ($('ccMudasSearchInput')?.value || '').toLowerCase().trim();
   const rawList = window.webInfoParcelasData || [];
 
   const filtered = rawList.filter(item => {
-    const pCode = (item.parcela2 || item.parcela || '').toLowerCase().trim();
-    if (selParcel && pCode !== selParcel) return false;
+    const pCode = item.parcela2 || item.parcela || '';
+    if (selParcel && !matchCcParcela(pCode, selParcel)) return false;
 
     if (search) {
       const vars = extractParcelaSementesVars(item);
-      const matchParcel = pCode.includes(search);
+      const matchParcel = pCode.toLowerCase().includes(search);
       const matchCult = (item.cultura || '').toLowerCase().includes(search);
       const matchInVars = vars.some(v => 
         (v.nome || '').toLowerCase().includes(search) ||
@@ -22098,25 +22138,34 @@ let _posColheitaList = [];
 
 async function loadColheitasTable() {
   try {
-  if (!_infoParcelas || _infoParcelas.length === 0) {
-  const { data: ipData } = await sb.from('info_parcelas').select('*').eq('tenant_id', tenantId);
-  if (ipData) _infoParcelas = ipData;
-  }
-  if (!window._parcels || window._parcels.length === 0) {
-  const { data: pData } = await sb.from('parcels').select('id, code').eq('tenant_id', tenantId);
-  if (pData) window._parcels = pData;
-  }
+    const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id);
+    if (!_infoParcelas || _infoParcelas.length === 0) {
+      let qIp = sb.from('info_parcelas').select('*');
+      if (tId) qIp = qIp.eq('tenant_id', tId);
+      const { data: ipData } = await qIp;
+      if (ipData) _infoParcelas = ipData;
+    }
+    if (!window._parcels || window._parcels.length === 0) {
+      let qP = sb.from('parcels').select('id, code');
+      if (tId) qP = qP.eq('tenant_id', tId);
+      const { data: pData } = await qP;
+      if (pData) window._parcels = pData;
+    }
 
-  const [ccRes, fcRes] = await Promise.all([
-  sb.from('caderno_campo_colheita')
-  .select('*')
-  .eq('tenant_id', tenantId)
-  .order('data_colheita', { ascending: false }),
-  sb.from('field_carrao_sessions')
-  .select('*, parcels(code), varieties(name), field_carrao_employees(*)')
-  .eq('tenant_id', tenantId)
-  .order('date', { ascending: false })
-  ]);
+    let qCc = sb.from('caderno_campo_colheita').select('*').order('data_colheita', { ascending: false });
+    if (tId) qCc = qCc.eq('tenant_id', tId);
+    const ccRes = await qCc;
+
+    let fcRes = { data: [] };
+    try {
+      let qFc = sb.from('field_carrao_sessions')
+        .select('*, parcels(code), varieties(name), field_carrao_employees(*)')
+        .order('date', { ascending: false });
+      if (tId) qFc = qFc.eq('tenant_id', tId);
+      fcRes = await qFc;
+    } catch(errFc) {
+      console.warn('field_carrao_sessions query fallback:', errFc);
+    }
 
   let list = [];
   if (ccRes.data) {
@@ -23052,25 +23101,25 @@ async function deleteCalagemRecord(id) {
 let _tratosList = [];
 async function loadTratosTable() {
   try {
-  const { data, error } = await sb.from('caderno_campo_tratos')
-  .select('*')
-  .eq('tenant_id', tenantId)
-  .order('data_trato', { ascending: false });
+    const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id);
+    let q = sb.from('caderno_campo_tratos').select('*').order('data_trato', { ascending: false });
+    if (tId) q = q.eq('tenant_id', tId);
+    const { data, error } = await q;
 
-  if (!error && data) {
-  _tratosList = data;
-  populateCcTratosParcelFilter();
-  filterCcTratosList();
-  } else {
-  _tratosList = [];
-  populateCcTratosParcelFilter();
-  renderCcTratosTable([]);
-  }
+    if (!error && data) {
+      _tratosList = data;
+      populateCcTratosParcelFilter();
+      filterCcTratosList();
+    } else {
+      _tratosList = [];
+      populateCcTratosParcelFilter();
+      renderCcTratosTable([]);
+    }
   } catch (e) {
-  console.error('Erro ao carregar tratos culturais:', e);
-  _tratosList = [];
-  populateCcTratosParcelFilter();
-  renderCcTratosTable([]);
+    console.error('Erro ao carregar tratos culturais:', e);
+    _tratosList = [];
+    populateCcTratosParcelFilter();
+    renderCcTratosTable([]);
   }
 }
 
@@ -23231,39 +23280,39 @@ function getFertPhaseWeb(dap) {
 
 async function loadFertTable() {
   try {
-  const { data: fertData, error: fertErr } = await sb.from('caderno_campo_fertirrigacao')
-  .select('*')
-  .eq('tenant_id', tenantId)
-  .order('data_inicio', { ascending: false });
+    const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id);
+    let qF = sb.from('caderno_campo_fertirrigacao').select('*').order('data_inicio', { ascending: false });
+    if (tId) qF = qF.eq('tenant_id', tId);
+    const { data: fertData, error: fertErr } = await qF;
 
-  const { data: itensData, error: itensErr } = await sb.from('caderno_campo_fertirrigacao_itens')
-  .select('*')
-  .eq('tenant_id', tenantId);
+    let qI = sb.from('caderno_campo_fertirrigacao_itens').select('*');
+    if (tId) qI = qI.eq('tenant_id', tId);
+    const { data: itensData } = await qI;
 
-  if (!fertErr && fertData) {
-  const itemsMap = {};
-  (itensData || []).forEach(it => {
-  if (!itemsMap[it.fert_id]) itemsMap[it.fert_id] = [];
-  itemsMap[it.fert_id].push(`${it.produto_nome} (${it.quantidade}${it.unidade || 'kg'})` );
-  });
+    if (!fertErr && fertData) {
+      const itemsMap = {};
+      (itensData || []).forEach(it => {
+        if (!itemsMap[it.fert_id]) itemsMap[it.fert_id] = [];
+        itemsMap[it.fert_id].push(`${it.produto_nome} (${it.quantidade}${it.unidade || 'kg'})`);
+      });
 
-  _fertList = fertData.map(f => ({
-  ...f,
-  fertilizantes: (itemsMap[f.id] || []).join(', ') || '—'
-  }));
+      _fertList = fertData.map(f => ({
+        ...f,
+        fertilizantes: (itemsMap[f.id] || []).join(', ') || '—'
+      }));
 
-  populateCcFertParcelFilter();
-  filterCcFertList();
-  } else {
-  _fertList = [];
-  populateCcFertParcelFilter();
-  renderCcFertTable([]);
-  }
+      populateCcFertParcelFilter();
+      filterCcFertList();
+    } else {
+      _fertList = [];
+      populateCcFertParcelFilter();
+      renderCcFertTable([]);
+    }
   } catch (e) {
-  console.error('Erro ao carregar fertirrigação:', e);
-  _fertList = [];
-  populateCcFertParcelFilter();
-  renderCcFertTable([]);
+    console.error('Erro ao carregar fertirrigação:', e);
+    _fertList = [];
+    populateCcFertParcelFilter();
+    renderCcFertTable([]);
   }
 }
 
@@ -24089,10 +24138,10 @@ function loadMudasTable() {
 // ── PÓS-COLHEITA / TRATAMENTO DE TALO DO MELÃO ─────────────────────
 async function loadPosColheitaTable() {
   try {
-    const { data, error } = await sb.from('caderno_campo_pos_colheita')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .order('data_aplicacao', { ascending: false });
+    const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id);
+    let q = sb.from('caderno_campo_pos_colheita').select('*').order('data_aplicacao', { ascending: false });
+    if (tId) q = q.eq('tenant_id', tId);
+    const { data, error } = await q;
 
     if (!error && data) {
       _posColheitaList = data;
