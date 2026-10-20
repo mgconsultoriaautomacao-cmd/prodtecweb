@@ -56,6 +56,8 @@ const DEFAULT_ELEMENTS_DATABASE = {
   "CLORETO DE POTÁSSIO (KCL)": { k2o: 60.0 },
   "FERT": { mat_org: 2.0, n: 2.0, p2o5: 3.0 },
   "SUPERSOIL": { mat_org: 2.0, n: 2.0, p2o5: 3.0 },
+  "AGI MOL": { mat_org: 2.0, n: 2.0, p2o5: 3.0 },
+  "AGIMOL": { mat_org: 2.0, n: 2.0, p2o5: 3.0 },
   
   // Adubos de Fundação & Complexos NPK
   "ADUBO 06-24-12": { n: 6.0, p2o5: 24.0, k2o: 12.0 },

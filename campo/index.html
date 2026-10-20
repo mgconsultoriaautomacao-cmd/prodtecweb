@@ -2067,12 +2067,19 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   </div>
 
   <div class="form-field">
-  <div style="display:flex; justify-content:space-between; align-items:center">
-  <label class="field-label">Supersoil / Outro</label>
-  <span id="fertBadge_SUPERSOIL" style="font-size:10px; color:var(--muted2)">—</span>
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px">
+  <div style="flex:1; margin-right:6px">
+    <input id="fertCampoCustomProdName" list="fertCampoCatalogoDatalist" value="AGI MOL" 
+           title="Clique para escolher ou alterar o produto (Catálogo de Adubos)"
+           placeholder="Adubo (ex: AGI MOL)"
+           style="width:100%; font-size:11px; font-weight:700; color:var(--text); background:rgba(255,255,255,0.06); border:1px solid var(--border); border-radius:4px; padding:2px 6px"
+           onchange="onCampoCustomFertChange(this.value)">
+  </div>
+  <span id="fertBadge_SUPERSOIL" style="font-size:10px; color:var(--muted2); white-space:nowrap">—</span>
   </div>
   <input id="fertQty_SUPERSOIL" type="number" step="0.01" placeholder="0.00" style="font-size:13px">
   </div>
+  <datalist id="fertCampoCatalogoDatalist"></datalist>
   </div>
   </div>
 
@@ -4475,9 +4482,27 @@ let varieties = [];
   $('fertReceita').value = '';
   $('fertVazaoBase').value = '1.00';
   $('fertProtocolSelect').value = 'MELAO_PADRAO';
+
+  const savedFert = localStorage.getItem('prodtec_fert_custom_product') || 'AGI MOL';
+  if ($('fertCampoCustomProdName')) $('fertCampoCustomProdName').value = savedFert;
+  populateCampoFertCatalogo();
   
   resetFertFields();
   resetFertDiagnostic();
+  }
+
+  function populateCampoFertCatalogo() {
+    const dl = $('fertCampoCatalogoDatalist');
+    if (!dl) return;
+    const prods = ['AGI MOL', 'SUPERSOIL', 'ACTIWAVE', 'ADUBO 06-24-12', 'AJIFOL', 'AMIORGAN', 'BIOACE', 'BIOTURBO', 'COMPOSTO ORGÂNICO', 'FERT', 'K-30', 'MEGAFOL', 'QUELATEC', 'RAÍZA', 'RUTER AA', 'SOIL PLEX FERT', 'VIVA', 'URÉIA', 'MAP', 'CLORETO DE POTÁSSIO (KCL)'];
+    dl.innerHTML = prods.map(p => `<option value="${p}"></option>`).join('');
+  }
+
+  function onCampoCustomFertChange(val) {
+    const name = (val || 'AGI MOL').trim().toUpperCase();
+    localStorage.setItem('prodtec_fert_custom_product', name);
+    if ($('fertCampoCustomProdName')) $('fertCampoCustomProdName').value = name;
+    if (typeof onFertParcelChange === 'function') onFertParcelChange();
   }
 
   function resetFertFields() {
@@ -4690,17 +4715,19 @@ let varieties = [];
 
   const daysCount = dapEnd - dapStart + 1;
   currentFertSuggestion = {};
+  const customFertName = ($('fertCampoCustomProdName') && $('fertCampoCustomProdName').value.trim()) || localStorage.getItem('prodtec_fert_custom_product') || 'AGI MOL';
   let itemsHtml = '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">';
 
   Object.entries(accumulatedBase).forEach(([fertName, baseSum]) => {
   const fieldKey = mapKeys[fertName] || fertName;
   const totalDose = (baseSum * factor);
   currentFertSuggestion[fieldKey] = totalDose;
+  const displayName = fertName === 'FERT' ? customFertName : fertName;
 
   itemsHtml += `
   <div style="background:rgba(255,255,255,0.05); padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center">
   <div>
-  <div style="font-weight:700; color:var(--text); font-size:12px">${fertName}</div>
+  <div style="font-weight:700; color:var(--text); font-size:12px">${displayName}</div>
   <div style="font-size:10px; color:var(--muted)">${baseSum.toFixed(1)} kg/ha ${daysCount > 1 ? `(${(baseSum/daysCount).toFixed(1)}/dia)` : ''}</div>
   </div>
   <div style="text-align:right">
@@ -4721,7 +4748,7 @@ let varieties = [];
   dailyDays.forEach(item => {
   const prods = Object.entries(item.sched)
   .filter(([k]) => k !== 'OBSERVAÇÕES')
-  .map(([k, v]) => `${k}: ${(v * factor).toFixed(1)}kg`)
+  .map(([k, v]) => `${k === 'FERT' ? customFertName : k}: ${(v * factor).toFixed(1)}kg`)
   .join(', ');
   dailyTimeline += `<div><b style="color:var(--blue)">DAP ${item.dap}:</b> <span style="color:var(--text)">${prods || 'Sem aplicação'}</span></div>`;
   });
@@ -5071,6 +5098,7 @@ let varieties = [];
   const pObj = parcelas.find(p => p.id == pId);
   const parcelaCode = pObj ? (pObj.code || pObj.label || '') : '';
   
+  const customFertName = ($('fertCampoCustomProdName') && $('fertCampoCustomProdName').value.trim()) || localStorage.getItem('prodtec_fert_custom_product') || 'AGI MOL';
   const fertilizers = [
   { key: 'MAP', name: 'MAP' },
   { key: 'UREIA', name: 'UREIA' },
@@ -5079,7 +5107,7 @@ let varieties = [];
   { key: 'SULF_MAG', name: 'SULFATO DE MAGNESIO' },
   { key: 'SULF_POT', name: 'SULFATO DE POTASSIO' },
   { key: 'CLOR_POT', name: 'CLORETO DE POTASSIO' },
-  { key: 'SUPERSOIL', name: 'SUPERSOIL' }
+  { key: 'SUPERSOIL', name: customFertName.toUpperCase() }
   ];
 
   const items = [];
@@ -6787,11 +6815,12 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
     'NIT. CALCIO': 'NITRATO DE CÁLCIO',
     'SULF. MAG.': 'SULFATO DE MAGNÉSIO',
     'SULF. POTASSIO': 'SULFATO DE POTÁSSIO',
-    'FERT': 'SUPERSOIL'
+    'FERT': (localStorage.getItem('prodtec_fert_custom_product') || 'AGI MOL')
   };
 
   if (uniqueProducts.length === 0) {
-    ['MAP', 'UREIA', 'ÁCIDO BÓRICO', 'NITRATO DE CÁLCIO', 'SULFATO DE MAGNÉSIO', 'SULFATO DE POTÁSSIO', 'SUPERSOIL'].forEach(p => uniqueProducts.push(p));
+    const customF = localStorage.getItem('prodtec_fert_custom_product') || 'AGI MOL';
+    ['MAP', 'UREIA', 'ÁCIDO BÓRICO', 'NITRATO DE CÁLCIO', 'SULFATO DE MAGNÉSIO', 'SULFATO DE POTÁSSIO', customF].forEach(p => uniqueProducts.push(p));
   }
 
   const productTotals = {};
