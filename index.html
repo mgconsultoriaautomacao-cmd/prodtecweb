@@ -363,6 +363,8 @@
   }
 
   @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .spin { animation: spin 0.8s linear infinite; display: inline-block; }
   
   /* TABS SYSTEM */
   .tab { display: none; animation: fs .2s ease; }
@@ -1099,7 +1101,7 @@
   <div class="f"><label class="flabel">Início</label><input type="date" id="dashStart"/></div>
   <div class="f"><label class="flabel">Fim</label><input type="date" id="dashEnd"/></div>
   <div class="f"><label class="flabel">Colaborador</label><select id="dashEmployee"><option value="">Todos</option></select></div>
-  <button onclick="refreshDash()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="search" style="width:14px; height:14px"></i> Filtrar</button>
+  <button id="btnRefreshDash" onclick="refreshDash()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="search" style="width:14px; height:14px"></i> Filtrar</button>
   <button class="sec" onclick="exportDashPDF()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-text" style="width:14px; height:14px"></i> PDF</button>
   </div>
 
@@ -1255,7 +1257,7 @@
   <div class="f"><label class="flabel">Fim</label><input type="date" id="rankEnd"/></div>
   <div class="f"><label class="flabel">Função</label><select id="rankRole"><option value="">Todos</option><option value="EMBALADOR">Embalador</option><option value="EMPILHADOR">Empilhador</option><option value="COLHEDOR">Colhedor</option><option value="TRATORISTA">Tratorista</option><option value="SUPERVISOR">Supervisor</option></select></div>
   <div class="f"><label class="flabel">Colaborador</label><select id="rankEmp"><option value="">Todos</option></select></div>
-  <button onclick="refreshRanking()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="search" style="width:14px; height:14px"></i> Filtrar</button>
+  <button id="btnRefreshRank" onclick="refreshRanking()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="search" style="width:14px; height:14px"></i> Filtrar</button>
   <button class="sec" onclick="exportRankPDF()" style="display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-text" style="width:14px; height:14px"></i> PDF</button>
   </div>
   <div class="kgrid">
@@ -5800,7 +5802,7 @@ async function afterLogin(user){
   console.warn('Erro ao carregar dados iniciais:', e);
   }
   if (window.lucide) lucide.createIcons();
-  setInterval(()=>{ if($('tab-dash').classList.contains('active')) refreshDash(); },20000);
+  setInterval(()=>{ if($('tab-dash').classList.contains('active') && !_isRefreshingDash) refreshDash(true); }, 30000);
 }
 
 async function doLogout(){
@@ -6281,19 +6283,33 @@ async function delCarriage(id) { if(confirm('Excluir este carrocão?')) { await 
 async function delMachine(id) { if(confirm('Excluir esta máquina?')) { await sb.from('machines').delete().eq('id', id); loadMachines(); } }
 async function delOperation(id) { if(confirm('Excluir esta operação?')) { await sb.from('operations').delete().eq('id', id); loadOperations(); } }
 
-// Helper: fetch all records handling Supabase 1000 row default PostgREST limit
-async function sbFetchAll(queryBuilder) {
+// Helper: fetch all records handling Supabase 1000 row default PostgREST limit with retry
+async function sbFetchAll(queryBuilder, onProgress = null) {
   let allRows = [];
   let from = 0;
   const step = 1000;
   while (true) {
-    const { data, error } = await queryBuilder.range(from, from + step - 1);
+    let res = null;
+    let retries = 3;
+    while (retries > 0) {
+      res = await queryBuilder.range(from, from + step - 1);
+      if (!res.error) break;
+      retries--;
+      if (retries > 0) {
+        console.warn(`[sbFetchAll] Falha no offset ${from}. Tentando novamente em 800ms (${retries} tentativas restantes)...`, res.error?.message || res.error);
+        await new Promise(r => setTimeout(r, 800));
+      }
+    }
+    const { data, error } = res || {};
     if (error) {
       console.error('sbFetchAll error:', error);
       throw error;
     }
     if (!data || data.length === 0) break;
     allRows = allRows.concat(data);
+    if (typeof onProgress === 'function') {
+      try { onProgress(allRows.length); } catch(_) {}
+    }
     if (data.length < step) break;
     from += step;
   }
@@ -6380,31 +6396,72 @@ async function loadWeights(){
   if(window.lucide) lucide.createIcons();
 }
 
-async function refreshRanking(){
+let _isRefreshingRank = false;
+
+async function refreshRanking(isBackground = false){
   const s=$('rankStart').value, e=$('rankEnd').value;
   if(!s||!e)return;
+  if(_isRefreshingRank) {
+    console.log('[refreshRanking] já em andamento, ignorando nova chamada');
+    return;
+  }
+  _isRefreshingRank = true;
+
+  const btn = $('btnRefreshRank');
+  const origBtnHtml = btn ? btn.innerHTML : null;
+  if (btn && !isBackground) {
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spin"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></span> Filtrando...`;
+  }
+  if (!isBackground) {
+    showTractorReportModal('Filtrando Ranking...', 'Consultando apontamentos de produção... Por favor aguarde.');
+  }
   
-  const selectedRole = $('rankRole')?.value;
-  const selectedEmpId = $('rankEmp')?.value; // UUID
-  
-  const targetEmp = selectedEmpId ? _employees.find(x => x.id === selectedEmpId) : null;
-  const targetBarcode = targetEmp ? targetEmp.barcode : null;
-  const targetNameNormalized = targetEmp ? targetEmp.name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : null;
-  
-  const type = window._rankType || 'PACKING';
-  
-  if (type === 'PACKING') {
-  let scans = [], audits = [], stops = [];
   try {
-    const sMs = new Date(s + 'T00:00:00').getTime();
-    const eMs = new Date(e + 'T23:59:59.999').getTime();
-    [scans, audits, stops] = await Promise.all([
-      sbFetchAll(sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')).order('ts',{ascending:false})),
-      sbFetchAll(sb.from('quality_audits').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'))).catch(()=>[]),
-      sbFetchAll(sb.from('global_stops').select('*').eq('tenant_id',tenantId).gte('start_ts',s).lte('start_ts',e+'T23:59:59Z')).catch(()=>[])
-    ]);
-    window._currentStops = stops || [];
-  } catch(err) { console.error('Error in refreshRanking:', err); return; }
+    const selectedRole = $('rankRole')?.value;
+    const selectedEmpId = $('rankEmp')?.value; // UUID
+    
+    const targetEmp = selectedEmpId ? _employees.find(x => x.id === selectedEmpId) : null;
+    const targetBarcode = targetEmp ? targetEmp.barcode : null;
+    const targetNameNormalized = targetEmp ? targetEmp.name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : null;
+    
+    const type = window._rankType || 'PACKING';
+    
+    if (type === 'PACKING') {
+      let scans = [], audits = [], stops = [];
+      try {
+        let qScans = sb.from('production_scans')
+          .select('id, ts, role, weight_kg, weight_name, employee_name, raw_barcode, parcel_code')
+          .eq('tenant_id', tenantId)
+          .gte('ts', toISO(s))
+          .lte('ts', toISO(e, '23:59:59'))
+          .order('ts', { ascending: false });
+
+        if (selectedRole) {
+          qScans = qScans.eq('role', selectedRole);
+        }
+        if (targetBarcode) {
+          qScans = qScans.eq('raw_barcode', targetBarcode);
+        }
+
+        [scans, audits, stops] = await Promise.all([
+          sbFetchAll(qScans, (count) => {
+            if (!isBackground) {
+              const sEl = $('tractorReportSub');
+              if (sEl) sEl.textContent = `Consultando apontamentos... (${count.toLocaleString()} registros lidos)`;
+            }
+          }),
+          sbFetchAll(sb.from('quality_audits').select('id, ts, penalty_boxes, employee_barcode').eq('tenant_id', tenantId).gte('ts', toISO(s)).lte('ts', toISO(e, '23:59:59'))).catch(()=>[]),
+          sbFetchAll(sb.from('global_stops').select('*').eq('tenant_id', tenantId).gte('start_ts', s).lte('start_ts', e+'T23:59:59Z')).catch(()=>[])
+        ]);
+        window._currentStops = stops || [];
+      } catch(err) {
+        console.error('Error in refreshRanking:', err);
+        if (!isBackground) {
+          alert('Erro ao carregar dados do ranking. Se o período for muito extenso, tente um intervalo menor.');
+        }
+        return;
+      }
   
   // Apply client side filters if selected
   let filteredData = scans || [];
@@ -6568,6 +6625,15 @@ async function refreshRanking(){
   options: { indexAxis: 'y' }
   });
   }
+  } finally {
+    _isRefreshingRank = false;
+    if (btn && origBtnHtml) {
+      btn.disabled = false;
+      btn.innerHTML = origBtnHtml;
+      if (window.lucide) lucide.createIcons();
+    }
+    if (!isBackground) hideTractorReportModal();
+  }
 }
 
 window._rankType = 'PACKING';
@@ -6616,7 +6682,7 @@ async function refreshFin(){
 
   let scans = [];
   try {
-    scans = await sbFetchAll(sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')));
+    scans = await sbFetchAll(sb.from('production_scans').select('id, ts, role, weight_kg, employee_name, raw_barcode').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')));
   } catch(err) { console.error('Error fetching production_scans for finance:', err); }
   const {data:abs}=await sb.from('employee_absences').select('*').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
 
@@ -6642,14 +6708,15 @@ async function refreshFin(){
   // ── 1. PACKING (production_scans) ──────────────────────────────────────────
   const scansByEmp = {};
   (scans||[]).forEach(x => {
+  const scanBarcode = x.raw_barcode || x.employee_barcode;
   if (selectedRole && x.role !== selectedRole) return;
-  if (targetBarcode && x.employee_barcode !== targetBarcode) return;
+  if (targetBarcode && scanBarcode !== targetBarcode) return;
 
   const normName = (str) => (str||'').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const empRecord = _employees.find(em => em.barcode === x.employee_barcode)
+  const empRecord = _employees.find(em => em.barcode === scanBarcode)
   || _employees.find(em => em.id === x.employee_id)
   || (x.employee_name ? _employees.find(em => normName(em.name) === normName(x.employee_name)) : null);
-  const barcode = empRecord?.barcode || x.employee_barcode || null;
+  const barcode = empRecord?.barcode || scanBarcode || null;
   const displayName = empRecord?.name || x.employee_name || barcode || 'Desconhecido';
   const key = resolveCanonicalKey(empRecord, barcode, displayName, x.employee_id);
 
@@ -6916,119 +6983,176 @@ async function loadWeightSelectAll(){
   _weights=data||[];
 }
 
-async function refreshDash(){
+let _isRefreshingDash = false;
+
+async function refreshDash(isBackground = false){
   const s=$('dashStart').value, e=$('dashEnd').value, empId=$('dashEmployee').value;
-  if(!s||!e)return;
-  
-  let q=sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
-  if(empId) {
-  const emp = _employees.find(ex => ex.id === empId);
-  if(emp) {
-    if (emp.barcode && emp.name) {
-      q = q.or(`employee_barcode.eq.${emp.barcode},employee_name.eq.${emp.name}`);
-    } else if (emp.barcode) {
-      q = q.eq('employee_barcode', emp.barcode);
+  if(!s||!e) return;
+  if(_isRefreshingDash) {
+    console.log('[refreshDash] já em andamento, ignorando nova chamada');
+    return;
+  }
+  _isRefreshingDash = true;
+
+  const btn = $('btnRefreshDash');
+  const origBtnHtml = btn ? btn.innerHTML : null;
+  if (btn && !isBackground) {
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spin"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></span> Filtrando...`;
+  }
+  if (!isBackground) {
+    showTractorReportModal('Filtrando Produção...', 'Carregando dados da produção... Por favor aguarde.');
+  }
+
+  try {
+    let q = sb.from('production_scans')
+      .select('id, ts, role, weight_kg, weight_name, employee_name, raw_barcode, parcel_code')
+      .eq('tenant_id', tenantId)
+      .gte('ts', toISO(s))
+      .lte('ts', toISO(e, '23:59:59'));
+
+    if(empId) {
+      const emp = _employees.find(ex => ex.id === empId);
+      if(emp) {
+        if (emp.barcode && emp.name) {
+          q = q.or(`raw_barcode.eq.${emp.barcode},employee_name.eq.${emp.name}`);
+        } else if (emp.barcode) {
+          q = q.eq('raw_barcode', emp.barcode);
+        } else {
+          q = q.eq('employee_name', emp.name);
+        }
+      }
+    }
+
+    let scans = [];
+    try {
+      scans = await sbFetchAll(q.order('ts', { ascending: false }), (count) => {
+        if (!isBackground) {
+          const sEl = $('tractorReportSub');
+          if (sEl) sEl.textContent = `Carregando dados da produção... (${count.toLocaleString()} registros lidos)`;
+        }
+      });
+    } catch(err) {
+      console.error('Error in refreshDash scans:', err);
+      if (!isBackground) {
+        alert('Erro ao carregar dados de produção do servidor. Se o período for muito extenso, tente um intervalo menor.');
+      }
+      return;
+    }
+
+    // Comparativo Período Anterior - OTIMIZADO: Contagem direta via HEAD request sem baixar milhares de linhas!
+    const diff = new Date(e) - new Date(s);
+    const ps = new Date(new Date(s) - diff - 86400000).toISOString().split('T')[0];
+    const pe = new Date(new Date(s) - 86400000).toISOString().split('T')[0];
+    let prevTotal = 0;
+    try {
+      const { count, error: countErr } = await sb.from('production_scans')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .in('role', ['PACKER', 'EMBALADOR'])
+        .gte('ts', toISO(ps))
+        .lte('ts', toISO(pe, '23:59:59'));
+      if (!countErr && count !== null) {
+        prevTotal = count;
+      }
+    } catch(err) {
+      console.warn('Error fetching prevScans count:', err);
+    }
+    
+    const [stopsRes, auditsRes, harvestRes] = await Promise.all([
+      sb.from('global_stops').select('*').eq('tenant_id', tenantId).gte('start_ts', s).lte('start_ts', e+'T23:59:59Z'),
+      sbFetchAll(sb.from('quality_audits').select('id, ts, penalty_boxes, employee_barcode').eq('tenant_id', tenantId).gte('ts', toISO(s)).lte('ts', toISO(e, '23:59:59'))).catch(()=>[]),
+      sb.from('field_carrao_sessions').select('*, parcels(code), varieties(name)').eq('tenant_id',tenantId).gte('date',s).lte('date',e)
+    ]);
+    const stops = stopsRes?.data || [];
+    const audits = auditsRes || [];
+    const harvest = harvestRes?.data || [];
+    window._currentStops = stops;
+    updateStopBanner();
+
+    const safeScans = scans || [];
+    const packerScans = safeScans.filter(s=>s.role==='PACKER' || s.role==='EMBALADOR');
+    const kg = packerScans.reduce((a,x)=>a+(x.weight_kg||0),0);
+
+    // Calcula penalidades totais no período
+    const totalPenalties = audits.reduce((sum, q) => sum + Number(q.penalty_boxes || 0), 0);
+    const rawCount = packerScans.length;
+    const netCount = Math.max(0, rawCount - totalPenalties);
+    const globalQual = rawCount > 0 ? Math.round(Math.max(0, 100 - (totalPenalties / rawCount * 100)) * 10) / 10 : 100.0;
+
+    $('kpiTotalDia').textContent = netCount.toLocaleString();
+    $('kpiTotalKg').textContent = (kg/1000).toFixed(1)+' Ton';
+
+    if ($('kpiQualidadeDash')) {
+      $('kpiQualidadeDash').textContent = `${globalQual}%`;
+      $('kpiQualidadeDash').style.color = globalQual >= 95 ? 'var(--green)' : (globalQual >= 85 ? 'var(--yellow)' : 'var(--red)');
+    }
+    if ($('kpiErrosDash')) {
+      $('kpiErrosDash').textContent = totalPenalties;
+    }
+
+    // Meta Horária
+    const targetPacker = parseFloat(tenantConfig.target_per_hour_packer || $('cfgTargetPacker')?.value || 100);
+    if ($('kpiMetaValorDash')) $('kpiMetaValorDash').textContent = targetPacker;
+
+    let teamAvgHourly = 0;
+    if(packerScans.length>1){
+      const sorted=[...packerScans].sort((a,b)=>new Date(a.ts)-new Date(b.ts));
+      const gaps=[];
+      for(let i=1;i<sorted.length;i++){
+        const diff=(new Date(sorted[i].ts)-new Date(sorted[i-1].ts))/1000;
+        if(diff<600) gaps.push(diff);
+      }
+      const avgGap=gaps.length?gaps.reduce((a,b)=>a+b,0)/gaps.length:0;
+      teamAvgHourly = avgGap > 0 ? Math.round(3600/avgGap) : 0;
+      $('kpiCadencia').textContent = avgGap>0?(avgGap<60?avgGap.toFixed(0)+'s':(avgGap/60).toFixed(1)+'min'):'--';
+      $('kpiMediaHora').textContent = teamAvgHourly > 0 ? teamAvgHourly : '--';
+    }
+
+    const yieldPct = targetPacker > 0 && teamAvgHourly > 0 ? Math.round((teamAvgHourly / targetPacker) * 100) : 0;
+    if ($('kpiMetaAtingimentoDash')) {
+      $('kpiMetaAtingimentoDash').textContent = yieldPct > 0 ? `${yieldPct}%` : '--';
+      $('kpiMetaAtingimentoDash').style.color = yieldPct >= 100 ? 'var(--green)' : (yieldPct >= 80 ? 'var(--blue)' : 'var(--yellow)');
+    }
+
+    const rankedCollabs = buildRankingGrid(safeScans, 'collabDetailList', audits);
+    buildDashCharts(safeScans, packerScans, s, e, prevTotal, harvest);
+    buildWeightDetail(packerScans);
+
+    // Ociosidade Média da Equipe
+    const avgTeamIdle = rankedCollabs.length ? Math.round(rankedCollabs.reduce((a, c) => a + c.idleMinutes, 0) / rankedCollabs.length) : 0;
+    if ($('kpiOciosidadeDash')) {
+      $('kpiOciosidadeDash').textContent = `${avgTeamIdle} min`;
+      $('kpiOciosidadeDash').style.color = avgTeamIdle > 30 ? 'var(--red)' : (avgTeamIdle > 15 ? 'var(--yellow)' : 'var(--green)');
+    }
+
+    // Destaque (Top 1 Performer por Score)
+    if (rankedCollabs && rankedCollabs[0]) {
+      const top = rankedCollabs[0];
+      const emp = _employees.find(e => e.name === top.name || e.barcode === top.barcode);
+      const cardEl = $('topPerformerCard');
+      cardEl.style.display = 'block';
+      cardEl.dataset.barcode = emp?.barcode || emp?.id || top.name || '';
+      cardEl.onclick = () => openEmpDrawer(emp?.barcode || emp?.id || top.name);
+      $('topPerformerName').textContent = top.name;
+      $('topPerformerStats').textContent = `${top.boxes} cx • ${top.qualityPct}% qual • Score ${Math.round(top.score)}`;
+      $('topPerformerAvatar').innerHTML = safePhotoUrl(emp?.photo_path) ? `<img src="${safePhotoUrl(emp.photo_path)}" onerror="this.outerHTML='${top.name[0]}'">` : top.name[0];
     } else {
-      q = q.eq('employee_name', emp.name);
+      $('topPerformerCard').style.display = 'none';
     }
-  }
-  }
-  let scans = [];
-  try {
-    scans = await sbFetchAll(q.order('ts',{ascending:false}));
-  } catch(err) { console.error('Error in refreshDash:', err); return; }
-
-  // Comparativo Período Anterior
-  const diff = new Date(e) - new Date(s);
-  const ps = new Date(new Date(s) - diff - 86400000).toISOString().split('T')[0];
-  const pe = new Date(new Date(s) - 86400000).toISOString().split('T')[0];
-  let prevScans = [];
-  try {
-    prevScans = await sbFetchAll(sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(ps)).lte('ts',toISO(pe,'23:59:59')));
-  } catch(err) { console.error('Error fetching prevScans:', err); }
-  
-  const sMs = new Date(s + 'T00:00:00').getTime();
-  const eMs = new Date(e + 'T23:59:59.999').getTime();
-  const [stopsRes, auditsRes, harvestRes] = await Promise.all([
-    sb.from('global_stops').select('*').eq('tenant_id', tenantId).gte('start_ts', s).lte('start_ts', e+'T23:59:59Z'),
-    sbFetchAll(sb.from('quality_audits').select('*').eq('tenant_id', tenantId).gte('ts', toISO(s)).lte('ts', toISO(e, '23:59:59'))).catch(()=>[]),
-    sb.from('field_carrao_sessions').select('*, parcels(code), varieties(name)').eq('tenant_id',tenantId).gte('date',s).lte('date',e)
-  ]);
-  const stops = stopsRes?.data || [];
-  const audits = auditsRes || [];
-  const harvest = harvestRes?.data || [];
-  window._currentStops = stops;
-  updateStopBanner();
-
-  const safeScans = scans || [];
-  const packerScans = safeScans.filter(s=>s.role==='PACKER' || s.role==='EMBALADOR');
-  const kg = packerScans.reduce((a,x)=>a+(x.weight_kg||0),0);
-
-  // Calcula penalidades totais no período
-  const totalPenalties = audits.reduce((sum, q) => sum + Number(q.penalty_boxes || 0), 0);
-  const rawCount = packerScans.length;
-  const netCount = Math.max(0, rawCount - totalPenalties);
-  const globalQual = rawCount > 0 ? Math.round(Math.max(0, 100 - (totalPenalties / rawCount * 100)) * 10) / 10 : 100.0;
-
-  $('kpiTotalDia').textContent = netCount.toLocaleString();
-  $('kpiTotalKg').textContent = (kg/1000).toFixed(1)+' Ton';
-
-  if ($('kpiQualidadeDash')) {
-    $('kpiQualidadeDash').textContent = `${globalQual}%`;
-    $('kpiQualidadeDash').style.color = globalQual >= 95 ? 'var(--green)' : (globalQual >= 85 ? 'var(--yellow)' : 'var(--red)');
-  }
-  if ($('kpiErrosDash')) {
-    $('kpiErrosDash').textContent = totalPenalties;
-  }
-
-  // Meta Horária
-  const targetPacker = parseFloat(tenantConfig.target_per_hour_packer || $('cfgTargetPacker')?.value || 100);
-  if ($('kpiMetaValorDash')) $('kpiMetaValorDash').textContent = targetPacker;
-
-  let teamAvgHourly = 0;
-  if(packerScans.length>1){
-    const sorted=[...packerScans].sort((a,b)=>new Date(a.ts)-new Date(b.ts));
-    const gaps=[];
-    for(let i=1;i<sorted.length;i++){
-      const diff=(new Date(sorted[i].ts)-new Date(sorted[i-1].ts))/1000;
-      if(diff<600) gaps.push(diff);
+  } catch(err) {
+    console.error('Error in refreshDash:', err);
+    if (!isBackground) {
+      alert('Erro ao carregar dados da produção. Se o período for muito extenso, tente um intervalo menor.');
     }
-    const avgGap=gaps.length?gaps.reduce((a,b)=>a+b,0)/gaps.length:0;
-    teamAvgHourly = avgGap > 0 ? Math.round(3600/avgGap) : 0;
-    $('kpiCadencia').textContent = avgGap>0?(avgGap<60?avgGap.toFixed(0)+'s':(avgGap/60).toFixed(1)+'min'):'--';
-    $('kpiMediaHora').textContent = teamAvgHourly > 0 ? teamAvgHourly : '--';
-  }
-
-  const yieldPct = targetPacker > 0 && teamAvgHourly > 0 ? Math.round((teamAvgHourly / targetPacker) * 100) : 0;
-  if ($('kpiMetaAtingimentoDash')) {
-    $('kpiMetaAtingimentoDash').textContent = yieldPct > 0 ? `${yieldPct}%` : '--';
-    $('kpiMetaAtingimentoDash').style.color = yieldPct >= 100 ? 'var(--green)' : (yieldPct >= 80 ? 'var(--blue)' : 'var(--yellow)');
-  }
-
-  const rankedCollabs = buildRankingGrid(safeScans, 'collabDetailList', audits);
-  buildDashCharts(safeScans, packerScans, s, e, prevScans, harvest);
-  buildWeightDetail(packerScans);
-
-  // Ociosidade Média da Equipe
-  const avgTeamIdle = rankedCollabs.length ? Math.round(rankedCollabs.reduce((a, c) => a + c.idleMinutes, 0) / rankedCollabs.length) : 0;
-  if ($('kpiOciosidadeDash')) {
-    $('kpiOciosidadeDash').textContent = `${avgTeamIdle} min`;
-    $('kpiOciosidadeDash').style.color = avgTeamIdle > 30 ? 'var(--red)' : (avgTeamIdle > 15 ? 'var(--yellow)' : 'var(--green)');
-  }
-
-  // Destaque (Top 1 Performer por Score)
-  if (rankedCollabs && rankedCollabs[0]) {
-    const top = rankedCollabs[0];
-    const emp = _employees.find(e => e.name === top.name || e.barcode === top.barcode);
-    const cardEl = $('topPerformerCard');
-    cardEl.style.display = 'block';
-    cardEl.dataset.barcode = emp?.barcode || emp?.id || top.name || '';
-    cardEl.onclick = () => openEmpDrawer(emp?.barcode || emp?.id || top.name);
-    $('topPerformerName').textContent = top.name;
-    $('topPerformerStats').textContent = `${top.boxes} cx • ${top.qualityPct}% qual • Score ${Math.round(top.score)}`;
-    $('topPerformerAvatar').innerHTML = safePhotoUrl(emp?.photo_path) ? `<img src="${safePhotoUrl(emp.photo_path)}" onerror="this.outerHTML='${top.name[0]}'">` : top.name[0];
-  } else {
-    $('topPerformerCard').style.display = 'none';
+  } finally {
+    _isRefreshingDash = false;
+    if (btn && origBtnHtml) {
+      btn.disabled = false;
+      btn.innerHTML = origBtnHtml;
+      if (window.lucide) lucide.createIcons();
+    }
+    if (!isBackground) hideTractorReportModal();
   }
 }
 
@@ -7049,13 +7173,14 @@ function buildDashCharts(scans, packerScans, s, e, prevScans, harvest){
   try {
   const empStats = {};
   packerScans.forEach(x => { 
-  let name = x.employee_name;
-  if(!name || name.includes('-')) {
-  const emp = _employees ? _employees.find(e => e.barcode === x.employee_barcode) : null;
-  if(emp) name = emp.name;
-  }
-  if(!name) name = x.employee_barcode || 'Desconhecido';
-  empStats[name] = (empStats[name] || 0) + 1; 
+    const bcode = x.raw_barcode || x.employee_barcode;
+    let name = x.employee_name;
+    if(!name || name.includes('-')) {
+      const emp = _employees ? _employees.find(e => e.barcode === bcode) : null;
+      if(emp) name = emp.name;
+    }
+    if(!name) name = bcode || 'Desconhecido';
+    empStats[name] = (empStats[name] || 0) + 1; 
   });
   const sortedEmps = Object.entries(empStats).sort((a,b) => b[1] - a[1]).slice(0, 10);
   mkChart('chartCollab', {
@@ -7070,7 +7195,7 @@ function buildDashCharts(scans, packerScans, s, e, prevScans, harvest){
 
   try {
   const curTotal = packerScans.length;
-  const prevTotal = (prevScans || []).filter(x => x.role === 'PACKER' || x.role === 'EMBALADOR').length;
+  const prevTotal = typeof prevScans === 'number' ? prevScans : (prevScans || []).filter(x => x.role === 'PACKER' || x.role === 'EMBALADOR').length;
   mkChart('chartComparison', {
   type: 'bar',
   data: {
@@ -7154,18 +7279,19 @@ function buildWeightDetail(scans){
 function buildRankingGrid(scans, containerId, audits = []){
   const eb={};
   scans.forEach(x=>{
+    const bcode = x.raw_barcode || x.employee_barcode;
     let displayName = x.employee_name;
     if(!displayName || displayName.includes('-')) {
-      const emp = _employees.find(e => e.barcode === x.employee_barcode);
+      const emp = _employees.find(e => e.barcode === bcode);
       if(emp) displayName = emp.name;
     }
-    if(!displayName) displayName = x.employee_barcode || 'Desconhecido';
+    if(!displayName) displayName = bcode || 'Desconhecido';
 
-    if(!eb[displayName]) eb[displayName] = { rawBoxes: 0, kg: 0, scans: [], barcode: x.employee_barcode, role: x.role };
+    if(!eb[displayName]) eb[displayName] = { rawBoxes: 0, kg: 0, scans: [], barcode: bcode, role: x.role };
     eb[displayName].rawBoxes++;
     eb[displayName].kg += (x.weight_kg || 0);
     eb[displayName].scans.push(x);
-    if (!eb[displayName].barcode && x.employee_barcode) eb[displayName].barcode = x.employee_barcode;
+    if (!eb[displayName].barcode && bcode) eb[displayName].barcode = bcode;
   });
 
   const targetPacker = parseFloat(tenantConfig.target_per_hour_packer || $('cfgTargetPacker')?.value || 100);
@@ -8351,7 +8477,7 @@ function calculateIdleTime(scans, globalStops = []) {
   if (scans.length < 2) return 0;
   const sorted = [...scans].sort((a,b) => new Date(a.ts) - new Date(b.ts));
   let totalIdleSeconds = 0;
-  const thresholdMin = Number(tenantConfig.idle_threshold_min) || 10;
+  const thresholdMin = Number(tenantConfig.idle_threshold_min || localStorage.getItem('cfg_idle_threshold_min_' + tenantId) || 10);
   const thresholdSeconds = thresholdMin * 60; // Padrão: 10 minutos (600 segundos)
   
   for (let i = 1; i < sorted.length; i++) {
@@ -8393,7 +8519,7 @@ function calculateIdleDetails(scans, globalStops = []) {
   const gaps = [];
   if (scans.length < 2) return { totalMinutes: 0, gaps, avgGapMinutes: 0 };
   const sorted = [...scans].sort((a,b) => new Date(a.ts) - new Date(b.ts));
-  const thresholdMin = Number(tenantConfig.idle_threshold_min) || 10;
+  const thresholdMin = Number(tenantConfig.idle_threshold_min || localStorage.getItem('cfg_idle_threshold_min_' + tenantId) || 10);
   const thresholdSeconds = thresholdMin * 60; // 10 minutos
   
   for (let i = 1; i < sorted.length; i++) {
@@ -8604,7 +8730,7 @@ async function previewFinalize(){
   const date=$('finalizeDate').value; if(!date)return;
   let scans = [];
   try {
-    scans = await sbFetchAll(sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(date)).lte('ts',toISO(date,'23:59:59')));
+    scans = await sbFetchAll(sb.from('production_scans').select('employee_name, role, weight_kg').eq('tenant_id',tenantId).gte('ts',toISO(date)).lte('ts',toISO(date,'23:59:59')));
   } catch(err) { console.error(err); }
   if(!scans||!scans.length){$('finalizePreview').innerHTML='<div style="color:var(--muted);font-size:13px">Nenhum registro para esta data.</div>';return;}
   const eb={};
@@ -8639,7 +8765,7 @@ async function doFinalize(){
 // ══════════════════════════════════════
 async function refreshLogs(){
   const s=$('logStart').value,e=$('logEnd').value,empId=$('logEmp').value;
-  let q=sb.from('production_scans').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
+  let q=sb.from('production_scans').select('ts, employee_name, role, weight_name, weight_kg, parcel_code').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
   if(empId) q=q.eq('employee_id',empId);
   const {data}=await q.order('ts',{ascending:false}).limit(500);
   $('logsTable').querySelector('tbody').innerHTML=(data||[]).map(x=>`
@@ -9485,9 +9611,9 @@ async function loadSettings(){
   if($('cfgWorkEnd')) $('cfgWorkEnd').value=data.work_end_time||'17:00';
   if($('cfgLunchStart')) $('cfgLunchStart').value=data.lunch_start_time||'11:30';
   if($('cfgLunchEnd')) $('cfgLunchEnd').value=data.lunch_end_time||'13:00';
-  if($('cfgSnackStart')) $('cfgSnackStart').value=data.snack_start_time||'09:00';
-  if($('cfgSnackEnd')) $('cfgSnackEnd').value=data.snack_end_time||'09:15';
-  if($('cfgIdleThreshold')) $('cfgIdleThreshold').value=data.idle_threshold_min||10;
+  if($('cfgSnackStart')) $('cfgSnackStart').value=data.snack_start_time || localStorage.getItem('cfg_snack_start_time_' + tenantId) || '09:00';
+  if($('cfgSnackEnd')) $('cfgSnackEnd').value=data.snack_end_time || localStorage.getItem('cfg_snack_end_time_' + tenantId) || '09:15';
+  if($('cfgIdleThreshold')) $('cfgIdleThreshold').value=data.idle_threshold_min || localStorage.getItem('cfg_idle_threshold_min_' + tenantId) || 10;
   if($('cfgTargetPacker')) $('cfgTargetPacker').value=data.target_per_hour_packer||100;
   if($('cfgTargetStacker')) $('cfgTargetStacker').value=data.target_per_hour_stacker||100;
 
@@ -9557,6 +9683,15 @@ async function saveSettings(){
   const btn=$('cfgSaveBtn'),st=$('cfgStatus');
   btn.disabled=true;st.textContent='Salvando...';
   
+  // Salva no localStorage as configs que não são colunas no banco (tabela tenants)
+  if ($('cfgSnackStart')) localStorage.setItem('cfg_snack_start_time_' + tenantId, $('cfgSnackStart').value);
+  if ($('cfgSnackEnd')) localStorage.setItem('cfg_snack_end_time_' + tenantId, $('cfgSnackEnd').value);
+  if ($('cfgIdleThreshold')) {
+    const idleVal = parseFloat($('cfgIdleThreshold').value) || 10;
+    localStorage.setItem('cfg_idle_threshold_min_' + tenantId, idleVal);
+    tenantConfig.idle_threshold_min = idleVal;
+  }
+
   const payload = {
   name:$('cfgName').value.trim(),
   culture_type:$('cfgCulture').value,
@@ -9578,9 +9713,6 @@ async function saveSettings(){
   work_end_time:$('cfgWorkEnd')?.value||'17:00',
   lunch_start_time:$('cfgLunchStart')?.value||'11:30',
   lunch_end_time:$('cfgLunchEnd')?.value||'13:00',
-  snack_start_time:$('cfgSnackStart')?.value||'09:00',
-  snack_end_time:$('cfgSnackEnd')?.value||'09:15',
-  idle_threshold_min:parseFloat($('cfgIdleThreshold')?.value)||10,
   target_per_hour_packer:parseFloat($('cfgTargetPacker')?.value)||100,
   target_per_hour_stacker:parseFloat($('cfgTargetStacker')?.value)||100,
   // New fields
