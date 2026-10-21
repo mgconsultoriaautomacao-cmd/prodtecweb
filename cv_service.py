@@ -305,10 +305,22 @@ def process_image(frame):
     return fruit_count, annotated_frame
 
 def open_camera(index):
-    """Abre a câmera no índice fornecido testando backends compatíveis com Windows (CAP_DSHOW, CAP_MSMF) e Linux/Mac."""
+    """Abre a câmera no índice fornecido ou URL RTSP/HTTP (para câmeras de segurança IP com cabo de rede RJ45)."""
+    # Se for URL de stream de rede (RTSP, HTTP, ONVIF)
+    if isinstance(index, str) and (index.startswith("rtsp://") or index.startswith("http://") or index.startswith("https://")):
+        try:
+            cap = cv2.VideoCapture(index, cv2.CAP_FFMPEG)
+            if cap is not None and cap.isOpened():
+                return cap
+        except Exception:
+            pass
+        return cv2.VideoCapture(index)
+
+    # Câmeras USB locais ou emuladas via DirectShow / Media Foundation
     if sys.platform == "win32":
         try:
-            cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+            idx_int = int(index) if not isinstance(index, int) else index
+            cap = cv2.VideoCapture(idx_int, cv2.CAP_DSHOW)
             if cap is not None and cap.isOpened():
                 return cap
             if cap is not None:
@@ -317,7 +329,8 @@ def open_camera(index):
             pass
 
         try:
-            cap = cv2.VideoCapture(index, cv2.CAP_MSMF)
+            idx_int = int(index) if not isinstance(index, int) else index
+            cap = cv2.VideoCapture(idx_int, cv2.CAP_MSMF)
             if cap is not None and cap.isOpened():
                 return cap
             if cap is not None:
@@ -325,8 +338,7 @@ def open_camera(index):
         except Exception:
             pass
 
-    cap = cv2.VideoCapture(index)
-    return cap
+    return cv2.VideoCapture(int(index) if str(index).isdigit() else index)
 
 camera_change_requested = False
 target_camera_index = 0

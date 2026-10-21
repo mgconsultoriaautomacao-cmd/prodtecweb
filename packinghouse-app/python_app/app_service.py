@@ -177,9 +177,14 @@ def auth_login(email: str, password: str) -> dict:
 def auth_check() -> dict:
     cfg = config_get_all()
     token = cfg.get('auth_token')
-    if not token or token in ('null', 'undefined', ''):
+    tenant_id = cfg.get('tenant_id')
+    
+    # Se já tem tenant_id ou token configurado, o terminal já está vinculado!
+    has_binding = (tenant_id and tenant_id not in ('null', 'undefined', '')) or (token and token not in ('null', 'undefined', ''))
+    if not has_binding:
         return {'ok': False}
-    # Tenta renovar via refresh token
+
+    # Tenta renovar via refresh token se houver internet
     refresh = cfg.get('auth_refresh_token')
     if refresh and refresh not in ('null', ''):
         url = cfg.get('supabase_url') or DEFAULT_SUPA_URL
@@ -189,18 +194,24 @@ def auth_check() -> dict:
                 f'{url}/auth/v1/token?grant_type=refresh_token',
                 headers={'apikey': key, 'Content-Type': 'application/json'},
                 json={'refresh_token': refresh},
-                timeout=10
+                timeout=5
             )
             if res.ok:
                 d = res.json()
                 config_set({'auth_token': d['access_token'], 'auth_refresh_token': d['refresh_token']})
                 return {'ok': True, 'email': cfg.get('auth_email', '')}
             else:
-                config_set({'auth_token': None, 'auth_refresh_token': None})
-                return {'ok': False}
-        except Exception:
-            return {'ok': False}
-    return {'ok': False}
+                # SE FALHAR NA RENOVAÇÃO REMOTA, NÃO LIMPAR TOKENS!
+                # Mantém o terminal vinculado operando localmente no packinghouse
+                print(f"AuthCheck: Refresh status {res.status_code}. Mantendo terminal vinculado offline.")
+                return {'ok': True, 'email': cfg.get('auth_email', ''), 'offline': True}
+        except Exception as e:
+            # Em caso de timeout de rede ou oscilação de internet, mantém vinculado!
+            print(f"AuthCheck: Conexão offline ({e}). Mantendo terminal vinculado.")
+            return {'ok': True, 'email': cfg.get('auth_email', ''), 'offline': True}
+
+    # Se já tem tenant_id salvo, permanece vinculado
+    return {'ok': True, 'email': cfg.get('auth_email', ''), 'offline': True}
 
 
 # ─── Funcionários ─────────────────────────────────────────────────────────────

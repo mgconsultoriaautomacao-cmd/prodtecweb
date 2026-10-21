@@ -2877,19 +2877,19 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Detecção de Erros de Sincronização (JWT Expirado) - Com trava para não inundar o log
+// Detecção de Erros de Sincronização (JWT Expirado)
 let lastAuthErrorTime = 0;
 window.api.onSyncAuthError(() => {
   const now = Date.now();
   if (now - lastAuthErrorTime < 60000) return; // Só avisa uma vez por minuto
   lastAuthErrorTime = now;
 
-  console.warn("[Sync] Sessão expirada ou token inválido.");
-  const loginOverlay = document.getElementById('loginOverlay');
-  const status = document.getElementById('loginStatus');
-  
-  if (loginOverlay && loginOverlay.style.display === 'none') {
-    loginOverlay.style.display = 'flex';
-    if (status) status.textContent = 'Sessão expirada. Por favor, entre novamente.';
+  console.warn("[Sync] Sessão remota expirada ou token pendente de sincronização.");
+  // NUNCA interromper a operação ativa de contagem de caixas do packinghouse!
+  // Apenas registra o log e atualiza o indicador de sincronização se existir.
+  const syncInd = document.getElementById('syncIndicator') || document.getElementById('statusBar');
+  if (syncInd) {
+    syncInd.title = "Sincronização remota pendente (dados salvos localmente no PC)";
   }
 });
 
