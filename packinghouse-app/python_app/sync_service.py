@@ -84,20 +84,23 @@ def sync_to_supabase(conn: sqlite3.Connection):
     print(f'Sync [up]: Iniciando upload para {url}...')
 
     # ── 1. Scan Events ────────────────────────────────────────────────────────
-    scans = conn.execute("""
-        SELECT s.*, e.name as employee_name,
-               w.name as weight_name, w.weight_kg,
-               p.code as parcel_code, f.name as fruit_name, v.name as variety_name
-        FROM scan_events s
-        LEFT JOIN employees e ON s.employee_id=e.id
-        LEFT JOIN box_weights w ON s.weight_id=w.id
-        LEFT JOIN parcels p ON s.parcel_id=p.id
-        LEFT JOIN fruits f ON s.fruit_id=f.id
-        LEFT JOIN varieties v ON s.variety_id=v.id
-        WHERE s.synced=0 LIMIT 100
-    """).fetchall()
+    while True:
+        scans = conn.execute("""
+            SELECT s.*, e.name as employee_name,
+                   w.name as weight_name, w.weight_kg,
+                   p.code as parcel_code, f.name as fruit_name, v.name as variety_name
+            FROM scan_events s
+            LEFT JOIN employees e ON s.employee_id=e.id
+            LEFT JOIN box_weights w ON s.weight_id=w.id
+            LEFT JOIN parcels p ON s.parcel_id=p.id
+            LEFT JOIN fruits f ON s.fruit_id=f.id
+            LEFT JOIN varieties v ON s.variety_id=v.id
+            WHERE s.synced=0 LIMIT 200
+        """).fetchall()
 
-    if scans:
+        if not scans:
+            break
+
         body = [{
             'local_id': s['id'],
             'ts': _ms_to_iso(s['ts']),
@@ -118,9 +121,12 @@ def sync_to_supabase(conn: sqlite3.Connection):
         if res and res.ok:
             ids = ','.join(str(s['id']) for s in scans)
             _dbrun(conn, f'UPDATE scan_events SET synced=1 WHERE id IN ({ids})')
-            print(f'Sync [up]: {len(scans)} scans enviados.')
+            print(f'Sync [up]: {len(scans)} scans enviados com sucesso.')
+            if len(scans) < 200:
+                break
         else:
             _log_error(res, 'production_scans', 'up')
+            break
 
     # ── 2. Quality Audits ─────────────────────────────────────────────────────
     audits = conn.execute("""
