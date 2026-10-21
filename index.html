@@ -2266,8 +2266,16 @@
   <!-- ABA 2: APLICAÇÃO DE DEFENSIVOS (O.P) -->
   <div id="ccTabOp" class="tab-pane-cc" style="display:none">
   <div class="card" style="margin-bottom:24px">
-  <div class="title" style="display:flex; justify-content:space-between; align-items:center"><div style="display:flex; align-items:center; gap:6px"><i data-lucide="file-text" class="btn-i"></i> Ordens de Pulverização (O.P)</div>
-  <button onclick="openNewOpModal()" class="green" style="font-size:11px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px"><i data-lucide="plus-circle" style="width:14px; height:14px"></i> Nova O.P.</button>
+  <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px">
+    <div style="display:flex; align-items:center; gap:6px"><i data-lucide="file-text" class="btn-i"></i> Ordens de Pulverização (O.P)</div>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+      <button onclick="exportOpListToExcel()" class="btn sec" style="font-size:11px; padding:6px 14px; display:inline-flex; align-items:center; gap:6px; background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); font-weight:700" title="Exportar pulverizações e saídas de defensivos/foliares em planilha Excel (.xlsx)">
+        <i data-lucide="download" style="width:14px; height:14px"></i> Exportar Excel (.xlsx)
+      </button>
+      <button onclick="openNewOpModal()" class="green" style="font-size:11px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px">
+        <i data-lucide="plus-circle" style="width:14px; height:14px"></i> Nova O.P.
+      </button>
+    </div>
   </div>
   <p style="color:var(--muted); font-size:12px; margin-bottom:14px">Histórico de aplicações de agroquímicos registradas e laudos de carência para liberação.</p>
   
@@ -2387,6 +2395,7 @@
             <span>Saldos de Estoque — DEFENSIVOS FITOSSANITÁRIOS</span>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap">
+            <button onclick="exportOpListToExcel()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:5px; color:var(--green); border-color:rgba(16,185,129,0.3)" title="Exportar histórico de pulverizações e saídas em planilha Excel (.xlsx)"><i data-lucide="download" style="width:14px;height:14px"></i> Exportar Saídas (O.P)</button>
             <button onclick="downloadStockInventoryTemplateCSV('DEFENSIVOS')" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px" title="Baixar Modelo de Planilha de Inventário Inicial de Defensivos"><i data-lucide="download" style="width:14px;height:14px"></i> Modelo Inventário</button>
             <button onclick="openImportStockModal('DEFENSIVOS')" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--blue); border-color:rgba(59,130,246,0.3)" title="Importar planilha de saldo de defensivos"><i data-lucide="upload" style="width:14px;height:14px"></i> Importar Inventário</button>
             <button onclick="openXmlNfeModal('DEFENSIVOS')" class="btn on" style="font-size:12px; padding:6px 14px; background:linear-gradient(135deg,#0ea5e9,#0284c7); border:none; color:#fff; font-weight:bold; display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-code" style="width:16px;height:16px"></i> Importar XML de NFe</button>
@@ -2527,6 +2536,7 @@
             <span>Saldos de Estoque — ADUBOS FOLIARES & NUTRIÇÃO FOLIAR</span>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap">
+            <button onclick="exportOpListToExcel()" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:5px; color:var(--green); border-color:rgba(16,185,129,0.3)" title="Exportar histórico de pulverizações e saídas de foliares em planilha Excel (.xlsx)"><i data-lucide="download" style="width:14px;height:14px"></i> Exportar Saídas (O.P)</button>
             <button onclick="downloadStockInventoryTemplateCSV('FOLIARES')" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--green); border-color:rgba(16,185,129,0.3)" title="Baixar Modelo de Planilha de Inventário Inicial de Foliares"><i data-lucide="download" style="width:14px;height:14px"></i> Modelo Inventário</button>
             <button onclick="openImportStockModal('FOLIARES')" class="btn sec" style="font-size:12px; padding:6px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--green); border-color:rgba(16,185,129,0.3)" title="Importar planilha de saldo de foliares"><i data-lucide="upload" style="width:14px;height:14px"></i> Importar Inventário</button>
             <button onclick="openXmlNfeModal('FOLIARES')" class="btn on" style="font-size:12px; padding:6px 14px; background:linear-gradient(135deg,#10b981,#059669); border:none; color:#fff; font-weight:bold; display:inline-flex; align-items:center; gap:6px"><i data-lucide="file-code" style="width:16px;height:16px"></i> Importar XML de NFe</button>
@@ -4374,7 +4384,25 @@
   </div>
   <div style="margin-bottom:12px">
   <label class="flabel">Atividade / Trato *</label>
-  <input type="text" id="tratoAtividade" placeholder="Ex: GRADAGEM, COROAMENTO..." style="text-transform:uppercase; width:100%" required/>
+  <input type="text" id="tratoAtividade" list="tratoAtividadesList" placeholder="Ex: GRADAGEM, COROAMENTO, COLMÉIAS..." style="text-transform:uppercase; width:100%" required/>
+  <datalist id="tratoAtividadesList">
+    <option value="COLOCAÇÃO DE COLMÉIAS DE ABELHAS">
+    <option value="RETIRADA DE COLMÉIAS DE ABELHAS">
+    <option value="GRADAGEM ARADORA">
+    <option value="GRADAGEM NIVELADORA">
+    <option value="COBERTURA">
+    <option value="MONTAGEM">
+    <option value="COLOCAÇÃO DE MULCHING">
+    <option value="PLANTIO">
+    <option value="COLOCAÇÃO DE ARCO">
+    <option value="COLOCAÇÃO DE MANTA">
+    <option value="RETIROU MANTA">
+    <option value="RETIROU ARCO">
+    <option value="CAPINA MANUAL">
+    <option value="COLOCAÇÃO DE BANDEJAS">
+    <option value="VIRADA DE FRUTOS">
+    <option value="PLÁSTICO AMARELO NAS BORDADURAS">
+  </datalist>
   </div>
   <div style="margin-bottom:12px">
   <label class="flabel">Data *</label>
@@ -4383,11 +4411,11 @@
   <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px">
   <div>
   <label class="flabel">Implemento</label>
-  <input type="text" id="tratoImplemento" placeholder="Ex: Grade aradora" style="width:100%"/>
+  <input type="text" id="tratoImplemento" placeholder="Ex: Grade aradora ou MANUAL" style="width:100%"/>
   </div>
   <div>
-  <label class="flabel">Operador</label>
-  <input type="text" id="tratoOperador" placeholder="Nome do operador" style="width:100%"/>
+  <label class="flabel" id="tratoOperadorLabel">Operador / Responsável</label>
+  <input type="text" id="tratoOperador" placeholder="Nome do operador ou apicultor" style="width:100%"/>
   </div>
   </div>
   
@@ -13559,8 +13587,8 @@ async function printPastaCampoTratos(id) {
     { ativ: 'RETIROU MANTA', offsetDays: 25, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' },
     { ativ: 'RETIROU ARCO', offsetDays: 25, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' },
     { ativ: 'CAPINA MANUAL', offsetDays: 25, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' },
-    { ativ: 'COLOCAÇÃO DE COLMÉIAS DE ABELHAS', offsetDays: 26, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' },
-    { ativ: 'RETIRADA DE COLMÉIAS DE ABELHAS', offsetDays: 36, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' },
+    { ativ: 'COLOCAÇÃO DE COLMÉIAS DE ABELHAS', offsetDays: 26, impl: 'MANUAL', num: 'S/N', defaultOp: (typeof localStorage !== 'undefined' && localStorage.getItem('prodtech_trato_op_colmeias')) || 'ANDRÉ LUCAS' },
+    { ativ: 'RETIRADA DE COLMÉIAS DE ABELHAS', offsetDays: 36, impl: 'MANUAL', num: 'S/N', defaultOp: (typeof localStorage !== 'undefined' && localStorage.getItem('prodtech_trato_op_colmeias')) || 'ANDRÉ LUCAS' },
     { ativ: 'COLOCAÇÃO DE BANDEJAS', offsetDays: 38, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' },
     { ativ: 'VIRADA DE FRUTOS', offsetDays: 45, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' },
     { ativ: 'PLÁSTICO AMARELO NAS BORDADURAS', offsetDays: 15, impl: 'MANUAL', num: 'S/N', defaultOp: 'ANDRÉ LUCAS' }
@@ -14096,10 +14124,11 @@ async function printPastaCampoDefensivos(id) {
 // ── MODAL & GERADOR AUTOMÁTICO DE TRATOS CULTURAIS (PC05) ──────────────────
 async function openAutoTratosModal() {
   let modal = document.getElementById('autoTratosModal');
-  if (!modal) {
+  if (!modal || !document.getElementById('autoTratoOpColmeias')) {
+    if (modal) modal.remove();
     const modalHtml = `
     <div id="autoTratosModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:10005; align-items:center; justify-content:center; padding:12px;">
-      <div class="card" style="width:100%; max-width:620px; display:flex; flex-direction:column; padding:20px; gap:16px;">
+      <div class="card" style="width:100%; max-width:680px; display:flex; flex-direction:column; padding:20px; gap:16px;">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px;">
           <div style="font-size:16px; font-weight:800; color:var(--text); display:flex; align-items:center; gap:8px;">
             <i data-lucide="zap" style="width:18px;height:18px;color:#eab308"></i> <span>Gerar Tratos Culturais Automáticos (Modelo Oficial Bom Jesus)</span>
@@ -14108,7 +14137,7 @@ async function openAutoTratosModal() {
         </div>
 
         <p style="font-size:12px; color:var(--muted); line-height:1.4">
-          Gera automaticamente todos os 17 tratos culturais e preparos de solo com as datas exatas calculadas por offset a partir da data de plantio da parcela (Gradagem, Cobertura, Mulching, Plantio, Arcos, Mantas, Capina, Colmeias e Bandejas), registrando no banco com os operadores responsáveis.
+          Gera automaticamente todos os 17 tratos culturais e preparos de solo com as datas exatas calculadas por offset a partir da data de plantio da parcela (Gradagem, Cobertura, Mulching, Plantio, Arcos, Mantas, Capina, Colmeias e Bandejas), registrando no banco com os operadores e responsáveis específicos.
         </p>
 
         <div class="form-field">
@@ -14116,16 +14145,23 @@ async function openAutoTratosModal() {
           <select id="autoTratoParcelSelect" style="font-size:13px; font-weight:bold; width:100%"></select>
         </div>
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px">
           <div class="form-field">
-            <label class="field-label" style="font-size:11px; font-weight:700">Operador Tratorista (Implementos)</label>
-            <input type="text" id="autoTratoOpTrator" value="FRANCISCO ANTONIO PEREIRA CANDIDO" style="font-size:12px; font-weight:600">
+            <label class="field-label" style="font-size:11px; font-weight:700">🚜 Operador Tratorista (Implementos)</label>
+            <input type="text" id="autoTratoOpTrator" list="tratosOperadoresDatalist" value="FRANCISCO ANTONIO PEREIRA CANDIDO" style="font-size:12px; font-weight:600">
           </div>
           <div class="form-field">
-            <label class="field-label" style="font-size:11px; font-weight:700">Operador Manual (Manta/Arco/Capina)</label>
-            <input type="text" id="autoTratoOpManual" value="ANDRÉ LUCAS" style="font-size:12px; font-weight:600">
+            <label class="field-label" style="font-size:11px; font-weight:700">🧑‍🌾 Operador Manual (Manta/Arco/Capina)</label>
+            <input type="text" id="autoTratoOpManual" list="tratosOperadoresDatalist" value="ANDRÉ LUCAS" style="font-size:12px; font-weight:600">
+          </div>
+          <div class="form-field">
+            <label class="field-label" style="font-size:11px; font-weight:700; color:#f59e0b; display:flex; align-items:center; gap:4px">
+              <span>🐝 Responsável Colmeias (Abelhas)</span>
+            </label>
+            <input type="text" id="autoTratoOpColmeias" list="tratosOperadoresDatalist" value="" placeholder="Selecione ou digite..." style="font-size:12px; font-weight:600; border-color:rgba(245,158,11,0.5)">
           </div>
         </div>
+        <datalist id="tratosOperadoresDatalist"></datalist>
 
         <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border); padding-top:14px">
           <button class="btn sec" onclick="closeAutoTratosModal()" style="font-size:12px; padding:8px 14px">Cancelar</button>
@@ -14138,6 +14174,22 @@ async function openAutoTratosModal() {
     `;
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     modal = document.getElementById('autoTratosModal');
+  }
+
+  // Preencher datalist com operadores e colaboradores cadastrados da fazenda
+  const opDatalist = document.getElementById('tratosOperadoresDatalist');
+  if (opDatalist) {
+    const empNames = (typeof _employees !== 'undefined' && Array.isArray(_employees) ? _employees : []).map(e => e.name).filter(Boolean);
+    const tratosNames = (typeof _tratosList !== 'undefined' && Array.isArray(_tratosList) ? _tratosList : []).map(t => t.operador).filter(Boolean);
+    const uniqueOps = Array.from(new Set([...empNames, ...tratosNames, 'FRANCISCO ANTONIO PEREIRA CANDIDO', 'ANDRÉ LUCAS'])).sort();
+    opDatalist.innerHTML = uniqueOps.map(name => `<option value="${name}">`).join('');
+  }
+
+  // Preencher responsável pelas colmeias salvo previamente
+  const savedColmeiasOp = (typeof localStorage !== 'undefined' && localStorage.getItem('prodtech_trato_op_colmeias')) || '';
+  const inpColmeias = document.getElementById('autoTratoOpColmeias');
+  if (inpColmeias && !inpColmeias.value) {
+    inpColmeias.value = savedColmeiasOp;
   }
 
   const select = document.getElementById('autoTratoParcelSelect');
@@ -14179,6 +14231,11 @@ async function submitAutoTratos() {
 
   const opTrator = document.getElementById('autoTratoOpTrator')?.value.trim() || 'FRANCISCO ANTONIO PEREIRA CANDIDO';
   const opManual = document.getElementById('autoTratoOpManual')?.value.trim() || 'ANDRÉ LUCAS';
+  const opColmeias = document.getElementById('autoTratoOpColmeias')?.value.trim() || opManual;
+
+  if (opColmeias) {
+    try { localStorage.setItem('prodtech_trato_op_colmeias', opColmeias); } catch(e){}
+  }
 
   const plantioStr = item.plantio || item.data_plantio || item.transplante;
   const plantioDt = plantioStr ? new Date(plantioStr + (plantioStr.includes('T') ? '' : 'T00:00:00')) : new Date();
@@ -14196,8 +14253,8 @@ async function submitAutoTratos() {
     { ativ: 'RETIROU MANTA', offsetDays: 25, impl: 'MANUAL', num: 'S/N', op: opManual },
     { ativ: 'RETIROU ARCO', offsetDays: 25, impl: 'MANUAL', num: 'S/N', op: opManual },
     { ativ: 'CAPINA MANUAL', offsetDays: 25, impl: 'MANUAL', num: 'S/N', op: opManual },
-    { ativ: 'COLOCAÇÃO DE COLMÉIAS DE ABELHAS', offsetDays: 26, impl: 'MANUAL', num: 'S/N', op: opManual },
-    { ativ: 'RETIRADA DE COLMÉIAS DE ABELHAS', offsetDays: 36, impl: 'MANUAL', num: 'S/N', op: opManual },
+    { ativ: 'COLOCAÇÃO DE COLMÉIAS DE ABELHAS', offsetDays: 26, impl: 'MANUAL', num: 'S/N', op: opColmeias },
+    { ativ: 'RETIRADA DE COLMÉIAS DE ABELHAS', offsetDays: 36, impl: 'MANUAL', num: 'S/N', op: opColmeias },
     { ativ: 'COLOCAÇÃO DE BANDEJAS', offsetDays: 38, impl: 'MANUAL', num: 'S/N', op: opManual },
     { ativ: 'VIRADA DE FRUTOS', offsetDays: 45, impl: 'MANUAL', num: 'S/N', op: opManual },
     { ativ: 'PLÁSTICO AMARELO NAS BORDADURAS', offsetDays: 15, impl: 'MANUAL', num: 'S/N', op: opManual }
@@ -17898,6 +17955,7 @@ function filterCcOpList() {
   const badge = $('ccOpCountBadge');
   if (badge) badge.textContent = `${displayList.length} de ${rawList.length} OPs`;
 
+  window._displayedOpList = displayList;
   renderCcOpTable(displayList);
 }
 
@@ -21383,6 +21441,347 @@ function renderCcOpTable(list) {
   setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// EXPORTAÇÃO COMPLETA DE PULVERIZAÇÕES & SAÍDAS DE ESTOQUE PARA EXCEL (.XLSX)
+// ═══════════════════════════════════════════════════════════════════════
+
+function calculateOpItemTotalExit(op, it) {
+  const areaHa = parseFloat(op.area_ha || 0) || 1.0;
+  const volCaldaLha = parseFloat(op.volume_calda || 0) || 500;
+  const volTotalCalda = volCaldaLha * areaHa; // Litros totais de calda aplicada
+
+  const doseVal = parseFloat(it.dosagem_real) || 
+                  parseFloat(it.dosagem_corrigida) || 
+                  parseFloat(it.dosagem) || 
+                  parseFloat(it.dose) || 0;
+
+  const uRaw = String(it.unidade || 'L/ha').trim();
+  const u = uRaw.toLowerCase().replace(/\s+/g, '');
+  
+  const pName = (it.produto_nome || it.produto_comercial || it.produto || '').trim();
+  const isFoliar = (typeof getProductGroup === 'function' && getProductGroup(pName || it) === 'FOLIARES') ||
+                   (it.alvo || '').toUpperCase().includes('FOLIAR') ||
+                   (it.tipo || '').toUpperCase().includes('FOLIAR') ||
+                   (it.categoria || '').toUpperCase().includes('FOLIAR') ||
+                   !!it.is_foliar;
+
+  let totalQtd = 0;
+  let unitMedida = 'L';
+
+  // 1. Caso Foliar com dosagem total direta informada
+  if (isFoliar && !u.includes('/ha') && !u.includes('ha') && !u.includes('100l')) {
+    totalQtd = doseVal;
+    unitMedida = (u.includes('kg') || u.startsWith('g')) ? 'KG' : 'L';
+  }
+  // 2. Dosagem por 100 Litros de calda (ex: mL/100L, g/100L, L/100L, kg/100L)
+  else if (volTotalCalda > 0 && u.includes('100l')) {
+    const rawExit = (volTotalCalda / 100) * doseVal;
+    if (u.startsWith('ml')) {
+      totalQtd = rawExit / 1000;
+      unitMedida = 'L';
+    } else if (u.startsWith('g')) {
+      totalQtd = rawExit / 1000;
+      unitMedida = 'KG';
+    } else if (u.includes('kg')) {
+      totalQtd = rawExit;
+      unitMedida = 'KG';
+    } else {
+      totalQtd = rawExit;
+      unitMedida = 'L';
+    }
+  }
+  // 3. Dosagem por Hectare (ex: L/ha, mL/ha, kg/ha, g/ha) ou Padrão
+  else {
+    const rawExit = doseVal * areaHa;
+    if (u.startsWith('ml')) {
+      totalQtd = rawExit / 1000;
+      unitMedida = 'L';
+    } else if (u.startsWith('g')) {
+      totalQtd = rawExit / 1000;
+      unitMedida = 'KG';
+    } else if (u.includes('kg')) {
+      totalQtd = rawExit;
+      unitMedida = 'KG';
+    } else {
+      totalQtd = rawExit;
+      unitMedida = 'L';
+    }
+  }
+
+  return {
+    produtoNome: pName,
+    isFoliar,
+    categoria: isFoliar ? 'Foliar / Fertilizante' : 'Defensivo Fitossanitário',
+    doseVal,
+    unidadeDose: uRaw,
+    areaHa,
+    volCaldaLha,
+    volTotalCalda,
+    totalQtd: Math.round(totalQtd * 1000) / 1000,
+    unitMedida
+  };
+}
+
+async function exportOpListToExcel(forceAll = false) {
+  if (typeof XLSX === 'undefined') {
+    alert('Biblioteca de exportação Excel (SheetJS) ainda não foi carregada. Por favor, aguarde alguns instantes ou recarregue a página.');
+    return;
+  }
+
+  let allOps = window._opList || [];
+  if (!allOps || allOps.length === 0) {
+    if (typeof toast === 'function') toast('Carregando dados das pulverizações do servidor...', 'info');
+    try {
+      const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id);
+      let q = sb.from('caderno_campo_op')
+        .select('*, caderno_campo_op_itens(*)')
+        .order('data_aplicacao', { ascending: true })
+        .order('created_at', { ascending: true });
+      if (tId) q = q.eq('tenant_id', tId);
+      const { data, error } = await q;
+      if (!error && data) {
+        allOps = data.map((item, idx) => {
+          const num = idx + 1;
+          item.numero_op = num;
+          item.op_cod = 'OP ' + num;
+          return item;
+        });
+        window._opList = allOps;
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar OPs para exportação:', e);
+    }
+  }
+
+  if (!allOps || allOps.length === 0) {
+    alert('Nenhuma ordem de pulverização encontrada para exportar.');
+    return;
+  }
+
+  // Verificar se há filtro ativo na interface
+  const filterParcel = ($('ccOpFilterParcela')?.value || '').trim();
+  const searchVal = ($('ccOpSearchInput')?.value || '').trim();
+  const isFiltered = !!(filterParcel || searchVal);
+  const displayedOps = window._displayedOpList || allOps;
+
+  let opsToExport = allOps;
+  if (!forceAll && isFiltered && displayedOps.length > 0 && displayedOps.length < allOps.length) {
+    const filtrar = confirm(`Há um filtro ativo na tela (${displayedOps.length} de ${allOps.length} OPs exibidas).\n\n• Clique em "OK" para exportar apenas as ${displayedOps.length} OPs filtradas.\n• Clique em "Cancelar" para exportar TODAS as ${allOps.length} OPs cadastradas.`);
+    if (filtrar) {
+      opsToExport = displayedOps;
+    }
+  }
+
+  if (typeof toast === 'function') toast(`📊 Gerando planilha Excel com ${opsToExport.length} pulverizações...`, 'info');
+
+  const dtFormat = dt => {
+    if (!dt) return '—';
+    if (typeof dt === 'string' && dt.includes('-')) {
+      const parts = dt.split('T')[0].split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dt;
+  };
+
+  const sheet1Rows = [];
+  const productAgg = new Map();
+
+  opsToExport.forEach(op => {
+    const items = op.caderno_campo_op_itens || op.itens || [];
+    const areaHa = parseFloat(op.area_ha || 0) || 1.0;
+    const volCaldaLha = parseFloat(op.volume_calda || 0) || 500;
+    const volTotalCalda = Math.round(volCaldaLha * areaHa * 10) / 10;
+    const opCod = op.op_cod || (op.numero_op ? `OP ${op.numero_op}` : 'OP —');
+    const dtApp = dtFormat(op.data_aplicacao);
+    const parcela = op.parcela || '—';
+    const cultura = (op.cultura || 'MELÃO').toUpperCase();
+    const variedade = op.variedade || 'Padrão';
+    const tratorista = op.tratorista || op.aplicador || '—';
+    const equipamento = op.equipamento || op.trator || '—';
+    const barrista = op.barrista || op.manipulador || '—';
+    const horario = (op.horario_inicio || op.horario_fim) ? `${op.horario_inicio || ''} - ${op.horario_fim || ''}` : '—';
+    const obs = op.observacoes || '';
+
+    if (items.length === 0) {
+      sheet1Rows.push({
+        'Nº O.P': opCod,
+        'Data Aplicação': dtApp,
+        'Parcela': parcela,
+        'Cultura': cultura,
+        'Variedade': variedade,
+        'Área (ha)': Math.round(areaHa * 100) / 100,
+        'Volume Calda (L/ha)': volCaldaLha,
+        'Calda Total (L)': volTotalCalda,
+        'Produto Comercial': 'NENHUM PRODUTO REGISTRADO',
+        'Categoria': '—',
+        'Ingrediente Ativo': '—',
+        'Alvo / Finalidade': '—',
+        'Dosagem Registrada': 0,
+        'Unidade Dosagem': '—',
+        'Total Saída (Qtd)': 0,
+        'Unidade Saída': '—',
+        'Carência (Dias)': 0,
+        'Data Fim Carência': '—',
+        'Tratorista / Aplicador': tratorista,
+        'Pulverizador / Equipamento': equipamento,
+        'Barrista / Manipulador': barrista,
+        'Horário': horario,
+        'Observações': obs
+      });
+      return;
+    }
+
+    items.forEach(it => {
+      const calc = calculateOpItemTotalExit(op, it);
+      const carenciaDias = parseInt(it.carencia_dias) || 0;
+      let dataLiberacaoStr = '—';
+      if (op.data_aplicacao && carenciaDias > 0) {
+        try {
+          const appD = new Date(op.data_aplicacao + 'T12:00:00');
+          appD.setDate(appD.getDate() + carenciaDias + 1);
+          dataLiberacaoStr = appD.toLocaleDateString('pt-BR');
+        } catch(e) {}
+      }
+
+      sheet1Rows.push({
+        'Nº O.P': opCod,
+        'Data Aplicação': dtApp,
+        'Parcela': parcela,
+        'Cultura': cultura,
+        'Variedade': variedade,
+        'Área (ha)': Math.round(areaHa * 100) / 100,
+        'Volume Calda (L/ha)': volCaldaLha,
+        'Calda Total (L)': volTotalCalda,
+        'Produto Comercial': calc.produtoNome || '—',
+        'Categoria': calc.categoria,
+        'Ingrediente Ativo': it.ingrediente_ativo || '—',
+        'Alvo / Finalidade': it.alvo || '—',
+        'Dosagem Registrada': calc.doseVal,
+        'Unidade Dosagem': calc.unidadeDose,
+        'Total Saída (Qtd)': calc.totalQtd,
+        'Unidade Saída': calc.unitMedida,
+        'Carência (Dias)': carenciaDias,
+        'Data Fim Carência': dataLiberacaoStr,
+        'Tratorista / Aplicador': tratorista,
+        'Pulverizador / Equipamento': equipamento,
+        'Barrista / Manipulador': barrista,
+        'Horário': horario,
+        'Observações': obs
+      });
+
+      // Acumulador para Sheet 2 (Consolidado por Produto)
+      const pKey = (calc.produtoNome || '').trim().toUpperCase();
+      if (pKey && pKey !== '—') {
+        if (!productAgg.has(pKey)) {
+          productAgg.set(pKey, {
+            produto: calc.produtoNome,
+            categoria: calc.categoria,
+            ingrediente: it.ingrediente_ativo || '—',
+            unidade: calc.unitMedida,
+            totalSaida: 0,
+            totalOps: 0,
+            areaTotalHa: 0,
+            parcelasSet: new Set(),
+            primeiraData: dtApp,
+            ultimaData: dtApp
+          });
+        }
+        const agg = productAgg.get(pKey);
+        agg.totalSaida += (calc.totalQtd || 0);
+        agg.totalOps += 1;
+        agg.areaTotalHa += areaHa;
+        if (parcela && parcela !== '—') agg.parcelasSet.add(parcela);
+        if (dtApp && dtApp !== '—') agg.ultimaData = dtApp;
+      }
+    });
+  });
+
+  // Sheet 2: Resumo Consolidado por Produto
+  const sheet2Rows = Array.from(productAgg.values()).map(p => ({
+    'Produto Comercial': p.produto,
+    'Categoria': p.categoria,
+    'Ingrediente Ativo': p.ingrediente,
+    'Total Saída Consolidada': Math.round(p.totalSaida * 1000) / 1000,
+    'Unidade de Medida': p.unidade,
+    'Qtd Pulverizações (O.P)': p.totalOps,
+    'Área Total Aplicada (ha)': Math.round(p.areaTotalHa * 100) / 100,
+    'Parcelas Aplicadas': Array.from(p.parcelasSet).sort().join(', ') || '—',
+    'Primeira Aplicação': p.primeiraData || '—',
+    'Última Aplicação': p.ultimaData || '—'
+  })).sort((a, b) => a['Produto Comercial'].localeCompare(b['Produto Comercial']));
+
+  // Sheet 3: Ordens de Pulverização (Resumo Geral)
+  const sheet3Rows = opsToExport.map(op => {
+    const items = op.caderno_campo_op_itens || op.itens || [];
+    const prodSummary = items.map(it => {
+      const calc = calculateOpItemTotalExit(op, it);
+      return `${calc.produtoNome} (${calc.doseVal} ${calc.unidadeDose} ➔ Total: ${calc.totalQtd} ${calc.unitMedida})`;
+    }).join(' | ') || 'Nenhum produto';
+
+    let maxCarencia = 0;
+    items.forEach(it => {
+      const c = parseInt(it.carencia_dias) || 0;
+      if (c > maxCarencia) maxCarencia = c;
+    });
+
+    const areaHa = parseFloat(op.area_ha || 0) || 1.0;
+    const volCalda = parseFloat(op.volume_calda || 0) || 500;
+
+    return {
+      'Nº O.P': op.op_cod || (op.numero_op ? `OP ${op.numero_op}` : 'OP —'),
+      'Data Aplicação': dtFormat(op.data_aplicacao),
+      'Parcela': op.parcela || '—',
+      'Cultura': op.cultura || 'MELÃO',
+      'Variedade': op.variedade || '—',
+      'Área (ha)': Math.round(areaHa * 100) / 100,
+      'Volume Calda (L/ha)': volCalda,
+      'Calda Total (L)': Math.round(volCalda * areaHa * 10) / 10,
+      'Qtd Produtos': items.length,
+      'Produtos e Dosagens Aplicadas': prodSummary,
+      'Tratorista': op.tratorista || op.aplicador || '—',
+      'Equipamento / Pulverizador': op.equipamento || op.trator || '—',
+      'Barrista / Manipulador': op.barrista || op.manipulador || '—',
+      'Horário': (op.horario_inicio || op.horario_fim) ? `${op.horario_inicio || ''} - ${op.horario_fim || ''}` : '—',
+      'Carência Máxima (Dias)': maxCarencia,
+      'Observações': op.observacoes || ''
+    };
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.json_to_sheet(sheet1Rows);
+  const ws2 = XLSX.utils.json_to_sheet(sheet2Rows);
+  const ws3 = XLSX.utils.json_to_sheet(sheet3Rows);
+
+  // Auto-ajuste de colunas
+  [ws1, ws2, ws3].forEach(ws => {
+    if (!ws['!ref']) return;
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    const colWidths = [];
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      let maxLen = 12;
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+        if (cell && cell.v != null) {
+          const str = String(cell.v);
+          if (str.length > maxLen) maxLen = Math.min(str.length, 60);
+        }
+      }
+      colWidths.push({ wch: maxLen + 3 });
+    }
+    ws['!cols'] = colWidths;
+  });
+
+  XLSX.utils.book_append_sheet(wb, ws1, 'Saidas_Produtos');
+  XLSX.utils.book_append_sheet(wb, ws2, 'Consolidado_Estoque');
+  XLSX.utils.book_append_sheet(wb, ws3, 'Ordens_Pulverizacao');
+
+  const dataAtual = new Date().toISOString().split('T')[0];
+  const fileName = `PRODTEC_Pulverizacoes_Saidas_Estoque_${dataAtual}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+
+  if (typeof toast === 'function') toast(`✅ Planilha ${fileName} exportada com sucesso! (${sheet1Rows.length} saídas de produtos)`, 'ok');
+}
+
 // ═══════════════════════════════════════════
 // CADASTRO DE DEFENSIVOS & IMPORTAÇÃO DE PLANILHA
 // ═══════════════════════════════════════════
@@ -23306,18 +23705,48 @@ async function openNewTratoModal() {
   $('tratoImplemento').value = '';
   $('tratoOperador').value = '';
 
-  // Popular datalist com colaboradores cadastrados da fazenda
-  const emps = (_employees || []).map(e => e.name).sort();
+  // Popular datalist com colaboradores cadastrados da fazenda e histórico
+  const empNames = (typeof _employees !== 'undefined' && Array.isArray(_employees) ? _employees : []).map(e => e.name).filter(Boolean);
+  const tratosNames = (typeof _tratosList !== 'undefined' && Array.isArray(_tratosList) ? _tratosList : []).map(t => t.operador).filter(Boolean);
+  const savedColm = (typeof localStorage !== 'undefined' && localStorage.getItem('prodtech_trato_op_colmeias')) || '';
+  const emps = Array.from(new Set([...empNames, ...tratosNames, savedColm, 'FRANCISCO ANTONIO PEREIRA CANDIDO', 'ANDRÉ LUCAS'].filter(Boolean))).sort();
+
   let datalist = $('tratoristasList');
   if (!datalist) {
-  datalist = document.createElement('datalist');
-  datalist.id = 'tratoristasList';
-  document.body.appendChild(datalist);
+    datalist = document.createElement('datalist');
+    datalist.id = 'tratoristasList';
+    document.body.appendChild(datalist);
   }
   datalist.innerHTML = emps.map(e => `<option value="${e}">`).join('');
 
   if ($('tratoOperador')) {
-  $('tratoOperador').setAttribute('list', 'tratoristasList');
+    $('tratoOperador').setAttribute('list', 'tratoristasList');
+  }
+
+  // Monitorar atividade para ajustar automaticamente se for colmeia/abelha
+  const ativInput = $('tratoAtividade');
+  const opLabel = $('tratoOperadorLabel');
+  if (ativInput) {
+    ativInput.oninput = function() {
+      const v = (this.value || '').toUpperCase();
+      if (v.includes('COLMEIA') || v.includes('COLMÉIA') || v.includes('ABELHA')) {
+        if (opLabel) {
+          opLabel.innerHTML = '🐝 Responsável Colmeias (Abelhas)';
+          opLabel.style.color = '#f59e0b';
+        }
+        if (savedColm && (!$('tratoOperador').value || $('tratoOperador').value === 'ANDRÉ LUCAS')) {
+          $('tratoOperador').value = savedColm;
+        }
+        if (!$('tratoImplemento').value) {
+          $('tratoImplemento').value = 'MANUAL';
+        }
+      } else {
+        if (opLabel) {
+          opLabel.innerHTML = 'Operador / Responsável';
+          opLabel.style.color = '';
+        }
+      }
+    };
   }
 
   modal.style.display = 'flex';
@@ -23338,6 +23767,11 @@ async function saveTrato() {
   if (!parcela) { alert('Selecione a parcela.'); return; }
   if (!data_trato) { alert('Selecione a data.'); return; }
   if (!atividade) { alert('Informe a atividade/trato cultural.'); return; }
+
+  // Se for atividade de colmeias, memoriza o responsável
+  if (operador && (atividade.includes('COLMEIA') || atividade.includes('COLMÉIA') || atividade.includes('ABELHA'))) {
+    try { localStorage.setItem('prodtech_trato_op_colmeias', operador); } catch(e){}
+  }
 
   let realParcelId = null;
   if (window._parcels && Array.isArray(window._parcels)) {
