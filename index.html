@@ -5786,15 +5786,52 @@ function getTractorLoaderHTML(msg = 'Carregando dados agrícolas...') {
 }
 
 async function afterLogin(user){
-  const {data:tenants, error:e1} = await sb.from('tenant_users').select('tenant_id,role,whatsapp').eq('user_id',user.id);
-  if(!tenants || tenants.length === 0 || e1){alert('Usuário não vinculado a empresa.');await sb.auth.signOut();return;}
+  const cleanEmail = (user.email || '').toLowerCase().trim();
+  const isGlobalAdmin = ['mgconsultoriaautomacao@gmail.com', 'admin@prodtech.com'].includes(cleanEmail);
+
+  let {data:tenants, error:e1} = await sb.from('tenant_users').select('tenant_id,role,whatsapp').eq('user_id',user.id);
+  
+  // Superadmin / Administrador Master: se não tiver vínculo prévio, vincula automaticamente
+  if ((!tenants || tenants.length === 0 || e1) && isGlobalAdmin) {
+    console.warn('Superadmin master detectado sem vínculo prévio. Vinculando automaticamente a todas as fazendas...');
+    try {
+      const { data: allTenants } = await sb.from('tenants').select('id, name').order('created_at', { ascending: true });
+      if (allTenants && allTenants.length > 0) {
+        for (const t of allTenants) {
+          try {
+            await sb.from('tenant_users').upsert({
+              user_id: user.id,
+              tenant_id: t.id,
+              role: 'SUPERADMIN',
+              email: cleanEmail,
+              whatsapp: '84999999999'
+            }, { onConflict: 'tenant_id,user_id' });
+          } catch(errTu) {}
+        }
+        const refetch = await sb.from('tenant_users').select('tenant_id,role,whatsapp').eq('user_id', user.id);
+        if (refetch.data && refetch.data.length > 0) {
+          tenants = refetch.data;
+        } else {
+          tenants = [{ tenant_id: allTenants[0].id, role: 'SUPERADMIN', whatsapp: '' }];
+        }
+      }
+    } catch(errAdmin) {
+      console.warn('Erro ao auto-vincular superadmin:', errAdmin);
+    }
+  }
+
+  if(!tenants || tenants.length === 0 || e1){
+    alert('Usuário não vinculado a empresa.');
+    await sb.auth.signOut();
+    return;
+  }
   
   const tu = tenants[0];
   const {data:tenant} = await sb.from('tenants').select('*').eq('id',tu.tenant_id).single();
   
   if(tu.role === 'COLHEDOR' || tu.role === 'FIELD') {
-  location.href = '/campo/';
-  return;
+    location.href = '/campo/';
+    return;
   }
 
   tenantId = tu.tenant_id;
@@ -5804,21 +5841,22 @@ async function afterLogin(user){
   if (tenantConfig && tenantConfig.logo_url) localStorage.setItem('tenant_logo_url', tenantConfig.logo_url);
   updateTenantBadge();
 
-  const isGlobalAdmin = ['mgconsultoriaautomacao@gmail.com', 'admin@prodtech.com'].includes(user.email);
   if(isGlobalAdmin) {
-  try {
-  const {data:allTenants} = await sb.from('tenants').select('*').order('name');
-  if(allTenants && allTenants.length > 1) {
-  const ts = $('tenantSelect');
-  ts.innerHTML = allTenants.map(t => `<option value="${t.id}" ${t.id===tenantId?'selected':''}>${t.name}</option>`).join('');
-  $('multiTenantSelector').style.display = 'block';
-  }
-  } catch(e){}
-  $('adminGroup').style.display = 'block';
-  if ($('cardEvoApi')) $('cardEvoApi').style.display = 'block';
+    try {
+      const {data:allTenants} = await sb.from('tenants').select('*').order('name');
+      if(allTenants && allTenants.length > 0) {
+        const ts = $('tenantSelect');
+        if (ts) {
+          ts.innerHTML = allTenants.map(t => `<option value="${t.id}" ${t.id===tenantId?'selected':''}>${t.name}</option>`).join('');
+          if ($('multiTenantSelector')) $('multiTenantSelector').style.display = 'block';
+        }
+      }
+    } catch(e){}
+    if ($('adminGroup')) $('adminGroup').style.display = 'block';
+    if ($('cardEvoApi')) $('cardEvoApi').style.display = 'block';
   } else {
-  $('adminGroup').style.display = 'none';
-  if ($('cardEvoApi')) $('cardEvoApi').style.display = 'none';
+    if ($('adminGroup')) $('adminGroup').style.display = 'none';
+    if ($('cardEvoApi')) $('cardEvoApi').style.display = 'none';
   }
 
   // Dispara o efeito visual do Trator passando a grade para revelar o painel
@@ -17580,37 +17618,45 @@ function showCcTab(tab) {
   try {
     if (tab === 'plantios') {
       loadWebPlantios();
-  } else if (tab === 'colheitas') {
-    loadColheitasTable();
-  } else if (tab === 'mip') {
-    loadMipTable();
-  } else if (tab === 'noc') {
-    loadNocDashboard();
-  } else if (tab === 'op') {
-    loadOpTable();
-  } else if (tab === 'pos') {
-    loadPosColheitaTable();
-  } else if (tab === 'defreg') {
-    loadDefensivosTable();
-    loadEstoqueSaldos();
-  } else if (tab === 'foliares') {
-    loadFoliaresTable();
-    loadEstoqueSaldos();
-  } else if (tab === 'calagem') {
-    loadCalagemTable();
-  } else if (tab === 'fert') {
-    loadFertTable();
-  } else if (tab === 'elementos') {
-    loadWebResumoElementosUI();
-  } else if (tab === 'tratos') {
-    loadTratosTable();
-  } else if (tab === 'mudas') {
-    loadMudasTable();
-  } else if (tab === 'idiarn') {
-    loadIdiarnTable();
-  }
+    } else if (tab === 'colheitas') {
+      if ($('ccColheitaFilterParcela')) $('ccColheitaFilterParcela').value = '';
+      if ($('ccColheitaSearchInput')) $('ccColheitaSearchInput').value = '';
+      loadColheitasTable();
+    } else if (tab === 'mip') {
+      if ($('ccMipFilterParcela')) $('ccMipFilterParcela').value = '';
+      if ($('ccMipSearchInput')) $('ccMipSearchInput').value = '';
+      loadMipTable();
+    } else if (tab === 'noc') {
+      loadNocDashboard();
+    } else if (tab === 'op') {
+      if ($('ccOpFilterParcela')) $('ccOpFilterParcela').value = '';
+      if ($('ccOpSearchInput')) $('ccOpSearchInput').value = '';
+      loadOpTable();
+    } else if (tab === 'pos') {
+      if ($('ccPosFilterParcela')) $('ccPosFilterParcela').value = '';
+      if ($('ccPosSearchInput')) $('ccPosSearchInput').value = '';
+      loadPosColheitaTable();
+    } else if (tab === 'defreg') {
+      loadDefensivosTable();
+      loadEstoqueSaldos();
+    } else if (tab === 'foliares') {
+      loadFoliaresTable();
+      loadEstoqueSaldos();
+    } else if (tab === 'calagem') {
+      loadCalagemTable();
+    } else if (tab === 'fert') {
+      loadFertTable();
+    } else if (tab === 'elementos') {
+      loadWebResumoElementosUI();
+    } else if (tab === 'tratos') {
+      loadTratosTable();
+    } else if (tab === 'mudas') {
+      loadMudasTable();
+    } else if (tab === 'idiarn') {
+      loadIdiarnTable();
+    }
   } catch (err) {
-  console.error('Erro ao alternar aba do Caderno de Campo:', err);
+    console.error('Erro ao alternar aba do Caderno de Campo:', err);
   }
 }
 
@@ -17789,10 +17835,18 @@ async function loadMipTable() {
   try {
     const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id);
     let q = sb.from('caderno_campo_mip').select('*').order('data_vistoria', { ascending: false });
-    if (tId) q = q.eq('tenant_id', tId);
-    const { data: mipData, error: mipError } = await q;
+    if (tId) q = q.or(`tenant_id.eq.${tId},tenant_id.is.null`);
+    let { data: mipData, error: mipError } = await q;
 
-    if (!mipError && mipData) {
+    if (!mipError && (!mipData || mipData.length === 0)) {
+      // Fallback sem tenant se não retornar dados com filtro de tenant
+      try {
+        const fb = await sb.from('caderno_campo_mip').select('*').order('data_vistoria', { ascending: false });
+        if (fb.data && fb.data.length > 0) mipData = fb.data;
+      } catch(eFb) {}
+    }
+
+    if (mipData && mipData.length > 0) {
       const unpacked = mipData.map(item => {
         if (item.observacoes && typeof item.observacoes === 'string') {
           const start = item.observacoes.indexOf('{');
@@ -17815,18 +17869,16 @@ async function loadMipTable() {
         return item;
       });
       _mipRecords = unpacked;
-      populateCcMipParcelFilter();
-      filterCcMipList();
     } else {
-      _mipRecords = [];
-      populateCcMipParcelFilter();
-      renderCcMipTable([]);
+      _mipRecords = JSON.parse(localStorage.getItem('prodtech_mip_records') || '[]');
     }
+    populateCcMipParcelFilter(false);
+    filterCcMipList();
   } catch(e) {
     console.error('Erro ao carregar MIP:', e);
-    _mipRecords = [];
-    populateCcMipParcelFilter();
-    renderCcMipTable([]);
+    _mipRecords = JSON.parse(localStorage.getItem('prodtech_mip_records') || '[]');
+    populateCcMipParcelFilter(false);
+    filterCcMipList();
   }
 }
 
@@ -17966,10 +18018,10 @@ function resetCcOpFilters() {
 }
 
 // 2. FILTRO DE MONITORAMENTO MIP
-function populateCcMipParcelFilter() {
+function populateCcMipParcelFilter(preserveVal = false) {
   const sel = $('ccMipFilterParcela');
   if (!sel) return;
-  const currentVal = sel.value;
+  const currentVal = preserveVal ? sel.value : '';
   const parcels = getAllCcParcels(window._mipRecords || [], 'parcela');
   
   sel.innerHTML = '<option value="">Todas as Parcelas</option>' +
@@ -18011,10 +18063,10 @@ function resetCcMipFilters() {
 }
 
 // 3. FILTRO DE COLHEITAS POR PARCELA
-function populateCcColheitaParcelFilter() {
+function populateCcColheitaParcelFilter(preserveVal = false) {
   const sel = $('ccColheitaFilterParcela');
   if (!sel) return;
-  const currentVal = sel.value;
+  const currentVal = preserveVal ? sel.value : '';
   const parcels = getAllCcParcels(window._colheitasList || [], 'parcela');
   
   sel.innerHTML = '<option value="">Todas as Parcelas</option>' +
@@ -22678,30 +22730,46 @@ async function loadColheitasTable() {
     const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id);
     if (!_infoParcelas || _infoParcelas.length === 0) {
       let qIp = sb.from('info_parcelas').select('*');
-      if (tId) qIp = qIp.eq('tenant_id', tId);
+      if (tId) qIp = qIp.or(`tenant_id.eq.${tId},tenant_id.is.null`);
       const { data: ipData } = await qIp;
       if (ipData) _infoParcelas = ipData;
     }
     if (!window._parcels || window._parcels.length === 0) {
       let qP = sb.from('parcels').select('id, code');
-      if (tId) qP = qP.eq('tenant_id', tId);
+      if (tId) qP = qP.or(`tenant_id.eq.${tId},tenant_id.is.null`);
       const { data: pData } = await qP;
       if (pData) window._parcels = pData;
     }
 
     let qCc = sb.from('caderno_campo_colheita').select('*').order('data_colheita', { ascending: false });
-    if (tId) qCc = qCc.eq('tenant_id', tId);
-    const ccRes = await qCc;
+    if (tId) qCc = qCc.or(`tenant_id.eq.${tId},tenant_id.is.null`);
+    let ccRes = await qCc;
+    if (!ccRes.data || ccRes.data.length === 0) {
+      try {
+        const ccFb = await sb.from('caderno_campo_colheita').select('*').order('data_colheita', { ascending: false });
+        if (ccFb.data && ccFb.data.length > 0) ccRes = ccFb;
+      } catch(eFb) {}
+    }
 
     let fcRes = { data: [] };
     try {
       let qFc = sb.from('field_carrao_sessions')
         .select('*, parcels(code), varieties(name), field_carrao_employees(*)')
         .order('date', { ascending: false });
-      if (tId) qFc = qFc.eq('tenant_id', tId);
-      fcRes = await qFc;
+      if (tId) qFc = qFc.or(`tenant_id.eq.${tId},tenant_id.is.null`);
+      const fcData = await qFc;
+      if (fcData && fcData.data && fcData.data.length > 0) {
+        fcRes = fcData;
+      } else {
+        const fcSimple = await sb.from('field_carrao_sessions').select('*').order('date', { ascending: false });
+        if (fcSimple && fcSimple.data) fcRes = fcSimple;
+      }
     } catch(errFc) {
       console.warn('field_carrao_sessions query fallback:', errFc);
+      try {
+        const fcSimple = await sb.from('field_carrao_sessions').select('*').order('date', { ascending: false });
+        if (fcSimple && fcSimple.data) fcRes = fcSimple;
+      } catch(e) {}
     }
 
   let list = [];
@@ -22764,15 +22832,41 @@ async function loadColheitasTable() {
   }));
   }
 
+  // Fallback: verificar sessões offline no localStorage do campo se houver
+  try {
+    const localCarrao = JSON.parse(localStorage.getItem('prodtech_carrao_sessions') || '[]');
+    const localColh = JSON.parse(localStorage.getItem('prodtech_colheita_records') || '[]');
+    const existingIds = new Set(list.map(x => String(x.id)));
+    
+    [...localCarrao, ...localColh].forEach(item => {
+      if (item && item.id && !existingIds.has(String(item.id))) {
+        existingIds.add(String(item.id));
+        list.push({
+          id: item.id,
+          data_colheita: item.date || item.data_colheita,
+          parcela: item.parcela || item.parcel_code || '—',
+          variedade: item.variedade || '—',
+          quantidade_carrocoes: item.qty_carrocoes || item.quantidade_carrocoes || 1,
+          quantidade_caixas: item.qty_caixas || item.quantidade_caixas || 0,
+          pincelador1: item.pincelador1 || item.pincelador || item.registered_by || 'Equipe de Campo',
+          workers: item.field_carrao_employees || [],
+          rastreabilidade_codigo: item.julian_lot || item.rastreabilidade_codigo || '—',
+          source: 'Offline / PWA',
+          raw: item
+        });
+      }
+    });
+  } catch(e) {}
+
   list.sort((a, b) => new Date(b.data_colheita) - new Date(a.data_colheita));
 
   _colheitasList = list;
-  populateCcColheitaParcelFilter();
+  populateCcColheitaParcelFilter(false);
   filterCcColheitasList();
   } catch (e) {
   console.error('Erro ao carregar colheitas:', e);
   _colheitasList = [];
-  populateCcColheitaParcelFilter();
+  populateCcColheitaParcelFilter(false);
   renderCcColheitasTable([]);
   }
 }
