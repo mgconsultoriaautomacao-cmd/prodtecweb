@@ -5826,7 +5826,9 @@ async function afterLogin(user){
     return;
   }
   
-  const tu = tenants[0];
+  const savedTid = (typeof localStorage !== 'undefined' && localStorage.getItem('prodtech_last_tenant_id')) || null;
+  const matchedTu = (savedTid && tenants.find(t => t.tenant_id === savedTid)) || tenants[0];
+  const tu = matchedTu;
   const {data:tenant} = await sb.from('tenants').select('*').eq('id',tu.tenant_id).single();
   
   if(tu.role === 'COLHEDOR' || tu.role === 'FIELD') {
@@ -5835,6 +5837,7 @@ async function afterLogin(user){
   }
 
   tenantId = tu.tenant_id;
+  try { localStorage.setItem('prodtech_last_tenant_id', tenantId); } catch(e){}
   tenantName = tenant?.name || 'Empresa';
   tenantConfig = tenant || {};
   window.tenantConfig = tenantConfig;
@@ -5888,6 +5891,7 @@ async function switchTenant(id) {
   const {data:t} = await sb.from('tenants').select('*').eq('id',id).single();
   if(!t) return;
   tenantId = t.id;
+  try { localStorage.setItem('prodtech_last_tenant_id', tenantId); } catch(e){}
   tenantName = t.name;
   tenantConfig = t;
   window.tenantConfig = tenantConfig;
@@ -17645,12 +17649,17 @@ function showCcTab(tab) {
     } else if (tab === 'calagem') {
       loadCalagemTable();
     } else if (tab === 'fert') {
+      if ($('ccFertFilterParcela')) $('ccFertFilterParcela').value = '';
+      if ($('ccFertSearchInput')) $('ccFertSearchInput').value = '';
       loadFertTable();
     } else if (tab === 'elementos') {
       loadWebResumoElementosUI();
     } else if (tab === 'tratos') {
+      if ($('ccTratosFilterParcela')) $('ccTratosFilterParcela').value = '';
+      if ($('ccTratosSearchInput')) $('ccTratosSearchInput').value = '';
       loadTratosTable();
     } else if (tab === 'mudas') {
+      if ($('ccMudasFilterParcela')) $('ccMudasFilterParcela').value = '';
       loadMudasTable();
     } else if (tab === 'idiarn') {
       loadIdiarnTable();
@@ -17869,14 +17878,17 @@ async function loadMipTable() {
         return item;
       });
       _mipRecords = unpacked;
+      window._mipRecords = unpacked;
     } else {
       _mipRecords = JSON.parse(localStorage.getItem('prodtech_mip_records') || '[]');
+      window._mipRecords = _mipRecords;
     }
     populateCcMipParcelFilter(false);
     filterCcMipList();
   } catch(e) {
     console.error('Erro ao carregar MIP:', e);
     _mipRecords = JSON.parse(localStorage.getItem('prodtech_mip_records') || '[]');
+    window._mipRecords = _mipRecords;
     populateCcMipParcelFilter(false);
     filterCcMipList();
   }
@@ -18022,7 +18034,8 @@ function populateCcMipParcelFilter(preserveVal = false) {
   const sel = $('ccMipFilterParcela');
   if (!sel) return;
   const currentVal = preserveVal ? sel.value : '';
-  const parcels = getAllCcParcels(window._mipRecords || [], 'parcela');
+  const list = (typeof _mipRecords !== 'undefined' && Array.isArray(_mipRecords) && _mipRecords.length > 0 ? _mipRecords : window._mipRecords) || [];
+  const parcels = getAllCcParcels(list, 'parcela');
   
   sel.innerHTML = '<option value="">Todas as Parcelas</option>' +
     parcels.map(p => `<option value="${p}">${p}</option>`).join('');
@@ -18033,7 +18046,7 @@ function populateCcMipParcelFilter(preserveVal = false) {
 function filterCcMipList() {
   const selParcel = ($('ccMipFilterParcela')?.value || '').trim();
   const search = ($('ccMipSearchInput')?.value || '').toLowerCase().trim();
-  const rawList = window._mipRecords || [];
+  const rawList = (typeof _mipRecords !== 'undefined' && Array.isArray(_mipRecords) && _mipRecords.length > 0 ? _mipRecords : window._mipRecords) || [];
 
   const filtered = rawList.filter(item => {
     if (selParcel && !matchCcParcela(item.parcela, selParcel)) return false;
@@ -18067,7 +18080,8 @@ function populateCcColheitaParcelFilter(preserveVal = false) {
   const sel = $('ccColheitaFilterParcela');
   if (!sel) return;
   const currentVal = preserveVal ? sel.value : '';
-  const parcels = getAllCcParcels(window._colheitasList || [], 'parcela');
+  const list = (typeof _colheitasList !== 'undefined' && Array.isArray(_colheitasList) && _colheitasList.length > 0 ? _colheitasList : window._colheitasList) || [];
+  const parcels = getAllCcParcels(list, 'parcela');
   
   sel.innerHTML = '<option value="">Todas as Parcelas</option>' +
     parcels.map(p => `<option value="${p}">${p}</option>`).join('');
@@ -18078,7 +18092,7 @@ function populateCcColheitaParcelFilter(preserveVal = false) {
 function filterCcColheitasList() {
   const selParcel = ($('ccColheitaFilterParcela')?.value || '').trim();
   const search = ($('ccColheitaSearchInput')?.value || '').toLowerCase().trim();
-  const rawList = window._colheitasList || [];
+  const rawList = (typeof _colheitasList !== 'undefined' && Array.isArray(_colheitasList) && _colheitasList.length > 0 ? _colheitasList : window._colheitasList) || [];
 
   const filtered = rawList.filter(item => {
     if (selParcel && !matchCcParcela(item.parcela, selParcel)) return false;
@@ -18111,7 +18125,8 @@ function populateCcPosParcelFilter() {
   const sel = $('ccPosFilterParcela');
   if (!sel) return;
   const currentVal = sel.value;
-  const parcels = getAllCcParcels(window._posColheitaList || [], 'parcela');
+  const list = (typeof _posColheitaList !== 'undefined' && Array.isArray(_posColheitaList) && _posColheitaList.length > 0 ? _posColheitaList : window._posColheitaList) || [];
+  const parcels = getAllCcParcels(list, 'parcela');
   
   sel.innerHTML = '<option value="">Todas as Parcelas</option>' +
     parcels.map(p => `<option value="${p}">${p}</option>`).join('');
@@ -18122,7 +18137,7 @@ function populateCcPosParcelFilter() {
 function filterCcPosList() {
   const selParcel = ($('ccPosFilterParcela')?.value || '').trim();
   const search = ($('ccPosSearchInput')?.value || '').toLowerCase().trim();
-  const rawList = window._posColheitaList || [];
+  const rawList = (typeof _posColheitaList !== 'undefined' && Array.isArray(_posColheitaList) && _posColheitaList.length > 0 ? _posColheitaList : window._posColheitaList) || [];
 
   const filtered = rawList.filter(item => {
     if (selParcel && !matchCcParcela(item.parcela, selParcel)) return false;
@@ -18155,7 +18170,8 @@ function populateCcFertParcelFilter() {
   const sel = $('ccFertFilterParcela');
   if (!sel) return;
   const currentVal = sel.value;
-  const parcels = getAllCcParcels(window._fertList || [], 'parcela');
+  const list = (typeof _fertList !== 'undefined' && Array.isArray(_fertList) && _fertList.length > 0 ? _fertList : window._fertList) || [];
+  const parcels = getAllCcParcels(list, 'parcela');
   
   sel.innerHTML = '<option value="">Todas as Parcelas</option>' +
     parcels.map(p => `<option value="${p}">${p}</option>`).join('');
@@ -18166,7 +18182,7 @@ function populateCcFertParcelFilter() {
 function filterCcFertList() {
   const selParcel = ($('ccFertFilterParcela')?.value || '').trim();
   const search = ($('ccFertSearchInput')?.value || '').toLowerCase().trim();
-  const rawList = window._fertList || [];
+  const rawList = (typeof _fertList !== 'undefined' && Array.isArray(_fertList) && _fertList.length > 0 ? _fertList : window._fertList) || [];
 
   const filtered = rawList.filter(item => {
     if (selParcel && !matchCcParcela(item.parcela, selParcel)) return false;
@@ -18199,7 +18215,8 @@ function populateCcTratosParcelFilter() {
   const sel = $('ccTratosFilterParcela');
   if (!sel) return;
   const currentVal = sel.value;
-  const parcels = getAllCcParcels(window._tratosList || [], 'parcela');
+  const list = (typeof _tratosList !== 'undefined' && Array.isArray(_tratosList) && _tratosList.length > 0 ? _tratosList : window._tratosList) || [];
+  const parcels = getAllCcParcels(list, 'parcela');
   
   sel.innerHTML = '<option value="">Todas as Parcelas</option>' +
     parcels.map(p => `<option value="${p}">${p}</option>`).join('');
@@ -18210,7 +18227,7 @@ function populateCcTratosParcelFilter() {
 function filterCcTratosList() {
   const selParcel = ($('ccTratosFilterParcela')?.value || '').trim();
   const search = ($('ccTratosSearchInput')?.value || '').toLowerCase().trim();
-  const rawList = window._tratosList || [];
+  const rawList = (typeof _tratosList !== 'undefined' && Array.isArray(_tratosList) && _tratosList.length > 0 ? _tratosList : window._tratosList) || [];
 
   const filtered = rawList.filter(item => {
     if (selParcel && !matchCcParcela(item.parcela, selParcel)) return false;
@@ -18230,6 +18247,8 @@ function filterCcTratosList() {
 
   renderCcTratosTable(filtered);
 }
+
+
 
 function resetCcTratosFilters() {
   if ($('ccTratosFilterParcela')) $('ccTratosFilterParcela').value = '';
@@ -22907,11 +22926,13 @@ async function loadColheitasTable() {
   list.sort((a, b) => new Date(b.data_colheita) - new Date(a.data_colheita));
 
   _colheitasList = list;
+  window._colheitasList = list;
   populateCcColheitaParcelFilter(false);
   filterCcColheitasList();
   } catch (e) {
   console.error('Erro ao carregar colheitas:', e);
   _colheitasList = [];
+  window._colheitasList = [];
   populateCcColheitaParcelFilter(false);
   renderCcColheitasTable([]);
   }
@@ -23780,21 +23801,31 @@ async function loadTratosTable() {
   try {
     const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id);
     let q = sb.from('caderno_campo_tratos').select('*').order('data_trato', { ascending: false });
-    if (tId) q = q.eq('tenant_id', tId);
-    const { data, error } = await q;
+    if (tId) q = q.or(`tenant_id.eq.${tId},tenant_id.is.null`);
+    let { data, error } = await q;
+
+    if (!error && (!data || data.length === 0)) {
+      try {
+        const fb = await sb.from('caderno_campo_tratos').select('*').order('data_trato', { ascending: false });
+        if (fb.data && fb.data.length > 0) data = fb.data;
+      } catch(eFb) {}
+    }
 
     if (!error && data) {
       _tratosList = data;
+      window._tratosList = data;
       populateCcTratosParcelFilter();
       filterCcTratosList();
     } else {
       _tratosList = [];
+      window._tratosList = [];
       populateCcTratosParcelFilter();
       renderCcTratosTable([]);
     }
   } catch (e) {
     console.error('Erro ao carregar tratos culturais:', e);
     _tratosList = [];
+    window._tratosList = [];
     populateCcTratosParcelFilter();
     renderCcTratosTable([]);
   }
@@ -23994,12 +24025,25 @@ async function loadFertTable() {
   try {
     const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id);
     let qF = sb.from('caderno_campo_fertirrigacao').select('*').order('data_inicio', { ascending: false });
-    if (tId) qF = qF.eq('tenant_id', tId);
-    const { data: fertData, error: fertErr } = await qF;
+    if (tId) qF = qF.or(`tenant_id.eq.${tId},tenant_id.is.null`);
+    let { data: fertData, error: fertErr } = await qF;
+
+    if (!fertErr && (!fertData || fertData.length === 0)) {
+      try {
+        const fb = await sb.from('caderno_campo_fertirrigacao').select('*').order('data_inicio', { ascending: false });
+        if (fb.data && fb.data.length > 0) fertData = fb.data;
+      } catch(eFb) {}
+    }
 
     let qI = sb.from('caderno_campo_fertirrigacao_itens').select('*');
-    if (tId) qI = qI.eq('tenant_id', tId);
-    const { data: itensData } = await qI;
+    if (tId) qI = qI.or(`tenant_id.eq.${tId},tenant_id.is.null`);
+    let { data: itensData } = await qI;
+    if (!itensData || itensData.length === 0) {
+      try {
+        const fbI = await sb.from('caderno_campo_fertirrigacao_itens').select('*');
+        if (fbI.data && fbI.data.length > 0) itensData = fbI.data;
+      } catch(eFbI) {}
+    }
 
     if (!fertErr && fertData) {
       const itemsMap = {};
@@ -24012,17 +24056,20 @@ async function loadFertTable() {
         ...f,
         fertilizantes: (itemsMap[f.id] || []).join(', ') || '—'
       }));
+      window._fertList = _fertList;
 
       populateCcFertParcelFilter();
       filterCcFertList();
     } else {
       _fertList = [];
+      window._fertList = [];
       populateCcFertParcelFilter();
       renderCcFertTable([]);
     }
   } catch (e) {
     console.error('Erro ao carregar fertirrigação:', e);
     _fertList = [];
+    window._fertList = [];
     populateCcFertParcelFilter();
     renderCcFertTable([]);
   }
@@ -24878,21 +24925,31 @@ async function loadPosColheitaTable() {
   try {
     const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id);
     let q = sb.from('caderno_campo_pos_colheita').select('*').order('data_aplicacao', { ascending: false });
-    if (tId) q = q.eq('tenant_id', tId);
-    const { data, error } = await q;
+    if (tId) q = q.or(`tenant_id.eq.${tId},tenant_id.is.null`);
+    let { data, error } = await q;
+
+    if (!error && (!data || data.length === 0)) {
+      try {
+        const fb = await sb.from('caderno_campo_pos_colheita').select('*').order('data_aplicacao', { ascending: false });
+        if (fb.data && fb.data.length > 0) data = fb.data;
+      } catch(eFb) {}
+    }
 
     if (!error && data) {
       _posColheitaList = data;
+      window._posColheitaList = data;
       populateCcPosParcelFilter();
       filterCcPosList();
     } else {
       _posColheitaList = [];
+      window._posColheitaList = [];
       populateCcPosParcelFilter();
       renderCcPosTable([]);
     }
   } catch (e) {
     console.error('Erro ao carregar pós-colheita:', e);
     _posColheitaList = [];
+    window._posColheitaList = [];
     populateCcPosParcelFilter();
     renderCcPosTable([]);
   }
