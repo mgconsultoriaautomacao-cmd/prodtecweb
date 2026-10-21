@@ -21517,47 +21517,45 @@ function calculateOpItemTotalExit(op, it) {
                    (it.categoria || '').toUpperCase().includes('FOLIAR') ||
                    !!it.is_foliar;
 
-  let totalQtd = 0;
+  // Unidade de medida base: preserva fielmente a unidade da aplicação registrada (mL, g, L, KG)
   let unitMedida = 'L';
+  if (u.startsWith('ml')) {
+    unitMedida = 'mL';
+  } else if (u.startsWith('g') || u.startsWith('gr')) {
+    unitMedida = 'g';
+  } else if (u.startsWith('kg')) {
+    unitMedida = 'KG';
+  } else if (u.startsWith('l')) {
+    unitMedida = 'L';
+  } else {
+    const cleaned = uRaw.replace(/\/ha/i, '').replace(/\/100l/i, '').replace(/\/100\s*l/i, '').trim();
+    unitMedida = cleaned || 'L';
+  }
 
-  // 1. Caso Foliar com dosagem total direta informada
+  let totalQtd = 0;
+
+  // 1. Caso Foliar/Adubo direto (dosagem total informada sem /ha e sem /100L)
   if (isFoliar && !u.includes('/ha') && !u.includes('ha') && !u.includes('100l')) {
     totalQtd = doseVal;
-    unitMedida = (u.includes('kg') || u.startsWith('g')) ? 'KG' : 'L';
   }
-  // 2. Dosagem por 100 Litros de calda (ex: mL/100L, g/100L, L/100L, kg/100L)
+  // 2. Dosagem por 100 Litros de calda (ex: 30 mL/100L com 1920L de calda -> (1920 / 100) * 30 = 576 mL)
   else if (volTotalCalda > 0 && u.includes('100l')) {
-    const rawExit = (volTotalCalda / 100) * doseVal;
-    if (u.startsWith('ml')) {
-      totalQtd = rawExit / 1000;
-      unitMedida = 'L';
-    } else if (u.startsWith('g')) {
-      totalQtd = rawExit / 1000;
-      unitMedida = 'KG';
-    } else if (u.includes('kg')) {
-      totalQtd = rawExit;
-      unitMedida = 'KG';
-    } else {
-      totalQtd = rawExit;
-      unitMedida = 'L';
-    }
+    totalQtd = (volTotalCalda / 100) * doseVal;
   }
-  // 3. Dosagem por Hectare (ex: L/ha, mL/ha, kg/ha, g/ha) ou Padrão
+  // 3. Dosagem por Hectare (ex: 60 mL/ha * 3.84 ha = 230.4 mL; 200 g/ha * 3.84 ha = 768 g; 2 L/ha * 3.84 ha = 7.68 L)
   else {
-    const rawExit = doseVal * areaHa;
-    if (u.startsWith('ml')) {
-      totalQtd = rawExit / 1000;
-      unitMedida = 'L';
-    } else if (u.startsWith('g')) {
-      totalQtd = rawExit / 1000;
-      unitMedida = 'KG';
-    } else if (u.includes('kg')) {
-      totalQtd = rawExit;
-      unitMedida = 'KG';
-    } else {
-      totalQtd = rawExit;
-      unitMedida = 'L';
-    }
+    totalQtd = doseVal * areaHa;
+  }
+
+  // Equivalente em L ou KG para referência de estoque
+  let equivL_KG = totalQtd;
+  let equivUnit = unitMedida;
+  if (unitMedida === 'mL') {
+    equivL_KG = totalQtd / 1000;
+    equivUnit = 'L';
+  } else if (unitMedida === 'g') {
+    equivL_KG = totalQtd / 1000;
+    equivUnit = 'KG';
   }
 
   return {
@@ -21570,7 +21568,9 @@ function calculateOpItemTotalExit(op, it) {
     volCaldaLha,
     volTotalCalda,
     totalQtd: Math.round(totalQtd * 1000) / 1000,
-    unitMedida
+    unitMedida,
+    equivL_KG: Math.round(equivL_KG * 1000) / 1000,
+    equivUnit
   };
 }
 
@@ -21672,6 +21672,7 @@ async function exportOpListToExcel(forceAll = false) {
         'Unidade Dosagem': '—',
         'Total Saída (Qtd)': 0,
         'Unidade Saída': '—',
+        'Equivalente (L ou KG)': '—',
         'Carência (Dias)': 0,
         'Data Fim Carência': '—',
         'Tratorista / Aplicador': tratorista,
@@ -21712,6 +21713,7 @@ async function exportOpListToExcel(forceAll = false) {
         'Unidade Dosagem': calc.unidadeDose,
         'Total Saída (Qtd)': calc.totalQtd,
         'Unidade Saída': calc.unitMedida,
+        'Equivalente (L ou KG)': (calc.unitMedida === 'mL' || calc.unitMedida === 'g') ? `${calc.equivL_KG} ${calc.equivUnit}` : `${calc.totalQtd} ${calc.unitMedida}`,
         'Carência (Dias)': carenciaDias,
         'Data Fim Carência': dataLiberacaoStr,
         'Tratorista / Aplicador': tratorista,
@@ -21735,10 +21737,13 @@ async function exportOpListToExcel(forceAll = false) {
             areaTotalHa: 0,
             parcelasSet: new Set(),
             primeiraData: dtApp,
-            ultimaData: dtApp
+            ultimaData: dtApp,
+            unitsMap: {}
           });
         }
         const agg = productAgg.get(pKey);
+        const uMed = calc.unitMedida;
+        agg.unitsMap[uMed] = (agg.unitsMap[uMed] || 0) + (calc.totalQtd || 0);
         agg.totalSaida += (calc.totalQtd || 0);
         agg.totalOps += 1;
         agg.areaTotalHa += areaHa;
@@ -21749,18 +21754,59 @@ async function exportOpListToExcel(forceAll = false) {
   });
 
   // Sheet 2: Resumo Consolidado por Produto
-  const sheet2Rows = Array.from(productAgg.values()).map(p => ({
-    'Produto Comercial': p.produto,
-    'Categoria': p.categoria,
-    'Ingrediente Ativo': p.ingrediente,
-    'Total Saída Consolidada': Math.round(p.totalSaida * 1000) / 1000,
-    'Unidade de Medida': p.unidade,
-    'Qtd Pulverizações (O.P)': p.totalOps,
-    'Área Total Aplicada (ha)': Math.round(p.areaTotalHa * 100) / 100,
-    'Parcelas Aplicadas': Array.from(p.parcelasSet).sort().join(', ') || '—',
-    'Primeira Aplicação': p.primeiraData || '—',
-    'Última Aplicação': p.ultimaData || '—'
-  })).sort((a, b) => a['Produto Comercial'].localeCompare(b['Produto Comercial']));
+  const sheet2Rows = Array.from(productAgg.values()).map(p => {
+    const unitKeys = Object.keys(p.unitsMap || {});
+    let totalConsolidado = 0;
+    let unidadeFinal = p.unidade;
+    let equivStr = '—';
+
+    // Se só foi registrada 1 unidade de medida em todas as OPs (ex: 100% das OPs foram em mL, ou em g, ou em L)
+    if (unitKeys.length <= 1) {
+      unidadeFinal = unitKeys[0] || p.unidade;
+      totalConsolidado = Math.round((p.unitsMap[unidadeFinal] || p.totalSaida) * 1000) / 1000;
+      if (unidadeFinal === 'mL') {
+        equivStr = `${Math.round((totalConsolidado / 1000) * 1000) / 1000} L`;
+      } else if (unidadeFinal === 'g') {
+        equivStr = `${Math.round((totalConsolidado / 1000) * 1000) / 1000} KG`;
+      } else {
+        equivStr = `${totalConsolidado} ${unidadeFinal}`;
+      }
+    } else {
+      // Se houve mistura de unidades cadastradas pelo operador (ex: algumas OPs digitadas em mL e outras em L)
+      const hasLiquid = unitKeys.some(u => u === 'mL' || u === 'L');
+      if (hasLiquid) {
+        const totalL = ((p.unitsMap['mL'] || 0) / 1000) + (p.unitsMap['L'] || 0);
+        totalConsolidado = Math.round(totalL * 1000) / 1000;
+        unidadeFinal = 'L (Convertido)';
+        const parts = [];
+        if (p.unitsMap['mL']) parts.push(`${Math.round(p.unitsMap['mL'] * 10) / 10} mL`);
+        if (p.unitsMap['L']) parts.push(`${Math.round(p.unitsMap['L'] * 1000) / 1000} L`);
+        equivStr = parts.join(' + ');
+      } else {
+        const totalKg = ((p.unitsMap['g'] || 0) / 1000) + (p.unitsMap['KG'] || 0);
+        totalConsolidado = Math.round(totalKg * 1000) / 1000;
+        unidadeFinal = 'KG (Convertido)';
+        const parts = [];
+        if (p.unitsMap['g']) parts.push(`${Math.round(p.unitsMap['g'] * 10) / 10} g`);
+        if (p.unitsMap['KG']) parts.push(`${Math.round(p.unitsMap['KG'] * 1000) / 1000} KG`);
+        equivStr = parts.join(' + ');
+      }
+    }
+
+    return {
+      'Produto Comercial': p.produto,
+      'Categoria': p.categoria,
+      'Ingrediente Ativo': p.ingrediente,
+      'Total Saída Consolidada': totalConsolidado,
+      'Unidade de Medida': unidadeFinal,
+      'Equivalente / Detalhamento': equivStr,
+      'Qtd Pulverizações (O.P)': p.totalOps,
+      'Área Total Aplicada (ha)': Math.round(p.areaTotalHa * 100) / 100,
+      'Parcelas Aplicadas': Array.from(p.parcelasSet).sort().join(', ') || '—',
+      'Primeira Aplicação': p.primeiraData || '—',
+      'Última Aplicação': p.ultimaData || '—'
+    };
+  }).sort((a, b) => a['Produto Comercial'].localeCompare(b['Produto Comercial']));
 
   // Sheet 3: Ordens de Pulverização (Resumo Geral)
   const sheet3Rows = opsToExport.map(op => {
