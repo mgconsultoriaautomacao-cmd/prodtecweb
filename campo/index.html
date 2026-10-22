@@ -3901,105 +3901,68 @@ let varieties = [];
   const item = (typeof infoParcelasData !== 'undefined' ? infoParcelasData : []).find(x => x.id === id) || (window._infoParcelas && window._infoParcelas.find(x => x.id === id));
   if (!item) { toast('Plantio não encontrado', 'err'); return; }
 
-  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'BOM JESUS AGRÍCOLA';
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'AGRICOLA BOM JESUS LTDA';
   const printWin = window.open('', '_blank', 'width=950,height=1250');
   if (!printWin) { toast('Permita popups no navegador para imprimir.', 'err'); return; }
 
   const normData = extractNormalizedParcelVarieties(item);
-  const varsData = normData.vars;
+  const pCode = item.parcela2 || (item.parcela ? item.parcela + (item.letra || '') : '') || item.code || '—';
+  const variedadesStr = (normData.vars && normData.vars.length > 0)
+    ? normData.vars.map(v => v.nome).join(', ')
+    : (item.variedade || '—');
+  const totalAreaStr = normData.totalArea > 0 ? normData.totalArea.toFixed(2) : (item.area || '—');
 
-  let totalLinhas = 0;
-  let totalSementes = 0;
-  let totalAreaCalculada = 0;
-
-  const variedadesRowsHtml = varsData.map((v, i) => {
-  const lin = v.linhas || 0;
-  const qtdSem = v.qtd || 0;
-  const areaCalc = v.area || 0;
-  totalLinhas += lin;
-  totalSementes += qtdSem;
-  totalAreaCalculada += areaCalc;
-
-  const dtPlantio = v.data ? new Date(v.data + (v.data.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('pt-BR') : '—';
-
-  return `
-  <tr>
-  <td style="text-align:center; font-weight:bold">${i + 1}</td>
-  <td style="font-weight:bold">${v.nome.toUpperCase()}</td>
-  <td>${v.lote || '—'}</td>
-  <td style="text-align:center">${dtPlantio}</td>
-  <td style="text-align:center; font-weight:bold">${lin > 0 ? lin : '—'}</td>
-  <td style="text-align:right">${qtdSem > 0 ? qtdSem.toLocaleString('pt-BR') : '—'}</td>
-  <td style="text-align:right; font-weight:bold; color:#1d4ed8">${areaCalc > 0 ? areaCalc.toFixed(2) + ' ha' : '—'}</td>
-  </tr>
-  `;
-  }).join('');
-
-  const areaFinal = normData.totalArea > 0 ? normData.totalArea.toFixed(2) : (totalAreaCalculada > 0 ? totalAreaCalculada.toFixed(2) : (item.area || '—'));
   const dtPlantioItem = item.plantio ? new Date(item.plantio + 'T12:00:00') : null;
-  const anoStr = dtPlantioItem ? `${dtPlantioItem.getFullYear()}/${dtPlantioItem.getFullYear() + 1}` : new Date().getFullYear();
+  const anoStr = dtPlantioItem ? `${dtPlantioItem.getFullYear()}/${dtPlantioItem.getFullYear() + 1}` : '2025/2026';
 
-  // Identificação dos registros exclusivos da Fazenda Ativa
-  const tNameUpper = tenantName.toUpperCase();
-  let ggnFazenda = (window.tenantConfig && window.tenantConfig.ggn_individual) || '';
-  let tescoFazenda = (window.tenantConfig && window.tenantConfig.registro_tesco) || '';
-  let sedexFazenda = (window.tenantConfig && window.tenantConfig.registro_sedex) || '';
+  // Dados da Empresa / Fazenda (com fallback fiel ao modelo oficial Bom Jesus / Fazenda Pauliceia)
+  const cfg = window.tenantConfig || {};
+  const empNome = (cfg.name || tenantName).toUpperCase();
+  const empEndereco = cfg.endereco || 'FAZ PAULICEIA, SN - ZONA RURAL';
+  const empMunicipio = cfg.municipio || 'MOSSORÓ';
+  const empUf = cfg.uf || 'RN';
+  const empCep = cfg.cep || '59649899';
+  const empCaixaPostal = cfg.caixa_postal || 'XXXXXX';
+  const empTelefone = cfg.telefone || '(84) 3318-3878 RAMAL 3030 / 3031';
+  const empEmail = cfg.email || 'agricolabomjesus@gmail.com';
 
-  if (!ggnFazenda) {
-    if (tNameUpper.includes('BOM JESUS') || tNameUpper.includes('ABJ')) {
-      ggnFazenda = 'ABJ-4049929454262';
-      tescoFazenda = tescoFazenda || 'ABJ-55/NC10/35366/08';
-      sedexFazenda = sedexFazenda || 'ABJ-P000000040789';
-    } else if (tNameUpper.includes('DINA') || tNameUpper.includes('DINAMARCA')) {
-      ggnFazenda = 'DINA-4049929454279';
-      tescoFazenda = tescoFazenda || 'DINA-55/NC10/35363/08';
-      sedexFazenda = sedexFazenda || 'DINA-P000000040784';
-    } else if (tNameUpper.includes('NOR') || tNameUpper.includes('AGRONORTE')) {
-      ggnFazenda = 'NOR-4049928594464';
-      tescoFazenda = tescoFazenda || 'NOR-55/NC10/35365/08';
-      sedexFazenda = sedexFazenda || 'NOR-PS974429034707';
-    } else if (tNameUpper.includes('FV') || tNameUpper.includes('FRUTAVEL') || tNameUpper.includes('FRUTA VEL')) {
-      ggnFazenda = 'FV-4050373290191';
-      tescoFazenda = tescoFazenda || 'FV-55/NC10/50717/09';
-      sedexFazenda = sedexFazenda || 'FV-P000000040785';
-    } else if (tNameUpper.includes('JM') || tNameUpper.includes('JOSÉ') || tNameUpper.includes('JOSE')) {
-      ggnFazenda = 'JM-4049929684294';
-      tescoFazenda = tescoFazenda || 'JM-55/NC10/35364/08';
-      sedexFazenda = sedexFazenda || 'JM-P000000040787';
-    } else {
-      ggnFazenda = (window.tenantConfig && window.tenantConfig.ggn_geral) || '4049928377654';
-      tescoFazenda = tescoFazenda || '55/NC10/35366/08';
-      sedexFazenda = sedexFazenda || 'P000000040789';
-    }
-  }
-
-  const rtNome = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS DE OLIVEIRA CUNHA';
+  // Dados da Responsável Técnica (Dona Ivanosca Martins de Oliveira Cunha)
+  const rtNome = cfg.responsavel_tecnico_nome || 'IVANOSCA MARTINS DE OLIVEIRA CUNHA';
+  const rtEndereco = cfg.responsavel_tecnico_endereco || 'TRAVESSA DO ESTUDANTE 1, Nº 01';
+  const rtMunicipio = cfg.responsavel_tecnico_municipio || 'MOSSORÓ';
+  const rtUf = cfg.responsavel_tecnico_uf || 'RN';
+  const rtCep = cfg.responsavel_tecnico_cep || '59.603-202';
+  const rtTelefone = cfg.responsavel_tecnico_telefone || '(84) 99424-0818 / (84) 99424-0808';
+  const rtEmail = cfg.responsavel_tecnico_email || 'ivanoscacunha@hotmail.com';
+  const rtCrea = cfg.responsavel_tecnico_crea || '2100160575';
+  const rtCpf = cfg.responsavel_tecnico_cpf || '592.803.444-04';
 
   const html = `
   <!DOCTYPE html>
   <html>
   <head>
   <meta charset="utf-8"/>
-  <title>Capa PC01 — REGISTROS DA CULTURA — ${item.parcela2 || item.parcela}</title>
+  <title>Capa PC01 — REGISTROS DA CULTURA — ${pCode}</title>
   <style>
-    @page { size: A4 portrait; margin: 12mm 14mm 10mm 14mm; }
+    @page { size: A4 portrait; margin: 10mm 12mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 8.5pt; line-height: 1.4; }
-    .sheet { width: 100%; min-height: 268mm; display: flex; flex-direction: column; justify-content: space-between; }
+    body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 9.5pt; line-height: 1.5; }
+    .outer-box { border: 1.5px solid #000; padding: 12px 14px; min-height: 272mm; display: flex; flex-direction: column; justify-content: space-between; }
     .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; border: 1.5px solid #000; }
     .hdr-table td { border: 1px solid #000; padding: 4px 6px; font-size: 7pt; vertical-align: middle; }
-    .main-title { font-size: 13pt; font-weight: 900; text-align: center; padding: 6px 0; border: 1.5px solid #000; margin-bottom: 8px; background: #f8fafc; letter-spacing: 0.5px; }
-    .section-title { font-size: 9pt; font-weight: 800; margin: 8px 0 3px 0; padding-bottom: 2px; border-bottom: 1.5px solid #000; text-transform: uppercase; letter-spacing: 0.5px; }
-    .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 8pt; }
-    .grid-table td, .grid-table th { border: 1px solid #000; padding: 5px 7px; vertical-align: top; }
-    .signatures-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
-    .sig-box { border: 1.5px solid #000; padding: 8px 10px; font-size: 8pt; background: #fafafa; min-height: 95px; display: flex; flex-direction: column; justify-content: space-between; }
-    .sig-line { margin-top: 26px; border-top: 1px solid #000; text-align: center; padding-top: 3px; font-size: 7.5pt; font-weight: bold; }
-    .obs-box { margin-top: 8px; border: 1.5px solid #000; padding: 6px 10px; font-size: 7.5pt; line-height: 1.35; background: #fdfdfd; }
+    .doc-title { font-size: 14pt; font-weight: 900; text-align: center; margin: 8px 0 14px 0; letter-spacing: 0.5px; text-transform: uppercase; }
+    .subhdr-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 10pt; font-weight: bold; }
+    .subhdr-table td { padding: 4px 2px; vertical-align: top; }
+    .sec-title { font-size: 11pt; font-weight: 900; margin-top: 14px; margin-bottom: 6px; text-transform: uppercase; }
+    .sec-subtitle { font-size: 9.5pt; font-weight: bold; margin-bottom: 10px; }
+    .divider-line { border: none; border-top: 1.5px solid #000; margin: 10px 0 12px 0; }
+    .info-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 9.5pt; }
+    .info-item { margin-bottom: 6px; font-size: 9.5pt; }
+    .obs-text { margin-top: 24px; font-size: 7.5pt; line-height: 1.4; text-align: justify; }
   </style>
   </head>
   <body onload="window.print()">
-  <div class="sheet">
+  <div class="outer-box">
     <div>
       <table class="hdr-table">
         <tr>
@@ -4018,106 +3981,58 @@ let varieties = [];
         </tr>
       </table>
 
-      <div class="main-title">REGISTROS DA CULTURA</div>
+      <div class="doc-title">REGISTROS DA CULTURA</div>
 
-      <!-- DADOS DA PARCELA E CULTURA -->
-      <table class="grid-table">
-        <tr style="background:#f8fafc">
-          <td style="width: 33%;"><strong>PARCELA:</strong><br/><span style="font-size: 13pt; font-weight: 900; color:#1d4ed8">${item.parcela2 || item.parcela || '—'}</span></td>
-          <td style="width: 33%;"><strong>CULTURA:</strong><br/><span style="font-size: 12pt; font-weight: 800;">${(item.cultura || 'MELÃO').toUpperCase()}</span></td>
-          <td style="width: 34%;"><strong>ANO AGRÍCOLA:</strong><br/><span style="font-size: 11pt; font-weight: 800;">${anoStr}</span></td>
+      <table class="subhdr-table">
+        <tr>
+          <td style="width: 60%;">PARCELA: <span style="font-weight: 800;">${pCode}</span></td>
+          <td style="width: 40%;">SAFRA: <span style="font-weight: 800;">${anoStr}</span></td>
         </tr>
         <tr>
-          <td colspan="2" style="line-height:1.6;">
-            <strong>VARIEDADES / CULTIVARES PLANTADAS:</strong><br/>
-            <table style="width:100%; border-collapse:collapse; margin-top:4px">
-              <thead>
-                <tr style="background:#f1f5f9; font-size:7.5pt">
-                  <th style="padding:2px 4px; border:1px solid #000; text-align:center">#</th>
-                  <th style="padding:2px 4px; border:1px solid #000; text-align:left">Variedade</th>
-                  <th style="padding:2px 4px; border:1px solid #000; text-align:left">Lote</th>
-                  <th style="padding:2px 4px; border:1px solid #000; text-align:center">Data Plantio</th>
-                  <th style="padding:2px 4px; border:1px solid #000; text-align:center">Linhas</th>
-                  <th style="padding:2px 4px; border:1px solid #000; text-align:right">Sementes</th>
-                  <th style="padding:2px 4px; border:1px solid #000; text-align:right">Área</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${variedadesRowsHtml}
-              </tbody>
-            </table>
-          </td>
-          <td style="background:#fdfdfd; vertical-align:middle; text-align:center">
-            <strong>TOTAL HECTARES:</strong><br/>
-            <span style="font-size: 15pt; font-weight: 900; color:#16a34a">${areaFinal} ha</span>
-          </td>
+          <td style="padding-top: 6px;">VARIEDADES: <span style="font-weight: 800;">${variedadesStr.toUpperCase()}</span></td>
+          <td style="padding-top: 6px;">HÁ: <span style="font-weight: 800;">${String(totalAreaStr).replace('.', ',')}</span></td>
         </tr>
       </table>
 
-      <div class="section-title">1. IDENTIFICAÇÃO DA EMPRESA</div>
-      <table class="grid-table">
-        <tr>
-          <td colspan="2"><strong>NOME DA EMPRESA:</strong><br/><span style="font-size:10pt; font-weight: 800; color:#0f172a">${tenantName.toUpperCase()}</span></td>
-          <td style="width: 15%;"><strong>UF:</strong><br/>${window.tenantConfig && window.tenantConfig.uf || 'RN'}</td>
-        </tr>
-        <tr>
-          <td colspan="2"><strong>ENDEREÇO:</strong><br/>${window.tenantConfig && window.tenantConfig.endereco || 'Sítio Pau Branco, S/N - Zona Rural'}</td>
-          <td><strong>MUNICÍPIO:</strong><br/>${window.tenantConfig && window.tenantConfig.municipio || 'Mossoró'}</td>
-        </tr>
-        <tr>
-          <td><strong>CEP:</strong><br/>${window.tenantConfig && window.tenantConfig.cep || '59.600-970'}</td>
-          <td><strong>CAIXA POSTAL:</strong><br/>${window.tenantConfig && window.tenantConfig.caixa_postal || '111'}</td>
-          <td><strong>TELEFONE:</strong><br/>${window.tenantConfig && window.tenantConfig.telefone || '(84) 9424 0050'}</td>
-        </tr>
-        <tr>
-          <td colspan="3"><strong>E-MAIL DE CONTATO:</strong><br/>${window.tenantConfig && window.tenantConfig.email || 'ajaxdgfilho@uol.com.br / neto@coopyfrutas.com'}</td>
-        </tr>
-      </table>
+      <div class="sec-title">1. IDENTIFICAÇÃO</div>
+      <div class="sec-subtitle">1.1 NOME DA EMPRESA: <span style="font-weight: 800;">${empNome}</span></div>
 
-      <div class="section-title">CERTIFICAÇÕES & AUDITORIAS DA FAZENDA</div>
-      <table class="grid-table">
-        <tr>
-          <td style="width: 35%;"><strong>1.2 REGISTRO NO GLOBALG.A.P.:</strong></td>
-          <td style="font-weight: bold; font-size:8.5pt;">${window.tenantConfig && window.tenantConfig.registro_globalgap || 'SATIVA EURO 18GP'}</td>
-        </tr>
-        <tr>
-          <td><strong>1.3 REGISTRO GGN GERAL NO GLOBALG.A.P.:</strong></td>
-          <td style="font-weight: bold; font-size:8.5pt;">${window.tenantConfig && window.tenantConfig.ggn_geral || '4049928377654'}</td>
-        </tr>
-        <tr>
-          <td><strong>1.4 REGISTRO GGN INDIVIDUAL DA FAZENDA:</strong></td>
-          <td style="font-weight: 800; font-size:9pt; color:#1d4ed8;">${ggnFazenda}</td>
-        </tr>
-        <tr>
-          <td><strong>1.5 REGISTRO TN - TESCO NATURE'S CHOICE:</strong></td>
-          <td style="font-weight: bold;">${tescoFazenda}</td>
-        </tr>
-        <tr>
-          <td><strong>1.6 REGISTRO NO SEDEX:</strong></td>
-          <td style="font-weight: bold;">${sedexFazenda}</td>
-        </tr>
-        <tr style="background: #f8fafc">
-          <td colspan="2" style="text-align: center; font-weight: 800; font-size: 8pt; padding: 6px; letter-spacing:0.5px">
-            OS CERTIFICADOS ORIGINAIS ENCONTRAM-SE ARQUIVADOS NA PASTA 13
-          </td>
-        </tr>
-      </table>
+      <hr class="divider-line"/>
 
-      <div class="section-title">2. RESPONSÁVEL TÉCNICO DE CAMPO</div>
-      <div class="signatures-grid" style="display:flex; justify-content:center; margin-top:8px;">
-        <div class="sig-box" style="width:380px; max-width:100%;">
-          <div>
-            <div style="font-weight:800; font-size:9.5pt; color:#0f172a">${rtNome}</div>
-            <div style="font-size:7.5pt; color:#475569; margin-top:2px">Engenheiro(a) Agrônomo(a) &nbsp;|&nbsp; Responsável Técnico(a) de Campo</div>
-            <div style="font-size:7pt; color:#64748b; margin-top:2px">${window.tenantConfig && window.tenantConfig.municipio || 'Mossoró'} - ${window.tenantConfig && window.tenantConfig.uf || 'RN'}</div>
-          </div>
-          <div class="sig-line">Assinatura Responsável Técnico de Campo</div>
-        </div>
+      <div class="info-item"><strong>ENDEREÇO:</strong> ${empEndereco}</div>
+      <div class="info-row" style="max-width: 650px;">
+        <span><strong>MUNICÍPIO:</strong> ${empMunicipio}</span>
+        <span style="margin-right: 140px;"><strong>UF:</strong> ${empUf}</span>
+      </div>
+      <div class="info-row" style="max-width: 650px;">
+        <span><strong>CEP:</strong> ${empCep}</span>
+        <span style="margin-right: 60px;"><strong>CAIXA POSTAL:</strong> ${empCaixaPostal}</span>
+      </div>
+      <div class="info-item"><strong>TELEFONE:</strong> ${empTelefone}</div>
+      <div class="info-item"><strong>E-MAIL:</strong> ${empEmail}</div>
+
+      <div class="sec-title" style="margin-top: 28px;">2. RESPONSÁVEL TÉCNICO:</div>
+
+      <div class="info-row" style="align-items: baseline;">
+        <span><strong>NOME COMPLETO:</strong> ${rtNome}</span>
+        <span style="margin-left: 20px;"><strong>ASSINATURA:</strong> <span style="display:inline-block; width: 140px; border-bottom: 1px solid #000;"></span></span>
+      </div>
+      <div class="info-item"><strong>ENDEREÇO:</strong> ${rtEndereco}</div>
+      <div class="info-row" style="max-width: 650px;">
+        <span><strong>MUNICÍPIO:</strong> ${rtMunicipio}</span>
+        <span style="margin-right: 140px;"><strong>UF:</strong> ${rtUf}</span>
+      </div>
+      <div class="info-item"><strong>CEP:</strong> ${rtCep}</div>
+      <div class="info-item"><strong>TELEFONE:</strong> ${rtTelefone}</div>
+      <div class="info-item"><strong>E-MAIL:</strong> ${rtEmail}</div>
+      <div class="info-row" style="max-width: 650px;">
+        <span><strong>REGISTRO NO CREA Nº:</strong> ${rtCrea}</span>
+        <span style="margin-right: 80px;"><strong>CPF:</strong> ${rtCpf}</span>
       </div>
     </div>
 
-    <div class="obs-box">
-      <strong>OBSERVAÇÃO GERAL:</strong> O responsável técnico ao assinar este documento cód: <strong>PC01</strong> está se responsabilizando por todos os registros contidos na pasta da parcela de campo, sem obrigatoriedade de constar em cada planilha os dados pessoais e de assinar cada folha individualmente.
+    <div class="obs-text">
+      <strong>OBS:</strong> O responsável técnico ao assinar esse documento COD: PC01 está se responsabilizando por todos os registros contidos na parcela de campo. Sem mais obrigação de constar em cada planilha seus dados pessoais e de assinar cada planilha individualmente.
     </div>
   </div>
   </body>
@@ -6935,6 +6850,13 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
     }).join('');
   }
 
+  let defaultOp = (fertData && fertData.find(f => f.operador && f.operador.trim())?.operador) || 
+                  ($('fertOperador') ? $('fertOperador').value : '') || 
+                  'ROBSON RAFAEL';
+  const opPrompt = prompt('Confirme ou selecione o nome do Operador da Fertirrigação para a ficha (PC07):', defaultOp);
+  if (opPrompt === null) return; // cancelou impressão
+  const operadorNome = opPrompt.trim() || defaultOp;
+
   const totalsColsHtml = uniqueProducts.map(p => {
     const tot = productTotals[p];
     return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${tot > 0 ? tot.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) : '-'}</td>`;
@@ -6964,7 +6886,7 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
   .grid-table th { background: #e5e7eb; font-weight: bold; text-align: center; font-size: 6pt; }
   .obs-box { border: 1px solid #000; padding: 3px 5px; font-size: 5.4pt; line-height: 1.15; margin-bottom: 3px; background: #fafafa; }
   .sig-table { width: 100%; border-collapse: collapse; margin-top: 3px; font-size: 6.5pt; }
-  .sig-table td { border: 1px solid #000; padding: 3px; text-align: center; vertical-align: bottom; }
+  .sig-table td { border: 1px solid #000; padding: 4px 6px; text-align: center; vertical-align: bottom; }
   @media print {
     html, body { height: 100%; margin: 0 !important; padding: 0 !important; }
     .sheet { page-break-inside: avoid; page-break-after: avoid; }
@@ -7031,8 +6953,13 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
 
     <table class="sig-table">
       <tr>
-        <td width="100%">
-          <div style="border-top:1px dashed #000; width:55%; margin:14px auto 0 auto; padding-top:2px;"><b>Responsável Técnico:</b> ${rtNome} (CREA: ${rtCrea})</div>
+        <td style="width:50%; border:1px solid #000; padding:4px 6px; text-align:center; vertical-align:bottom; height:46px;">
+          <b>NOME DO OPERADOR:</b> ${operadorNome}<br/><br/>
+          <div style="border-top:1px dashed #000; width:75%; margin:0 auto; padding-top:2px;">Assinatura do Operador</div>
+        </td>
+        <td style="width:50%; border:1px solid #000; padding:4px 6px; text-align:center; vertical-align:bottom; height:46px;">
+          <b>RESPONSÁVEL TÉCNICO:</b> ${rtNome} (CREA: ${rtCrea})<br/><br/>
+          <div style="border-top:1px dashed #000; width:75%; margin:0 auto; padding-top:2px;">Assinatura do Responsável Técnico</div>
         </td>
       </tr>
     </table>
