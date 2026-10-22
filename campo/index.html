@@ -4103,24 +4103,15 @@ let varieties = [];
         </tr>
       </table>
 
-      <div class="section-title">2. RESPONSÁVEIS TÉCNICOS & CERTIFICAÇÃO DA PASTA</div>
-      <div class="signatures-grid">
-        <div class="sig-box">
+      <div class="section-title">2. RESPONSÁVEL TÉCNICO DE CAMPO</div>
+      <div class="signatures-grid" style="display:flex; justify-content:center; margin-top:8px;">
+        <div class="sig-box" style="width:380px; max-width:100%;">
           <div>
-            <div style="font-weight:800; font-size:9pt; color:#0f172a">${rtNome}</div>
+            <div style="font-weight:800; font-size:9.5pt; color:#0f172a">${rtNome}</div>
             <div style="font-size:7.5pt; color:#475569; margin-top:2px">Engenheiro(a) Agrônomo(a) &nbsp;|&nbsp; Responsável Técnico(a) de Campo</div>
             <div style="font-size:7pt; color:#64748b; margin-top:2px">${window.tenantConfig && window.tenantConfig.municipio || 'Mossoró'} - ${window.tenantConfig && window.tenantConfig.uf || 'RN'}</div>
           </div>
           <div class="sig-line">Assinatura Responsável Técnico de Campo</div>
-        </div>
-
-        <div class="sig-box">
-          <div>
-            <div style="font-weight:800; font-size:9pt; color:#0f172a">EMANUELA MOREIRA</div>
-            <div style="font-size:7.5pt; color:#475569; margin-top:2px">Engenheira Agrônoma &nbsp;|&nbsp; Validação e Certificação da Pasta</div>
-            <div style="font-size:7pt; color:#64748b; margin-top:2px">Supervisão dos Processos de Certificação (GlobalG.A.P. / Tesco / IDIARN)</div>
-          </div>
-          <div class="sig-line">Assinatura Resp. Validação da Certificação</div>
         </div>
       </div>
     </div>
@@ -6768,10 +6759,37 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
   const rtCrea = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_crea) || '2100995243';
   const certNome = (window.tenantConfig && window.tenantConfig.agronomo_certificacao) || 'Emanuela Moreira';
   const areaHa = item && item.area ? parseFloat(item.area).toFixed(2) : '3.00';
-  const info = getParcelaCompleteInfo(parcelCode || item, infoParcelasData);
+  const info = (typeof getParcelaCompleteInfo === 'function') ? getParcelaCompleteInfo(parcelCode || item, infoParcelasData) : null;
   const variedadesStr = (info && info.variedadesList && info.variedadesList.length > 0)
     ? info.variedadesList.join(', ')
     : (item ? (item.variedades || [item.variedade || 'JADEAL']).filter(Boolean).join(', ') : 'JADEAL');
+
+  function parseDateFlex(str) {
+    if (!str) return null;
+    str = String(str).trim();
+    if (str.includes('/')) {
+      const parts = str.split('/');
+      if (parts.length === 3) {
+        let y = parseInt(parts[2]);
+        if (y < 100) y += 2000;
+        return new Date(y, parseInt(parts[1]) - 1, parseInt(parts[0]));
+      }
+    }
+    if (str.includes('-')) {
+      const parts = str.split('-');
+      if (parts.length === 3) {
+        let y = parseInt(parts[0]);
+        if (y < 100) y += 2000;
+        return new Date(y, parseInt(parts[1]) - 1, parseInt(parts[2]));
+      }
+    }
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  const plantioStr = (item && (item.plantio || item.transplante || item.data_plantio || item.data_plantio1)) ||
+                     (info && (info.plantio || info.transplante || info.data_plantio || info.data_plantio1));
+  const plantioDt = plantioStr ? parseDateFlex(plantioStr) : null;
 
   let fertData = [];
   let itensData = [];
@@ -6827,25 +6845,34 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
 
     rowsHtml = fertData.map((f, idx) => {
       const ordNum = idx + 1;
-      const dtStr = f.data_inicio ? f.data_inicio.split('-').reverse().join('/') : '—';
-      const dapVal = f.dap != null ? f.dap : '—';
-      const faseStr = `DAP ${dapVal}`;
+      let dtStr = '—';
+      if (f.data_inicio) {
+        dtStr = f.data_inicio.includes('-') ? f.data_inicio.split('-').reverse().join('/') : f.data_inicio;
+      }
+      let dapVal = f.dap;
+      if ((dapVal == null || dapVal === '' || dapVal === '—') && plantioDt && f.data_inicio) {
+        const dF = parseDateFlex(f.data_inicio);
+        if (dF && !isNaN(dF.getTime())) {
+          dapVal = Math.round((dF.getTime() - plantioDt.getTime()) / 86400000) + 1;
+        }
+      }
+      const faseStr = dapVal != null ? `DAP ${dapVal}` : '—';
       const pItems = itemsByFertId[f.id] || {};
 
       const colsHtml = uniqueProducts.map(p => {
         const val = pItems[p];
         if (val != null && val > 0) {
           productTotals[p] += val;
-          return `<td style="border:1px solid #000; padding:3px 4px; text-align:center; font-weight:bold">${val.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}</td>`;
+          return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${val.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}</td>`;
         }
-        return `<td style="border:1px solid #000; padding:3px 4px; text-align:center; color:#999">-</td>`;
+        return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; color:#999">-</td>`;
       }).join('');
 
       return `
         <tr>
-          <td style="border:1px solid #000; padding:3px 4px; text-align:center">${dtStr}</td>
-          <td style="border:1px solid #000; padding:3px 4px; text-align:center; font-weight:bold">${ordNum}</td>
-          <td style="border:1px solid #000; padding:3px 4px; text-align:center; font-weight:bold">${faseStr}</td>
+          <td style="border:1px solid #000; padding:2px 3px; text-align:center">${dtStr}</td>
+          <td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${ordNum}</td>
+          <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold">${faseStr}</td>
           ${colsHtml}
         </tr>
       `;
@@ -6868,8 +6895,6 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
       "55":{"NIT. CALCIO":9.0,"SULF. MAG.":1.0,"SULF. POTASSIO":13.0},
       "60":{"NIT. CALCIO":9.0,"SULF. POTASSIO":13.0}
     };
-    const plantioStr = item ? (item.plantio || item.transplante || item.data_plantio1) : null;
-    const plantioDt = plantioStr ? new Date(plantioStr + (plantioStr.includes('T') ? '' : 'T00:00:00')) : null;
     const areaVal = parseFloat(areaHa) || 1.0;
 
     let orderCount = 1;
@@ -6894,16 +6919,16 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
         const totalKg = doseBase * areaVal;
         if (totalKg > 0) {
           productTotals[p] = (productTotals[p] || 0) + totalKg;
-          return `<td style="border:1px solid #000; padding:3px 4px; text-align:center; font-weight:bold">${totalKg.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}</td>`;
+          return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${totalKg.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}</td>`;
         }
-        return `<td style="border:1px solid #000; padding:3px 4px; text-align:center; color:#999">-</td>`;
+        return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; color:#999">-</td>`;
       }).join('');
 
       return `
         <tr>
-          <td style="border:1px solid #000; padding:3px 4px; text-align:center">${calcDtStr}</td>
-          <td style="border:1px solid #000; padding:3px 4px; text-align:center; font-weight:bold">${orderCount++}</td>
-          <td style="border:1px solid #000; padding:3px 4px; text-align:center; font-weight:bold">${faseStr}</td>
+          <td style="border:1px solid #000; padding:2px 3px; text-align:center">${calcDtStr}</td>
+          <td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${orderCount++}</td>
+          <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold">${faseStr}</td>
           ${colsHtml}
         </tr>
       `;
@@ -6912,10 +6937,10 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
 
   const totalsColsHtml = uniqueProducts.map(p => {
     const tot = productTotals[p];
-    return `<td style="border:1px solid #000; padding:4px 4px; text-align:center; font-weight:bold">${tot > 0 ? tot.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) : '-'}</td>`;
+    return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${tot > 0 ? tot.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) : '-'}</td>`;
   }).join('');
 
-  const printWin = window.open('', '_blank', 'width=1200,height=900');
+  const printWin = window.open('', '_blank', 'width=1100,height=1250');
   if (!printWin) { toast('Permita popups para imprimir.', 'err'); return; }
 
   const html = `
@@ -6925,32 +6950,40 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
   <meta charset="utf-8"/>
   <title>PC 07 — CONTROLE DO USO DE FERTILIZANTES (FERTIRRIGAÇÃO)</title>
   <style>
-  @page { size: A4 landscape; margin: 6mm 8mm; }
+  @page { size: A4 portrait; margin: 4mm 6mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; font-size: 7pt; color: #000; line-height: 1.2; }
+  body { font-family: Arial, sans-serif; font-size: 6.8pt; color: #000; line-height: 1.15; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .sheet { width: 100%; }
-  .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
-  .hdr-table td { border: 1px solid #000; padding: 3px 5px; font-size: 6.5pt; vertical-align: middle; }
-  .main-title { font-size: 9.5pt; font-weight: bold; text-align: center; padding: 4px; border: 1.5px solid #000; margin-bottom: 5px; background: #f3f4f6; text-transform: uppercase; }
-  .info-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
-  .info-table td { border: 1px solid #000; padding: 3px 5px; font-size: 7pt; }
-  .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 6.5pt; }
-  .grid-table th, .grid-table td { border: 1px solid #000; padding: 3px 3px; }
-  .grid-table th { background: #e5e7eb; font-weight: bold; text-align: center; font-size: 6.5pt; }
-  .obs-box { border: 1px solid #000; padding: 4px 6px; font-size: 6pt; line-height: 1.2; margin-bottom: 6px; background: #fafafa; }
+  .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 2px; }
+  .hdr-table td { border: 1px solid #000; padding: 2px 4px; font-size: 6pt; vertical-align: middle; }
+  .main-title { font-size: 8.5pt; font-weight: bold; text-align: center; padding: 2px; border: 1.5px solid #000; margin-bottom: 2px; background: #f3f4f6; text-transform: uppercase; }
+  .info-table { width: 100%; border-collapse: collapse; margin-bottom: 2px; }
+  .info-table td { border: 1px solid #000; padding: 2px 4px; font-size: 6.8pt; }
+  .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 3px; font-size: 6.2pt; }
+  .grid-table th, .grid-table td { border: 1px solid #000; padding: 2px 2px; }
+  .grid-table th { background: #e5e7eb; font-weight: bold; text-align: center; font-size: 6pt; }
+  .obs-box { border: 1px solid #000; padding: 3px 5px; font-size: 5.4pt; line-height: 1.15; margin-bottom: 3px; background: #fafafa; }
+  .sig-table { width: 100%; border-collapse: collapse; margin-top: 3px; font-size: 6.5pt; }
+  .sig-table td { border: 1px solid #000; padding: 3px; text-align: center; vertical-align: bottom; }
+  @media print {
+    html, body { height: 100%; margin: 0 !important; padding: 0 !important; }
+    .sheet { page-break-inside: avoid; page-break-after: avoid; }
+    table { page-break-inside: avoid; }
+    tr { page-break-inside: avoid; }
+  }
   </style>
   </head>
   <body onload="window.print()">
   <div class="sheet">
     <table class="hdr-table">
       <tr>
-        <td width="38%" style="font-weight:bold; font-size:6.5pt;">
+        <td width="38%" style="font-weight:bold; font-size:6.2pt; line-height:1.2;">
           ELABORADO, EMITIDO e REVISADO POR: EMANUELA MOREIRA<br/>
           Avaliado por: ADGF &nbsp;|&nbsp; Aprovado Por: ADGF<br/>
           Frequência: Por parcela de campo.
         </td>
-        <td width="20%" style="text-align:center; vertical-align:middle;">${getTenantLogoHtml(42, 120)}</td>
-        <td width="42%" style="font-size:6.5pt;">
+        <td width="20%" style="text-align:center; vertical-align:middle;">${getTenantLogoHtml(34, 105)}</td>
+        <td width="42%" style="font-size:6.2pt; line-height:1.2;">
           <b>DEPARTAMENTO:</b> CAMPO<br/>
           <b>NOME DO DOC:</b> CONTROLE DO USO DE FERTILIZANTES NO DESENVOLVIMENTO DA CULTURA<br/>
           <b>EMISSÃO:</b> 15/06/2026 &nbsp;|&nbsp; <b>MOD E APROVAÇÃO:</b> 01/07/2026 &nbsp;|&nbsp; <b>U. REVISÃO:</b> 01/07/2026<br/>
@@ -6974,13 +7007,13 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
     <table class="grid-table">
       <thead>
         <tr>
-          <th rowspan="2" style="width:75px;">PERÍODO DE APLICAÇÃO<br/>(dd/mm/aa)</th>
-          <th rowspan="2" style="width:35px;">Nº DA ORDEM</th>
-          <th rowspan="2" style="width:110px;">FASE DA CULTURA (DAP*)</th>
+          <th rowspan="2" style="width:58px;">PERÍODO DE APLICAÇÃO<br/>(dd/mm/aa)</th>
+          <th rowspan="2" style="width:26px;">Nº DA ORDEM</th>
+          <th rowspan="2" style="width:62px;">FASE DA CULTURA (DAP*)</th>
           <th colspan="${uniqueProducts.length}">N O M E S &nbsp; D O S &nbsp; F E R T I L I Z A N T E S</th>
         </tr>
         <tr>
-          ${uniqueProducts.map(p => `<th>${p}<br/><small style="font-weight:normal; font-size:5.5pt">Quant (Kg/L)</small></th>`).join('')}
+          ${uniqueProducts.map(p => `<th>${p}<br/><small style="font-weight:normal; font-size:4.8pt">Quant (Kg/L)</small></th>`).join('')}
         </tr>
       </thead>
       <tbody>
@@ -6996,10 +7029,10 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
       <b>OBS:</b> DAP* (DIAS APÓS O PLANTIO) - É OBRIGATÓRIO O REGISTRO DE TODAS AS APLICAÇÕES DE FERTILIZANTES VIA FERTIRRIGAÇÃO OU ADUBAÇÃO FOLIAR. CADA APLICAÇÃO DEVE CONTER O NOME COMERCIAL, A QUANTIDADE E A IDENTIFICAÇÃO DO OPERADOR RESPONSÁVEL.
     </div>
 
-    <table style="width:100%; border-collapse:collapse; margin-top:12px; font-size:6.5pt">
+    <table class="sig-table">
       <tr>
-        <td width="100%" style="border:1px solid #000; padding:5px; text-align:center; vertical-align:bottom; height:45px">
-          <div style="border-top:1px dashed #000; margin-top:20px; padding-top:2px;"><b>Responsável Técnico:</b> ${rtNome} (CREA: ${rtCrea})</div>
+        <td width="100%">
+          <div style="border-top:1px dashed #000; width:55%; margin:14px auto 0 auto; padding-top:2px;"><b>Responsável Técnico:</b> ${rtNome} (CREA: ${rtCrea})</div>
         </td>
       </tr>
     </table>
@@ -7493,31 +7526,37 @@ async function printPastaCampoDefensivos(idOrStr) {
   <meta charset="utf-8"/>
   <title>PC06 — CONTROLE GERAL DE AGROTÓXICO NA CULTURA — ${pCode}</title>
   <style>
-    @page { size: A4 landscape; margin: 4mm 6mm; }
+    @page { size: A4 landscape; margin: 3mm 4mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, Helvetica, sans-serif; font-size: 6pt; color: #000; line-height: 1.15; background: #fff; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 5.6pt; color: #000; line-height: 1.12; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .sheet { width: 100%; }
-    .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; border: 1.5px solid #000; }
-    .hdr-table td { border: 1px solid #000; padding: 2px 4px; font-size: 6pt; vertical-align: middle; }
-    .main-title { font-size: 8.5pt; font-weight: bold; text-align: center; padding: 3px; border: 1.5px solid #000; margin-bottom: 4px; background: #f9fafb; color: #d32f2f; text-transform: uppercase; }
-    .info-bar { width: 100%; display: flex; justify-content: space-between; font-size: 7.5pt; font-weight: bold; margin-bottom: 4px; }
-    .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 5.6pt; }
-    .grid-table th, .grid-table td { border: 1px solid #000; padding: 1.5px 2px; }
-    .grid-table th { background: #f3f4f6; font-weight: bold; text-align: center; }
-    .footer-obs { font-size: 5.6pt; line-height: 1.25; margin-top: 5px; border-top: 1px solid #000; padding-top: 4px; }
+    .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 2px; border: 1px solid #000; }
+    .hdr-table td { border: 1px solid #000; padding: 1.5px 3px; font-size: 5.5pt; vertical-align: middle; }
+    .main-title { font-size: 8pt; font-weight: bold; text-align: center; padding: 2px; border: 1px solid #000; margin-bottom: 2px; background: #f9fafb; color: #d32f2f; text-transform: uppercase; }
+    .info-bar { width: 100%; display: flex; justify-content: space-between; font-size: 6.8pt; font-weight: bold; margin-bottom: 2px; }
+    .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 2px; font-size: 5.3pt; }
+    .grid-table th, .grid-table td { border: 1px solid #000; padding: 1px 2px; }
+    .grid-table th { background: #f3f4f6; font-weight: bold; text-align: center; font-size: 5.1pt; }
+    .footer-obs { font-size: 5pt; line-height: 1.15; margin-top: 2px; border-top: 1px solid #000; padding-top: 2px; }
+    @media print {
+      html, body { height: 100%; margin: 0 !important; padding: 0 !important; }
+      .sheet { page-break-inside: avoid; page-break-after: avoid; }
+      table { page-break-inside: avoid; }
+      tr { page-break-inside: avoid; }
+    }
   </style>
   </head>
   <body onload="window.print()">
   <div class="sheet">
     <table class="hdr-table">
       <tr>
-        <td width="36%" style="line-height: 1.25;">
+        <td width="36%" style="line-height: 1.2;">
           <strong>ELABORADO, EMITIDO E REVISADO POR:</strong> EMANUELA MOREIRA<br/>
           Avaliado por: ADGF &nbsp;|&nbsp; Aprovado por: ADGF<br/>
           <strong>FREQUÊNCIA:</strong> POR PARCELA DE CAMPO.
         </td>
-        <td width="18%" style="text-align:center; vertical-align:middle;">${getTenantLogoHtml(36, 110)}</td>
-        <td width="46%" style="line-height: 1.25;">
+        <td width="18%" style="text-align:center; vertical-align:middle;">${getTenantLogoHtml(32, 100)}</td>
+        <td width="46%" style="line-height: 1.2;">
           <strong>DEPARTAMENTO:</strong> CAMPO<br/>
           <strong>NOME DO DOC:</strong> CONTROLE GERAL DE AGROTÓXICO NA CULTURA<br/>
           <strong>EMISSÃO:</strong> 15/06/2026 &nbsp;|&nbsp; <strong>MOD. E APROVAÇÃO:</strong> 01/07/2026 &nbsp;|&nbsp; <strong>U. REVISÃO:</strong> 01/07/2026<br/>
@@ -7537,26 +7576,26 @@ async function printPastaCampoDefensivos(idOrStr) {
       <thead>
         <tr>
           <th rowspan="2" style="width: 48px;">Data<br/>DD/MM/AA</th>
-          <th rowspan="2" style="width: 32px;">Nº<br/>Ordem</th>
+          <th rowspan="2" style="width: 30px;">Nº<br/>Ordem</th>
           <th rowspan="2" style="width: 26px;">DAP*</th>
-          <th rowspan="2" style="width: 100px;">Justificativa Nome<br/>Pragas e /ou Doenças</th>
-          <th rowspan="2" style="width: 75px;">Nome Comercial (s)</th>
-          <th rowspan="2" style="width: 85px;">Ingrediente Ativo<br/>Classe Toxicológica</th>
+          <th rowspan="2" style="width: 95px;">Justificativa Nome<br/>Pragas e /ou Doenças</th>
+          <th rowspan="2" style="width: 72px;">Nome Comercial (s)</th>
+          <th rowspan="2" style="width: 80px;">Ingrediente Ativo<br/>Classe Toxicológica</th>
           <th colspan="2">Dosagem</th>
           <th colspan="2">Nº Aplicações</th>
-          <th rowspan="2" style="width: 34px;">Carência*<br/>(Dias)</th>
-          <th rowspan="2" style="width: 26px;">I.S*<br/>(Dias)</th>
-          <th rowspan="2" style="width: 44px;">Quantidade<br/>(L ou Kg)</th>
-          <th rowspan="2" style="width: 44px;">Horário de<br/>Aplicação</th>
-          <th rowspan="2" style="width: 48px;">Data Autorizada<br/>p/ Colheita</th>
-          <th rowspan="2" style="width: 58px;">Colheita Realizada<br/>p/ Destruição</th>
-          <th rowspan="2" style="width: 75px;">Nome Sobre do<br/>Aplicador</th>
+          <th rowspan="2" style="width: 32px;">Carência*<br/>(Dias)</th>
+          <th rowspan="2" style="width: 24px;">I.S*<br/>(Dias)</th>
+          <th rowspan="2" style="width: 42px;">Quantidade<br/>(L ou Kg)</th>
+          <th rowspan="2" style="width: 42px;">Horário de<br/>Aplicação</th>
+          <th rowspan="2" style="width: 46px;">Data Autorizada<br/>p/ Colheita</th>
+          <th rowspan="2" style="width: 55px;">Colheita Realizada<br/>p/ Destruição</th>
+          <th rowspan="2" style="width: 72px;">Nome Sobre do<br/>Aplicador</th>
         </tr>
         <tr>
-          <th style="font-size:5.2pt; width:48px;">Recomendada</th>
-          <th style="font-size:5.2pt; width:34px;">Usada</th>
-          <th style="font-size:5.2pt; width:34px;">Realizadas</th>
-          <th style="font-size:5.2pt; width:32px;">Permitidas</th>
+          <th style="font-size:4.8pt; width:46px;">Recomendada</th>
+          <th style="font-size:4.8pt; width:32px;">Usada</th>
+          <th style="font-size:4.8pt; width:32px;">Realizadas</th>
+          <th style="font-size:4.8pt; width:30px;">Permitidas</th>
         </tr>
       </thead>
       <tbody>
@@ -7573,11 +7612,11 @@ async function printPastaCampoDefensivos(idOrStr) {
     </div>
 
     <!-- ASSINATURA DA RESPONSÁVEL TÉCNICA -->
-    <div style="display:flex; justify-content:flex-end; margin-top:14px;">
-      <div style="text-align:center; width:340px;">
-        <div style="border-bottom:1px solid #000; margin-bottom:4px; height:28px;"></div>
-        <div style="font-weight:bold; font-size:7.5pt;">${rtNome}</div>
-        <div style="font-size:6.5pt; color:#222;">Engª. Agrônoma &nbsp;|&nbsp; Responsável Técnica</div>
+    <div style="display:flex; justify-content:flex-end; margin-top:3px;">
+      <div style="text-align:center; width:260px;">
+        <div style="border-bottom:1px solid #000; margin-bottom:2px; height:18px;"></div>
+        <div style="font-weight:bold; font-size:7pt;">${rtNome}</div>
+        <div style="font-size:5.8pt; color:#222;">Engª. Agrônoma &nbsp;|&nbsp; Responsável Técnica</div>
       </div>
     </div>
   </div>
