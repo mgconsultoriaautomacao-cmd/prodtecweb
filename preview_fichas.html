@@ -421,7 +421,8 @@
     }
 
     function getPC04Html() {
-      const plantioDate = new Date('2026-07-07T00:00:00');
+      const semeaduraDate = new Date('2026-06-27T00:00:00');
+      const transplanteDate = new Date('2026-07-07T00:00:00');
       const addDays = (d, n) => {
         const res = new Date(d);
         res.setDate(res.getDate() + n);
@@ -431,23 +432,28 @@
         return `${dd}/${mm}/${yy}`;
       };
 
-      // Coluna esquerda: Estufa + Dias 1 a 44
+      // Coluna esquerda: Estufa + Dias 1 a 44 (contando desde a Semeadura)
+      const semeaduraStr = addDays(semeaduraDate, 0);
       let leftRows = `
         <tr>
           <td style="border:1px solid #000; font-size:6.5pt; text-align:center; font-weight:bold; padding:1.5px 2px;">Plantio direto/<br/>Estufa</td>
-          <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1.5px 2px;">01/08/26</td>
-          <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1.5px 2px;">01/08/26</td>
-          <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1.5px 2px;"></td>
+          <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1.5px 2px; font-weight:bold; color:#0f766e">${semeaduraStr}</td>
+          <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1.5px 2px; font-weight:bold; color:#0f766e">${semeaduraStr}</td>
+          <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1.5px 2px; font-weight:bold; color:#0f766e">ESTUFA</td>
         </tr>
       `;
       for (let day = 1; day <= 44; day++) {
-        const dt = addDays(plantioDate, day);
+        const dt = addDays(semeaduraDate, day - 1);
+        const isSemeadura = (day === 1);
+        const isTransplante = (day === 11);
+        const style = isSemeadura ? 'background:#10b981; color:#fff; font-weight:bold;' : (isTransplante ? 'background:#7c3aed; color:#fff; font-weight:bold;' : '');
+        const obs = isSemeadura ? 'SEMEADURA' : (isTransplante ? 'TRANSPLANTIO' : '');
         leftRows += `
           <tr>
-            <td style="border:1px solid #000; font-size:6.5pt; text-align:center; font-weight:bold; padding:1px 2px;">${day}</td>
-            <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1px 2px;">${dt}</td>
-            <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1px 2px;">${dt}</td>
-            <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1px 2px;"></td>
+            <td style="border:1px solid #000; font-size:6.5pt; text-align:center; font-weight:bold; padding:1px 2px; ${style}">${day}</td>
+            <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1px 2px; ${style}">${dt}</td>
+            <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1px 2px; ${style}">${dt}</td>
+            <td style="border:1px solid #000; font-size:6.5pt; text-align:center; padding:1px 2px; ${style}">${obs}</td>
           </tr>
         `;
       }
@@ -455,7 +461,7 @@
       // Coluna direita: Dias 45 a 90
       let rightRows = '';
       for (let day = 45; day <= 90; day++) {
-        const dt = addDays(plantioDate, day);
+        const dt = addDays(semeaduraDate, day - 1);
         rightRows += `
           <tr>
             <td style="border:1px solid #000; font-size:6.5pt; text-align:center; font-weight:bold; padding:1px 2px;">${day}</td>
@@ -526,8 +532,9 @@
                   </tr>
                 </table>
               </td>
-              <td style="width:42%; vertical-align:middle; padding-left:14px; font-size:7.2pt; line-height:1.6;">
-                <div><strong>DATA DE PLANTIO:</strong> &nbsp;&nbsp; 07/07/2026</div>
+              <td style="width:42%; vertical-align:middle; padding-left:14px; font-size:7.2pt; line-height:1.65;">
+                <div><strong>DATA DA SEMEADURA:</strong> &nbsp;&nbsp; <span style="color:#0f766e; font-weight:bold;">27/06/2026</span></div>
+                <div><strong>DATA DO TRANSPLANTE:</strong> &nbsp;&nbsp; <span style="color:#7c3aed; font-weight:bold;">07/07/2026</span></div>
                 <div><strong>PREVISÃO DE COLHEITA:</strong> &nbsp;&nbsp; 15/09/2026</div>
                 <div style="margin-top:4px;"><strong>TOTAL DA ÁREA (ha):</strong> &nbsp;&nbsp;&nbsp;&nbsp; <strong>3,00</strong></div>
               </td>

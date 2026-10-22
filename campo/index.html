@@ -6439,14 +6439,65 @@ async function printPastaCampoCalendario(idOrStr) {
         ? info.variedadesList.map(v => ({ nome: v, area: '—' }))
         : [{ nome: item.variedade || '—', area: totalAreaStr }]);
 
-  const plantioDateStr = item.plantio || item.transplante || item.data_plantio1 || '2026-07-07';
-  const plantioDate = new Date(plantioDateStr + (plantioDateStr.includes('T') ? '' : 'T00:00:00'));
-  const isValidDate = !isNaN(plantioDate.getTime());
+  // 1. Identificação precisa das datas de SEMEADURA e TRANSPLANTE
+  const normVars = (typeof extractNormalizedParcelVarieties === 'function') ? extractNormalizedParcelVarieties(item).vars : [];
+  const semeaduraRaw = item.semeadura || item.data_semeadura || item.semeadura1 || (normVars[0] && normVars[0].semeadura) || null;
+  const transplanteRaw = item.transplante || item.plantio || item.data_plantio || item.data_plantio1 || (normVars[0] && normVars[0].data) || null;
 
-  const prevColheitaStr = item.previsao_colheita || (isValidDate ? new Date(plantioDate.getTime() + (70 * 86400000)).toISOString().split('T')[0] : '2026-09-15');
-  const fmtDateBr = (iso) => iso ? iso.split('-').reverse().join('/') : '—';
+  const parseFlexDate = (s) => {
+    if (!s) return null;
+    if (s instanceof Date) return isNaN(s.getTime()) ? null : s;
+    const str = String(s).trim();
+    if (str.includes('/')) {
+      const parts = str.split('/');
+      if (parts.length === 3) {
+        const d = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const y = parseInt(parts[2], 10);
+        const dt = new Date(y, m, d, 12, 0, 0);
+        if (!isNaN(dt.getTime())) return dt;
+      }
+    }
+    const clean = str.includes('T') ? str.split('T')[0] : str;
+    const parts = clean.split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const d = parseInt(parts[2], 10);
+      const dt = new Date(y, m, d, 12, 0, 0);
+      if (!isNaN(dt.getTime())) return dt;
+    }
+    const dt = new Date(str + 'T12:00:00');
+    return isNaN(dt.getTime()) ? null : dt;
+  };
+
+  const dtSemeadura = parseFlexDate(semeaduraRaw);
+  const dtTransplante = parseFlexDate(transplanteRaw);
+
+  // A contagem do calendário DEVE ser desde o dia da SEMEADURA e NÃO do transplante!
+  let baseDate = null;
+  if (dtSemeadura) {
+    baseDate = dtSemeadura;
+  } else if (dtTransplante) {
+    baseDate = new Date(dtTransplante.getTime() - (10 * 86400000));
+  } else {
+    baseDate = new Date('2026-07-01T12:00:00');
+  }
+
+  // Dia do transplante dentro do calendário de 90 dias
+  let transplantDap = -1;
+  if (dtTransplante && baseDate) {
+    const diffDays = Math.round((dtTransplante.getTime() - baseDate.getTime()) / 86400000);
+    transplantDap = diffDays + 1; // 1-indexed
+  } else {
+    transplantDap = 11;
+  }
+
+  const prevColheitaRaw = item.previsao_colheita || (normVars[0] && normVars[0].previsao) || null;
+  const dtPrevColheita = parseFlexDate(prevColheitaRaw) || new Date(baseDate.getTime() + (75 * 86400000));
 
   const formatShortDate = (d) => {
+    if (!d || isNaN(d.getTime())) return '—';
     const dd = String(d.getDate()).padStart(2, '0');
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const yy = String(d.getFullYear()).slice(-2);
@@ -6454,32 +6505,44 @@ async function printPastaCampoCalendario(idOrStr) {
   };
 
   const getDayDateBr = (dap) => {
-    if (!isValidDate) return '—';
-    const d = new Date(plantioDate.getTime() + ((dap - 1) * 86400000));
+    const d = new Date(baseDate.getTime() + ((dap - 1) * 86400000));
     return formatShortDate(d);
   };
 
-  // Linhas DAP 1 a 44 (DAP 1 pintado de roxo #7c3aed para Transplantio)
+  // Linha Estufa: Data da Semeadura
+  const semeaduraDtStr = formatShortDate(baseDate);
   let leftRowsHtml = `
     <tr>
       <td style="border:1px solid #000; padding:2px; font-weight:bold; font-size:6.5pt; text-align:center">Plantio direto/<br/>Estufa</td>
-      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt">${isValidDate ? formatShortDate(new Date(plantioDate.getTime() - (6 * 86400000))) : '01/08/26'}</td>
-      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt">${isValidDate ? formatShortDate(new Date(plantioDate.getTime() - (6 * 86400000))) : '01/08/26'}</td>
-      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt"></td>
+      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt; font-weight:bold; color:#0f766e">${semeaduraDtStr}</td>
+      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt; font-weight:bold; color:#0f766e">${semeaduraDtStr}</td>
+      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt; font-weight:bold; color:#0f766e">ESTUFA</td>
     </tr>
   `;
 
   for (let dap = 1; dap <= 44; dap++) {
     const dtBr = getDayDateBr(dap);
-    const isTransplant = (dap === 1);
-    const dapStyle = isTransplant ? 'background:#7c3aed; color:#fff; font-weight:bold;' : '';
-    const dateStyle = isTransplant ? 'background:#7c3aed; color:#fff; font-weight:bold;' : '';
+    const isSemeadura = (dap === 1);
+    const isTransplant = (dap === transplantDap);
+
+    let obsText = '';
+    let rowStyle = '';
+    if (isSemeadura) {
+      obsText = 'SEMEADURA';
+      rowStyle = 'background:#10b981; color:#fff; font-weight:bold;';
+    } else if (isTransplant) {
+      obsText = 'TRANSPLANTIO';
+      rowStyle = 'background:#7c3aed; color:#fff; font-weight:bold;';
+    }
+
+    const dapStyle = rowStyle || '';
+    const dateStyle = rowStyle || '';
     leftRowsHtml += `
       <tr>
         <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.8pt; font-weight:600; ${dapStyle}">${dap}</td>
         <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt; ${dateStyle}">${dtBr}</td>
         <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt; ${dateStyle}">${dtBr}</td>
-        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt; ${isTransplant ? 'background:#7c3aed; color:#fff; font-weight:bold;' : ''}">${isTransplant ? 'TRANSPLANTIO' : ''}</td>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt; ${rowStyle}">${obsText}</td>
       </tr>
     `;
   }
@@ -6584,10 +6647,11 @@ async function printPastaCampoCalendario(idOrStr) {
             </tbody>
           </table>
         </td>
-        <td style="width: 52%; vertical-align:middle; padding-left:12px; line-height:1.7;">
-          <div style="font-size:7.5pt; font-weight:bold;">DATA DE PLANTIO: &nbsp; ${fmtDateBr(plantioDateStr)}</div>
-          <div style="font-size:7.5pt; font-weight:bold;">PREVISÃO DE COLHEITA: &nbsp; ${fmtDateBr(prevColheitaStr)}</div>
-          <div style="font-size:8pt; font-weight:bold; margin-top:8px;">TOTAL DA ÁREA (ha): &nbsp;&nbsp;&nbsp;&nbsp; <strong>${totalAreaStr}</strong></div>
+        <td style="width: 52%; vertical-align:middle; padding-left:12px; line-height:1.65;">
+          <div style="font-size:7.5pt; font-weight:bold;">DATA DA SEMEADURA: &nbsp; <span style="color:#0f766e; font-weight:800">${formatShortDate(baseDate)}</span></div>
+          <div style="font-size:7.5pt; font-weight:bold;">DATA DO TRANSPLANTE: &nbsp; <span style="color:#7c3aed; font-weight:800">${dtTransplante ? formatShortDate(dtTransplante) : '—'}</span></div>
+          <div style="font-size:7.5pt; font-weight:bold;">PREVISÃO DE COLHEITA: &nbsp; ${formatShortDate(dtPrevColheita)}</div>
+          <div style="font-size:8pt; font-weight:bold; margin-top:4px;">TOTAL DA ÁREA (ha): &nbsp;&nbsp;&nbsp;&nbsp; <strong>${totalAreaStr}</strong></div>
         </td>
       </tr>
     </table>
@@ -6640,6 +6704,7 @@ async function printPastaCampoCalendario(idOrStr) {
         ESSE DOCUMENTO DEVE SER UTILIZADO PARA DECISÕES DE COLHEITA, NÃO PODENDO EXISTIR ERROS NO PREENCHIMENTO. O TÉCNICO REPONSÁVEL DEVE OBSERVAR A DATA DE APLICAÇÃO E A CARÊNCIA DOS PRODUTOS APLICADOS.
       </div>
       <div class="legend-right">
+        <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> SEMEADURA (INÍCIO DO CICLO)</div>
         <div class="legend-item"><div class="legend-color" style="background:#7c3aed;"></div> TRANSPLANTIO</div>
         <div class="legend-item"><div class="legend-color" style="background:#0284c7;"></div> MIP</div>
         <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> PULVERIZAÇÃO</div>
