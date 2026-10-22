@@ -14643,21 +14643,145 @@ async function printPastaCampoIdiarn(id) {
 
 
 function printPastaCampoCapa(id) {
-  const item = _infoParcelas.find(x => x.id === id);
+  const item = (typeof _infoParcelas !== 'undefined' ? _infoParcelas : []).find(x => x.id === id) || 
+               (typeof infoParcelasData !== 'undefined' ? infoParcelasData : []).find(x => x.id === id) || 
+               (window._infoParcelas && window._infoParcelas.find(x => x.id === id)) ||
+               (window.parcelas && window.parcelas.find(x => x.id === id));
   if (!item) { alert('Ciclo de parcela não encontrado.'); return; }
-  
-  const info = getParcelaCompleteInfo(item || id, _infoParcelas);
-  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'AGRICOLA BOM JESUS LTDA';
-  const pCode = (item.parcela2 || (item.parcela ? item.parcela + (item.letra || '') : '')) || (info ? info.parcelaNum : '—');
-  const variedadesStr = (info && info.variedade) ? info.variedade : (item.variedade || '—');
-  const totalAreaStr = info ? info.area : (item.area || '—');
-  
-  const dtPlantio = item.plantio ? new Date(item.plantio + 'T12:00:00') : null;
-  const anoStr = dtPlantio ? `${dtPlantio.getFullYear()}/${dtPlantio.getFullYear() + 1}` : '2025/2026';
 
-  // Dados da Empresa / Fazenda (com fallback fiel ao modelo oficial Bom Jesus / Fazenda Pauliceia)
+  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'AGRICOLA BOM JESUS LTDA';
+  const printWin = window.open('', '_blank', 'width=950,height=1250');
+  if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
+
+  const normData = (typeof extractNormalizedParcelVarieties === 'function')
+    ? extractNormalizedParcelVarieties(item)
+    : { vars: [], totalLinhas: 0, totalArea: 0 };
+
+  const pCode = (item.parcela2 || (item.parcela ? item.parcela + (item.letra || '') : '')) || item.code || '—';
+  const dtPlantioItem = item.plantio ? new Date(item.plantio + (item.plantio.includes('T') ? '' : 'T12:00:00')) : null;
+  const anoStr = dtPlantioItem ? `${dtPlantioItem.getFullYear()}/${dtPlantioItem.getFullYear() + 1}` : '2025/2026';
+
+  const allInfoParcelas = window._infoParcelas || (typeof infoParcelasData !== 'undefined' ? infoParcelasData : []) || [];
+  const baseParcelaCode = String(item.parcela || item.parcela2 || item.code || '').trim();
+  const siblingParcels = allInfoParcelas.filter(p => {
+    if (!baseParcelaCode) return false;
+    const p1 = String(p.parcela || '').trim();
+    const p2 = String(p.parcela2 || '').trim();
+    const clean1 = p1.replace(/^P0*/i, '').toUpperCase();
+    const clean2 = p2.replace(/^P0*/i, '').toUpperCase();
+    const cleanTarget = baseParcelaCode.replace(/^P0*/i, '').toUpperCase();
+    return p1 === baseParcelaCode || p2 === baseParcelaCode || (clean1 && clean1 === cleanTarget) || (clean2 && clean2 === cleanTarget);
+  });
+
+  let varsData = (normData.vars && normData.vars.length > 0) ? normData.vars : [];
+  if (siblingParcels.length > 1 && varsData.length <= 1) {
+    const gatheredVars = [];
+    siblingParcels.forEach(sp => {
+      const spNorm = (typeof extractNormalizedParcelVarieties === 'function') ? extractNormalizedParcelVarieties(sp) : { vars: [] };
+      if (spNorm.vars && spNorm.vars.length > 0) {
+        spNorm.vars.forEach(sv => gatheredVars.push(sv));
+      } else if (sp.variedade) {
+        gatheredVars.push({
+          nome: sp.variedade,
+          lote: sp.lote || '—',
+          data: sp.plantio || sp.transplante || '',
+          linhas: parseFloat(sp.linhas) || 0,
+          qtd: parseFloat(sp.quantidade) || 0,
+          area: parseFloat(sp.area || sp.area_ha) || 0
+        });
+      }
+    });
+    if (gatheredVars.length > 1) {
+      varsData = gatheredVars;
+    }
+  }
+
+  if (varsData.length === 0) {
+    varsData = [{
+      nome: item.variedade || item.cultura || 'MELÃO',
+      lote: item.lote || '—',
+      data: item.data_plantio1 || item.transplante || item.plantio || '',
+      linhas: parseFloat(item.linhas) || 0,
+      qtd: parseFloat(item.quantidade) || 0,
+      area: parseFloat(item.area || item.area_ha) || 0
+    }];
+  }
+
+  // Se tem apenas 1 registro mas o nome contém múltiplas variedades (ex: "JADIAL / GOLDEX")
+  if (varsData.length === 1 && (/[\/,\+]/.test(varsData[0].nome))) {
+    const rawNames = varsData[0].nome.split(/[\/,\+]/).map(s => s.trim().toUpperCase()).filter(Boolean);
+    if (rawNames.length > 1) {
+      const origItem = varsData[0];
+      const totArea = origItem.area > 0 ? origItem.area : (parseFloat(item.area || item.area_ha || 0) || 0);
+      const areaEach = totArea > 0 ? parseFloat((totArea / rawNames.length).toFixed(2)) : 0;
+      varsData = rawNames.map((n, idx) => ({
+        ...origItem,
+        idx: idx + 1,
+        nome: n,
+        linhas: origItem.linhas > 0 ? Math.round(origItem.linhas / rawNames.length) : 0,
+        qtd: origItem.qtd > 0 ? Math.round(origItem.qtd / rawNames.length) : 0,
+        area: (idx === rawNames.length - 1 && totArea > 0)
+          ? parseFloat((totArea - areaEach * (rawNames.length - 1)).toFixed(2))
+          : areaEach
+      }));
+    }
+  }
+
+  // Garantir que TODAS as variedades tenham sua área em hectares calculada e preenchida
+  const mainAreaVal = parseFloat(item.area || item.area_ha || 0) || 0;
+  const varsSemArea = varsData.filter(v => (!v.area || v.area <= 0));
+  if (varsSemArea.length > 0 && mainAreaVal > 0) {
+    const areaJaAlocada = varsData.filter(v => v.area > 0).reduce((sum, v) => sum + v.area, 0);
+    const areaRestante = Math.max(0, mainAreaVal - areaJaAlocada);
+    if (areaRestante > 0) {
+      const areaPorVar = parseFloat((areaRestante / varsSemArea.length).toFixed(2));
+      varsSemArea.forEach((v, idx) => {
+        if (idx === varsSemArea.length - 1) {
+          const somaOutras = varsSemArea.slice(0, -1).reduce((s, x) => s + (x.area || 0), 0);
+          v.area = parseFloat((areaRestante - somaOutras).toFixed(2));
+        } else {
+          v.area = areaPorVar;
+        }
+      });
+    }
+  }
+
+  let totalLinhas = 0;
+  let totalSementes = 0;
+  let totalAreaCalculada = 0;
+
+  const variedadesRowsHtml = varsData.map((v, i) => {
+    const lin = parseFloat(v.linhas) || 0;
+    const qtdSem = parseFloat(v.qtd) || 0;
+    const areaCalc = parseFloat(v.area) || 0;
+    totalLinhas += lin;
+    totalSementes += qtdSem;
+    totalAreaCalculada += areaCalc;
+
+    const dtPlantio = v.data ? new Date(v.data + (v.data.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('pt-BR') : '—';
+
+    return `
+      <tr>
+        <td style="text-align:center; font-weight:bold; border:1px solid #000; padding:2px 3px;">${i + 1}</td>
+        <td style="font-weight:bold; border:1px solid #000; padding:2px 4px;">${(v.nome || '—').toUpperCase()}</td>
+        <td style="text-align:center; border:1px solid #000; padding:2px 4px;">${v.lote || '—'}</td>
+        <td style="text-align:center; border:1px solid #000; padding:2px 4px;">${dtPlantio}</td>
+        <td style="text-align:center; font-weight:bold; border:1px solid #000; padding:2px 4px;">${lin > 0 ? lin : '—'}</td>
+        <td style="text-align:right; border:1px solid #000; padding:2px 4px;">${qtdSem > 0 ? qtdSem.toLocaleString('pt-BR') : '—'}</td>
+        <td style="text-align:right; font-weight:bold; color:#16a34a; font-size:8pt; border:1px solid #000; padding:2px 4px;">${areaCalc > 0 ? areaCalc.toFixed(2).replace('.', ',') + ' ha' : '—'}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const areaFinal = normData.totalArea > 0 
+    ? normData.totalArea.toFixed(2) 
+    : (totalAreaCalculada > 0 ? totalAreaCalculada.toFixed(2) : (parseFloat(item.area || item.area_ha || 0).toFixed(2) || '—'));
+  const areaFinalStr = String(areaFinal).replace('.', ',');
+
+  // Dados da Empresa / Fazenda
   const cfg = window.tenantConfig || {};
-  const empNome = (cfg.name || tenantName).toUpperCase();
+  const tNameUpper = (cfg.name || tenantName).toUpperCase();
+  const empNome = tNameUpper;
   const empEndereco = cfg.endereco || 'FAZ PAULICEIA, SN - ZONA RURAL';
   const empMunicipio = cfg.municipio || 'MOSSORÓ';
   const empUf = cfg.uf || 'RN';
@@ -14665,6 +14789,38 @@ function printPastaCampoCapa(id) {
   const empCaixaPostal = cfg.caixa_postal || 'XXXXXX';
   const empTelefone = cfg.telefone || '(84) 3318-3878 RAMAL 3030 / 3031';
   const empEmail = cfg.email || 'agricolabomjesus@gmail.com';
+
+  // Identificação de Certificações da Fazenda
+  let ggnFazenda = cfg.ggn_individual || '';
+  let tescoFazenda = cfg.registro_tesco || '';
+  let sedexFazenda = cfg.registro_sedex || '';
+  if (!ggnFazenda) {
+    if (tNameUpper.includes('BOM JESUS') || tNameUpper.includes('ABJ')) {
+      ggnFazenda = 'ABJ-4049929454262';
+      tescoFazenda = tescoFazenda || 'ABJ-55/NC10/35366/08';
+      sedexFazenda = sedexFazenda || 'ABJ-P000000040789';
+    } else if (tNameUpper.includes('DINA') || tNameUpper.includes('DINAMARCA')) {
+      ggnFazenda = 'DINA-4049929454279';
+      tescoFazenda = tescoFazenda || 'DINA-55/NC10/35363/08';
+      sedexFazenda = sedexFazenda || 'DINA-P000000040784';
+    } else if (tNameUpper.includes('NOR') || tNameUpper.includes('AGRONORTE')) {
+      ggnFazenda = 'NOR-4049928594464';
+      tescoFazenda = tescoFazenda || 'NOR-55/NC10/35365/08';
+      sedexFazenda = sedexFazenda || 'NOR-PS974429034707';
+    } else if (tNameUpper.includes('FV') || tNameUpper.includes('FRUTAVEL') || tNameUpper.includes('FRUTA VEL')) {
+      ggnFazenda = 'FV-4050373290191';
+      tescoFazenda = tescoFazenda || 'FV-55/NC10/50717/09';
+      sedexFazenda = sedexFazenda || 'FV-P000000040785';
+    } else if (tNameUpper.includes('JM') || tNameUpper.includes('JOSÉ') || tNameUpper.includes('JOSE')) {
+      ggnFazenda = 'JM-4049929684294';
+      tescoFazenda = tescoFazenda || 'JM-55/NC10/35364/08';
+      sedexFazenda = sedexFazenda || 'JM-P000000040787';
+    } else {
+      ggnFazenda = cfg.ggn_geral || '4049928377654';
+      tescoFazenda = tescoFazenda || '55/NC10/35366/08';
+      sedexFazenda = sedexFazenda || 'P000000040789';
+    }
+  }
 
   // Dados da Responsável Técnica (Dona Ivanosca Martins de Oliveira Cunha)
   const rtNome = cfg.responsavel_tecnico_nome || 'IVANOSCA MARTINS DE OLIVEIRA CUNHA';
@@ -14677,9 +14833,6 @@ function printPastaCampoCapa(id) {
   const rtCrea = cfg.responsavel_tecnico_crea || '2100160575';
   const rtCpf = cfg.responsavel_tecnico_cpf || '592.803.444-04';
 
-  const printWin = window.open('', '_blank', 'width=950,height=1250');
-  if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
-  
   const html = `
   <!DOCTYPE html>
   <html>
@@ -14687,21 +14840,22 @@ function printPastaCampoCapa(id) {
   <meta charset="utf-8"/>
   <title>Capa PC01 — REGISTROS DA CULTURA — ${pCode}</title>
   <style>
-    @page { size: A4 portrait; margin: 10mm 12mm; }
+    @page { size: A4 portrait; margin: 8mm 10mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 9.5pt; line-height: 1.5; }
-    .outer-box { border: 1.5px solid #000; padding: 12px 14px; min-height: 272mm; display: flex; flex-direction: column; justify-content: space-between; }
-    .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; border: 1.5px solid #000; }
-    .hdr-table td { border: 1px solid #000; padding: 4px 6px; font-size: 7pt; vertical-align: middle; }
-    .doc-title { font-size: 14pt; font-weight: 900; text-align: center; margin: 8px 0 14px 0; letter-spacing: 0.5px; text-transform: uppercase; }
-    .subhdr-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 10pt; font-weight: bold; }
-    .subhdr-table td { padding: 4px 2px; vertical-align: top; }
-    .sec-title { font-size: 11pt; font-weight: 900; margin-top: 14px; margin-bottom: 6px; text-transform: uppercase; }
-    .sec-subtitle { font-size: 9.5pt; font-weight: bold; margin-bottom: 10px; }
-    .divider-line { border: none; border-top: 1.5px solid #000; margin: 10px 0 12px 0; }
-    .info-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 9.5pt; }
-    .info-item { margin-bottom: 6px; font-size: 9.5pt; }
-    .obs-text { margin-top: 24px; font-size: 7.5pt; line-height: 1.4; text-align: justify; }
+    body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 8pt; line-height: 1.32; }
+    .outer-box { border: 1.5px solid #000; padding: 8px 10px; min-height: 275mm; display: flex; flex-direction: column; justify-content: space-between; }
+    .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; border: 1.5px solid #000; }
+    .hdr-table td { border: 1px solid #000; padding: 3px 5px; font-size: 6.5pt; vertical-align: middle; }
+    .doc-title { font-size: 13pt; font-weight: 900; text-align: center; margin: 4px 0 6px 0; letter-spacing: 0.5px; text-transform: uppercase; }
+    .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; font-size: 7.5pt; }
+    .grid-table td, .grid-table th { border: 1px solid #000; padding: 3px 5px; vertical-align: middle; }
+    .sec-title { font-size: 8.8pt; font-weight: 900; margin-top: 6px; margin-bottom: 3px; text-transform: uppercase; border-bottom: 1px solid #000; padding-bottom: 2px; }
+    .obs-text { margin-top: 8px; font-size: 6.8pt; line-height: 1.25; text-align: justify; border-top: 1px solid #000; padding-top: 4px; }
+    @media print {
+      html, body { height: 100%; margin: 0 !important; padding: 0 !important; }
+      .outer-box { page-break-inside: avoid; page-break-after: avoid; min-height: auto; }
+      table, tr { page-break-inside: avoid; }
+    }
   </style>
   </head>
   <body onload="window.print()">
@@ -14709,13 +14863,13 @@ function printPastaCampoCapa(id) {
     <div>
       <table class="hdr-table">
         <tr>
-          <td width="36%" style="line-height: 1.35;">
+          <td width="36%" style="line-height: 1.3;">
             <strong>ELABORADO, EMITIDO E REVISADO POR:</strong> EMANUELA MOREIRA<br/>
             Avaliado por: ADGF &nbsp;|&nbsp; Aprovado por: ADGF<br/>
             <strong>FREQUÊNCIA:</strong> POR PARCELA DE CAMPO.
           </td>
-          <td width="18%" style="text-align:center; vertical-align:middle;">${getTenantLogoHtml(48, 130)}</td>
-          <td width="46%" style="line-height: 1.35;">
+          <td width="18%" style="text-align:center; vertical-align:middle;">${getTenantLogoHtml(40, 115)}</td>
+          <td width="46%" style="line-height: 1.3;">
             <strong>DEPARTAMENTO:</strong> CAMPO<br/>
             <strong>NOME DO DOC:</strong> REGISTROS DA CULTURA<br/>
             <strong>EMISSÃO:</strong> 15/06/2026 &nbsp;|&nbsp; <strong>MOD. E APROVAÇÃO:</strong> 01/07/2026 &nbsp;|&nbsp; <strong>U. REVISÃO:</strong> 01/07/2026<br/>
@@ -14726,52 +14880,122 @@ function printPastaCampoCapa(id) {
 
       <div class="doc-title">REGISTROS DA CULTURA</div>
 
-      <table class="subhdr-table">
-        <tr>
-          <td style="width: 60%;">PARCELA: <span style="font-weight: 800;">${pCode}</span></td>
-          <td style="width: 40%;">SAFRA: <span style="font-weight: 800;">${anoStr}</span></td>
+      <!-- DADOS DA PARCELA E CULTURA -->
+      <table class="grid-table">
+        <tr style="background:#f8fafc">
+          <td style="width: 33%;"><strong>PARCELA:</strong><br/><span style="font-size: 13pt; font-weight: 900; color:#1d4ed8">${pCode}</span></td>
+          <td style="width: 33%;"><strong>CULTURA:</strong><br/><span style="font-size: 12pt; font-weight: 800;">${(item.cultura || 'MELÃO').toUpperCase()}</span></td>
+          <td style="width: 34%;"><strong>SAFRA / ANO AGRÍCOLA:</strong><br/><span style="font-size: 11pt; font-weight: 800;">${anoStr}</span></td>
         </tr>
         <tr>
-          <td style="padding-top: 6px;">VARIEDADES: <span style="font-weight: 800;">${variedadesStr.toUpperCase()}</span></td>
-          <td style="padding-top: 6px;">HÁ: <span style="font-weight: 800;">${String(totalAreaStr).replace('.', ',')}</span></td>
+          <td colspan="2" style="line-height:1.4; padding:4px; vertical-align:top;">
+            <div style="font-weight:bold; font-size:7.5pt; margin-bottom:2px; text-transform:uppercase;">Variedades / Cultivares Plantadas na Parcela:</div>
+            <table style="width:100%; border-collapse:collapse; margin-top:3px; font-size:7pt;">
+              <thead>
+                <tr style="background:#f1f5f9;">
+                  <th style="padding:2px 3px; border:1px solid #000; text-align:center; width:20px">#</th>
+                  <th style="padding:2px 4px; border:1px solid #000; text-align:left">Variedade</th>
+                  <th style="padding:2px 4px; border:1px solid #000; text-align:center">Lote Semente</th>
+                  <th style="padding:2px 4px; border:1px solid #000; text-align:center">Data Plantio</th>
+                  <th style="padding:2px 4px; border:1px solid #000; text-align:center">Linhas</th>
+                  <th style="padding:2px 4px; border:1px solid #000; text-align:right">Sementes</th>
+                  <th style="padding:2px 4px; border:1px solid #000; text-align:right">Área (ha)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${variedadesRowsHtml}
+                <tr style="background:#f8fafc; font-weight:bold;">
+                  <td colspan="4" style="text-align:right; border:1px solid #000; padding:2.5px 4px;">TOTAL DA PARCELA:</td>
+                  <td style="text-align:center; border:1px solid #000; padding:2.5px 4px;">${totalLinhas > 0 ? totalLinhas : (item.linhas || '—')}</td>
+                  <td style="text-align:right; border:1px solid #000; padding:2.5px 4px;">${totalSementes > 0 ? totalSementes.toLocaleString('pt-BR') : '—'}</td>
+                  <td style="text-align:right; border:1px solid #000; padding:2.5px 4px; color:#16a34a">${areaFinalStr} ha</td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+          <td style="background:#fdfdfd; vertical-align:middle; text-align:center; padding:6px;">
+            <div style="font-weight:bold; font-size:7.5pt; text-transform:uppercase;">Total da Área:</div>
+            <span style="font-size: 16pt; font-weight: 900; color:#16a34a">${areaFinalStr} ha</span>
+            ${item.plantio ? `<div style="font-size:6.8pt; color:#475569; margin-top:4px;"><b>Data Plantio:</b> ${new Date(item.plantio + (item.plantio.includes('T') ? '' : 'T12:00:00')).toLocaleDateString('pt-BR')}</div>` : ''}
+            ${item.previsao_colheita ? `<div style="font-size:6.8pt; color:#d97706; margin-top:2px;"><b>Prev. Colheita:</b> ${new Date(item.previsao_colheita + (item.previsao_colheita.includes('T') ? '' : 'T12:00:00')).toLocaleDateString('pt-BR')}</div>` : ''}
+          </td>
         </tr>
       </table>
 
-      <div class="sec-title">1. IDENTIFICAÇÃO</div>
-      <div class="sec-subtitle">1.1 NOME DA EMPRESA: <span style="font-weight: 800;">${empNome}</span></div>
+      <div class="sec-title">1. IDENTIFICAÇÃO DA EMPRESA</div>
+      <table class="grid-table" style="margin-bottom:5px;">
+        <tr>
+          <td colspan="2"><strong>NOME DA EMPRESA:</strong><br/><span style="font-size:9pt; font-weight:800; color:#0f172a">${empNome}</span></td>
+          <td style="width: 15%;"><strong>UF:</strong><br/>${empUf}</td>
+        </tr>
+        <tr>
+          <td colspan="2"><strong>ENDEREÇO:</strong><br/>${empEndereco}</td>
+          <td><strong>MUNICÍPIO:</strong><br/>${empMunicipio}</td>
+        </tr>
+        <tr>
+          <td><strong>CEP:</strong><br/>${empCep}</td>
+          <td><strong>CAIXA POSTAL:</strong><br/>${empCaixaPostal}</td>
+          <td><strong>TELEFONE:</strong><br/>${empTelefone}</td>
+        </tr>
+        <tr>
+          <td colspan="3"><strong>E-MAIL:</strong><br/>${empEmail}</td>
+        </tr>
+      </table>
 
-      <hr class="divider-line"/>
+      <div class="sec-title">CERTIFICAÇÕES & AUDITORIAS DA FAZENDA</div>
+      <table class="grid-table" style="margin-bottom:5px; font-size:6.8pt;">
+        <tr>
+          <td style="width: 42%;"><strong>1.2 REGISTRO NO GLOBALG.A.P.:</strong></td>
+          <td style="font-weight: bold;">${cfg.registro_globalgap || 'SATIVA EURO 18GP'}</td>
+        </tr>
+        <tr>
+          <td><strong>1.3 REGISTRO GGN GERAL NO GLOBALG.A.P.:</strong></td>
+          <td style="font-weight: bold;">${cfg.ggn_geral || '4049928377654'}</td>
+        </tr>
+        <tr>
+          <td><strong>1.4 REGISTRO GGN INDIVIDUAL DA FAZENDA:</strong></td>
+          <td style="font-weight: 800; color:#1d4ed8;">${ggnFazenda}</td>
+        </tr>
+        <tr>
+          <td><strong>1.5 REGISTRO TN - TESCO NATURE'S CHOICE:</strong></td>
+          <td style="font-weight: bold;">${tescoFazenda}</td>
+        </tr>
+        <tr>
+          <td><strong>1.6 REGISTRO NO SEDEX:</strong></td>
+          <td style="font-weight: bold;">${sedexFazenda}</td>
+        </tr>
+        <tr style="background: #f8fafc">
+          <td colspan="2" style="text-align: center; font-weight: 800; font-size: 6.5pt; padding: 2.5px; letter-spacing:0.3px">
+            OS CERTIFICADOS ORIGINAIS ENCONTRAM-SE ARQUIVADOS NA PASTA 13
+          </td>
+        </tr>
+      </table>
 
-      <div class="info-item"><strong>ENDEREÇO:</strong> ${empEndereco}</div>
-      <div class="info-row" style="max-width: 650px;">
-        <span><strong>MUNICÍPIO:</strong> ${empMunicipio}</span>
-        <span style="margin-right: 140px;"><strong>UF:</strong> ${empUf}</span>
-      </div>
-      <div class="info-row" style="max-width: 650px;">
-        <span><strong>CEP:</strong> ${empCep}</span>
-        <span style="margin-right: 60px;"><strong>CAIXA POSTAL:</strong> ${empCaixaPostal}</span>
-      </div>
-      <div class="info-item"><strong>TELEFONE:</strong> ${empTelefone}</div>
-      <div class="info-item"><strong>E-MAIL:</strong> ${empEmail}</div>
-
-      <div class="sec-title" style="margin-top: 28px;">2. RESPONSÁVEL TÉCNICO:</div>
-
-      <div class="info-row" style="align-items: baseline;">
-        <span><strong>NOME COMPLETO:</strong> ${rtNome}</span>
-        <span style="margin-left: 20px;"><strong>ASSINATURA:</strong> <span style="display:inline-block; width: 140px; border-bottom: 1px solid #000;"></span></span>
-      </div>
-      <div class="info-item"><strong>ENDEREÇO:</strong> ${rtEndereco}</div>
-      <div class="info-row" style="max-width: 650px;">
-        <span><strong>MUNICÍPIO:</strong> ${rtMunicipio}</span>
-        <span style="margin-right: 140px;"><strong>UF:</strong> ${rtUf}</span>
-      </div>
-      <div class="info-item"><strong>CEP:</strong> ${rtCep}</div>
-      <div class="info-item"><strong>TELEFONE:</strong> ${rtTelefone}</div>
-      <div class="info-item"><strong>E-MAIL:</strong> ${rtEmail}</div>
-      <div class="info-row" style="max-width: 650px;">
-        <span><strong>REGISTRO NO CREA Nº:</strong> ${rtCrea}</span>
-        <span style="margin-right: 80px;"><strong>CPF:</strong> ${rtCpf}</span>
-      </div>
+      <div class="sec-title">2. RESPONSÁVEL TÉCNICO</div>
+      <table class="grid-table" style="margin-bottom:5px;">
+        <tr>
+          <td style="width:58%;">
+            <strong>NOME COMPLETO:</strong><br/><span style="font-size:9pt; font-weight:800; color:#0f172a">${rtNome}</span>
+          </td>
+          <td style="width:42%; text-align:center; vertical-align:bottom; height:44px;">
+            <div style="border-top:1px dashed #000; width:85%; margin:20px auto 0 auto; padding-top:2px; font-weight:bold; font-size:6.8pt;">
+              Assinatura do(a) Responsável Técnico(a)
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>ENDEREÇO:</strong> ${rtEndereco}</td>
+          <td><strong>MUNICÍPIO / UF:</strong> ${rtMunicipio} - ${rtUf}</td>
+        </tr>
+        <tr>
+          <td><strong>CEP:</strong> ${rtCep} &nbsp;|&nbsp; <strong>TEL:</strong> ${rtTelefone}</td>
+          <td><strong>E-MAIL:</strong> ${rtEmail}</td>
+        </tr>
+        <tr>
+          <td><strong>REGISTRO NO CREA Nº:</strong> <b>${rtCrea}</b></td>
+          <td><strong>CPF:</strong> <b>${rtCpf}</b></td>
+        </tr>
+      </table>
     </div>
 
     <div class="obs-text">
@@ -15124,6 +15348,22 @@ function printPastaCampoOrdemPulv(itemStr) {
   });
   }
   
+  const allOps = (window._opList && window._opList.length > 0)
+    ? window._opList
+    : ((window.opRecordsData && window.opRecordsData.length > 0)
+        ? window.opRecordsData
+        : (typeof _opList !== 'undefined' ? _opList : (typeof opRecordsData !== 'undefined' ? opRecordsData : [])));
+
+  const allDefs = (window._defensivos && window._defensivos.length > 0)
+    ? window._defensivos
+    : ((window.defensivosData && window.defensivosData.length > 0)
+        ? window.defensivosData
+        : (typeof _defensivos !== 'undefined' ? _defensivos : (typeof defensivosData !== 'undefined' ? defensivosData : [])));
+
+  const normParcel = (val) => String(val || '').toUpperCase().replace(/^P\s*0*/i, '').replace(/[^A-Z0-9]/g, '');
+  const pCodeNorm = normParcel(item.parcela || item.parcela2 || item.code);
+  const normProd = (s) => String(s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' ');
+
   const productsRowsHtml = filledProducts.map((p, idx) => {
   if (!p.produto_nome) {
   return `
@@ -15134,27 +15374,8 @@ function printPastaCampoOrdemPulv(itemStr) {
   `;
   }
 
-  let activeIng = '—';
-  let toxicClass = '—';
-  let concentration = '—';
-  let numPermitidoCiclo = '3';
-  let intervBula = '7';
-  let doseBulaText = '—';
-  let reentradaDias = '1 dia';
-  
-  const match = (_defensivos || []).find(d => d.produto.toUpperCase() === p.produto_nome.toUpperCase());
-  if (match) {
-  activeIng = match.ingrediente_ativo || '—';
-  toxicClass = match.classe_toxicologica || '—';
-  concentration = match.concentracao_ia || '—';
-  numPermitidoCiclo = match.num_aplicacoes_ciclo || '3';
-  intervBula = match.intervalo_aplicacao_dias || '7';
-  doseBulaText = match.dose_texto || `${match.dose || p.dosagem_corrigida || '—'} ${p.unidade || 'L/ha'}`;
-  reentradaDias = match.reentrada_dias ? `${match.reentrada_dias} dia(s)` : '1 dia';
-  }
-
   const doseRealVal = parseFloat(p.dosagem_real) || parseFloat(p.dosagem_corrigida) || 0;
-  const unitStr = (p.unidade || match?.unidade_dose || match?.unidade || 'L/ha').trim();
+  const unitStr = (p.unidade || 'L/ha').trim();
   const isPor100L = unitStr.toLowerCase().includes('100l');
   
   let qtdTotalUtilizadaStr = '—';
@@ -15193,21 +15414,95 @@ function printPastaCampoOrdemPulv(itemStr) {
     doseAreaStr = `${doseRealVal.toLocaleString('pt-BR')} ${unitStr}`;
   }
 
+  const targetProdNorm = normProd(p.produto_nome);
+  const match = (allDefs || []).find(d => {
+    const dProd = normProd(d.produto);
+    return dProd === targetProdNorm || (targetProdNorm.length > 3 && dProd.includes(targetProdNorm)) || (dProd.length > 3 && targetProdNorm.includes(dProd));
+  });
+
+  const activeIng = match?.ingrediente_ativo || p.ingrediente_ativo || '—';
+  const toxicClass = match?.classe_toxicologica || match?.toxicidade || 'IV';
+  const concentration = match?.concentracao_ia || match?.concentracao || '—';
+  const numPermitidoCiclo = match?.num_aplicacoes_ciclo || '3';
+  const intervBula = match?.intervalo_aplicacao_dias || '7';
+  let doseBulaText = match?.dose_texto || `${match?.dose || doseRealVal} ${unitStr}`;
   if (doseBulaText === '—') {
     doseBulaText = `${doseRealVal.toLocaleString('pt-BR')} ${unitStr}`;
   }
+  const reentradaDias = match?.reentrada_dias ? `${match.reentrada_dias} dia(s)` : '1 dia(s)';
+  const carenciaStr = (p.carencia_dias !== '' && p.carencia_dias !== undefined)
+    ? `${p.carencia_dias}`
+    : (match?.carencia_dias ? `${match.carencia_dias}` : '—');
 
-  const carenciaStr = p.carencia_dias !== '' && p.carencia_dias !== undefined ? `${p.carencia_dias}` : '—';
-  const numAplicRealizadas = p.produto_nome ? (typeof countOpAplicacoesCiclo === 'function' ? countOpAplicacoesCiclo(item.parcela, p.produto_nome) : '1') : '—';
-  
-  let dataCarStr = '—';
-  if (item.data_aplicacao && p.carencia_dias) {
-  const appDate = new Date(item.data_aplicacao + 'T12:00:00');
-  appDate.setDate(appDate.getDate() + parseInt(p.carencia_dias) + 1);
-  dataCarStr = appDate.toLocaleDateString('pt-BR');
+  // Histórico de aplicações na mesma parcela para este defensivo
+  const matchingOps = (allOps || []).filter(op => {
+    const opParcelNorm = normParcel(op.parcela || op.parcela2 || op.code);
+    const sameParcel = (op.parcel_id && item.parcel_id && String(op.parcel_id) === String(item.parcel_id)) ||
+                       (opParcelNorm === pCodeNorm);
+    if (!sameParcel) return false;
+
+    const opItens = op.caderno_campo_op_itens || op.itens || [];
+    return opItens.some(it => {
+      const itProdNorm = normProd(it.produto_nome);
+      return itProdNorm === targetProdNorm ||
+             (targetProdNorm.length > 3 && itProdNorm.includes(targetProdNorm)) ||
+             (itProdNorm.length > 3 && targetProdNorm.includes(itProdNorm));
+    });
+  });
+
+  matchingOps.sort((a, b) => {
+    const da = a.data_aplicacao || '';
+    const db = b.data_aplicacao || '';
+    if (da !== db) return da.localeCompare(db);
+    return (a.id || 0) - (b.id || 0);
+  });
+
+  let currentOpIdx = matchingOps.findIndex(op => String(op.id) === String(item.id));
+  if (currentOpIdx === -1 && item.data_aplicacao) {
+    currentOpIdx = matchingOps.findIndex(op => op.data_aplicacao === item.data_aplicacao);
   }
 
-  const tipoAplic = item.equipamento || 'Pulverização';
+  let numAplicRealizadas = 1;
+  let ultimaAplicacaoDias = '0';
+
+  if (currentOpIdx >= 0) {
+    numAplicRealizadas = currentOpIdx + 1;
+    if (currentOpIdx > 0) {
+      const prevOp = matchingOps[currentOpIdx - 1];
+      if (prevOp && prevOp.data_aplicacao && item.data_aplicacao) {
+        const dCurr = new Date(item.data_aplicacao + 'T12:00:00');
+        const dPrev = new Date(prevOp.data_aplicacao + 'T12:00:00');
+        const diffDays = Math.round((dCurr - dPrev) / (1000 * 60 * 60 * 24));
+        ultimaAplicacaoDias = (diffDays >= 0) ? String(diffDays) : '0';
+      }
+    } else {
+      ultimaAplicacaoDias = '0';
+    }
+  } else {
+    const earlierOps = matchingOps.filter(op => op.data_aplicacao && item.data_aplicacao && op.data_aplicacao < item.data_aplicacao);
+    if (earlierOps.length > 0) {
+      numAplicRealizadas = earlierOps.length + 1;
+      const prevOp = earlierOps[earlierOps.length - 1];
+      if (prevOp && prevOp.data_aplicacao && item.data_aplicacao) {
+        const dCurr = new Date(item.data_aplicacao + 'T12:00:00');
+        const dPrev = new Date(prevOp.data_aplicacao + 'T12:00:00');
+        const diffDays = Math.round((dCurr - dPrev) / (1000 * 60 * 60 * 24));
+        ultimaAplicacaoDias = (diffDays >= 0) ? String(diffDays) : '0';
+      }
+    } else {
+      numAplicRealizadas = matchingOps.length > 0 ? matchingOps.length : 1;
+      ultimaAplicacaoDias = '0';
+    }
+  }
+
+  let dataCarStr = '—';
+  if (item.data_aplicacao && carenciaStr !== '—') {
+    const appDate = new Date(item.data_aplicacao + 'T12:00:00');
+    appDate.setDate(appDate.getDate() + parseInt(carenciaStr) + 1);
+    dataCarStr = appDate.toLocaleDateString('pt-BR');
+  }
+
+  const tipoAplic = item.equipamento || item.tipo_aplicacao || 'Pulverização';
 
   return `
   <tr style="background: ${idx % 2 === 1 ? '#f8fafc' : '#ffffff'};">
@@ -15216,11 +15511,11 @@ function printPastaCampoOrdemPulv(itemStr) {
   <td style="text-align:center;">${concentration}</td>
   <td style="text-align:center; font-weight:600">${unitStr}</td>
   <td style="font-weight: bold; text-align:center;">${carenciaStr}</td>
-  <td style="text-align: left; font-size: 6pt;">${p.alvo || '—'}</td>
+  <td style="text-align: left; font-size: 6pt;">${p.alvo || match?.alvo || '—'}</td>
   <td style="text-align:center;">${numPermitidoCiclo}</td>
-  <td style="text-align:center;">${numAplicRealizadas}</td>
+  <td style="text-align:center; font-weight: bold;">${numAplicRealizadas}</td>
   <td style="text-align:center;">${intervBula}</td>
-  <td style="text-align:center;">—</td>
+  <td style="text-align:center; font-weight: bold; color: #1e3a8a;">${ultimaAplicacaoDias}</td>
   <td style="color: #d97706; font-weight: bold; text-align:left;">${doseBulaText}</td>
   <td style="font-weight: bold; text-align:center; color: #1e3a8a;">${qtdTotalUtilizadaStr}</td>
   <td style="color: #d97706; font-weight: bold; text-align:center;">${doseAreaStr}</td>
