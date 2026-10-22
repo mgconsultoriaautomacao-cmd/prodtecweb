@@ -15246,7 +15246,7 @@ function printPastaCampoOrdemPulv(itemStr) {
 
   const opCod = item.op_cod || (item.numero_op ? ('OP ' + item.numero_op) : (item.id ? String(item.id).substring(0, 6).toUpperCase() : '1'));
   const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'EMPRESA';
-  const elaborador = 'Ivanosca cunha';
+  const elaborador = (window.tenantConfig && (window.tenantConfig.agronomo_certificacao || window.tenantConfig.segunda_agronoma)) || 'EMANUELA MOREIRA';
   const tenantLogo = (window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64 || 'logo.png';
   const logoHtml = tenantLogo ? `<img src="${tenantLogo}" style="max-height: 48px; max-width: 100%; object-fit: contain;" alt="Logo Empresa" onerror="this.src='logo.png';"/>` : `<div style="font-weight:bold; font-size:10pt;">${tenantName}</div>`;
 
