@@ -957,11 +957,8 @@ async function printPastaCampoResumoElementos(parcelIdOrCode) {
 
     <table class="sig-table">
       <tr>
-        <td width="50%">
+        <td width="100%">
           <div style="border-top:1px dashed #000; margin-top:16px; padding-top:2px;"><strong>Responsável Técnico:</strong> ${rtNome} (CREA: ${rtCrea})</div>
-        </td>
-        <td width="50%">
-          <div style="border-top:1px dashed #000; margin-top:16px; padding-top:2px;"><strong>Agrônomo / Certificações:</strong> ${certNome}</div>
         </td>
       </tr>
     </table>

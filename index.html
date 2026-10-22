@@ -3133,7 +3133,7 @@
   <!-- MODAL: NOVA ORDEM DE PULVERIZAÇÃO (WEB DASHBOARD) -->
   <div id="newOpModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">
   <div style="background:var(--modal-bg); color:var(--modal-text); padding:24px; border-radius:12px; width:650px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 10px 30px rgba(0,0,0,0.3)">
-  <h3 style="margin-top:0; color:#fff; margin-bottom:20px; display:flex; align-items:center; gap:8px"><i data-lucide="file-text" style="width:20px; height:20px; color:var(--blue)"></i> Cadastrar Ordem de Pulverização (O.P)</h3>
+  <h3 id="newOpModalTitle" style="margin-top:0; color:#fff; margin-bottom:20px; display:flex; align-items:center; gap:8px"><i data-lucide="file-text" style="width:20px; height:20px; color:var(--blue)"></i> Cadastrar Ordem de Pulverização (O.P)</h3>
   
   <!-- Seção 1: Dados da Área -->
   <div style="font-weight:700; color:#fff; margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px">1. Dados da Área</div>
@@ -4121,7 +4121,7 @@
     <div style="background:var(--modal-bg); color:var(--modal-text); padding:24px 28px; border-radius:18px; width:1200px; max-width:98%; max-height:94vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 25px 60px rgba(0,0,0,0.7)">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px">
         <div>
-          <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px; font-size:18px; font-weight:800">
+          <h3 id="newMipModalTitle" style="margin:0; color:#fff; display:flex; align-items:center; gap:8px; font-size:18px; font-weight:800">
             <i data-lucide="bug" style="width:22px; height:22px; color:var(--green)"></i> Manejo Integrado de Pragas e Doenças / MIP (Ficha Modelo EMBRAPA)
           </h3>
           <span style="font-size:11px; color:var(--muted)">Ficha Oficial de Amostragem Fitossanitária em 20 Pontos Amostrados por Parcela</span>
@@ -4319,7 +4319,7 @@
       <!-- Botões de Ação -->
       <div style="display:flex; justify-content:flex-end; gap:10px">
         <button type="button" class="btn" onclick="closeNewMipModal()">Cancelar</button>
-        <button type="button" class="btn btn-green" onclick="saveNewMipDashboard()" style="padding:8px 24px; font-weight:800; display:inline-flex; align-items:center; gap:6px">
+        <button type="button" id="btnSaveNewMip" class="btn btn-green" onclick="saveNewMipDashboard()" style="padding:8px 24px; font-weight:800; display:inline-flex; align-items:center; gap:6px">
           <i data-lucide="check-circle-2" style="width:16px;height:16px"></i> Salvar Vistoria MIP (EMBRAPA)
         </button>
       </div>
@@ -4374,7 +4374,7 @@
   <div id="newTratoModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center;">
   <div style="background:var(--modal-bg); color:var(--modal-text); padding:28px; border-radius:18px; width:550px; max-width:95%; max-height:90vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.5)">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px">
-  <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px"><i data-lucide="clipboard-list" style="width:22px; height:22px; color:var(--green)"></i> Registrar Novo Trato Cultural</h3>
+  <h3 id="newTratoModalTitle" style="margin:0; color:#fff; display:flex; align-items:center; gap:8px"><i data-lucide="clipboard-list" style="width:22px; height:22px; color:var(--green)"></i> Registrar Novo Trato Cultural</h3>
   <button onclick="closeNewTratoModal()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); border-radius:50%; width:32px; height:32px; cursor:pointer"></button>
   </div>
   
@@ -4421,7 +4421,7 @@
   
   <div style="display:flex; justify-content:flex-end; gap:10px">
   <button class="btn" onclick="closeNewTratoModal()">Cancelar</button>
-  <button class="btn btn-green" onclick="saveTrato()">Salvar</button>
+  <button class="btn btn-green" id="btnSaveTrato" onclick="saveTrato()">Salvar</button>
   </div>
   </div>
   </div>
@@ -4430,7 +4430,7 @@
   <div id="newFertModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center;">
   <div style="background:var(--modal-bg); color:var(--modal-text); padding:24px 28px; border-radius:18px; width:780px; max-width:95%; max-height:92vh; overflow-y:auto; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.6)">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px">
-  <h3 style="margin:0; color:#fff; display:flex; align-items:center; gap:8px"><i data-lucide="droplets" style="width:22px; height:22px; color:var(--blue)"></i> Prescrição & Lançamento de Fertirrigação</h3>
+  <h3 id="newFertModalTitle" style="margin:0; color:#fff; display:flex; align-items:center; gap:8px"><i data-lucide="droplets" style="width:22px; height:22px; color:var(--blue)"></i> Prescrição & Lançamento de Fertirrigação</h3>
   <button onclick="closeNewFertModal()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); border-radius:50%; width:32px; height:32px; cursor:pointer; display:flex; align-items:center; justify-content:center"></button>
   </div>
   
@@ -14547,16 +14547,11 @@ async function printPastaCampoIdiarn(id) {
   </tbody>
   </table>
   
-  <div style="margin-top:25px; display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-  <div style="text-align:center; border:1px solid #000; padding:8px; background:#fafafa;">
+  <div style="margin-top:25px; display:flex; justify-content:center;">
+  <div style="text-align:center; border:1px solid #000; padding:8px 24px; background:#fafafa; min-width:320px;">
   <strong>${rtNome}</strong><br/>
   <span style="font-size:7.5pt; color:#444">Engenheiro(a) Agrônomo(a) — Responsável Técnico de Campo</span>
   <div style="border-top:1px dashed #000; width:80%; margin:22px auto 0 auto; padding-top:3px; font-size:7pt; font-weight:bold;">Assinatura Responsável Técnico de Campo</div>
-  </div>
-  <div style="text-align:center; border:1px solid #000; padding:8px; background:#fafafa;">
-  <strong>${certNome}</strong><br/>
-  <span style="font-size:7.5pt; color:#444">Engenheira Agrônoma — Validação da Pasta de Certificação</span>
-  <div style="border-top:1px dashed #000; width:80%; margin:22px auto 0 auto; padding-top:3px; font-size:7pt; font-weight:bold;">Assinatura Resp. pela Validação da Certificação</div>
   </div>
   </div>
   </body>
@@ -15251,7 +15246,7 @@ function printPastaCampoOrdemPulv(itemStr) {
 
   const opCod = item.op_cod || (item.numero_op ? ('OP ' + item.numero_op) : (item.id ? String(item.id).substring(0, 6).toUpperCase() : '1'));
   const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'EMPRESA';
-  const elaborador = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'EMANUELA MOREIRA';
+  const elaborador = 'Ivanosca cunha';
   const tenantLogo = (window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64 || 'logo.png';
   const logoHtml = tenantLogo ? `<img src="${tenantLogo}" style="max-height: 48px; max-width: 100%; object-fit: contain;" alt="Logo Empresa" onerror="this.src='logo.png';"/>` : `<div style="font-weight:bold; font-size:10pt;">${tenantName}</div>`;
 
@@ -15502,13 +15497,9 @@ function printPastaCampoOrdemPulv(itemStr) {
   </td>
   </tr>
   <tr>
-  <td style="width: 50%;">
+  <td colspan="2" style="width: 100%;">
   <strong>Eng. Agrônomo / Resp. Técnico:</strong> ${item.eng_agronomo || item.tecnico || 'IVANOSCA MARTINS'}
   <div class="sig-line">Assinatura Responsável Técnico</div>
-  </td>
-  <td style="width: 50%;">
-  <strong>Validação da Certificação:</strong> Emanuele Moreira (Eng. Agrônoma)
-  <div class="sig-line">Assinatura Resp. Validação Certificação</div>
   </td>
   </tr>
   </table>
@@ -19424,7 +19415,7 @@ function printPastaCampoMip(itemStr) {
   ${cleanObservationText(item.obs_texto || item.observacoes) || 'Nenhuma observação registrada na amostragem.'}
   </div>
 
-  <div class="signatures-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+  <div class="signatures-grid" style="grid-template-columns: 1fr 1fr;">
   <div class="sig-box">
   <div>
   <strong>Monitor de Pragas (Pragueiro)</strong><br/>
@@ -19438,13 +19429,6 @@ function printPastaCampoMip(itemStr) {
   Responsável Técnico de Campo
   </div>
   <div class="sig-line">Assinatura Resp. Técnico de Campo</div>
-  </div>
-  <div class="sig-box">
-  <div>
-  <strong>Emanuele Moreira</strong><br/>
-  Engenheira Agrônoma — Certificação
-  </div>
-  <div class="sig-line">Assinatura Validação da Certificação</div>
   </div>
   </div>
   </div>
@@ -19517,9 +19501,17 @@ function onWebMipDateChange() {
   onWebMipParcelChange();
 }
 
+let _editingMipId = null;
+
 function openNewMipModal() {
+  _editingMipId = null;
   const modal = $('newMipModal');
   if (!modal) return;
+
+  const titleEl = $('newMipModalTitle');
+  if (titleEl) titleEl.innerHTML = '<i data-lucide="bug" style="width:22px; height:22px; color:var(--green)"></i> Manejo Integrado de Pragas e Doenças / MIP (Ficha Modelo EMBRAPA)';
+  const btnSave = $('btnSaveNewMip');
+  if (btnSave) btnSave.innerHTML = '<i data-lucide="check-circle-2" style="width:16px;height:16px"></i> Salvar Vistoria MIP (EMBRAPA)';
 
   const parcelSel = $('newMipParcelSelect');
   if (parcelSel) {
@@ -19538,6 +19530,77 @@ function openNewMipModal() {
   onWebMipParcelChange();
   renderNewMipTableRows();
   calcMipErvasDaninhas();
+
+  modal.style.display = 'flex';
+  if (window.lucide) lucide.createIcons();
+}
+
+async function openEditMipModal(mipId) {
+  _editingMipId = mipId;
+  const modal = $('newMipModal');
+  if (!modal) return;
+
+  const item = (_mipRecords || []).find(x => x.id === mipId);
+  if (!item) {
+    alert('Vistoria MIP não encontrada.');
+    return;
+  }
+
+  const titleEl = $('newMipModalTitle');
+  if (titleEl) titleEl.innerHTML = `<i data-lucide="edit-3" style="width:22px; height:22px; color:#f59e0b"></i> Editar Vistoria MIP (Parcela ${item.parcela || '—'})`;
+  const btnSave = $('btnSaveNewMip');
+  if (btnSave) btnSave.innerHTML = '<i data-lucide="check-circle-2" style="width:16px;height:16px"></i> Salvar Alterações';
+
+  const parcelSel = $('newMipParcelSelect');
+  if (parcelSel) {
+    parcelSel.innerHTML = '<option value="">-- Selecione a Parcela --</option>' +
+      (_infoParcelas || []).map(p => `<option value="${p.id}">${p.parcela2 || p.parcela} (${p.variedade || 'Sem var'})</option>`).join('');
+    
+    const matchingIp = (_infoParcelas || []).find(x => x.id === item.parcel_id || x.parcela2 === item.parcela || x.parcela === item.parcela);
+    if (matchingIp) {
+      parcelSel.value = matchingIp.id;
+    }
+  }
+
+  $('newMipDate').value = item.data_vistoria || today();
+  onWebMipParcelChange();
+
+  $('newMipPragueiro').value = item.responsavel_mip || item.responsavel || item.monitor || '';
+  $('newMipTecnico').value = item.tecnico || (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'David Ferreira';
+  if ($('newMipObs')) $('newMipObs').value = item.obs_texto || item.observacoes || '';
+  if ($('newMipErvasPct')) $('newMipErvasPct').value = item.ervas_daninhas_pct || 0;
+  if ($('newMipNematoideObs')) $('newMipNematoideObs').value = item.nematoide_obs || 'Monitoramento preventivo / ausência de galhas';
+
+  renderNewMipTableRows();
+
+  // Preencher os pontos salvos nas pragas
+  if (item.pragas_json && typeof item.pragas_json === 'object') {
+    Object.keys(item.pragas_json).forEach(k => {
+      const pObj = item.pragas_json[k];
+      if (pObj && Array.isArray(pObj.pontos)) {
+        pObj.pontos.forEach((val, idx) => {
+          const inp = $(`mip_praga_${k}_p${idx + 1}`);
+          if (inp) inp.value = val;
+        });
+      }
+    });
+  }
+
+  // Preencher os pontos salvos nas doenças
+  if (item.doencas_json && typeof item.doencas_json === 'object') {
+    Object.keys(item.doencas_json).forEach(k => {
+      const dObj = item.doencas_json[k];
+      if (dObj && Array.isArray(dObj.pontos)) {
+        dObj.pontos.forEach((val, idx) => {
+          const inp = $(`mip_doenca_${k}_p${idx + 1}`);
+          if (inp) inp.value = val;
+        });
+      }
+    });
+  }
+
+  calcMipErvasDaninhas();
+  switchMipSubTab('pragas');
 
   modal.style.display = 'flex';
   if (window.lucide) lucide.createIcons();
@@ -19906,17 +19969,29 @@ async function saveNewMipDashboard() {
   if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
 
   try {
-    let { error } = await sb.from('caderno_campo_mip').insert([record]);
-    
-    // Fallback if parcel_id causes FK error (23503 / 22P02 / 409 / 400)
-    if (error && record.parcel_id) {
-      record.parcel_id = null;
-      const retry = await sb.from('caderno_campo_mip').insert([record]);
-      error = retry.error;
-    }
+    if (_editingMipId) {
+      let { error: updErr } = await sb.from('caderno_campo_mip').update(record).eq('id', _editingMipId);
+      if (updErr && record.parcel_id) {
+        record.parcel_id = null;
+        const retry = await sb.from('caderno_campo_mip').update(record).eq('id', _editingMipId);
+        updErr = retry.error;
+      }
+      if (updErr) throw updErr;
+      toast('✅ Vistoria MIP atualizada com sucesso!', 'ok');
+    } else {
+      let { error } = await sb.from('caderno_campo_mip').insert([record]);
+      
+      // Fallback if parcel_id causes FK error (23503 / 22P02 / 409 / 400)
+      if (error && record.parcel_id) {
+        record.parcel_id = null;
+        const retry = await sb.from('caderno_campo_mip').insert([record]);
+        error = retry.error;
+      }
 
-    if (error) throw error;
-    toast('✅ Vistoria MIP (Modelo EMBRAPA 20 Pontos) registrada com sucesso!', 'ok');
+      if (error) throw error;
+      toast('✅ Vistoria MIP (Modelo EMBRAPA 20 Pontos) registrada com sucesso!', 'ok');
+    }
+    _editingMipId = null;
     closeNewMipModal();
     await loadMipTable();
   } catch(e) {
@@ -19994,6 +20069,7 @@ function renderCcMipTable(list) {
       <td style="padding:12px 10px; text-align:center; white-space:nowrap">
         ${gpsBtn}
         <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:4px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoMip('${itemStr}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Ficha EMBRAPA</button>
+        <button class="btn sec" style="padding:4px 8px; font-size:11px; margin-right:4px; display:inline-flex; align-items:center; gap:2px; border-color:rgba(245,158,11,0.4); color:#f59e0b" onclick="openEditMipModal('${item.id}')" title="Editar Vistoria MIP"><i data-lucide="edit" style="width:12px; height:12px"></i> Editar</button>
         <button class="danger" style="padding:4px 8px; font-size:11px" onclick="deleteMipRecord('${item.id}')">Excluir</button>
       </td>
     </tr>
@@ -21500,6 +21576,9 @@ function renderCcOpTable(list) {
         </button>
         <button class="btn sec" style="font-size:11px; padding:4px 9px; margin-right:4px; display:inline-flex; align-items:center; gap:4px" onclick="printPastaCampoAutColheita('${itemStr}')" title="Imprimir Autorização de Colheita (PC11)">
           <i data-lucide="file-check" style="width:13px; height:13px; color:var(--green)"></i> Laudo
+        </button>
+        <button class="btn sec" style="font-size:11px; padding:4px 9px; margin-right:4px; display:inline-flex; align-items:center; gap:4px; border-color:rgba(245,158,11,0.4); color:#f59e0b" onclick="openEditOpModal('${item.id}')" title="Editar Ordem de Pulverização (O.P)">
+          <i data-lucide="edit" style="width:12px; height:12px"></i> Editar
         </button>
         <button class="danger" style="font-size:11px; padding:4px 8px; border-radius:6px" onclick="deleteOpRecord('${item.id}')" title="Excluir O.P">
           <i data-lucide="trash-2" style="width:12px; height:12px"></i>
@@ -23708,17 +23787,27 @@ function renderCcCalagemTable(list) {
   <td style="padding:12px 10px; text-align:center">${item.prnt || '—'} %</td>
   <td style="padding:12px 10px">${item.operador || '—'}</td>
   <td style="padding:12px 10px">${item.equipamento || '—'}</td>
-  <td style="padding:12px 10px; text-align:center">
+  <td style="padding:12px 10px; text-align:center; white-space:nowrap">
+  <button class="btn sec" style="padding:4px 8px; font-size:11px; margin-right:4px; display:inline-flex; align-items:center; gap:2px; border-color:rgba(245,158,11,0.4); color:#f59e0b" onclick="openEditCalagemModal('${item.id}')" title="Editar Calagem"><i data-lucide="edit" style="width:12px; height:12px"></i> Editar</button>
   <button class="danger" style="padding:4px 8px; font-size:11px" onclick="deleteCalagemRecord('${item.id}')">Excluir</button>
   </td>
   </tr>
   `;
   }).join('');
+  if (window.lucide) lucide.createIcons();
 }
 
+let _editingCalagemId = null;
+
 async function openNewCalagemModal() {
+  _editingCalagemId = null;
   const modal = $('newCalagemModal');
   if (!modal) return;
+
+  const titleEl = $('newCalagemModalTitle');
+  if (titleEl) titleEl.innerHTML = '<i data-lucide="layers" style="width:22px; height:22px; color:var(--green)"></i> Registrar Nova Calagem';
+  const btnSave = $('btnSaveCalagem');
+  if (btnSave) btnSave.textContent = 'Salvar';
 
   // Carregar parcelas
   const parcelSelect = $('calagemParcelaSelect');
@@ -23738,6 +23827,33 @@ async function openNewCalagemModal() {
   $('calagemEquipamento').value = '';
 
   modal.style.display = 'flex';
+  if (window.lucide) lucide.createIcons();
+}
+
+async function openEditCalagemModal(calagemId) {
+  _editingCalagemId = calagemId;
+  const item = (_calagemList || []).find(x => x.id === calagemId);
+  if (!item) {
+    alert('Registro de calagem não encontrado.');
+    return;
+  }
+
+  await openNewCalagemModal();
+  _editingCalagemId = calagemId;
+
+  const titleEl = $('newCalagemModalTitle');
+  if (titleEl) titleEl.innerHTML = `<i data-lucide="edit-3" style="width:22px; height:22px; color:#f59e0b"></i> Editar Calagem (${item.parcela || '—'})`;
+  const btnSave = $('btnSaveCalagem');
+  if (btnSave) btnSave.textContent = 'Salvar Alterações';
+
+  if ($('calagemParcelaSelect')) $('calagemParcelaSelect').value = item.parcela || '';
+  if ($('calagemData')) $('calagemData').value = item.data_aplicacao || today();
+  if ($('calagemQtd')) $('calagemQtd').value = item.quantidade_calcario || '';
+  if ($('calagemPrnt')) $('calagemPrnt').value = item.prnt || '';
+  if ($('calagemOperador')) $('calagemOperador').value = item.operador || '';
+  if ($('calagemEquipamento')) $('calagemEquipamento').value = item.equipamento || '';
+
+  if (window.lucide) lucide.createIcons();
 }
 
 function closeNewCalagemModal() {
@@ -23772,26 +23888,34 @@ async function saveCalagem() {
   };
 
   try {
-  const { error } = await sb.from('caderno_campo_calagem').insert([payload]);
-  if (error) throw error;
-  alert(' Registro de calagem salvo com sucesso!');
-  closeNewCalagemModal();
-  loadCalagemTable();
+    if (_editingCalagemId) {
+      const { error } = await sb.from('caderno_campo_calagem').update(payload).eq('id', _editingCalagemId);
+      if (error) throw error;
+      toast('✅ Registro de calagem atualizado com sucesso!', 'ok');
+    } else {
+      const { error } = await sb.from('caderno_campo_calagem').insert([payload]);
+      if (error) throw error;
+      toast('✅ Registro de calagem salvo com sucesso!', 'ok');
+    }
+    _editingCalagemId = null;
+    closeNewCalagemModal();
+    loadCalagemTable();
   } catch (e) {
-  console.error('Erro ao salvar calagem:', e);
-  alert('Erro ao salvar: ' + (e.message || 'Verifique sua conexão.'));
+    console.error('Erro ao salvar calagem:', e);
+    alert('Erro ao salvar: ' + (e.message || 'Verifique sua conexão.'));
   }
 }
 
 async function deleteCalagemRecord(id) {
   if (!confirm('Deseja realmente excluir este registro de calagem?')) return;
   try {
-  const { error } = await sb.from('caderno_campo_calagem').delete().eq('id', id).eq('tenant_id', tenantId);
-  if (error) throw error;
-  loadCalagemTable();
+    const { error } = await sb.from('caderno_campo_calagem').delete().eq('id', id).eq('tenant_id', tenantId);
+    if (error) throw error;
+    toast('✅ Registro de calagem excluído com sucesso!', 'ok');
+    loadCalagemTable();
   } catch (e) {
-  console.error('Erro ao excluir calagem:', e);
-  alert('Erro ao excluir: ' + (e.message || 'Verifique sua conexão.'));
+    console.error('Erro ao excluir calagem:', e);
+    alert('Erro ao excluir: ' + (e.message || 'Verifique sua conexão.'));
   }
 }
 
@@ -23848,17 +23972,27 @@ function renderCcTratosTable(list) {
   <td style="padding:12px 10px; font-weight:700; color:var(--text)">${item.atividade || '—'}</td>
   <td style="padding:12px 10px">${item.implemento || '—'}</td>
   <td style="padding:12px 10px">${item.operador || '—'}</td>
-  <td style="padding:12px 10px; text-align:center">
+  <td style="padding:12px 10px; text-align:center; white-space:nowrap">
+  <button class="btn sec" style="padding:4px 8px; font-size:11px; margin-right:4px; display:inline-flex; align-items:center; gap:2px; border-color:rgba(245,158,11,0.4); color:#f59e0b" onclick="openEditTratoModal('${item.id}')" title="Editar Trato Cultural"><i data-lucide="edit" style="width:12px; height:12px"></i> Editar</button>
   <button class="danger" style="padding:4px 8px; font-size:11px" onclick="deleteTratoRecord('${item.id}')">Excluir</button>
   </td>
   </tr>
   `;
   }).join('');
+  if (window.lucide) lucide.createIcons();
 }
 
+let _editingTratoId = null;
+
 async function openNewTratoModal() {
+  _editingTratoId = null;
   const modal = $('newTratoModal');
   if (!modal) return;
+
+  const titleEl = $('newTratoModalTitle');
+  if (titleEl) titleEl.innerHTML = '<i data-lucide="clipboard-list" style="width:22px; height:22px; color:var(--green)"></i> Registrar Novo Trato Cultural';
+  const btnSave = $('btnSaveTrato');
+  if (btnSave) btnSave.textContent = 'Salvar';
 
   // Carregar parcelas
   const parcelSelect = $('tratoParcelaSelect');
@@ -23921,6 +24055,32 @@ async function openNewTratoModal() {
   }
 
   modal.style.display = 'flex';
+  if (window.lucide) lucide.createIcons();
+}
+
+async function openEditTratoModal(tratoId) {
+  _editingTratoId = tratoId;
+  const item = (_tratosList || []).find(x => x.id === tratoId);
+  if (!item) {
+    alert('Trato cultural não encontrado.');
+    return;
+  }
+
+  await openNewTratoModal();
+  _editingTratoId = tratoId;
+
+  const titleEl = $('newTratoModalTitle');
+  if (titleEl) titleEl.innerHTML = `<i data-lucide="edit-3" style="width:22px; height:22px; color:#f59e0b"></i> Editar Trato Cultural (${item.parcela || '—'})`;
+  const btnSave = $('btnSaveTrato');
+  if (btnSave) btnSave.textContent = 'Salvar Alterações';
+
+  if ($('tratoParcelaSelect')) $('tratoParcelaSelect').value = item.parcela || '';
+  if ($('tratoData')) $('tratoData').value = item.data_trato || today();
+  if ($('tratoAtividade')) $('tratoAtividade').value = item.atividade || '';
+  if ($('tratoImplemento')) $('tratoImplemento').value = item.implemento || '';
+  if ($('tratoOperador')) $('tratoOperador').value = item.operador || '';
+
+  if (window.lucide) lucide.createIcons();
 }
 
 function closeNewTratoModal() {
@@ -23968,26 +24128,34 @@ async function saveTrato() {
   };
 
   try {
-  const { error } = await sb.from('caderno_campo_tratos').insert([payload]);
-  if (error) throw error;
-  toast(' Registro de trato cultural salvo com sucesso!', 'ok');
-  closeNewTratoModal();
-  loadTratosTable();
+    if (_editingTratoId) {
+      const { error } = await sb.from('caderno_campo_tratos').update(payload).eq('id', _editingTratoId);
+      if (error) throw error;
+      toast('✅ Trato cultural atualizado com sucesso!', 'ok');
+    } else {
+      const { error } = await sb.from('caderno_campo_tratos').insert([payload]);
+      if (error) throw error;
+      toast('✅ Registro de trato cultural salvo com sucesso!', 'ok');
+    }
+    _editingTratoId = null;
+    closeNewTratoModal();
+    loadTratosTable();
   } catch (e) {
-  console.error('Erro ao salvar trato cultural:', e);
-  alert('Erro ao salvar trato cultural: ' + (e.message || 'Verifique sua conexão.'));
+    console.error('Erro ao salvar trato cultural:', e);
+    alert('Erro ao salvar trato cultural: ' + (e.message || 'Verifique sua conexão.'));
   }
 }
 
 async function deleteTratoRecord(id) {
   if (!confirm('Deseja realmente excluir este trato cultural?')) return;
   try {
-  const { error } = await sb.from('caderno_campo_tratos').delete().eq('id', id).eq('tenant_id', tenantId);
-  if (error) throw error;
-  loadTratosTable();
+    const { error } = await sb.from('caderno_campo_tratos').delete().eq('id', id).eq('tenant_id', tenantId);
+    if (error) throw error;
+    toast('✅ Trato cultural excluído com sucesso!', 'ok');
+    loadTratosTable();
   } catch (e) {
-  console.error('Erro ao excluir trato cultural:', e);
-  alert('Erro ao excluir: ' + (e.message || 'Verifique sua conexão.'));
+    console.error('Erro ao excluir trato cultural:', e);
+    alert('Erro ao excluir: ' + (e.message || 'Verifique sua conexão.'));
   }
 }
 
@@ -24100,6 +24268,7 @@ function renderCcFertTable(list) {
   <td style="padding:12px 10px; color:var(--blue); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap" title="${item.fertilizantes}">${item.fertilizantes}</td>
   <td style="padding:12px 10px; text-align:center; white-space:nowrap">
   <button class="btn sec" style="padding:4px 8px; font-size:11px; margin-right:4px; display:inline-flex; align-items:center; gap:2px; background:rgba(6,182,212,0.15); color:#06b6d4; border:1px solid rgba(6,182,212,0.3)" onclick="printPastaCampoFertirrigacao('${item.parcel_id || item.parcela}')"><i data-lucide="printer" style="width:12px;height:12px"></i> Imprimir</button>
+  <button class="btn sec" style="padding:4px 8px; font-size:11px; margin-right:4px; display:inline-flex; align-items:center; gap:2px; border-color:rgba(245,158,11,0.4); color:#f59e0b" onclick="openEditFertModal('${item.id}')" title="Editar Fertirrigação"><i data-lucide="edit" style="width:12px; height:12px"></i> Editar</button>
   <button class="danger" style="padding:4px 8px; font-size:11px" onclick="deleteFertRecord('${item.id}')">Excluir</button>
   </td>
   </tr>
@@ -24108,9 +24277,17 @@ function renderCcFertTable(list) {
   if (window.lucide) lucide.createIcons();
 }
 
+let _editingFertId = null;
+
 async function openNewFertModal() {
+  _editingFertId = null;
   const modal = $('newFertModal');
   if (!modal) return;
+
+  const titleEl = $('newFertModalTitle');
+  if (titleEl) titleEl.innerHTML = '<i data-lucide="droplets" style="width:22px; height:22px; color:var(--blue)"></i> Prescrição & Lançamento de Fertirrigação';
+  const btnSave = $('btnSaveFertWeb');
+  if (btnSave) btnSave.innerHTML = '<i data-lucide="check" style="width:16px;height:16px"></i> Salvar Fertirrigação';
 
   const parcelSelect = $('fertParcelaSelect');
   if (parcelSelect) {
@@ -24133,11 +24310,96 @@ async function openNewFertModal() {
   if ($('fertWebCustomProdName')) $('fertWebCustomProdName').value = savedFertName;
   populateFertCatalogoDatalist();
   
+  const customContainer = document.getElementById('fertCustomRowsContainer');
+  if (customContainer) customContainer.innerHTML = '';
+
   resetWebFertFields();
   resetWebFertDiagnostic();
 
   modal.style.display = 'flex';
   if (window.lucide) lucide.createIcons();
+}
+
+async function openEditFertModal(fertId) {
+  _editingFertId = fertId;
+  const item = (_fertList || []).find(x => x.id === fertId);
+  if (!item) {
+    alert('Registro de fertirrigação não encontrado.');
+    return;
+  }
+
+  await openNewFertModal();
+  _editingFertId = fertId;
+
+  const titleEl = $('newFertModalTitle');
+  if (titleEl) titleEl.innerHTML = `<i data-lucide="edit-3" style="width:22px; height:22px; color:#f59e0b"></i> Editar Fertirrigação (${item.parcela || '—'})`;
+  const btnSave = $('btnSaveFertWeb');
+  if (btnSave) btnSave.innerHTML = '<i data-lucide="check" style="width:16px;height:16px"></i> Salvar Alterações';
+
+  if ($('fertParcelaSelect')) $('fertParcelaSelect').value = item.parcela || '';
+  if ($('fertDataInicio')) $('fertDataInicio').value = item.data_inicio || today();
+  if ($('fertDataFim')) $('fertDataFim').value = item.data_fim || item.data_inicio || today();
+  if ($('fertReceita')) $('fertReceita').value = item.receita || '';
+  if ($('fertOperador')) $('fertOperador').value = item.operador || '';
+  if ($('fertWebHectares')) $('fertWebHectares').value = item.vazao_base || '1.00';
+  if ($('fertWebProtocolSelect') && item.protocolo) $('fertWebProtocolSelect').value = item.protocolo;
+  if ($('fertMetodoSelect') && item.metodo) $('fertMetodoSelect').value = item.metodo;
+  if ($('fertEquipamentoSelect') && item.equipamento) $('fertEquipamentoSelect').value = item.equipamento;
+
+  // Carregar os itens da fertirrigação do banco
+  try {
+    const { data: itens, error } = await sb.from('caderno_campo_fertirrigacao_itens').select('*').eq('fert_id', fertId);
+    if (!error && Array.isArray(itens)) {
+      const fixedMap = {
+        'MAP': 'MAP',
+        'UREIA': 'UREIA',
+        'URÉIA': 'UREIA',
+        'ACIDO BORICO': 'ACID_BOR',
+        'ÁCIDO BÓRICO': 'ACID_BOR',
+        'NIT. CALCIO': 'NIT_CALCIO',
+        'NITRATO DE CÁLCIO': 'NIT_CALCIO',
+        'SULF. MAG.': 'SULF_MAG',
+        'SULFATO DE MAGNÉSIO': 'SULF_MAG',
+        'SULF. POTASSIO': 'SULF_POT',
+        'SULFATO DE POTÁSSIO': 'SULF_POT',
+        'CLORETO DE POTÁSSIO': 'CLOR_POT',
+        'CLOR_POT': 'CLOR_POT',
+        'SUPERSOIL': 'SUPERSOIL'
+      };
+
+      const customContainer = document.getElementById('fertCustomRowsContainer');
+      if (customContainer) customContainer.innerHTML = '';
+
+      itens.forEach(it => {
+        const pNorm = (it.produto_nome || '').trim().toUpperCase();
+        const fixedKey = fixedMap[pNorm];
+        if (fixedKey && $('fertWebQty_' + fixedKey)) {
+          $('fertWebQty_' + fixedKey).value = it.quantidade || '';
+        } else {
+          addCustomFertRow(it.produto_nome, it.quantidade, it.unidade || 'kg');
+        }
+      });
+    }
+  } catch(e) {
+    console.warn('Erro ao carregar itens da fertirrigação:', e);
+  }
+
+  if (window.lucide) lucide.createIcons();
+}
+
+async function deleteFertRecord(id) {
+  if (!confirm('Deseja realmente excluir este registro de fertirrigação?')) return;
+  try {
+    await sb.from('estoque_defensivos_saidas').delete().eq('referencia_id', id);
+    await sb.from('caderno_campo_fertirrigacao_itens').delete().eq('fert_id', id);
+    const { error } = await sb.from('caderno_campo_fertirrigacao').delete().eq('id', id).eq('tenant_id', tenantId);
+    if (error) throw error;
+    toast('✅ Registro de fertirrigação excluído com sucesso!', 'ok');
+    loadFertTable();
+  } catch(e) {
+    console.error('Erro ao excluir fertirrigação:', e);
+    alert('Erro ao excluir: ' + (e.message || 'Verifique sua conexão.'));
+  }
 }
 
 function onWebCustomFertChange(val) {
@@ -24573,38 +24835,58 @@ async function saveFert() {
   if (btn) { btn.disabled = true; btn.innerHTML = 'Salvando...'; }
 
   try {
-    let { data: headData, error: headErr } = await sb.from('caderno_campo_fertirrigacao')
-      .insert([headerPayload])
-      .select('id')
-      .single();
+    let fert_id = _editingFertId;
 
-    // FK fallback if needed
-    if (headErr && (headErr.code === '23503' || headErr.status === 409) && headerPayload.parcel_id) {
-      headerPayload.parcel_id = null;
-      const retry = await sb.from('caderno_campo_fertirrigacao')
+    if (_editingFertId) {
+      let { error: updErr } = await sb.from('caderno_campo_fertirrigacao')
+        .update(headerPayload)
+        .eq('id', _editingFertId);
+
+      if (updErr && (updErr.code === '42703' || (updErr.message && updErr.message.includes('column')))) {
+        delete headerPayload.metodo;
+        delete headerPayload.equipamento;
+        const retry = await sb.from('caderno_campo_fertirrigacao').update(headerPayload).eq('id', _editingFertId);
+        updErr = retry.error;
+      }
+      if (updErr) throw updErr;
+
+      // Limpar itens e baixas de estoque antigos para reinserir atualizados
+      await sb.from('caderno_campo_fertirrigacao_itens').delete().eq('fert_id', _editingFertId);
+      await sb.from('estoque_defensivos_saidas').delete().eq('referencia_id', _editingFertId);
+    } else {
+      let { data: headData, error: headErr } = await sb.from('caderno_campo_fertirrigacao')
         .insert([headerPayload])
         .select('id')
         .single();
-      headData = retry.data;
-      headErr = retry.error;
+
+      // FK fallback if needed
+      if (headErr && (headErr.code === '23503' || headErr.status === 409) && headerPayload.parcel_id) {
+        headerPayload.parcel_id = null;
+        const retry = await sb.from('caderno_campo_fertirrigacao')
+          .insert([headerPayload])
+          .select('id')
+          .single();
+        headData = retry.data;
+        headErr = retry.error;
+      }
+
+      // Column fallback if metodo/equipamento don't exist yet in table
+      if (headErr && (headErr.code === '42703' || (headErr.message && headErr.message.includes('column')))) {
+        delete headerPayload.metodo;
+        delete headerPayload.equipamento;
+        const retry2 = await sb.from('caderno_campo_fertirrigacao')
+          .insert([headerPayload])
+          .select('id')
+          .single();
+        headData = retry2.data;
+        headErr = retry2.error;
+      }
+
+      if (headErr) throw headErr;
+      if (!headData) throw new Error('Não foi possível gerar ID da fertirrigação.');
+      fert_id = headData.id;
     }
 
-    // Column fallback if metodo/equipamento don't exist yet in table
-    if (headErr && (headErr.code === '42703' || (headErr.message && headErr.message.includes('column')))) {
-      delete headerPayload.metodo;
-      delete headerPayload.equipamento;
-      const retry2 = await sb.from('caderno_campo_fertirrigacao')
-        .insert([headerPayload])
-        .select('id')
-        .single();
-      headData = retry2.data;
-      headErr = retry2.error;
-    }
-
-    if (headErr) throw headErr;
-    if (!headData) throw new Error('Não foi possível gerar ID da fertirrigação.');
-
-    const fert_id = headData.id;
     const finalItems = itemsToInsert.map(it => ({ ...it, fert_id }));
 
     const { error: itemsErr } = await sb.from('caderno_campo_fertirrigacao_itens').insert(finalItems);
@@ -24630,7 +24912,8 @@ async function saveFert() {
       console.warn('Erro ao registrar baixa automática de estoque de fertilizantes:', errStk);
     }
 
-    alert('✅ Registro de fertirrigação salvo com sucesso!');
+    toast(_editingFertId ? '✅ Fertirrigação atualizada com sucesso!' : '✅ Registro de fertirrigação salvo com sucesso!', 'ok');
+    _editingFertId = null;
     closeNewFertModal();
     loadFertTable();
   } catch (e) {
@@ -24894,11 +25177,8 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
 
     <table style="width:100%; border-collapse:collapse; margin-top:12px; font-size:6.5pt">
       <tr>
-        <td width="50%" style="border:1px solid #000; padding:5px; text-align:center; vertical-align:bottom; height:45px">
+        <td width="100%" style="border:1px solid #000; padding:5px; text-align:center; vertical-align:bottom; height:45px">
           <div style="border-top:1px dashed #000; margin-top:20px; padding-top:2px;"><b>Responsável Técnico:</b> ${rtNome} (CREA: ${rtCrea})</div>
-        </td>
-        <td width="50%" style="border:1px solid #000; padding:5px; text-align:center; vertical-align:bottom; height:45px">
-          <div style="border-top:1px dashed #000; margin-top:20px; padding-top:2px;"><b>Agrônomo / Certificações:</b> ${certNome}</div>
         </td>
       </tr>
     </table>
@@ -25431,7 +25711,15 @@ function countOpAplicacoesCiclo(parcelCode, produtoNome, cicloPlantio, cicloColh
   }).length;
 }
 
+let _editingOpId = null;
+
 function openNewOpModal() {
+  _editingOpId = null;
+  const titleEl = $('newOpModalTitle');
+  if (titleEl) titleEl.innerHTML = '<i data-lucide="file-text" style="width:20px; height:20px; color:var(--blue)"></i> Cadastrar Ordem de Pulverização (O.P)';
+  const btnSave = $('btnSaveNewOp');
+  if (btnSave) btnSave.textContent = 'Salvar e Registrar';
+
   _newOpItems = [];
   renderNewOpItems();
   
@@ -25489,6 +25777,109 @@ function openNewOpModal() {
   if ($('newOpDosagemWarning')) $('newOpDosagemWarning').style.display = 'none';
   
   $('newOpModal').style.display = 'flex';
+  if (window.lucide) lucide.createIcons();
+}
+
+async function openEditOpModal(opId) {
+  _editingOpId = opId;
+  const op = (_opList || []).find(x => x.id === opId);
+  if (!op) {
+    alert('Ordem de Pulverização não encontrada.');
+    return;
+  }
+
+  // Prepara selects e combos básicos
+  const allEmps = (_employees || []).filter(e => e.active !== false);
+  const tratoristas = allEmps.filter(e => e.role && e.role.toUpperCase().includes('TRATORISTA'));
+  const finalTratoristas = tratoristas.length > 0 ? tratoristas : allEmps;
+
+  const tratoristaOpts = '<option value="">— Selecionar Tratorista —</option>' + finalTratoristas.map(e => `<option value="${e.name}">${e.name}${e.role ? ' (' + e.role + ')' : ''}</option>`).join('');
+  const allEmpOpts = '<option value="">— Selecionar —</option>' + allEmps.map(e => `<option value="${e.name}">${e.name}${e.role ? ' (' + e.role + ')' : ''}</option>`).join('');
+
+  if ($('newOpTratorista')) $('newOpTratorista').innerHTML = tratoristaOpts;
+  if ($('newOpBarrista')) $('newOpBarrista').innerHTML = allEmpOpts;
+  if ($('newOpManipulador')) $('newOpManipulador').innerHTML = allEmpOpts;
+
+  updateOpEquipmentSelects();
+
+  // Parcelas
+  const opSel = $('newOpParcelSelect');
+  if (opSel) {
+    const list = (_infoParcelas && _infoParcelas.length > 0) ? _infoParcelas : (window.infoParcelasData || []);
+    const sorted = [...list].sort((a, b) => {
+      const pa = a.parcela2 || a.parcela || '';
+      const pb = b.parcela2 || b.parcela || '';
+      return pa.localeCompare(pb, undefined, { numeric: true, sensitivity: 'base' });
+    });
+    opSel.innerHTML = '<option value="">— Selecione a Parcela —</option>' + sorted.map(ip => {
+      const code = ip.parcela2 || ip.parcela || ip.id;
+      const cult = ip.cultura ? ' — ' + ip.cultura.toUpperCase() : '';
+      const varStr = ip.variedade ? ' (' + ip.variedade + ')' : '';
+      return `<option value="${ip.id || code}">${code}${cult}${varStr}</option>`;
+    }).join('');
+
+    const matchingIp = list.find(x => (x.parcela2 === op.parcela || x.parcela === op.parcela || x.id === op.parcel_id));
+    if (matchingIp) {
+      opSel.value = matchingIp.id || matchingIp.parcela2 || matchingIp.parcela;
+    }
+  }
+
+  $('newOpDate').value = op.data_aplicacao || today();
+  $('newOpCultura').value = `${op.cultura || 'MELÃO'} (${op.variedade || 'Padrão'})`;
+  $('newOpArea').value = op.area_ha || '1.00';
+
+  if ($('newOpTratorista')) $('newOpTratorista').value = op.tratorista || '';
+  if ($('newOpBarrista')) $('newOpBarrista').value = op.barrista || '';
+  if ($('newOpManipulador')) $('newOpManipulador').value = op.manipulador || '';
+  if ($('newOpTrator')) $('newOpTrator').value = op.trator || '';
+  if ($('newOpEquipamento')) $('newOpEquipamento').value = op.equipamento || '';
+  if ($('newOpPressao')) $('newOpPressao').value = op.pressao || '';
+  if ($('newOpBicos')) $('newOpBicos').value = op.bicos || '';
+  if ($('newOpVolumeCalda')) $('newOpVolumeCalda').value = op.volume_calda || '500';
+  if ($('newOpTemp')) $('newOpTemp').value = op.temperatura_c != null ? op.temperatura_c : '';
+  if ($('newOpUmid')) $('newOpUmid').value = op.umidade_rel_pct != null ? op.umidade_rel_pct : '';
+  if ($('newOpVento')) $('newOpVento').value = op.velocidade_vento_kmh != null ? op.velocidade_vento_kmh : '';
+  if ($('newOpHoraInicio')) $('newOpHoraInicio').value = (op.horario_inicio || '').substring(0, 5);
+  if ($('newOpHoraFim')) $('newOpHoraFim').value = (op.horario_fim || '').substring(0, 5);
+  if ($('newOpTecnico')) $('newOpTecnico').value = op.tecnico || '';
+  if ($('newOpAgronomo')) $('newOpAgronomo').value = op.eng_agronomo || '';
+  if ($('newOpObs')) $('newOpObs').value = op.observacoes || '';
+
+  // Carregar itens da calda
+  let items = op.caderno_campo_op_itens || [];
+  if (!items || items.length === 0) {
+    try {
+      const { data: dbItems } = await sb.from('caderno_campo_op_itens').select('*').eq('op_id', opId);
+      if (dbItems) items = dbItems;
+    } catch(e) {}
+  }
+
+  _newOpItems = (items || []).map(it => ({
+    produto_id: it.produto_id,
+    produto_nome: it.produto_nome,
+    ingrediente_ativo: it.ingrediente_ativo || '',
+    alvo: it.alvo || '',
+    is_foliar: !!it.is_foliar || (it.alvo && it.alvo.toUpperCase().includes('FOLIAR')),
+    dosagem_real: parseFloat(it.dosagem_real) || 0,
+    dosagem_corrigida: parseFloat(it.dosagem_corrigida) || parseFloat(it.dosagem_real) || 0,
+    unidade: it.unidade || 'L/ha',
+    carencia_dias: parseInt(it.carencia_dias) || 0
+  }));
+  renderNewOpItems();
+
+  populateNewOpDefensivesSelect();
+  _newOpTabMode = 'DEFENSIVO';
+  if ($('newOpFichaPanel')) $('newOpFichaPanel').style.display = 'none';
+  if ($('newOpTotaisPanel')) $('newOpTotaisPanel').style.display = 'none';
+  if ($('newOpDosagemWarning')) $('newOpDosagemWarning').style.display = 'none';
+
+  const titleEl = $('newOpModalTitle');
+  if (titleEl) titleEl.innerHTML = `<i data-lucide="edit-3" style="width:20px; height:20px; color:#f59e0b"></i> Editar Ordem de Pulverização (${op.op_cod || 'O.P'})`;
+  const btnSave = $('btnSaveNewOp');
+  if (btnSave) btnSave.textContent = 'Salvar Alterações';
+
+  $('newOpModal').style.display = 'flex';
+  if (window.lucide) lucide.createIcons();
 }
 
 function closeNewOpModal() {
@@ -26432,7 +26823,7 @@ async function saveNewOpDashboard() {
     
     // Validação de disponibilidade do Tratorista
     if (tratoristaVal) {
-      const conflictMsg = await checkPersonActivityConflict(tratoristaVal, 'tratorista', chosenDate, startVal, endVal);
+      const conflictMsg = await checkPersonActivityConflict(tratoristaVal, 'tratorista', chosenDate, startVal, endVal, _editingOpId);
       if (conflictMsg) {
         alert(conflictMsg);
         return;
@@ -26441,7 +26832,7 @@ async function saveNewOpDashboard() {
 
     // Validação de disponibilidade do Barrista
     if (barristaVal) {
-      const conflictMsg = await checkPersonActivityConflict(barristaVal, 'barrista', chosenDate, startVal, endVal);
+      const conflictMsg = await checkPersonActivityConflict(barristaVal, 'barrista', chosenDate, startVal, endVal, _editingOpId);
       if (conflictMsg) {
         alert(conflictMsg);
         return;
@@ -26450,7 +26841,7 @@ async function saveNewOpDashboard() {
 
     // Validação de disponibilidade do Manipulador
     if (manipuladorVal) {
-      const conflictMsg = await checkPersonActivityConflict(manipuladorVal, 'manipulador', chosenDate, startVal, endVal);
+      const conflictMsg = await checkPersonActivityConflict(manipuladorVal, 'manipulador', chosenDate, startVal, endVal, _editingOpId);
       if (conflictMsg) {
         alert(conflictMsg);
         return;
@@ -26462,6 +26853,7 @@ async function saveNewOpDashboard() {
       const normTrator = tratorVal.toLowerCase().trim();
       let opListToCheck = _opList || [];
       for (const op of opListToCheck) {
+        if (_editingOpId && op.id === _editingOpId) continue;
         if (op.data_aplicacao === chosenDate && op.trator && op.trator.toLowerCase().trim() === normTrator) {
           if (overlaps(startVal, endVal, op.horario_inicio, op.horario_fim)) {
             const hInicio = (op.horario_inicio || '').substring(0, 5);
@@ -26511,12 +26903,21 @@ async function saveNewOpDashboard() {
   }
   
   try {
-    const { data: opData, error: opErr } = await sb.from('caderno_campo_op').insert(recordOP).select('id').single();
-    if (opErr) throw opErr;
+    let targetOpId = _editingOpId;
+    if (_editingOpId) {
+      const { error: opErr } = await sb.from('caderno_campo_op').update(recordOP).eq('id', _editingOpId);
+      if (opErr) throw opErr;
+      await sb.from('caderno_campo_op_itens').delete().eq('op_id', _editingOpId);
+      await sb.from('estoque_defensivos_saidas').delete().eq('referencia_id', _editingOpId);
+    } else {
+      const { data: opData, error: opErr } = await sb.from('caderno_campo_op').insert(recordOP).select('id').single();
+      if (opErr) throw opErr;
+      targetOpId = opData.id;
+    }
     
     const itemsToInsert = _newOpItems.map(i => ({
       tenant_id: tenantId,
-      op_id: opData.id,
+      op_id: targetOpId,
       produto_id: (i.produto_id && isUUID(i.produto_id)) ? i.produto_id : null,
       produto_nome: i.produto_nome || '',
       alvo: i.alvo || '',
@@ -26529,8 +26930,9 @@ async function saveNewOpDashboard() {
     const { error: itemsErr } = await sb.from('caderno_campo_op_itens').insert(itemsToInsert);
     if (itemsErr) {
       console.error('Erro ao inserir itens da calda:', itemsErr);
-      // Rollback da OP pai para não deixar registros vazios/repetidos órfãos
-      await sb.from('caderno_campo_op').delete().eq('id', opData.id);
+      if (!_editingOpId) {
+        await sb.from('caderno_campo_op').delete().eq('id', targetOpId);
+      }
       throw itemsErr;
     }
     
@@ -26583,7 +26985,7 @@ async function saveNewOpDashboard() {
           quantidade_saida: totalQtd || doseVal,
           unidade_medida: unitMedida,
           motivo_saida: isFoliar ? 'PULVERIZACAO_FOLIAR' : 'PULVERIZACAO_DEFENSIVO',
-          referencia_id: opData.id,
+          referencia_id: targetOpId,
           parcela: recordOP.parcela,
           data_saida: recordOP.data_aplicacao || today(),
           observacao: `Baixa automática O.P (${isFoliar ? 'Foliar' : 'Defensivo'}) Parcela ${recordOP.parcela}`
@@ -26596,9 +26998,11 @@ async function saveNewOpDashboard() {
       console.warn('Erro ao registrar baixa automática de estoque:', errStk);
     }
     
-    toast(' Ordem de Pulverização registrada com sucesso!', 'ok');
+    toast(_editingOpId ? '✅ Ordem de Pulverização atualizada com sucesso!' : '✅ Ordem de Pulverização registrada com sucesso!', 'ok');
+    _editingOpId = null;
     closeNewOpModal();
     loadCadernoCampo();
+    if (typeof loadOpTable === 'function') loadOpTable();
   } catch(e) {
     console.error('Falha ao registrar OP:', e);
     alert('Erro ao registrar O.P no banco de dados:\n' + (e?.message || e?.details || 'Erro desconhecido. Verifique os dados e tente novamente.'));

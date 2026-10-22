@@ -5753,7 +5753,7 @@ function printPastaCampoMip(itemStr) {
   ${cleanObs || 'Nenhuma observação registrada na amostragem.'}
   </div>
 
-  <div class="signatures-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+  <div class="signatures-grid" style="grid-template-columns: 1fr 1fr;">
   <div class="sig-box">
   <div>
   <strong>Monitor de Pragas (Pragueiro)</strong><br/>
@@ -5767,13 +5767,6 @@ function printPastaCampoMip(itemStr) {
   Responsável Técnico de Campo
   </div>
   <div class="sig-line">Assinatura Resp. Técnico de Campo</div>
-  </div>
-  <div class="sig-box">
-  <div>
-  <strong>Emanuele Moreira</strong><br/>
-  Engenheira Agrônoma — Certificação
-  </div>
-  <div class="sig-line">Assinatura Validação da Certificação</div>
   </div>
   </div>
   </div>
@@ -5938,7 +5931,7 @@ function printPastaCampoOrdemPulv(itemStr) {
 
   const opCod = item.id ? String(item.id).substring(0, 6).toUpperCase() : '4';
   const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'EMPRESA';
-  const elaborador = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'EMANUELA MOREIRA';
+  const elaborador = 'Ivanosca cunha';
 
   const printWin = window.open('', '_blank', 'width=1400,height=900');
   if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
@@ -6125,13 +6118,9 @@ function printPastaCampoOrdemPulv(itemStr) {
   </td>
   </tr>
   <tr>
-  <td style="width: 50%;">
+  <td colspan="2" style="width: 100%;">
   <strong>Eng. Agrônomo / Resp. Técnico:</strong> ${item.eng_agronomo || item.tecnico || 'IVANOSCA MARTINS'}
   <div class="sig-line">Assinatura Responsável Técnico</div>
-  </td>
-  <td style="width: 50%;">
-  <strong>Validação da Certificação:</strong> Emanuele Moreira (Eng. Agrônoma)
-  <div class="sig-line">Assinatura Resp. Validação Certificação</div>
   </td>
   </tr>
   </table>
@@ -7009,11 +6998,8 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
 
     <table style="width:100%; border-collapse:collapse; margin-top:12px; font-size:6.5pt">
       <tr>
-        <td width="50%" style="border:1px solid #000; padding:5px; text-align:center; vertical-align:bottom; height:45px">
+        <td width="100%" style="border:1px solid #000; padding:5px; text-align:center; vertical-align:bottom; height:45px">
           <div style="border-top:1px dashed #000; margin-top:20px; padding-top:2px;"><b>Responsável Técnico:</b> ${rtNome} (CREA: ${rtCrea})</div>
-        </td>
-        <td width="50%" style="border:1px solid #000; padding:5px; text-align:center; vertical-align:bottom; height:45px">
-          <div style="border-top:1px dashed #000; margin-top:20px; padding-top:2px;"><b>Agrônomo / Certificações:</b> ${certNome}</div>
         </td>
       </tr>
     </table>
@@ -8109,16 +8095,11 @@ async function printPastaCampoIdiarn(itemStr) {
   </tbody>
   </table>
   
-  <div style="margin-top:25px; display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-  <div style="text-align:center; border:1px solid #000; padding:8px; background:#fafafa;">
+  <div style="margin-top:25px; display:flex; justify-content:center;">
+  <div style="text-align:center; border:1px solid #000; padding:8px 24px; background:#fafafa; min-width:320px;">
   <strong>${rtNome}</strong><br/>
   <span style="font-size:7.5pt; color:#444">Engenheiro(a) Agrônomo(a) — Responsável Técnico de Campo</span>
   <div style="border-top:1px dashed #000; width:80%; margin:22px auto 0 auto; padding-top:3px; font-size:7pt; font-weight:bold;">Assinatura Responsável Técnico de Campo</div>
-  </div>
-  <div style="text-align:center; border:1px solid #000; padding:8px; background:#fafafa;">
-  <strong>${certNome}</strong><br/>
-  <span style="font-size:7.5pt; color:#444">Engenheira Agrônoma — Validação da Pasta de Certificação</span>
-  <div style="border-top:1px dashed #000; width:80%; margin:22px auto 0 auto; padding-top:3px; font-size:7pt; font-weight:bold;">Assinatura Resp. pela Validação da Certificação</div>
   </div>
   </div>
   </body>
