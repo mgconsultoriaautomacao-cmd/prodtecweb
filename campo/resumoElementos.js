@@ -551,7 +551,8 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
       areaVal = parseFloat(item.area || item.area_ha || 3.0) || 1.0;
     }
   }
-  const plantioStr = item ? (item.plantio || item.transplante || item.data_plantio1) : null;
+  // Critério oficial exigido pelo auditor: a idade é contada a partir da SEMEADURA
+  const plantioStr = item ? (item.semeadura || item.data_semeadura || item.semeadura1 || item.plantio || item.transplante || item.data_plantio1) : null;
   const plantioDt = plantioStr ? new Date(plantioStr + (plantioStr.includes('T') ? '' : 'T00:00:00')) : null;
 
   // 4.1. FUNDAÇÃO (Não utilizada pelo produtor — 100% via Fertirrigação e Foliar)

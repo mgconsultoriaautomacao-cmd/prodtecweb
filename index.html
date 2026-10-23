@@ -4130,14 +4130,18 @@
       </div>
 
       <!-- 1. IDENTIFICAÇÃO DO TALHÃO / MONITORAMENTO -->
-      <div style="display:grid; grid-template-columns:1.4fr 1.2fr 1fr 1fr 1.2fr 1.2fr; gap:10px; margin-bottom:16px; background:rgba(255,255,255,0.02); padding:12px; border-radius:10px; border:1px solid var(--border)">
+      <div style="display:grid; grid-template-columns:1.3fr 1.3fr 0.8fr 0.8fr 1fr 1.1fr 1.2fr; gap:8px; margin-bottom:16px; background:rgba(255,255,255,0.02); padding:12px; border-radius:10px; border:1px solid var(--border)">
         <div>
           <label class="flabel">Parcela / Ciclo *</label>
           <select id="newMipParcelSelect" onchange="onWebMipParcelChange()" style="width:100%; font-weight:700; padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:6px"></select>
         </div>
         <div>
-          <label class="flabel">Variedade / Cultura</label>
-          <input type="text" id="newMipVariedade" readonly placeholder="Variedade" style="width:100%; padding:6px; background:rgba(0,0,0,0.2); color:var(--green); font-weight:700; border:1px solid var(--border); border-radius:6px"/>
+          <label class="flabel">Variedade(s) da Parcela</label>
+          <input type="text" id="newMipVariedade" readonly placeholder="Todas as variedades" style="width:100%; padding:6px; background:rgba(0,0,0,0.2); color:var(--green); font-weight:700; border:1px solid var(--border); border-radius:6px"/>
+        </div>
+        <div>
+          <label class="flabel">Área (ha)</label>
+          <input type="text" id="newMipArea" readonly placeholder="—" style="width:100%; text-align:center; padding:6px; background:rgba(0,0,0,0.2); color:var(--text); font-weight:700; border:1px solid var(--border); border-radius:6px"/>
         </div>
         <div>
           <label class="flabel">Idade Cultura (DAP)</label>
@@ -4153,7 +4157,7 @@
         </div>
         <div>
           <label class="flabel">Responsável Técnico</label>
-          <input type="text" id="newMipTecnico" placeholder="David Ferreira" style="width:100%; padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:6px"/>
+          <input type="text" id="newMipTecnico" placeholder="IVANOSCA MARTINS" style="width:100%; padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:6px"/>
         </div>
       </div>
 
@@ -4811,8 +4815,9 @@
   <div class="grid2">
   <div class="card" style="grid-column: span 2">
   <div class="title"><i data-lucide="building" class="btn-i"></i> Cadastro da Empresa & Certificações do Caderno de Campo</div>
-  <div style="display:grid; grid-template-columns:1.5fr 1fr 1.2fr; gap:12px; margin-bottom:12px">
-  <div><label class="flabel">Nome da Empresa / Fazenda</label><input id="cfgName" placeholder="Ex: Bom Jesus LTDA"/></div>
+  <div style="display:grid; grid-template-columns:1.4fr 1.4fr 1fr 1.2fr; gap:12px; margin-bottom:12px">
+  <div><label class="flabel">Nome da Empresa (Razão Social)</label><input id="cfgName" placeholder="Ex: Dina Dinamarca Industrial Agrícola LTDA"/></div>
+  <div><label class="flabel">Nome da Fazenda / Propriedade</label><input id="cfgFazendaNome" placeholder="Ex: Fazenda Santa Helena"/></div>
   <div><label class="flabel">Tipo de Cultura</label>
   <select id="cfgCulture"><option value="MAMAO">Mamão</option><option value="MELAO">Melão/Melancia (com rastreabilidade)</option><option value="OUTRO">Outro</option></select>
   </div>
@@ -9635,7 +9640,10 @@ async function loadSettings(){
   if(!data)return;
   tenantConfig=data;
   window.tenantConfig=data;
+  const savedFaz = data.fazenda_nome || data.fazenda || localStorage.getItem('cfg_fazenda_nome_' + tenantId) || 'SANTA HELENA';
+  window.tenantConfig.fazenda_nome = savedFaz;
   $('cfgName').value=data.name||'';
+  if ($('cfgFazendaNome')) $('cfgFazendaNome').value = savedFaz;
   $('cfgCulture').value=data.culture_type||'MAMAO';
   $('cfgMetaPacker').value=data.target_per_hour_packer||'';
   $('cfgMetaStacker').value=data.target_per_hour_stacker||'';
@@ -9818,6 +9826,12 @@ async function saveSettings(){
   responsavel_tecnico2_nome: $('cfgRt2Nome')?.value?.trim() || null,
   responsavel_tecnico2_crea: $('cfgRt2Crea')?.value?.trim() || null,
   };
+
+  const fazVal = $('cfgFazendaNome')?.value?.trim() || '';
+  if (fazVal) {
+    localStorage.setItem('cfg_fazenda_nome_' + tenantId, fazVal);
+    if (window.tenantConfig) window.tenantConfig.fazenda_nome = fazVal;
+  }
 
   try {
   const {error}=await sb.from('tenants').update(payload).eq('id',tenantId);
@@ -13683,8 +13697,8 @@ async function printPastaCampoTratos(id) {
     console.warn('Aviso: busca de tratos:', e);
   }
 
-  // Data base do plantio
-  const plantioStr = item.plantio || item.data_plantio || item.transplante;
+  // Data base de semeadura/plantio
+  const plantioStr = item.semeadura || item.data_semeadura || item.semeadura1 || item.plantio || item.data_plantio || item.transplante;
   const plantioDt = plantioStr ? new Date(plantioStr + (plantioStr.includes('T') ? '' : 'T00:00:00')) : new Date();
 
   // 17 Operações Oficiais do Modelo da Foto 1 da Bom Jesus Agrícola
@@ -13848,7 +13862,7 @@ async function printPastaCampoDefensivos(id) {
   if (!item) { alert('Selecione uma parcela.'); return; }
 
   const pCode = item.parcela2 || item.parcela || '10.01 T';
-  const plantioStr = item.plantio || item.data_plantio || item.transplante;
+  const plantioStr = item.semeadura || item.data_semeadura || item.semeadura1 || item.plantio || item.data_plantio || item.transplante;
   const plantioDt = plantioStr ? new Date(plantioStr + (plantioStr.includes('T') ? '' : 'T00:00:00')) : null;
   const areaHa = parseFloat(item.area || 3.0).toFixed(3);
   const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Bom Jesus Agrícola';
@@ -14465,7 +14479,7 @@ async function submitAutoTratos() {
     try { localStorage.setItem('prodtech_trato_op_colmeias', opColmeias); } catch(e){}
   }
 
-  const plantioStr = item.plantio || item.data_plantio || item.transplante;
+  const plantioStr = item.semeadura || item.data_semeadura || item.semeadura1 || item.plantio || item.data_plantio || item.transplante;
   const plantioDt = plantioStr ? new Date(plantioStr + (plantioStr.includes('T') ? '' : 'T00:00:00')) : new Date();
 
   const standardOperations = [
@@ -15351,6 +15365,8 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
   const varietiesSet = new Set();
   const varietiesWithArea = [];
   let totalArea = 0;
+  let semeaduraDates = [];
+  let transplanteDates = [];
   let plantioDates = [];
   let prevColheitaDates = [];
 
@@ -15363,13 +15379,24 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
         varietiesSet.add(v.nome);
         varietiesWithArea.push({
           nome: v.nome,
-          area: v.area > 0 ? v.area.toFixed(2) : '—'
+          area: v.area > 0 ? v.area.toFixed(2) : '—',
+          semeadura: v.semeadura || null,
+          transplante: v.data || v.dataPlantio || null
         });
       }
+      if (v.semeadura) semeaduraDates.push(v.semeadura);
+      if (v.data || v.dataPlantio) transplanteDates.push(v.data || v.dataPlantio);
     });
 
-    const pDt = m.transplante || m.plantio || m.data_plantio1;
+    const sDt = m.semeadura || m.data_semeadura || m.semeadura1;
+    if (sDt) semeaduraDates.push(sDt);
+
+    const tDt = m.transplante || m.transplante1;
+    if (tDt) transplanteDates.push(tDt);
+
+    const pDt = m.plantio || m.data_plantio || m.data_plantio1;
     if (pDt) plantioDates.push(pDt);
+
     if (m.previsao_colheita) prevColheitaDates.push(m.previsao_colheita);
   });
 
@@ -15378,9 +15405,25 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
     normObj.vars.forEach(v => {
       if (v.nome && !varietiesSet.has(v.nome)) {
         varietiesSet.add(v.nome);
-        varietiesWithArea.push({ nome: v.nome, area: v.area > 0 ? v.area.toFixed(2) : '—' });
+        varietiesWithArea.push({
+          nome: v.nome,
+          area: v.area > 0 ? v.area.toFixed(2) : '—',
+          semeadura: v.semeadura || null,
+          transplante: v.data || v.dataPlantio || null
+        });
       }
+      if (v.semeadura) semeaduraDates.push(v.semeadura);
+      if (v.data || v.dataPlantio) transplanteDates.push(v.data || v.dataPlantio);
     });
+    if (parcelInput.semeadura || parcelInput.data_semeadura || parcelInput.semeadura1) {
+      semeaduraDates.push(parcelInput.semeadura || parcelInput.data_semeadura || parcelInput.semeadura1);
+    }
+    if (parcelInput.transplante || parcelInput.transplante1) {
+      transplanteDates.push(parcelInput.transplante || parcelInput.transplante1);
+    }
+    if (parcelInput.plantio || parcelInput.data_plantio || parcelInput.data_plantio1) {
+      plantioDates.push(parcelInput.plantio || parcelInput.data_plantio || parcelInput.data_plantio1);
+    }
   }
 
   const varietiesList = Array.from(varietiesSet);
@@ -15390,6 +15433,11 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
   const variedadesBlockHtml = varietiesWithArea.length > 0
     ? varietiesWithArea.map(v => `<div style="display:flex; justify-content:space-between; width:180px;"><span style="font-weight:bold; color:#dc2626;">${v.nome}</span><span style="color:#dc2626; font-weight:bold;">${v.area !== '—' ? v.area.replace('.', ',') : ''}</span></div>`).join('')
     : `<div style="font-weight:bold; color:#dc2626;">${formattedVariedade}</div>`;
+
+  // EXIGÊNCIA AUDITORIA: A idade da parcela e das variedades é CRITERIZADA PELA SEMEADURA!
+  const primarySemeadura = semeaduraDates[0] || first.semeadura || first.data_semeadura || first.semeadura1 || null;
+  const primaryTransplante = transplanteDates[0] || first.transplante || plantioDates[0] || first.plantio || first.data_plantio1 || null;
+  const officialBaseDate = primarySemeadura || primaryTransplante || null;
 
   return {
     ...first,
@@ -15401,8 +15449,11 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
     variedadesBlockHtml: variedadesBlockHtml,
     area: formattedArea,
     area_ha: formattedArea,
-    transplante: plantioDates[0] || first.transplante || first.plantio || first.data_plantio1 || null,
-    plantio: plantioDates[0] || first.plantio || first.transplante || first.data_plantio1 || null,
+    semeadura: primarySemeadura,
+    transplante: primaryTransplante,
+    plantio: officialBaseDate, // Critério oficial: data da semeadura!
+    data_plantio: officialBaseDate,
+    data_base_idade: officialBaseDate,
     previsao_colheita: prevColheitaDates[0] || first.previsao_colheita || null
   };
 }
@@ -15418,13 +15469,14 @@ function printPastaCampoOrdemPulv(itemStr) {
   const dataPlantioStr = info && info.plantio ? info.plantio.split('-').reverse().join('/') : '—';
   const prevColheitaStr = info && info.previsao_colheita ? info.previsao_colheita.split('-').reverse().join('/') : '—';
   
-  // Calcular idade (dias entre plantio e data_aplicacao)
+  // Calcular idade (dias entre semeadura e data_aplicacao) - Critério oficial auditoria
   let idadeDias = '—';
-  if (info && (info.transplante || info.plantio || info.data_plantio1) && item.data_aplicacao) {
-  const pDate = new Date((info.transplante || info.plantio || info.data_plantio1) + 'T12:00:00');
-  const aDate = new Date(item.data_aplicacao + 'T12:00:00');
-  const diffTime = Math.abs(aDate - pDate);
-  idadeDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const dataBaseIdade = (info && (info.semeadura || info.data_semeadura || info.plantio || info.transplante || info.data_plantio1)) || (item && (item.semeadura || item.plantio || item.transplante));
+  if (dataBaseIdade && item.data_aplicacao) {
+    const pDate = new Date(dataBaseIdade + 'T12:00:00');
+    const aDate = new Date(item.data_aplicacao + 'T12:00:00');
+    const diffTime = Math.abs(aDate - pDate);
+    idadeDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
   
   const itemsCalda = item.caderno_campo_op_itens || [];
@@ -15974,12 +16026,26 @@ function printPastaCampoOrdemPulv(itemStr) {
 
 function printPastaCampoAutColheita(itemStr) {
   const item = typeof itemStr === 'string' ? JSON.parse(decodeURIComponent(itemStr)) : itemStr;
-  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'DINA DINAMARCA INDUSTRIAL AGRÍCOLA LTDA';
+  const tenantName = (window.tenantConfig && (window.tenantConfig.razao_social || window.tenantConfig.name)) || 'DINA DINAMARCA INDUSTRIAL AGRÍCOLA LTDA';
   
-  // Buscar ciclo correspondente em _infoParcelas para preencher dados extras
-  const ip = _infoParcelas.find(x => x.parcela2 === item.parcela || x.parcela === item.parcela);
-  const variedadesStr = ip && ip.variedade ? ip.variedade : (item.variedade || 'JADEAL, GOLDEX, GRAND PRIX, ASTURIA e GOLDMINE');
-  const pCode = item.parcela || '10';
+  // Buscar ciclo correspondente em _infoParcelas para preencher dados extras (todas as variedades da parcela)
+  const ip = (_infoParcelas || []).find(x => x.parcela2 === item.parcela || x.parcela === item.parcela || x.id === item.parcel_id);
+  const info = typeof getParcelaCompleteInfo === 'function' ? getParcelaCompleteInfo(item.parcela || item, _infoParcelas) : ip;
+  const variedadesStr = (info && info.variedade) ? info.variedade : (ip && ip.variedade ? ip.variedade : (item.variedade || 'JADEAL, GOLDEX, GRAND PRIX, ASTURIA e GOLDMINE'));
+  const pCode = (info && info.parcelaNum) || item.parcela || '10';
+
+  // Responsável Técnico puxado do cadastro do sistema (Donivanosca / Ivanosca Martins)
+  const rtNome = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS DE OLIVEIRA CUNHA';
+  const rtCrea = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_crea) || '2100160575';
+  const rt2Nome = (window.tenantConfig && window.tenantConfig.responsavel_tecnico2_nome) || '';
+  const rt2Crea = (window.tenantConfig && window.tenantConfig.responsavel_tecnico2_crea) || '';
+
+  let rtDeclaration = '';
+  if (rt2Nome) {
+    rtDeclaration = `${rtNome}, Engenheiro(a) Agrônomo(a), CREA sob o nº ${rtCrea} e/ou ${rt2Nome}, Engenheiro(a) Agrônomo(a), CREA sob o nº ${rt2Crea}, Técnicos Responsáveis pela produção da empresa <strong>${tenantName.toUpperCase()}</strong>, autorizo(amos) a colheita da parcela nº <strong>${pCode}</strong> com as variedades <strong>${variedadesStr.toUpperCase()}</strong>`;
+  } else {
+    rtDeclaration = `${rtNome}, Engenheiro(a) Agrônomo(a), CREA sob o nº ${rtCrea}, Responsável Técnico(a) pela produção da empresa <strong>${tenantName.toUpperCase()}</strong>, autorizo a colheita da parcela nº <strong>${pCode}</strong> com as variedades <strong>${variedadesStr.toUpperCase()}</strong>`;
+  }
 
   const printWin = window.open('', '_blank', 'width=950,height=1250');
   if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
@@ -16035,7 +16101,7 @@ function printPastaCampoAutColheita(itemStr) {
 
     <!-- TEXTO DA DECLARAÇÃO TÉCNICA -->
     <div class="declaration-p">
-      Ajax Dantas de Gois Filho, Engenheiro Agrônomo, CREA sob o nº 2100995243 e/ou Valeriano Dantas de Gois, Engenheiro Agrônomo, CREA sob o nº 2106090242 e/ou Francisco Canindé dos Santos Neto, Engenheiro Agrônomo, CREA sob o nº 2112017578, Técnicos Responsáveis pela produção da empresa <strong>${tenantName.toUpperCase()}</strong>, autorizo(amos) a colheita da parcela nº <strong>${pCode}</strong> com as variedades <strong>${variedadesStr.toUpperCase()}</strong>
+      ${rtDeclaration}
     </div>
 
     <!-- BLOCO DE CORTES COM LINHAS ABERTAS -->
@@ -16091,7 +16157,11 @@ function printPastaCampoAutColheita(itemStr) {
 
     <!-- CARIMBO E ASSINATURA -->
     <div class="sig-area">
-      <div class="sig-box">CARIMBO - ASSINATURA</div>
+      <div class="sig-box">
+        ${rtNome}<br/>
+        <span style="font-size:7.5pt; font-weight:normal;">Engenheiro(a) Agrônomo(a) - CREA ${rtCrea}</span><br/>
+        <span style="font-size:7pt; font-weight:normal; text-transform:uppercase;">Responsável Técnico(a)</span>
+      </div>
     </div>
   </div>
   </body>
@@ -19121,14 +19191,17 @@ function calcWebPrevisaoColheita() {
 }
 
 function calcWebPrevisaoColheitaRow(idx) {
-  const transplante = $(`webPlDataPlantio${idx}`)?.value || $(`webPlSemeaduraVar${idx}`)?.value;
+  const semeadura = $(`webPlSemeaduraVar${idx}`)?.value;
+  const transplante = $(`webPlDataPlantio${idx}`)?.value;
+  const dataBase = semeadura || transplante;
   const cultura = $('webPlCultura')?.value;
   const prevEl = $(`webPlPrevisaoVar${idx}`);
 
-  if (!transplante || !cultura || cultura === 'MAMÃO' || !prevEl) return;
+  if (!dataBase || !cultura || cultura === 'MAMÃO' || !prevEl) return;
 
-  const dias = cultura === 'MELÃO' ? 65 : 60; // MELANCIA = 60
-  const dt = new Date(transplante + 'T00:00:00');
+  // Ciclo total: a partir da semeadura ~75d (melão) / ~70d (melancia)
+  const dias = semeadura ? (cultura === 'MELÃO' ? 75 : 70) : (cultura === 'MELÃO' ? 65 : 60);
+  const dt = new Date(dataBase + 'T00:00:00');
   dt.setDate(dt.getDate() + dias);
   const iso = dt.toISOString().split('T')[0];
   prevEl.value = iso;
@@ -19517,7 +19590,7 @@ async function saveWebPlantio() {
   transplante4: varsData[3]?.data_plantio || null,
   transplante5: varsData[4]?.data_plantio || null,
 
-  plantio: varsData[0]?.data_plantio || varsData[0]?.semeadura || null,
+  plantio: varsData[0]?.semeadura || varsData[0]?.data_plantio || null,
   data_plantio1: varsData[0]?.data_plantio || null,
   data_plantio2: varsData[1]?.data_plantio || null,
   data_plantio3: varsData[2]?.data_plantio || null,
@@ -19717,153 +19790,7 @@ async function loadCadernoCampo() {
   } catch(e) {}
 }
 
-function printPastaCampoMip(itemStr) {
-  const item = typeof itemStr === 'string' ? JSON.parse(decodeURIComponent(itemStr)) : itemStr;
-  const formattedDate = item.data_vistoria ? item.data_vistoria.split('-').reverse().join('/') : '—';
-  
-  const pragaFriendly = (item.praga || '').replace(/_/g, ' ').toUpperCase();
-  const mediaVal = parseFloat(item.media) || 0;
-  
-  let limiar = 1.0;
-  if (pragaFriendly.includes('LAGARTA')) limiar = 0.2;
-  if (pragaFriendly.includes('OÍDIO') || pragaFriendly.includes('MÍLDIO')) limiar = 0.0;
-  
-  const acimaLimiar = mediaVal > limiar;
-  const statusText = acimaLimiar ? 'RECOMENDA-SE CONTROLE' : 'SOB CONTROLE';
-  
-  // Buscar informações da parcela
-  const ip = (_infoParcelas || []).find(x => x.parcela2 === item.parcela || x.parcela === item.parcela);
-  const info = getParcelaCompleteInfo(item.parcela || item, _infoParcelas);
-  const culturaStr = ip ? (ip.cultura || 'MELÃO').toUpperCase() : 'MELÃO';
-  const areaStr = ip && ip.area ? `${ip.area} ha` : '—';
-  const dataPlantioStr = ip && ip.plantio ? ip.plantio.split('-').reverse().join('/') : '—';
-
-  const printWin = window.open('', '_blank', 'width=900,height=1200');
-  if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
-
-  const html = `
-  <!DOCTYPE html>
-  <html>
-  <head>
-  <meta charset="utf-8"/>
-  <title>MIP — Ficha de Amostragem Fitossanitária</title>
-  <style>
-  @page { size: A4 portrait; margin: 8mm 10mm; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 8pt; line-height: 1.3; }
-  .sheet { width: 100%; }
-  .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-  .hdr-table td { border: 1px solid #000; padding: 3px 5px; font-size: 7.5pt; vertical-align: middle; }
-  .hdr-left { width: 50%; font-weight: bold; }
-  .hdr-right { width: 50%; font-family: 'Times New Roman', serif; font-size: 7.5pt; }
-  .main-title { font-family: 'Arial', sans-serif; font-size: 12pt; font-weight: bold; text-align: center; padding: 6px 0; border: 2px solid #000; margin-bottom: 8px; background: #f3f4f6; text-transform: uppercase; }
-  .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-  .grid-table td, .grid-table th { border: 1px solid #000; padding: 5px 7px; vertical-align: middle; }
-  .grid-table th { background: #f9fafb; font-weight: bold; text-align: center; }
-  .section-title { font-size: 9pt; font-weight: bold; margin: 12px 0 4px 0; padding-bottom: 2px; border-bottom: 1px solid #000; text-transform: uppercase; }
-  .pts-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-  .pts-table th, .pts-table td { border: 1px solid #000; padding: 6px; text-align: center; font-size: 9pt; }
-  .pts-table th { background: #f3f4f6; font-weight: bold; }
-  .status-box { border: 2px solid #000; padding: 8px; text-align: center; font-size: 10pt; font-weight: bold; margin-bottom: 12px; background: ${acimaLimiar ? '#fef2f2' : '#f0fdf4'}; color: ${acimaLimiar ? '#991b1b' : '#166534'}; }
-  .signatures-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 25px; }
-  .sig-box { border: 1px solid #000; padding: 8px; font-size: 7.5pt; background: #fafafa; display: flex; flex-direction: column; justify-content: space-between; height: 90px; }
-  .sig-line { margin-top: 20px; border-top: 1px dashed #000; text-align: center; padding-top: 3px; font-size: 7pt; font-weight: bold; }
-  </style>
-  </head>
-  <body onload="window.print()">
-  <div class="sheet">
-  <!-- CABEÇALHO OFICIAL COM LOGO DO TENANT -->
-  <div style="display:flex; justify-content:space-between; align-items:stretch; margin-bottom:8px; border:1px solid #000;">
-  <div style="width:45%; padding:5px; display:flex; align-items:center; gap:10px; border-right:1px solid #000;">
-  ${((window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64) ? `<img src="${(window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64}" style="max-height:45px; max-width:135px; object-fit:contain;"/>` : `<img src="logo.png" style="max-height:45px; max-width:135px; object-fit:contain;" onerror="this.style.display='none'"/>`}
-  <div>
-  <div style="font-size:9.5pt; font-weight:bold; color:#1b4332; text-transform:uppercase;">${(window.tenantConfig && window.tenantConfig.name || 'BOM JESUS AGRÍCOLA').toUpperCase()}</div>
-  <div style="font-size:6pt; color:#444; line-height:1.2;">
-  ${window.tenantConfig && window.tenantConfig.endereco ? `${window.tenantConfig.endereco}<br/>` : ''}
-  ${window.tenantConfig && window.tenantConfig.municipio ? `${window.tenantConfig.municipio}/${window.tenantConfig.uf || 'RN'}` : ''}
-  ${window.tenantConfig && window.tenantConfig.ggn_geral ? ` | GGN: ${window.tenantConfig.ggn_geral}` : ''}
-  </div>
-  </div>
-  </div>
-  <table class="hdr-table" style="width:55%; margin-bottom:0; border:none; table-layout:fixed;">
-  <tr>
-  <td class="hdr-left" style="border-top:none; border-left:none;">ELABORADO, EMITIDO E REVISADO: EMANUELA MOREIRA</td>
-  <td class="hdr-right" style="border-top:none; border-right:none;">DEPARTAMENTO: CAMPO</td>
-  </tr>
-  <tr>
-  <td class="hdr-left" style="border-left:none;">AVALIADO POR: ADGF</td>
-  <td class="hdr-right" style="border-right:none;">DOC: MONITORAMENTO E AMOSTRAGEM MIP</td>
-  </tr>
-  <tr>
-  <td class="hdr-left" style="border-left:none; border-bottom:none;">APROVADO POR: ADGF</td>
-  <td class="hdr-right" style="border-right:none; border-bottom:none; font-size:6pt;">EMISSÃO: 15/06/2026 &nbsp;&nbsp; VERSÃO: 01 &nbsp;&nbsp; COD: PC08</td>
-  </tr>
-  </table>
-  </div>
-
-  <div class="main-title">MANEJO INTEGRADO DE PRAGAS — FICHA DE AMOSTRAGEM (MIP)</div>
-
-  <table class="grid-table">
-  <tr>
-  <td style="width:25%;"><strong>PARCELA:</strong><br/><span style="font-size:10pt; font-weight:bold">${item.parcela || '—'}</span></td>
-  <td style="width:25%;"><strong>CULTURA:</strong><br/><span style="font-size:10pt; font-weight:bold">${culturaStr}</span></td>
-  <td style="width:25%;"><strong>VARIEDADE:</strong><br/>${item.variedade || '—'}</td>
-  <td style="width:25%;"><strong>DATA VISTORIA:</strong><br/><span style="font-size:10pt; font-weight:bold">${formattedDate}</span></td>
-  </tr>
-  <tr>
-  <td><strong>ÁREA PARCELA:</strong><br/>${areaStr}</td>
-  <td><strong>DATA PLANTIO:</strong><br/>${dataPlantioStr}</td>
-  <td colspan="2"><strong>PRAGA / DOENÇA MONITORADA:</strong><br/><span style="font-size:10pt; font-weight:bold">${pragaFriendly}</span></td>
-  </tr>
-  </table>
-
-  <div class="section-title">RESULTADOS DOS 10 PONTOS DE AMOSTRAGEM NO CAMPO</div>
-  <table class="pts-table">
-  <tr>
-  <th>Ponto 1</th><th>Ponto 2</th><th>Ponto 3</th><th>Ponto 4</th><th>Ponto 5</th>
-  <th>Ponto 6</th><th>Ponto 7</th><th>Ponto 8</th><th>Ponto 9</th><th>Ponto 10</th>
-  <th style="background:#e5e7eb; font-weight:bold">MÉDIA</th>
-  </tr>
-  <tr>
-  <td>${item.ponto1 ?? 0}</td><td>${item.ponto2 ?? 0}</td><td>${item.ponto3 ?? 0}</td><td>${item.ponto4 ?? 0}</td><td>${item.ponto5 ?? 0}</td>
-  <td>${item.ponto6 ?? 0}</td><td>${item.ponto7 ?? 0}</td><td>${item.ponto8 ?? 0}</td><td>${item.ponto9 ?? 0}</td><td>${item.ponto10 ?? 0}</td>
-  <td style="background:#e5e7eb; font-size:11pt; font-weight:bold">${mediaVal.toFixed(2)}</td>
-  </tr>
-  </table>
-
-  <div class="status-box">
-  AVALIAÇÃO TÉCNICA: ${statusText} (Limiar de Dano: ${limiar.toFixed(1)})
-  </div>
-
-  <div style="border:1px solid #000; padding:8px; margin-bottom:12px">
-  <strong>OBSERVAÇÕES DO PRAGUEIRO / AUDITORIA:</strong><br/>
-  ${cleanObservationText(item.obs_texto || item.observacoes) || 'Nenhuma observação registrada na amostragem.'}
-  </div>
-
-  <div class="signatures-grid" style="grid-template-columns: 1fr 1fr;">
-  <div class="sig-box">
-  <div>
-  <strong>Monitor de Pragas (Pragueiro)</strong><br/>
-  Responsável pela amostragem de campo e armadilhas
-  </div>
-  <div class="sig-line">Assinatura Monitor de Campo</div>
-  </div>
-  <div class="sig-box">
-  <div>
-  <strong>${item.tecnico || (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'David Ferreira'}</strong><br/>
-  Responsável Técnico de Campo
-  </div>
-  <div class="sig-line">Assinatura Resp. Técnico de Campo</div>
-  </div>
-  </div>
-  </div>
-  </body>
-  </html>
-  `;
-  
-  printWin.document.write(html);
-  printWin.document.close();
-}
+// A impressão oficial do MIP é realizada pelo modelo EMBRAPA 20 Pontos via printPastaCampoMip (ver abaixo)
 
 // ═══════════════════════════════════════════════════════
 // MIP — MANEJO INTEGRADO DE PRAGAS E DOENÇAS (EMBRAPA - 20 PONTOS)
@@ -19905,11 +19832,17 @@ function switchMipSubTab(tab) {
 function onWebMipParcelChange() {
   const pId = $('newMipParcelSelect')?.value;
   const ip = (_infoParcelas || []).find(x => x.id === pId);
-  if (ip) {
-    if ($('newMipVariedade')) $('newMipVariedade').value = `${ip.variedade || 'Sem variedade'} (${ip.cultura || 'Melão'})`;
+  const info = typeof getParcelaCompleteInfo === 'function' && ip ? getParcelaCompleteInfo(ip.parcela2 || ip.parcela || ip, _infoParcelas) : ip;
+  if (info || ip) {
+    const vars = (info && info.variedade) || (ip && ip.variedade) || 'Sem variedade';
+    const area = (info && info.area) || (ip && ip.area) || '';
+    if ($('newMipVariedade')) $('newMipVariedade').value = `${vars} (${(ip && ip.cultura) || 'Melão'})`;
+    if ($('newMipArea')) $('newMipArea').value = area ? `${parseFloat(area).toFixed(2).replace('.', ',')} ha` : '—';
     const dt = $('newMipDate')?.value || today();
-    if (ip.plantio && dt) {
-      const d1 = new Date(ip.plantio);
+    // Exigência da auditoria: A idade da parcela (DAP) é calculada a partir da SEMEADURA
+    const dataBase = (info && (info.semeadura || info.data_semeadura || info.plantio)) || (ip && (ip.semeadura || ip.data_semeadura || ip.plantio));
+    if (dataBase && dt) {
+      const d1 = new Date(dataBase);
       const d2 = new Date(dt);
       const diffDays = Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
       if ($('newMipDap')) $('newMipDap').value = diffDays >= 0 ? `${diffDays} DAP` : '0 DAP';
@@ -19918,6 +19851,7 @@ function onWebMipParcelChange() {
     }
   } else {
     if ($('newMipVariedade')) $('newMipVariedade').value = '';
+    if ($('newMipArea')) $('newMipArea').value = '—';
     if ($('newMipDap')) $('newMipDap').value = '—';
   }
 }
@@ -19946,7 +19880,7 @@ function openNewMipModal() {
 
   $('newMipDate').value = today();
   $('newMipPragueiro').value = '';
-  $('newMipTecnico').value = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'David Ferreira';
+  $('newMipTecnico').value = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS DE OLIVEIRA CUNHA';
   if ($('newMipObs')) $('newMipObs').value = '';
   if ($('newMipErvasPct')) $('newMipErvasPct').value = 0;
   if ($('newMipNematoideObs')) $('newMipNematoideObs').value = 'Monitoramento preventivo / ausência de galhas';
@@ -19991,7 +19925,7 @@ async function openEditMipModal(mipId) {
   onWebMipParcelChange();
 
   $('newMipPragueiro').value = item.responsavel_mip || item.responsavel || item.monitor || '';
-  $('newMipTecnico').value = item.tecnico || (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'David Ferreira';
+  $('newMipTecnico').value = item.tecnico || (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS DE OLIVEIRA CUNHA';
   if ($('newMipObs')) $('newMipObs').value = item.obs_texto || item.observacoes || '';
   if ($('newMipErvasPct')) $('newMipErvasPct').value = item.ervas_daninhas_pct || 0;
   if ($('newMipNematoideObs')) $('newMipNematoideObs').value = item.nematoide_obs || 'Monitoramento preventivo / ausência de galhas';
@@ -20368,11 +20302,15 @@ async function saveNewMipDashboard() {
     observacoes: userObs
   });
 
+  const info = typeof getParcelaCompleteInfo === 'function' && ip ? getParcelaCompleteInfo(ip.parcela2 || ip.parcela || ip, _infoParcelas) : ip;
+  const allVariedades = (info && info.variedade) || (ip ? (ip.variedade || '') : '');
+  const areaVal = (info && info.area) || (ip ? (ip.area || '') : '');
+
   const record = {
     tenant_id: tenantId,
     parcel_id: (ip && ip.parcel_id) ? ip.parcel_id : null,
     parcela: parcelCode,
-    variedade: ip ? (ip.variedade || '') : '',
+    variedade: allVariedades,
     data_vistoria: dateVal,
     praga: summaryPraga,
     media: parseFloat(maxMedia.toFixed(2)),
@@ -20600,75 +20538,160 @@ function printPastaCampoMip(itemStr) {
   const item = typeof itemStr === 'string' ? JSON.parse(decodeURIComponent(itemStr)) : itemStr;
   const formattedDate = item.data_vistoria ? item.data_vistoria.split('-').reverse().join('/') : '—';
   
-  const printWin = window.open('', '_blank', 'width=1050,height=1200');
+  const printWin = window.open('', '_blank', 'width=1100,height=1200');
   if (!printWin) { alert('Por favor, permita popups no navegador para imprimir.'); return; }
 
-  const ip = (_infoParcelas || []).find(x => x.parcela2 === item.parcela || x.parcela === item.parcela);
+  const ip = (_infoParcelas || []).find(x => x.parcela2 === item.parcela || x.parcela === item.parcela || x.id === item.parcel_id);
   const info = typeof getParcelaCompleteInfo === 'function' ? getParcelaCompleteInfo(item.parcela || item, _infoParcelas) : ip;
-  const empresaStr = (window.tenantConfig && window.tenantConfig.name || 'PRODTEC AGRO').toUpperCase();
-  const fazendaStr = (window.tenantConfig && window.tenantConfig.fazenda_nome || 'Fazenda Principal').toUpperCase();
-  const plantioDate = (info && info.plantio) || (ip && ip.plantio);
-  const dapStr = item.dap ? `${item.dap} DAP` : (plantioDate && item.data_vistoria ? `${Math.floor((new Date(item.data_vistoria) - new Date(plantioDate))/(1000*60*60*24))} DAP` : '—');
+  const empresaStr = ((window.tenantConfig && (window.tenantConfig.razao_social || window.tenantConfig.name)) || window.tenantName || 'PRODTEC AGRO').toUpperCase();
+  const fazendaStr = (
+    (item && (item.fazenda || item.fazenda_nome || item.propriedade)) ||
+    (info && (info.fazenda || info.fazenda_nome || info.propriedade)) ||
+    (ip && (ip.fazenda || ip.fazenda_nome || ip.propriedade)) ||
+    (window.tenantConfig && (window.tenantConfig.fazenda_nome || window.tenantConfig.fazenda || window.tenantConfig.propriedade)) ||
+    localStorage.getItem('cfg_fazenda_nome_' + (window.tenantId || '')) ||
+    localStorage.getItem('e3d_last_fazenda') ||
+    'SANTA HELENA'
+  ).toUpperCase();
 
-  // 1. Linhas de Pragas (20 Pontos)
+  // Exigência da auditoria: Idade da cultura calculada a partir da SEMEADURA
+  const baseDateMIP = (info && (info.semeadura || info.data_semeadura || info.plantio)) || (ip && (ip.semeadura || ip.data_semeadura || ip.plantio)) || (item && (item.semeadura || item.data_semeadura || item.plantio));
+  const dapStr = item.dap ? `${item.dap} DAP` : (baseDateMIP && item.data_vistoria ? `${Math.floor((new Date(item.data_vistoria) - new Date(baseDateMIP))/(1000*60*60*24))} DAP` : '—');
+  const areaStr = (info && info.area) ? `${parseFloat(info.area).toFixed(2).replace('.', ',')} ha` : ((ip && ip.area) ? `${parseFloat(ip.area).toFixed(2).replace('.', ',')} ha` : (item.area ? `${item.area} ha` : '—'));
+  const variedadesStr = (info && info.variedade) ? info.variedade : (item.variedade || (ip && ip.variedade) || '—');
+  const parcelaStr = item.parcela || (info && info.parcelaNum) || (ip && (ip.parcela2 || ip.parcela)) || '—';
+  const operadorResp = item.responsavel_mip || item.responsavel || item.monitor || item.pragueiro || 'EMANUELA MOREIRA';
+
+  // 1. Linhas de Pragas Estruturadas conforme Modelo EMBRAPA oficial (da imagem)
   const pragasJson = item.pragas_json || {};
-  let pragasRowsHtml = MIP_PRAGAS_EMBRAPA.map(p => {
-    const dataObj = pragasJson[p.key] || {};
-    const pts = dataObj.pontos || (p.key.startsWith('mosca') && item.pontos ? item.pontos : Array(20).fill(0));
-    const total = dataObj.total !== undefined ? dataObj.total : pts.reduce((a,b)=>a+b, 0);
-    const media = dataObj.media !== undefined ? dataObj.media : (total / 20.0);
-    const acima = dataObj.acima_limiar !== undefined ? dataObj.acima_limiar : (p.limiarTipo==='media' ? media>=p.limiar : total>=p.limiar && p.limiar<999);
+  const pragasGroups = [
+    {
+      nome: 'Mosca Branca',
+      fases: [
+        { key: 'mosca_branca_adulto', fase: 'Adulto', limiar: 2.0, limiarTipo: 'media' },
+        { key: 'mosca_branca_ninfa', fase: 'Ninfa', limiar: 2.0, limiarTipo: 'media' }
+      ],
+      nivelDanoHtml: '2*<br/><span style="font-size:6.5pt; font-weight:normal;">(média de adultos e ninfas encontrados por ponto)</span>'
+    },
+    {
+      nome: 'Minadora',
+      fases: [
+        { key: 'minadora_larva', fase: 'Larva viva', limiar: 4, limiarTipo: 'pontos', limiarTexto: '04 nos 20 pontos' },
+        { key: 'minadora_adulto', fase: 'Adulto', limiar: 10, limiarTipo: 'pontos', limiarTexto: '10 nos 20 pontos' }
+      ]
+    },
+    {
+      nome: 'Pulgão',
+      fases: [
+        { key: 'pulgao_c_asa', fase: 'c/asa', limiar: 999, limiarTipo: 'pontos' },
+        { key: 'pulgao_s_asa', fase: 's/asa', limiar: 3, limiarTipo: 'pontos' }
+      ],
+      nivelDanoHtml: '3 nos 20 pontos'
+    },
+    {
+      nome: 'Diafânia',
+      fases: [
+        { key: 'diafania_ovo', fase: 'Ovo', limiar: 999, limiarTipo: 'pontos', limiarTexto: '—' },
+        { key: 'diafania_lagarta', fase: 'Lagarta', limiar: 3, limiarTipo: 'pontos', limiarTexto: '03 nos 20 pontos' }
+      ]
+    },
+    {
+      nome: 'Mede-palmo',
+      fases: [
+        { key: 'mede_palmo_ovo', fase: 'Ovo', limiar: 999, limiarTipo: 'pontos', limiarTexto: '—' },
+        { key: 'mede_palmo_lagarta', fase: 'Lagarta', limiar: 6, limiarTipo: 'pontos', limiarTexto: '06 nos 20 pontos' }
+      ]
+    },
+    {
+      nome: 'Trips',
+      fases: [
+        { key: 'trips_adulto', fase: 'Adulto', limiar: 3, limiarTipo: 'pontos', limiarTexto: '03 nos 20 pontos' }
+      ]
+    }
+  ];
 
-    const ptsHtml = Array.from({length: 20}, (_, i) => {
-      const v = pts[i] !== undefined ? pts[i] : 0;
-      const highlight = v > 0 ? (acima ? 'background:#fca5a5; font-weight:bold;' : 'background:#fef3c7;') : '';
-      return `<td style="border:1px solid #000; text-align:center; padding:2px; font-size:7.5pt; ${highlight}">${v}</td>`;
-    }).join('');
+  let pragasRowsHtml = '';
+  pragasGroups.forEach(g => {
+    g.fases.forEach((faseObj, idx) => {
+      const dataObj = pragasJson[faseObj.key] || {};
+      let pts = dataObj.pontos ? [...dataObj.pontos] : (faseObj.key.startsWith('mosca') && item.pontos ? [...item.pontos] : Array(20).fill(0));
+      while (pts.length < 20) pts.push(0);
 
-    const rowBg = acima ? 'background:#fee2e2;' : '';
+      const total = dataObj.total !== undefined ? dataObj.total : pts.reduce((a, b) => a + (Number(b) || 0), 0);
+      const media = dataObj.media !== undefined ? dataObj.media : (total / 20.0);
+      const mediaStr = media === 0 ? '0' : media.toFixed(2).replace('.', ',');
 
-    return `
-    <tr style="${rowBg}">
-      <td style="border:1px solid #000; padding:3px 5px; font-weight:bold; font-size:7.5pt">${p.praga}</td>
-      <td style="border:1px solid #000; padding:3px 5px; font-size:7.5pt">${p.fase}</td>
-      ${ptsHtml}
-      <td style="border:1px solid #000; text-align:center; font-weight:bold; padding:2px; font-size:7.5pt">${total}</td>
-      <td style="border:1px solid #000; text-align:center; font-weight:bold; padding:2px; font-size:7.5pt">${media.toFixed(2)}</td>
-      <td style="border:1px solid #000; text-align:center; padding:2px 4px; font-size:7pt">${p.limiarTexto}</td>
-    </tr>
-    `;
-  }).join('');
+      const ptsHtml = Array.from({length: 20}, (_, i) => {
+        const v = pts[i] !== undefined ? pts[i] : 0;
+        return `<td style="border:1px solid #000; text-align:center; padding:2px 1px; font-size:7.5pt;">${v}</td>`;
+      }).join('');
+
+      if (idx === 0) {
+        let danoCell = '';
+        if (g.nivelDanoHtml) {
+          danoCell = `<td rowspan="${g.fases.length}" style="border:1px solid #000; text-align:center; vertical-align:middle; padding:2px 4px; font-size:7.5pt; font-weight:normal;">${g.nivelDanoHtml}</td>`;
+        } else {
+          danoCell = `<td style="border:1px solid #000; text-align:center; padding:2px 4px; font-size:7.5pt;">${faseObj.limiarTexto || '—'}</td>`;
+        }
+
+        pragasRowsHtml += `
+        <tr>
+          <td rowspan="${g.fases.length}" style="border:1px solid #000; padding:2px 6px; font-weight:normal; text-align:left; vertical-align:middle; font-size:7.5pt;">${g.nome}</td>
+          <td style="border:1px solid #000; padding:2px 4px; text-align:center; font-size:7.5pt;">${faseObj.fase}</td>
+          ${ptsHtml}
+          <td style="border:1px solid #000; text-align:center; padding:2px; font-size:7.5pt;">${total}</td>
+          <td style="border:1px solid #000; text-align:center; padding:2px; font-size:7.5pt;">${mediaStr}</td>
+          ${danoCell}
+        </tr>
+        `;
+      } else {
+        let danoCell = '';
+        if (!g.nivelDanoHtml) {
+          danoCell = `<td style="border:1px solid #000; text-align:center; padding:2px 4px; font-size:7.5pt;">${faseObj.limiarTexto || '—'}</td>`;
+        }
+
+        pragasRowsHtml += `
+        <tr>
+          <td style="border:1px solid #000; padding:2px 4px; text-align:center; font-size:7.5pt;">${faseObj.fase}</td>
+          ${ptsHtml}
+          <td style="border:1px solid #000; text-align:center; padding:2px; font-size:7.5pt;">${total}</td>
+          <td style="border:1px solid #000; text-align:center; padding:2px; font-size:7.5pt;">${mediaStr}</td>
+          ${danoCell}
+        </tr>
+        `;
+      }
+    });
+  });
 
   // 2. Linhas de Doenças (20 Pontos)
   const doencasJson = item.doencas_json || {};
   let doencasRowsHtml = MIP_DOENCAS_EMBRAPA.map(d => {
     const dataObj = doencasJson[d.key] || {};
-    const pts = dataObj.pontos || Array(20).fill(0);
-    const total = dataObj.total !== undefined ? dataObj.total : pts.reduce((a,b)=>a+b, 0);
+    let pts = dataObj.pontos ? [...dataObj.pontos] : Array(20).fill(0);
+    while (pts.length < 20) pts.push(0);
+
+    const total = dataObj.total !== undefined ? dataObj.total : pts.reduce((a, b) => a + (Number(b) || 0), 0);
     const pct = dataObj.pct !== undefined ? dataObj.pct : ((total / 20.0) * 100);
-    const acima = total > 0;
 
     const ptsHtml = Array.from({length: 20}, (_, i) => {
       const v = pts[i] !== undefined ? pts[i] : 0;
-      const highlight = v > 0 ? 'background:#fca5a5; font-weight:bold;' : '';
-      return `<td style="border:1px solid #000; text-align:center; padding:2px; font-size:7.5pt; ${highlight}">${v}</td>`;
+      return `<td style="border:1px solid #000; text-align:center; padding:2px 1px; font-size:7.5pt;">${v}</td>`;
     }).join('');
 
-    const rowBg = acima ? 'background:#fee2e2;' : '';
-
     return `
-    <tr style="${rowBg}">
-      <td style="border:1px solid #000; padding:3px 5px; font-weight:bold; font-size:7.5pt" colspan="2">${d.name}</td>
+    <tr>
+      <td style="border:1px solid #000; padding:2px 6px; font-size:7.5pt; text-align:left;" colspan="2">${d.name}</td>
       ${ptsHtml}
-      <td style="border:1px solid #000; text-align:center; font-weight:bold; padding:2px; font-size:7.5pt">${total}</td>
-      <td style="border:1px solid #000; text-align:center; font-weight:bold; padding:2px; font-size:7.5pt">${pct.toFixed(0)}%</td>
-      <td style="border:1px solid #000; text-align:center; padding:2px 4px; font-size:7pt">${d.limiarTexto}</td>
+      <td style="border:1px solid #000; text-align:center; padding:2px; font-size:7.5pt;">${total}</td>
+      <td style="border:1px solid #000; text-align:center; padding:2px; font-size:7.5pt;">${Math.round(pct)}%</td>
+      <td style="border:1px solid #000; text-align:center; padding:2px 4px; font-size:7.5pt;">${d.limiarTexto || '> 0%'}</td>
     </tr>
     `;
   }).join('');
 
   const ervasPct = item.ervas_daninhas_pct !== undefined ? item.ervas_daninhas_pct : 0;
-  const nematoideStr = item.nematoide_obs || 'A ocorrência de nematóides deve apenas ser monitorada por adoção de medidas de manejo em futuros plantios na mesma área.';
+  const ervasPctFmt = String(Math.round(ervasPct)).padStart(2, '0');
+  const nematoideStr = item.nematoide_obs || 'A ocorrência de nematoides deve apenas ser monitorada por adoção de medidas de manejo em futuros plantios na mesma área';
 
   const html = `
 <!DOCTYPE html>
@@ -20677,19 +20700,17 @@ function printPastaCampoMip(itemStr) {
   <meta charset="utf-8"/>
   <title>MIP — Ficha de Amostragem Modelo EMBRAPA</title>
   <style>
-    @page { size: A4 landscape; margin: 6mm 8mm; }
+    @page { size: A4 landscape; margin: 5mm 6mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Arial', sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 8pt; line-height: 1.2; }
+    body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 8pt; line-height: 1.2; }
     .sheet { width: 100%; max-width: 100%; }
-    .main-title { font-size: 11pt; font-weight: 900; text-align: center; padding: 4px 0; border: 2px solid #000; margin-bottom: 6px; background: #fff; text-transform: uppercase; letter-spacing: 0.5px; }
-    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-    .info-table td { border: 1.5px solid #000; padding: 4px 6px; font-size: 8pt; }
-    .mip-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 7.5pt; }
+    .main-title { font-size: 11pt; font-weight: bold; text-align: center; padding: 4px 0; border: 1.5px solid #000; margin-bottom: 4px; background: #fff; text-transform: uppercase; letter-spacing: 0.5px; }
+    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; border: 1.5px solid #000; }
+    .info-table td { border: 1px solid #000; padding: 3px 6px; font-size: 8pt; }
+    .mip-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 7.5pt; table-layout: fixed; }
     .mip-table th, .mip-table td { border: 1px solid #000; }
-    .mip-table th { background: #f2f2f2; font-weight: bold; text-align: center; padding: 4px 2px; }
-    .sec-header { background: #e5e7eb; font-weight: 900; text-align: left; padding: 4px 6px; text-transform: uppercase; font-size: 8pt; }
-    .footer-box { border: 1.5px solid #000; padding: 4px 6px; font-size: 7.5pt; margin-bottom: 6px; }
-    .official-footer { display: flex; justify-content: space-between; font-size: 6.5pt; font-family: 'Arial', sans-serif; margin-top: 6px; color: #000; text-transform: uppercase; border-top: 1px solid #000; padding-top: 4px; }
+    .mip-table th { background: #f2f2f2; font-weight: bold; text-align: center; padding: 3px 1px; font-size: 7.5pt; }
+    .mip-table td { padding: 2px 1px; }
   </style>
 </head>
 <body onload="window.print()">
@@ -20699,17 +20720,20 @@ function printPastaCampoMip(itemStr) {
     <!-- Cabeçalho de Identificação -->
     <table class="info-table">
       <tr>
-        <td style="width: 50%;"><strong>Nome da Empresa:</strong> ${empresaStr}</td>
-        <td style="width: 50%;"><strong>Propriedade:</strong> ${fazendaStr}</td>
+        <td style="width: 50%;"><strong>Nome da Empresa:</strong> &nbsp;${empresaStr}</td>
+        <td style="width: 50%;"><strong>Propriedade:</strong> &nbsp;${fazendaStr}</td>
       </tr>
       <tr>
-        <td colspan="2">
-          <div style="display:flex; justify-content:space-between;">
-            <span><strong>Parcela:</strong> ${item.parcela || '—'}</span>
-            <span><strong>Variedades:</strong> ${info ? info.variedade : (item.variedade || (ip && ip.variedade) || '—')}</span>
-            <span><strong>Idade da cultura:</strong> ${dapStr}</span>
-            <span><strong>Data:</strong> ${formattedDate}</span>
-          </div>
+        <td colspan="2" style="padding: 0;">
+          <table style="width: 100%; border-collapse: collapse; border: none;">
+            <tr>
+              <td style="border: none; border-right: 1px solid #000; width: 15%; padding: 3px 6px;"><strong>Parcela:</strong> &nbsp;${parcelaStr}</td>
+              <td style="border: none; border-right: 1px solid #000; width: 12%; padding: 3px 6px;"><strong>Área:</strong> &nbsp;${areaStr}</td>
+              <td style="border: none; border-right: 1px solid #000; width: 38%; padding: 3px 6px;"><strong>Variedade:</strong> &nbsp;${variedadesStr}</td>
+              <td style="border: none; border-right: 1px solid #000; width: 20%; padding: 3px 6px;"><strong>Idade da cultura:</strong> &nbsp;${dapStr}</td>
+              <td style="border: none; width: 15%; padding: 3px 6px;"><strong>Data:</strong> &nbsp;${formattedDate}</td>
+            </tr>
+          </table>
         </td>
       </tr>
     </table>
@@ -20720,24 +20744,26 @@ function printPastaCampoMip(itemStr) {
         <tr>
           <th colspan="2" style="width:160px;">PRAGAS</th>
           <th colspan="20">PONTOS AMOSTRADOS</th>
-          <th colspan="2" style="width:75px;">Ptos Atacados</th>
-          <th style="width:150px;">Nível de Dano</th>
+          <th colspan="2" style="width:90px;">Ptos Atacados</th>
+          <th style="width:160px;">Nível de Dano</th>
         </tr>
         <tr>
-          <th style="width:100px;">Nomes</th>
-          <th style="width:60px;">Fases</th>
-          <th>01</th><th>02</th><th>03</th><th>04</th><th>05</th><th>06</th><th>07</th><th>08</th><th>09</th><th>10</th>
-          <th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th><th>17</th><th>18</th><th>19</th><th>20</th>
-          <th>Total</th>
-          <th>Média</th>
-          <th>Nº . de pontos</th>
+          <th style="width:95px;">Nomes</th>
+          <th style="width:65px;">Fases</th>
+          <th style="width:23px;">01</th><th style="width:23px;">02</th><th style="width:23px;">03</th><th style="width:23px;">04</th><th style="width:23px;">05</th>
+          <th style="width:23px;">06</th><th style="width:23px;">07</th><th style="width:23px;">08</th><th style="width:23px;">09</th><th style="width:23px;">10</th>
+          <th style="width:23px;">11</th><th style="width:23px;">12</th><th style="width:23px;">13</th><th style="width:23px;">14</th><th style="width:23px;">15</th>
+          <th style="width:23px;">16</th><th style="width:23px;">17</th><th style="width:23px;">18</th><th style="width:23px;">19</th><th style="width:23px;">20</th>
+          <th style="width:45px;">Total</th>
+          <th style="width:45px;">Média</th>
+          <th style="width:160px;">Nº . de pontos</th>
         </tr>
       </thead>
       <tbody>
         ${pragasRowsHtml}
         <tr>
-          <th colspan="2" style="text-align:left; padding:4px 6px; background:#f2f2f2;">DOENÇAS</th>
-          <th colspan="20" style="background:#f2f2f2;">PONTOS AMOSTRADOS</th>
+          <th colspan="2" style="text-align:center;">DOENÇAS</th>
+          <th colspan="20">PONTOS AMOSTRADOS</th>
           <th>Total</th>
           <th>% Doença</th>
           <th>Nível de Dano</th>
@@ -20747,29 +20773,24 @@ function printPastaCampoMip(itemStr) {
     </table>
 
     <!-- Ervas Daninhas & Nematóide -->
-    <div class="footer-box">
-      <strong>ERVAS DANINHAS:</strong> PERCENTUAL DE ERVAS DANINHAS NA PARCELA: <u>&nbsp;${ervasPct}%&nbsp;</u> ${ervasPct >= 30 ? '<span style="color:#b91c1c; font-weight:bold;">(⚠️ RECOMENDA APLICAÇÃO DE HERBICIDA)</span>' : '(Sob Controle)'}
+    <div style="border:1.5px solid #000; border-bottom:none; padding:4px 6px; font-size:7.5pt; font-weight:bold;">
+      ERVAS DANINHAS: PERCENTUAL DE ERVAS DANINHAS NA PARCELA: ${ervasPctFmt}%
     </div>
-    <div class="footer-box">
-      <strong>Nematóide:</strong> ${nematoideStr}
+    <div style="border:1.5px solid #000; padding:4px 6px; font-size:7.5pt; margin-bottom:5px;">
+      <strong>Nematóide</strong> - ${nematoideStr}
     </div>
 
     <!-- Notas e Assinaturas -->
-    <div style="font-size: 7pt; margin-bottom: 6px; line-height: 1.3;">
-      * Na ausência de sintoma de amarelão o nível de ação deverá ser de 10 insetos (média) nos 20 pontos amostrados. Doenças: uma única planta (>5%) justifica o controle (P=Presença; A= Ausência)<br/>
-      <strong>Nome do operador responsável / Mipeiro:</strong> <u>&nbsp;${item.responsavel_mip || 'David Ferreira'}&nbsp;</u> &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Responsável Técnico (RT):</strong> <u>&nbsp;${item.tecnico || 'David Ferreira'}&nbsp;</u>
+    <div style="font-size: 6.8pt; line-height: 1.3; margin-bottom: 4px;">
+      * Na ausência de sintoma de amarelão o nível de ação deverá ser de 10 insetos (média) nos 20 pontos amostrados. Doenças: uma única planta (&gt;5%) justifica o controle (P=Presença; A=Ausência)
+    </div>
+    <div style="font-size: 7.5pt; font-weight: bold; margin-bottom: 6px;">
+      Nome do operador responsável: <u>&nbsp;&nbsp;${operadorResp}&nbsp;&nbsp;</u>
     </div>
 
     <!-- Rodapé Oficial EMBRAPA / Código do Documento -->
-    <div class="official-footer">
-      <span>IMPLANTADO POR EMANUELA MOREIRA</span>
-      <span>REVISADO E APROVADO POR ADGF</span>
-      <span>PAG 01 DE 01</span>
-      <span>FREQ. A CADA 3 DIAS</span>
-      <span>COD.CP 12 — VERSÃO 01</span>
-      <span>EMISSÃO: 15-06-2026</span>
-      <span>MOD E APROV.: 01-07-2026</span>
-      <span>U. REVISÃO 01-07-2026</span>
+    <div style="font-size: 6.2pt; text-align: center; border-top: 1px solid #000; padding-top: 4px; font-weight: bold; letter-spacing: 0.2px;">
+      IMPLANTADO POR EMANUELA MOREIRA \ REVISADO E APROVADO POR ADGF -- PAG 01 DE 01 - FREQ. A CADA 3 DIAS - COD.CP 12 -- VERSÃO 01 - EMISSÃO: 15-06-2026 - MOD E APROV.: 01-07-2026 - U. REVISÃO 01-07-2026
     </div>
   </div>
 </body>
@@ -24900,7 +24921,7 @@ function onWebFertParcelChange() {
   const variedade = info ? (info.variedade || '') : '';
   const cultura = info ? (info.cultura || '') : '';
   const area = info ? (parseFloat(info.area) || 1.0) : 1.0;
-  const plantioStr = info ? (info.plantio || info.data_plantio || info.transplante || info.data_plantio1 || '') : '';
+  const plantioStr = info ? (info.semeadura || info.data_semeadura || info.plantio || info.data_plantio || info.transplante || info.data_plantio1 || '') : '';
 
   // Auto-selecionar Protocolo com base na variedade / cultura
   const varUpper = (variedade + ' ' + cultura).toUpperCase();
@@ -24941,7 +24962,8 @@ function onWebFertProtocolOrFactorChange() {
 function calcWebFertDap(parcelCode, dateStr) {
   if (!parcelCode) return null;
   const info = findParcelInfoFlexible(parcelCode);
-  const plantioStr = info ? (info.plantio || info.data_plantio || info.transplante || info.data_plantio1) : null;
+  // Critério auditoria: contagem a partir da SEMEADURA
+  const plantioStr = info ? (info.semeadura || info.data_semeadura || info.plantio || info.data_plantio || info.transplante || info.data_plantio1) : null;
   if (!plantioStr) return null;
 
   const plantioDate = parseDateFlexibleWeb(plantioStr);
@@ -25416,8 +25438,8 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
     ? info.variedadesList.join(', ')
     : (item ? (item.variedades || [item.variedade || 'JADEAL']).filter(Boolean).join(', ') : 'JADEAL');
 
-  const plantioStr = (item && (item.plantio || item.transplante || item.data_plantio || item.data_plantio1)) ||
-                     (info && (info.plantio || info.transplante || info.data_plantio || info.data_plantio1));
+  const plantioStr = (item && (item.semeadura || item.data_semeadura || item.semeadura1 || item.plantio || item.transplante || item.data_plantio || item.data_plantio1)) ||
+                     (info && (info.semeadura || info.data_semeadura || info.semeadura1 || info.plantio || info.transplante || info.data_plantio || info.data_plantio1));
   const plantioDt = plantioStr ? parseDateFlexibleWeb(plantioStr) : null;
 
   let fertData = [];
