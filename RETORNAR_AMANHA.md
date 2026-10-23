@@ -59,9 +59,20 @@ Quando a ficha PC06 da Parcela 16 M for impressa amanhã:
 
 ---
 
-## 4. Próximos Passos Imediatos ao Retomar Amanhã
+## 5. Resolução da Extensão do Ciclo de Fertirrigação (PC08 & PC07)
 
-1. Abrir o navegador em `http://localhost:5173` ou na página de impressão.
-2. Clicar no botão de impressão de defensivos PC06 para a Parcela 16 M (ou outra parcela em auditoria).
-3. Verificar a impressão direta e validar com a equipe que os números batem 100% com as exigências dos auditores.
-4. Qualquer ajuste fino de layout de impressão (margens ou larguras de coluna) pode ser feito rapidamente conforme o retorno do usuário.
+1. **Dúvida / Apontamento do Usuário:**
+   - O usuário observou no áudio que a fertirrigação do melão é extensa (vai até DAP 50 a 55+), porém o resumo PC08 estava imprimindo apenas até 20/09/2026 (DAP 26, com 13 linhas), e questionou se o resumo deveria ser mais abrangente e cobrir todo o ciclo.
+2. **Causa Raiz Identificada:**
+   - Na ausência de lançamentos manuais na tabela `caderno_campo_fertirrigacao` para a parcela 16 M, o sistema aciona o cronograma fallback da cultura.
+   - Em `campo/resumoElementos.js`, o fallback `defaultProtoSched` continha um stub fixo que terminava no DAP 26.
+   - Além disso, o uso de `rowspan` na coluna "FORMA DE APLICAÇÃO" causava quebra e deslocamento de colunas no Chromium em impressões de 2 páginas.
+3. **Correções Implementadas:**
+   - Integrado o protocolo oficial completo (`DEFAULT_FERT_PROTOCOLS`) diretamente em [campo/resumoElementos.js](file:///c:/Users/mgcon/Desktop/prodtecweb/campo/resumoElementos.js) e sincronizado em [campo/index.html](file:///c:/Users/mgcon/Desktop/prodtecweb/campo/index.html).
+   - O cronograma agora cobre todo o ciclo da cultura:
+     - **Melão Padrão:** 55 dias (DAP 11 ao DAP 65).
+     - **Melão Astúria:** 65 dias (DAP 11 ao DAP 75).
+     - **Melão Grand Prix:** 60 dias (DAP 11 ao DAP 70).
+     - **Melancia:** 50 dias (DAP 16 ao DAP 65).
+   - Substituído o `rowspan` por célula individual com `FERTIRRIGAÇÃO` por linha, garantindo alinhamento perfeito de colunas nas 2 páginas A4 paisagem ("PAG: 01 DE 02").
+   - Habilitado `thead { display: table-header-group; }` e `tr { page-break-inside: avoid; }` para repetição elegante do cabeçalho na página 2 da impressão.

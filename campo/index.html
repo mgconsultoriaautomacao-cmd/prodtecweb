@@ -7171,27 +7171,21 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
       `;
     }).join('');
   } else {
-    // Protocolo fallback
-    const defaultProtoSched = {
-      "11":{"MAP":3.0,"UREIA":3.0},
-      "12":{"MAP":3.0,"UREIA":3.0,"NIT. CALCIO":2.0},
-      "13":{"MAP":3.0,"UREIA":3.0,"SULF. MAG.":1.0,"FERT":1.0},
-      "14":{"MAP":5.0,"UREIA":3.0,"NIT. CALCIO":2.0,"SULF. POTASSIO":2.0,"FERT":1.0},
-      "15":{"MAP":5.0,"UREIA":3.0,"SULF. MAG.":1.0,"FERT":1.0},
-      "20":{"MAP":5.0,"UREIA":4.0,"ACIDO BORICO":0.3,"NIT. CALCIO":2.0,"SULF. POTASSIO":2.0},
-      "25":{"MAP":6.0,"UREIA":5.0,"ACIDO BORICO":0.5,"NIT. CALCIO":2.0,"SULF. MAG.":1.0,"SULF. POTASSIO":2.0,"FERT":1.0},
-      "30":{"MAP":8.0,"ACIDO BORICO":0.5,"NIT. CALCIO":2.0,"SULF. MAG.":1.0,"SULF. POTASSIO":3.0,"FERT":1.0},
-      "35":{"MAP":9.0,"ACIDO BORICO":0.4,"NIT. CALCIO":3.0,"SULF. MAG.":2.0,"SULF. POTASSIO":3.0,"FERT":1.0},
-      "40":{"MAP":6.0,"UREIA":2.0,"ACIDO BORICO":0.4,"NIT. CALCIO":4.0,"SULF. MAG.":2.0,"SULF. POTASSIO":6.0,"FERT":1.0},
-      "45":{"UREIA":5.0,"ACIDO BORICO":0.25,"NIT. CALCIO":5.0,"SULF. MAG.":2.0,"SULF. POTASSIO":13.0,"FERT":1.0},
-      "50":{"UREIA":5.0,"ACIDO BORICO":0.25,"NIT. CALCIO":7.0,"SULF. MAG.":2.0,"SULF. POTASSIO":13.0},
-      "55":{"NIT. CALCIO":9.0,"SULF. MAG.":1.0,"SULF. POTASSIO":13.0},
-      "60":{"NIT. CALCIO":9.0,"SULF. POTASSIO":13.0}
-    };
+    // Protocolo Fallback Completo DAP 11 ao 65/75
+    const varUpper = (variedadesStr + ' ' + (item ? item.cultura || '' : '')).toUpperCase();
+    let protoKey = 'MELAO_PADRAO';
+    if (varUpper.includes('ASTURIA')) protoKey = 'ASTURIA';
+    else if (varUpper.includes('GRAND') || varUpper.includes('PRIX')) protoKey = 'GRAND_PRIX';
+    else if (varUpper.includes('MELANCIA') || varUpper.includes('WATERMELON')) protoKey = 'MELANCIA_PADRAO';
+
+    const proto = FERT_PROTOCOLS[protoKey] || FERT_PROTOCOLS['MELAO_PADRAO'];
+    const sched = proto ? proto.schedule : {};
     const areaVal = parseFloat(areaHa) || 1.0;
 
     let orderCount = 1;
-    rowsHtml = Object.entries(defaultProtoSched).sort((a,b) => Number(a[0]) - Number(b[0])).map(([dapKey, doses]) => {
+    const schedEntries = Object.entries(sched).sort((a,b) => Number(a[0]) - Number(b[0]));
+
+    rowsHtml = schedEntries.map(([dapKey, doses]) => {
       const dapNum = Number(dapKey);
       let calcDtStr = '—';
       if (plantioDt && !isNaN(plantioDt.getTime())) {
@@ -7206,6 +7200,7 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
       const colsHtml = uniqueProducts.map(p => {
         let doseBase = 0;
         Object.entries(doses).forEach(([fKey, val]) => {
+          if (fKey === 'OBSERVAÇÕES') return;
           const mappedName = mapFertNames[fKey] || fKey.trim().toUpperCase();
           if (mappedName === p) doseBase += Number(val);
         });
