@@ -851,7 +851,22 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
 }
 
 // ── 5. IMPRESSÃO OFICIAL: PC08 — CONTROLE GERAL DO USO DE FERTILIZANTES ─────
-async function printPastaCampoResumoElementos(parcelIdOrCode) {
+async function printPastaCampoResumoElementos(parcelIdOrCode, forceManual) {
+  let isManualMode = true;
+  if (typeof forceManual === 'boolean') {
+    isManualMode = forceManual;
+  } else {
+    const modoResp = prompt(
+      'Selecione o modelo de impressão do RESUMO DE ELEMENTOS (PC08):\n\n' +
+      '1 = MODELO DE CAMPO / AUDITORIA (Primeiras aplicações + linhas em branco para preenchimento manual)\n' +
+      '2 = MODELO DIGITAL COMPLETO (Todo o ciclo pré-calculado pelo sistema)\n\n' +
+      'Digite 1 ou 2 (Padrão: 1):',
+      localStorage.getItem('prodtec_pc08_print_mode') || '1'
+    );
+    if (modoResp === null) return; // cancelou
+    isManualMode = (modoResp.trim() !== '2');
+    try { localStorage.setItem('prodtec_pc08_print_mode', isManualMode ? '1' : '2'); } catch(e){}
+  }
   const data = await calcResumoElementosParcela(parcelIdOrCode);
   const item = data.item;
   const parcelCode = data.parcela;
@@ -863,23 +878,47 @@ async function printPastaCampoResumoElementos(parcelIdOrCode) {
 
   const fmtVal = v => (v != null && v > 0) ? v.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '-';
 
-  // Linhas de Fertirrigação
-  let fertRowsHtml = data.fertRows.map((r, i) => {
-    const cols = NUTRIENT_COLUMNS.map(c => `<td style="border:1px solid #000; padding:2px 3px; text-align:center">${fmtVal(r.nutrientes[c.key])}</td>`).join('');
+  // Linhas de Fertirrigação (Modo Manual de Auditoria ou Digital Completo)
+  const fertEntriesToRender = isManualMode ? data.fertRows.slice(0, 7) : data.fertRows;
+
+  let fertRowsHtml = fertEntriesToRender.map((r, i) => {
+    const cols = NUTRIENT_COLUMNS.map(c => `<td style="border:1px solid #000; padding:1.5px 2px; text-align:center">${fmtVal(r.nutrientes[c.key])}</td>`).join('');
     return `
-      <tr>
+      <tr style="height:19px;">
         <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:5pt; font-weight:600">FERTIRRIGAÇÃO</td>
-        <td style="border:1px solid #000; padding:2px 3px; text-align:center">${r.data}</td>
-        <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold">${r.dap}</td>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center">${r.data}</td>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-weight:bold">${r.dap}</td>
         ${cols}
       </tr>
     `;
   }).join('');
 
-  // Linhas de Totais
-  const totalFertCols = NUTRIENT_COLUMNS.map(c => `<td style="border:1px solid #000; padding:3px 3px; text-align:center; font-weight:bold">${fmtVal(data.totalFert[c.key])}</td>`).join('');
-  const totalFoliarCols = NUTRIENT_COLUMNS.map(c => `<td style="border:1px solid #000; padding:3px 3px; text-align:center; font-weight:bold">${fmtVal(data.totalFoliar[c.key])}</td>`).join('');
-  const totalGeralCols = NUTRIENT_COLUMNS.map(c => `<td style="border:1.5px solid #000; padding:4px 3px; text-align:center; font-weight:900; background:#e5e7eb">${fmtVal(data.totalGeral[c.key])}</td>`).join('');
+  if (isManualMode) {
+    // Linhas pautadas em branco para preenchimento manual pelo fertirrigador / auditoria
+    for (let b = 0; b < 18; b++) {
+      fertRowsHtml += `
+        <tr style="height:22px;">
+          <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:5pt; font-weight:600; color:#555">FERTIRRIGAÇÃO</td>
+          <td style="border:1px solid #000; text-align:center; height:22px;">&nbsp;</td>
+          <td style="border:1px solid #000; text-align:center; height:22px;">&nbsp;</td>
+          ${NUTRIENT_COLUMNS.map(() => '<td style="border:1px solid #000; height:22px;">&nbsp;</td>').join('')}
+        </tr>
+      `;
+    }
+  }
+
+  // Linhas de Totais (em branco no modo manual para preenchimento após conclusão da safra)
+  const totalFertCols = isManualMode
+    ? NUTRIENT_COLUMNS.map(() => '<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:22px;">&nbsp;</td>').join('')
+    : NUTRIENT_COLUMNS.map(c => `<td style="border:1px solid #000; padding:3px 3px; text-align:center; font-weight:bold">${fmtVal(data.totalFert[c.key])}</td>`).join('');
+
+  const totalFoliarCols = isManualMode
+    ? NUTRIENT_COLUMNS.map(() => '<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:22px;">&nbsp;</td>').join('')
+    : NUTRIENT_COLUMNS.map(c => `<td style="border:1px solid #000; padding:3px 3px; text-align:center; font-weight:bold">${fmtVal(data.totalFoliar[c.key])}</td>`).join('');
+
+  const totalGeralCols = isManualMode
+    ? NUTRIENT_COLUMNS.map(() => '<td style="border:1.5px solid #000; padding:2px 2px; text-align:center; height:24px; background:#fafafa;">&nbsp;</td>').join('')
+    : NUTRIENT_COLUMNS.map(c => `<td style="border:1.5px solid #000; padding:4px 3px; text-align:center; font-weight:900; background:#e5e7eb">${fmtVal(data.totalGeral[c.key])}</td>`).join('');
 
   const printWin = window.open('', '_blank', 'width=1350,height=900');
   if (!printWin) { _showToastMsg('Permita popups para imprimir.', 'err'); return; }

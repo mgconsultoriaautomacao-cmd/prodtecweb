@@ -25381,7 +25381,22 @@ async function saveFert() {
 }
 
 // ── IMPRESSÃO OFICIAL: CONTROLE DO USO DE FERTILIZANTES (PC 07 / PC04) ────────
-async function printPastaCampoFertirrigacao(parcelIdOrCode) {
+async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
+  let isManualMode = true;
+  if (typeof forceManual === 'boolean') {
+    isManualMode = forceManual;
+  } else {
+    const modoResp = prompt(
+      'Selecione o modelo de impressão da FERTIRRIGAÇÃO (PC07):\n\n' +
+      '1 = MODELO DE CAMPO / AUDITORIA (Primeiras aplicações + linhas em branco para preenchimento manual)\n' +
+      '2 = MODELO DIGITAL COMPLETO (Todo o ciclo pré-preenchido pelo sistema)\n\n' +
+      'Digite 1 ou 2 (Padrão: 1):',
+      localStorage.getItem('prodtec_fert_print_mode') || '1'
+    );
+    if (modoResp === null) return; // cancelou impressão
+    isManualMode = (modoResp.trim() !== '2');
+    try { localStorage.setItem('prodtec_fert_print_mode', isManualMode ? '1' : '2'); } catch(e){}
+  }
   let item = null;
   if (parcelIdOrCode) {
     item = (_infoParcelas || []).find(p => p.id === parcelIdOrCode || (p.parcela2 || p.parcela) === parcelIdOrCode);
@@ -25510,7 +25525,9 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
     const areaVal = parseFloat(areaHa) || 1.0;
 
     let orderCount = 1;
-    const schedEntries = Object.entries(sched).sort((a,b) => Number(a[0]) - Number(b[0]));
+    const allSchedEntries = Object.entries(sched).sort((a,b) => Number(a[0]) - Number(b[0]));
+    // No modo manual de auditoria: primeiras 7 aplicações no topo como modelo/guia + 19 linhas em branco
+    const schedEntries = isManualMode ? allSchedEntries.slice(0, 7) : allSchedEntries;
 
     rowsHtml = schedEntries.map(([dapKey, doses]) => {
       const dapNum = Number(dapKey);
@@ -25534,13 +25551,13 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
         const totalKg = doseBase * areaVal;
         if (totalKg > 0) {
           productTotals[p] = (productTotals[p] || 0) + totalKg;
-          return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${totalKg.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</td>`;
+          return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold; height:20px;">${totalKg.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</td>`;
         }
-        return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; color:#999">-</td>`;
+        return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; color:#999; height:20px;">-</td>`;
       }).join('');
 
       return `
-        <tr>
+        <tr style="height:20px;">
           <td style="border:1px solid #000; padding:2px 3px; text-align:center">${calcDtStr}</td>
           <td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${orderCount++}</td>
           <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold">${faseStr}</td>
@@ -25548,6 +25565,20 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
         </tr>
       `;
     }).join('');
+
+    if (isManualMode) {
+      // 19 linhas em branco com altura confortável (23px) para preenchimento manual à caneta
+      for (let b = 0; b < 19; b++) {
+        rowsHtml += `
+          <tr style="height: 23px;">
+            <td style="border:1px solid #000; text-align:center; height:23px;">&nbsp;</td>
+            <td style="border:1px solid #000; text-align:center; font-weight:bold; color:#777; height:23px;">${orderCount++}</td>
+            <td style="border:1px solid #000; text-align:center; height:23px;">&nbsp;</td>
+            ${uniqueProducts.map(() => '<td style="border:1px solid #000; height:23px;">&nbsp;</td>').join('')}
+          </tr>
+        `;
+      }
+    }
   }
 
   let defaultOp = (fertData && fertData.find(f => f.operador && f.operador.trim())?.operador) || 
@@ -25557,10 +25588,12 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
   if (opPrompt === null) return; // cancelou impressão
   const operadorNome = opPrompt.trim() || defaultOp;
 
-  const totalsColsHtml = uniqueProducts.map(p => {
-    const tot = productTotals[p];
-    return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${tot > 0 ? tot.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '-'}</td>`;
-  }).join('');
+  const totalsColsHtml = isManualMode
+    ? uniqueProducts.map(() => '<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:24px;">&nbsp;</td>').join('')
+    : uniqueProducts.map(p => {
+        const tot = productTotals[p];
+        return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${tot > 0 ? tot.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '-'}</td>`;
+      }).join('');
 
   const printWin = window.open('', '_blank', 'width=1100,height=1250');
   if (!printWin) { alert('Permita popups para imprimir.'); return; }

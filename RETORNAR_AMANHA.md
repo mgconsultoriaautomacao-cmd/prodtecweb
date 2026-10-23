@@ -76,3 +76,18 @@ Quando a ficha PC06 da Parcela 16 M for impressa amanhã:
      - **Melancia:** 50 dias (DAP 16 ao DAP 65).
    - Substituído o `rowspan` por célula individual com `FERTIRRIGAÇÃO` por linha, garantindo alinhamento perfeito de colunas nas 2 páginas A4 paisagem ("PAG: 01 DE 02").
    - Habilitado `thead { display: table-header-group; }` e `tr { page-break-inside: avoid; }` para repetição elegante do cabeçalho na página 2 da impressão.
+
+---
+
+## 6. Modelo Oficial de Preenchimento Manual para Auditoria de Campo (PC07 & PC08)
+
+1. **Exigência da Auditoria GlobalGAP / Empresa:**
+   - A auditoria externa exigiu que o controle de fertirrigação seja comprovadamente preenchido de forma manual no campo pelo operador (fertirrigador), evitando que a ficha saia 100% pré-impressa pelo computador para todo o ciclo.
+2. **Implementação do Modelo de Campo / Auditoria (Padrão Ativo):**
+   - **Topo com Guia de Dosagem:** As primeiras aplicações (DAP 11 ao 17) saem pré-preenchidas com as datas calculadas, DAP, ordem e quilos calculados para a área da parcela (ex: 4.160 ha), servindo como referência técnica exata de cada produto para o operador se basear.
+   - **Linhas em Branco Pautadas:** As linhas subsequentes (~19 a 20 linhas) são geradas em branco, com altura confortável (22 a 23px) e bordas nítidas para escrita manual à caneta.
+   - **Totais em Branco:** A linha de "TOTAL GERAL DO CICLO DA PARCELA" possui células em branco para o somatório manual e conferência ao final da safra.
+   - **100% em 1 Página A4 Retrato (PC07):** A ficha PC07 cabe em exatamente 1 página ("PAG: 01 DE 01"), sem transbordar.
+3. **Preservação Integral da Lógica Digital:**
+   - A metodologia digital de cálculo completo (DAP 11 ao 65/75) permanece 100% ativa no sistema para gráficos, indicadores e telas.
+   - Ao clicar em imprimir (tanto na PC07 quanto na PC08), o sistema apresenta a opção rápida (com Enter padrão = 1 para o modelo manual de auditoria e 2 para o modelo digital completo), gravando a preferência do usuário.
