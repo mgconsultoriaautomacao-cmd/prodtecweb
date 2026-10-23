@@ -12811,9 +12811,9 @@ async function resolveParcelaItem(idOrStr) {
 function extractParcelaSementesVars(item) {
   if (!item) return [];
   let sementesExt = [];
-  if (item.obs && item.obs.includes('<!--SEMENTES_EXT:')) {
+  if (item.obs && item.obs.includes('<!' + '--SEMENTES_EXT:')) {
     try {
-      const m = item.obs.match(/<!--SEMENTES_EXT:([\s\S]*?)-->/);
+      const m = item.obs.match(new RegExp('<\\!--SEMENTES_EXT:([\\s\\S]*?)--\\x3e'));
       if (m && m[1]) sementesExt = JSON.parse(m[1]);
     } catch(e) {
       console.warn('Erro ao decodificar sementesExt:', e);
@@ -15077,9 +15077,9 @@ function extractNormalizedParcelVarieties(item) {
   if (!item) return { vars: [], totalLinhas: 0, totalArea: 0 };
   
   let sementesExt = [];
-  if (item.obs && item.obs.includes('<!--SEMENTES_EXT:')) {
+  if (item.obs && item.obs.includes('<!' + '--SEMENTES_EXT:')) {
     try {
-      const m = item.obs.match(/<!--SEMENTES_EXT:([\s\S]*?)-->/);
+      const m = item.obs.match(new RegExp('<\\!--SEMENTES_EXT:([\\s\\S]*?)--\\x3e'));
       if (m && m[1]) sementesExt = JSON.parse(m[1]);
     } catch(e) {}
   }
@@ -18960,15 +18960,15 @@ function openWebPlantioModal(editId) {
   
   // Limpar tag JSON de metadados das observações visíveis
   let sementesExt = [];
-  if (item.obs && item.obs.includes('<!--SEMENTES_EXT:')) {
+  if (item.obs && item.obs.includes('<!' + '--SEMENTES_EXT:')) {
     try {
-      const m = item.obs.match(/<!--SEMENTES_EXT:([\s\S]*?)-->/);
+      const m = item.obs.match(new RegExp('<\\!--SEMENTES_EXT:([\\s\\S]*?)--\\x3e'));
       if (m && m[1]) sementesExt = JSON.parse(m[1]);
     } catch(e) {
       console.warn('Erro ao decodificar sementesExt:', e);
     }
   }
-  $('webPlObs').value = (item.obs || '').replace(/<!--SEMENTES_EXT:[\s\S]*?-->/g, '').trim();
+  $('webPlObs').value = (item.obs || '').replace(new RegExp('<\\!--SEMENTES_EXT:[\\s\\S]*?--\\x3e', 'g'), '').trim();
 
   // Load variedades normalizadas com hectares e linhas individuais corretas
   const normData = extractNormalizedParcelVarieties(item);
@@ -19330,7 +19330,7 @@ async function saveWebPlantio() {
   const parcela2 = `${parcela} ${letra}`;
 
   // Serializar metadados completos de sementes e tratamento da muda por variedade em bloco JSON no obs
-  const rawObs = ($('webPlObs')?.value?.trim() || '').replace(/<!--SEMENTES_EXT:[\s\S]*?-->/g, '').trim();
+  const rawObs = ($('webPlObs')?.value?.trim() || '').replace(new RegExp('<\\!--SEMENTES_EXT:[\\s\\S]*?--\\x3e', 'g'), '').trim();
   const sementesMeta = varsData.map(v => ({
     nome: v.nome,
     fornecedor: v.fornecedor,
@@ -19348,7 +19348,7 @@ async function saveWebPlantio() {
     tratamento_def: v.trat_muda_def1,
     tratamento_dos: v.trat_muda_dos1
   }));
-  const finalObs = (rawObs ? (rawObs + '\n') : '') + `<!--SEMENTES_EXT:${JSON.stringify(sementesMeta)}-->`;
+  const finalObs = (rawObs ? (rawObs + '\n') : '') + ('<!' + '--SEMENTES_EXT:' + JSON.stringify(sementesMeta) + '--' + '>');
 
   // Montar payload UNIFICADO em uma ÚNICA LINHA no banco (info_parcelas)
   const payload = {

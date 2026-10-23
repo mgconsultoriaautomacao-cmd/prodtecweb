@@ -3534,9 +3534,9 @@ let varieties = [];
     if (!item) return { vars: [], totalLinhas: 0, totalArea: 0 };
     
     let sementesExt = [];
-    if (item.obs && item.obs.includes('<!--SEMENTES_EXT:')) {
+    if (item.obs && item.obs.includes('<!' + '--SEMENTES_EXT:')) {
       try {
-        const m = item.obs.match(/<!--SEMENTES_EXT:([\s\S]*?)-->/);
+        const m = item.obs.match(new RegExp('<\\!--SEMENTES_EXT:([\\s\\S]*?)--\\x3e'));
         if (m && m[1]) sementesExt = JSON.parse(m[1]);
       } catch(e) {}
     }
@@ -3864,7 +3864,7 @@ let varieties = [];
   $('plProdutosMuda').value = item.produtos_muda || '';
   
   // Limpar metadados JSON do obs visível
-  $('plObs').value = (item.obs || '').replace(/<!--SEMENTES_EXT:[\s\S]*?-->/g, '').trim();
+  $('plObs').value = (item.obs || '').replace(new RegExp('<\\!--SEMENTES_EXT:[\\s\\S]*?--\\x3e', 'g'), '').trim();
 
   // Load variedades normalizadas com hectares e linhas individuais corretas
   const normData = extractNormalizedParcelVarieties(item);
@@ -4364,7 +4364,7 @@ let varieties = [];
   }
 
   // Serializar metadados completos de sementes e tratamento da muda por variedade em bloco JSON no obs
-  const rawObs = ($('plObs')?.value?.trim() || '').replace(/<!--SEMENTES_EXT:[\s\S]*?-->/g, '').trim();
+  const rawObs = ($('plObs')?.value?.trim() || '').replace(new RegExp('<\\!--SEMENTES_EXT:[\\s\\S]*?--\\x3e', 'g'), '').trim();
   const sementesMeta = varsData.map(v => ({
     nome: v.nome,
     fornecedor: v.fornecedor,
@@ -4382,7 +4382,7 @@ let varieties = [];
     tratamento_def: v.trat_muda_def1,
     tratamento_dos: v.trat_muda_dos1
   }));
-  const finalObs = (rawObs ? (rawObs + '\n') : '') + `<!--SEMENTES_EXT:${JSON.stringify(sementesMeta)}-->`;
+  const finalObs = (rawObs ? (rawObs + '\n') : '') + ('<!' + '--SEMENTES_EXT:' + JSON.stringify(sementesMeta) + '--' + '>');
 
   const payload = {
   tenant_id: tenantId,
