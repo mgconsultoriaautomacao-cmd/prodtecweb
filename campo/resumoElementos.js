@@ -847,9 +847,9 @@ async function printPastaCampoResumoElementos(parcelIdOrCode) {
   const rtNome = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS';
   const rtCrea = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_crea) || '2100995243';
   const certNome = (window.tenantConfig && window.tenantConfig.agronomo_certificacao) || 'Emanuela Moreira';
-  const areaHa = data.areaHa.toFixed(2);
+  const areaHa = data.areaHa.toFixed(3);
 
-  const fmtVal = v => (v != null && v > 0) ? v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-';
+  const fmtVal = v => (v != null && v > 0) ? v.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '-';
 
   // Linhas de Fertirrigação
   let fertRowsHtml = data.fertRows.map((r, i) => {
@@ -976,7 +976,7 @@ async function printPastaCampoResumoElementos(parcelIdOrCode) {
 async function printPastaCampoFoliares(parcelIdOrCode) {
   const data = await calcResumoElementosParcela(parcelIdOrCode);
   const parcelCode = data.parcela;
-  const areaHa = data.areaHa.toFixed(2);
+  const areaHa = data.areaHa.toFixed(3);
   const rtNome = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS';
   const certNome = (window.tenantConfig && window.tenantConfig.agronomo_certificacao) || 'Emanuela Moreira';
 
@@ -991,7 +991,7 @@ async function printPastaCampoFoliares(parcelIdOrCode) {
         <td style="border:1px solid #000; padding:2px 3px; text-align:center">${r.dap}</td>
         <td style="border:1px solid #000; padding:2px 4px; font-weight:bold">${r.produto}</td>
         ${cols}
-        <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold">${r.quantidade.toLocaleString('pt-BR')}</td>
+        <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold">${r.quantidade.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</td>
         <td style="border:1px solid #000; padding:2px 4px; text-align:center">${r.operador}</td>
       </tr>
     `;

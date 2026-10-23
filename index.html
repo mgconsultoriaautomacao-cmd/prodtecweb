@@ -13850,7 +13850,7 @@ async function printPastaCampoDefensivos(id) {
   const pCode = item.parcela2 || item.parcela || '10.01 T';
   const plantioStr = item.plantio || item.data_plantio || item.transplante;
   const plantioDt = plantioStr ? new Date(plantioStr + (plantioStr.includes('T') ? '' : 'T00:00:00')) : null;
-  const areaHa = parseFloat(item.area || 3.0).toFixed(2);
+  const areaHa = parseFloat(item.area || 3.0).toFixed(3);
   const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Bom Jesus Agrícola';
 
   // Buscar OPs da parcela
@@ -13968,11 +13968,24 @@ async function printPastaCampoDefensivos(id) {
       if (!unit && bulaFound) unit = bulaFound.unit;
       if (!unit) unit = 'L/ha';
 
+      // Normaliza espaçamento da unidade (ex: mL/100L -> mL/100 L)
+      unit = unit.replace(/\/100L/i, '/100 L');
       const uLow = unit.toLowerCase();
       const isSolid = uLow.includes('g') || uLow.includes('kg') || uLow.includes('wp') || uLow.includes('wg') || pNormUpper.includes(' WG') || pNormUpper.includes(' WP');
-      const finalQtdUnit = isSolid ? 'kg' : 'L';
 
-      // 4. Extração e formatação da Dosagem Usada
+      // Unidade de quantidade correspondente à unidade de aplicação
+      let finalQtdUnit = 'L';
+      if (uLow.startsWith('ml') || (uLow.includes('100') && uLow.includes('ml')) || uLow === 'ml' || pNormUpper.includes('DECIS') || pNormUpper.includes('SCORE')) {
+        finalQtdUnit = 'mL';
+      } else if (uLow.startsWith('g') || (uLow.includes('100') && uLow.includes('g')) || uLow === 'g') {
+        finalQtdUnit = 'g';
+      } else if (uLow.includes('kg') || isSolid) {
+        finalQtdUnit = 'kg';
+      } else {
+        finalQtdUnit = 'L';
+      }
+
+      // 4. Extração e formatação da Dosagem Usada com 3 casas decimais
       let rawDoseUsada = it.dosagem_corrigida || it.dosagem_real || it.dose || '—';
       let numDose = parseFloat(String(rawDoseUsada).replace(',', '.').replace(/[^0-9.]/g, '')) || 0;
       if (!numDose && bulaFound && bulaFound.recom) {
@@ -13984,45 +13997,42 @@ async function printPastaCampoDefensivos(id) {
       if (numDose > 0) {
         if (uLow.includes('ml/ha') || (pNormUpper.includes('VERTIMEC') && !uLow.includes('100'))) {
           if (numDose >= 10) {
-            doseUsada = `${(numDose / 1000).toFixed(2).replace('.', ',')} L/ha`;
+            doseUsada = `${(numDose / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} L/ha`;
           } else {
-            doseUsada = `${numDose.toFixed(2).replace('.', ',')} L/ha`;
+            doseUsada = `${numDose.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} L/ha`;
           }
         } else if (uLow.includes('100l') || uLow.includes('100 l') || pNormUpper.includes('DECIS') || pNormUpper.includes('SCORE')) {
-          if (numDose >= 5) {
-            doseUsada = `${(numDose / 1000).toFixed(2).replace('.', ',')} L/100 L`;
-          } else {
-            doseUsada = `${numDose.toFixed(2).replace('.', ',')} L/100 L`;
-          }
+          let doseVal = numDose >= 5 ? (numDose / 1000) : numDose;
+          doseUsada = `${doseVal.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} mL/100 L`;
         } else if (uLow.startsWith('g') || (pNormUpper.includes('ACTARA') || pNormUpper.includes('TRIGARD') || pNormUpper.includes('PROCLAIM'))) {
           if (numDose >= 10) {
-            doseUsada = `${(numDose / 1000).toFixed(2).replace('.', ',')} kg/ha`;
+            doseUsada = `${(numDose / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg/ha`;
           } else {
-            doseUsada = `${numDose.toFixed(2).replace('.', ',')} kg/ha`;
+            doseUsada = `${numDose.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg/ha`;
           }
         } else if (isSolid) {
-          doseUsada = `${numDose.toFixed(2).replace('.', ',')} kg/ha`;
+          doseUsada = `${numDose.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg/ha`;
         } else {
-          doseUsada = `${numDose.toFixed(2).replace('.', ',')} L/ha`;
+          doseUsada = `${numDose.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} L/ha`;
         }
       } else if (rawDoseUsada && rawDoseUsada !== '—') {
         let strVal = String(rawDoseUsada).trim();
-        if (!/[a-zA-Z]/.test(strVal)) {
-          doseUsada = `${strVal.replace('.', ',')} ${unit}`;
+        let pVal = parseFloat(strVal.replace(',', '.'));
+        if (!isNaN(pVal)) {
+          doseUsada = `${pVal.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${unit}`;
         } else {
           doseUsada = strVal.replace('.', ',');
         }
       }
 
-      // 5. CÁLCULO PRECISO DA QUANTIDADE TOTAL (L ou Kg)
-      // Evita o erro de grandeza onde 100 mL/ha em 4.16 ha virava 416 L
+      // 5. CÁLCULO PRECISO DA QUANTIDADE TOTAL COM 3 CASAS DECIMAIS
       const rawQtd = it.quantidade_utilizada || it.quantidade;
       let qtdNum = parseFloat(String(rawQtd || '').replace(',', '.').replace(/[^0-9.]/g, '')) || 0;
       let totalCalculado = 0;
       const numArea = parseFloat(areaHa) || 1.0;
 
       if (qtdNum > 0) {
-        if (uLow.includes('ml') || (uLow.startsWith('g') && !uLow.includes('kg'))) {
+        if ((uLow.includes('ml') || uLow.startsWith('g')) && !uLow.includes('kg') && finalQtdUnit !== 'mL' && finalQtdUnit !== 'g') {
           if (qtdNum > 5 || (numDose > 0 && qtdNum >= numDose * 0.5)) {
             totalCalculado = qtdNum / 1000;
           } else {
@@ -14035,12 +14045,15 @@ async function printPastaCampoDefensivos(id) {
         if (uLow.includes('100l') || uLow.includes('100 l') || pNormUpper.includes('DECIS') || pNormUpper.includes('SCORE')) {
           const factorPer100 = numDose >= 5 ? (numDose / 1000) : numDose;
           totalCalculado = factorPer100 * numArea;
+          finalQtdUnit = 'mL';
         } else if (uLow.includes('ml/ha') || (pNormUpper.includes('VERTIMEC') && !uLow.includes('100'))) {
           const doseLha = numDose >= 10 ? (numDose / 1000) : numDose;
           totalCalculado = doseLha * numArea;
+          finalQtdUnit = 'L';
         } else if (uLow.startsWith('g') || (pNormUpper.includes('ACTARA') || pNormUpper.includes('TRIGARD') || pNormUpper.includes('PROCLAIM'))) {
           const doseKgha = numDose >= 10 ? (numDose / 1000) : numDose;
           totalCalculado = doseKgha * numArea;
+          finalQtdUnit = 'kg';
         } else {
           totalCalculado = numDose * numArea;
         }
@@ -14048,7 +14061,7 @@ async function printPastaCampoDefensivos(id) {
         totalCalculado = 1.0;
       }
 
-      const qtdTotal = `${totalCalculado.toFixed(2).replace('.', ',')} ${finalQtdUnit}`;
+      const qtdTotal = `${totalCalculado.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${finalQtdUnit}`;
       const carencia = it.carencia_dias || it.carencia || (bulaFound ? bulaFound.carencia : '7');
       const isDias = it.intervalo_seguranca_horas ? Math.max(1, Math.round(it.intervalo_seguranca_horas / 24)) : (it.is_dias || (bulaFound ? bulaFound.is : '1'));
       const horario = op.horario_inicio || '17:00:00';
@@ -14094,13 +14107,13 @@ async function printPastaCampoDefensivos(id) {
     };
 
     rowsData = [
-      { data: fmtPlantioOff(6), ordem: '1330', dap: 6, alvo: '- Mosca Branca<br/>- Broca dos Frutos', produto: 'Actara 250 WG<br/>Decis 25 EC', ingrediente: 'Tiametoxam - IV<br/>Deltametrina - IV', doseRecom: '200-300 g/ha<br/>30 mL/100 L', doseUsada: '0,25 kg/ha<br/>0,03 L/100 L', appRealizadas: '1ª<br/>1ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(0.25 * areaHa).toFixed(2).replace('.', ',')} kg<br/>${(0.03 * areaHa).toFixed(2).replace('.', ',')} L`, horario: '17:00:00', dtColheita: fmtPlantioOff(13), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
-      { data: fmtPlantioOff(11), ordem: '1340', dap: 11, alvo: '- Broca dos Frutos', produto: 'Decis 25 EC', ingrediente: 'Deltametrina - IV', doseRecom: '30 mL/100 L', doseUsada: '0,03 L/100 L', appRealizadas: '2ª', appPermitidas: '4', carencia: '7', isDias: '1', qtd: `${(0.03 * areaHa).toFixed(2).replace('.', ',')} L`, horario: '17:00:00', dtColheita: fmtPlantioOff(18), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
-      { data: fmtPlantioOff(19), ordem: '1357', dap: 19, alvo: '- Mosca Minadora<br/>- Broca dos Frutos', produto: 'Vertimec 84 SC<br/>Decis 25 EC', ingrediente: 'Abamectina - II<br/>Deltametrina - IV', doseRecom: '50-100 mL/ha<br/>30 mL/100 L', doseUsada: '0,10 L/ha<br/>0,03 L/100 L', appRealizadas: '1ª<br/>3ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(0.1 * areaHa).toFixed(2).replace('.', ',')} L<br/>${(0.03 * areaHa).toFixed(2).replace('.', ',')} L`, horario: '17:00:00', dtColheita: fmtPlantioOff(26), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
-      { data: fmtPlantioOff(21), ordem: '1362', dap: 21, alvo: 'Mosca Minadora (Liriomyza sativae)', produto: 'Benevia', ingrediente: 'Ciantraniliprole - NC', doseRecom: '0,75 L/ha', doseUsada: '0,75 L/ha', appRealizadas: '1ª', appPermitidas: '2', carencia: '1', isDias: '1', qtd: `${(0.75 * areaHa).toFixed(2).replace('.', ',')} L`, horario: '17:00:00', dtColheita: fmtPlantioOff(22), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' },
-      { data: fmtPlantioOff(26), ordem: '1410', dap: 26, alvo: '- Mosca Branca', produto: 'Sivanto Prime 200 SL', ingrediente: 'Flupyradifurone - III', doseRecom: '0,75 a 1,0 L/ha', doseUsada: '0,75 L/ha', appRealizadas: '1ª', appPermitidas: '3', carencia: '14', isDias: '1', qtd: `${(0.75 * areaHa).toFixed(2).replace('.', ',')} L`, horario: '17:00:00', dtColheita: fmtPlantioOff(40), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' },
-      { data: fmtPlantioOff(33), ordem: '1432', dap: 33, alvo: '- Mosca Minadora<br/>- Broca dos Frutos', produto: 'Vertimec 84 SC<br/>Trigard 750 WP', ingrediente: 'Abamectina - II<br/>Ciromazina - III', doseRecom: '100-150 mL/ha<br/>150 g/ha', doseUsada: '0,10 L/ha<br/>0,15 kg/ha', appRealizadas: '2ª<br/>1ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(0.1 * areaHa).toFixed(2).replace('.', ',')} L<br/>${(0.15 * areaHa).toFixed(2).replace('.', ',')} kg`, horario: '17:00:00', dtColheita: fmtPlantioOff(40), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' },
-      { data: fmtPlantioOff(38), ordem: '1446', dap: 38, alvo: '- Oídio (Sphaerotheca fuliginea)<br/>- Broca dos Frutos', produto: 'Score 250 EC<br/>Decis 25 EC', ingrediente: 'Difenoconazol - III<br/>Deltametrina - IV', doseRecom: '20-30 mL/100 L<br/>30 mL/100 L', doseUsada: '0,02 L/100 L<br/>0,03 L/100 L', appRealizadas: '1ª<br/>4ª', appPermitidas: '3<br/>4', carencia: '14<br/>7', isDias: '1<br/>1', qtd: `${(0.02 * areaHa).toFixed(2).replace('.', ',')} L<br/>${(0.03 * areaHa).toFixed(2).replace('.', ',')} L`, horario: '17:00:00', dtColheita: fmtPlantioOff(52), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' }
+      { data: fmtPlantioOff(6), ordem: '1330', dap: 6, alvo: '- Mosca Branca<br/>- Broca dos Frutos', produto: 'Actara 250 WG<br/>Decis 25 EC', ingrediente: 'Tiametoxam - IV<br/>Deltametrina - IV', doseRecom: '200-300 g/ha<br/>30 mL/100 L', doseUsada: '0,250 kg/ha<br/>0,030 mL/100 L', appRealizadas: '1ª<br/>1ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(0.25 * areaHa).toFixed(3).replace('.', ',')} kg<br/>${(0.03 * areaHa).toFixed(3).replace('.', ',')} mL`, horario: '17:00:00', dtColheita: fmtPlantioOff(13), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
+      { data: fmtPlantioOff(11), ordem: '1340', dap: 11, alvo: '- Broca dos Frutos', produto: 'Decis 25 EC', ingrediente: 'Deltametrina - IV', doseRecom: '30 mL/100 L', doseUsada: '0,030 mL/100 L', appRealizadas: '2ª', appPermitidas: '4', carencia: '7', isDias: '1', qtd: `${(0.03 * areaHa).toFixed(3).replace('.', ',')} mL`, horario: '17:00:00', dtColheita: fmtPlantioOff(18), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
+      { data: fmtPlantioOff(19), ordem: '1357', dap: 19, alvo: '- Mosca Minadora<br/>- Broca dos Frutos', produto: 'Vertimec 84 SC<br/>Decis 25 EC', ingrediente: 'Abamectina - II<br/>Deltametrina - IV', doseRecom: '50-100 mL/ha<br/>30 mL/100 L', doseUsada: '0,100 L/ha<br/>0,030 mL/100 L', appRealizadas: '1ª<br/>3ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(0.1 * areaHa).toFixed(3).replace('.', ',')} L<br/>${(0.03 * areaHa).toFixed(3).replace('.', ',')} mL`, horario: '17:00:00', dtColheita: fmtPlantioOff(26), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
+      { data: fmtPlantioOff(21), ordem: '1362', dap: 21, alvo: 'Mosca Minadora (Liriomyza sativae)', produto: 'Benevia', ingrediente: 'Ciantraniliprole - NC', doseRecom: '0,75 L/ha', doseUsada: '0,750 L/ha', appRealizadas: '1ª', appPermitidas: '2', carencia: '1', isDias: '1', qtd: `${(0.75 * areaHa).toFixed(3).replace('.', ',')} L`, horario: '17:00:00', dtColheita: fmtPlantioOff(22), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' },
+      { data: fmtPlantioOff(26), ordem: '1410', dap: 26, alvo: '- Mosca Branca', produto: 'Sivanto Prime 200 SL', ingrediente: 'Flupyradifurone - III', doseRecom: '0,75 a 1,0 L/ha', doseUsada: '0,750 L/ha', appRealizadas: '1ª', appPermitidas: '3', carencia: '14', isDias: '1', qtd: `${(0.75 * areaHa).toFixed(3).replace('.', ',')} L`, horario: '17:00:00', dtColheita: fmtPlantioOff(40), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' },
+      { data: fmtPlantioOff(33), ordem: '1432', dap: 33, alvo: '- Mosca Minadora<br/>- Broca dos Frutos', produto: 'Vertimec 84 SC<br/>Trigard 750 WP', ingrediente: 'Abamectina - II<br/>Ciromazina - III', doseRecom: '100-150 mL/ha<br/>150 g/ha', doseUsada: '0,100 L/ha<br/>0,150 kg/ha', appRealizadas: '2ª<br/>1ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(0.1 * areaHa).toFixed(3).replace('.', ',')} L<br/>${(0.15 * areaHa).toFixed(3).replace('.', ',')} kg`, horario: '17:00:00', dtColheita: fmtPlantioOff(40), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' },
+      { data: fmtPlantioOff(38), ordem: '1446', dap: 38, alvo: '- Oídio (Sphaerotheca fuliginea)<br/>- Broca dos Frutos', produto: 'Score 250 EC<br/>Decis 25 EC', ingrediente: 'Difenoconazol - III<br/>Deltametrina - IV', doseRecom: '20-30 mL/100 L<br/>30 mL/100 L', doseUsada: '0,020 mL/100 L<br/>0,030 mL/100 L', appRealizadas: '1ª<br/>4ª', appPermitidas: '3<br/>4', carencia: '14<br/>7', isDias: '1<br/>1', qtd: `${(0.02 * areaHa).toFixed(3).replace('.', ',')} mL<br/>${(0.03 * areaHa).toFixed(3).replace('.', ',')} mL`, horario: '17:00:00', dtColheita: fmtPlantioOff(52), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' }
     ];
   }
 
@@ -14197,7 +14210,7 @@ async function printPastaCampoDefensivos(id) {
           <th colspan="2">Nº Aplicações</th>
           <th rowspan="2" style="width: 32px;">Carência*<br/>(Dias)</th>
           <th rowspan="2" style="width: 24px;">I.S*<br/>(Dias)</th>
-          <th rowspan="2" style="width: 42px;">Quantidade<br/>(L ou Kg)</th>
+          <th rowspan="2" style="width: 44px;">Quantidade<br/>(L, Kg ou mL)</th>
           <th rowspan="2" style="width: 42px;">Horário de<br/>Aplicação</th>
           <th rowspan="2" style="width: 46px;">Data Autorizada<br/>p/ Colheita</th>
           <th rowspan="2" style="width: 55px;">Colheita Realizada<br/>p/ Destruição</th>
@@ -14713,7 +14726,7 @@ function printPastaCampoCapa(id) {
     if (rawNames.length > 1) {
       const origItem = varsData[0];
       const totArea = origItem.area > 0 ? origItem.area : (parseFloat(item.area || item.area_ha || 0) || 0);
-      const areaEach = totArea > 0 ? parseFloat((totArea / rawNames.length).toFixed(2)) : 0;
+      const areaEach = totArea > 0 ? parseFloat((totArea / rawNames.length).toFixed(3)) : 0;
       varsData = rawNames.map((n, idx) => ({
         ...origItem,
         idx: idx + 1,
@@ -14721,7 +14734,7 @@ function printPastaCampoCapa(id) {
         linhas: origItem.linhas > 0 ? Math.round(origItem.linhas / rawNames.length) : 0,
         qtd: origItem.qtd > 0 ? Math.round(origItem.qtd / rawNames.length) : 0,
         area: (idx === rawNames.length - 1 && totArea > 0)
-          ? parseFloat((totArea - areaEach * (rawNames.length - 1)).toFixed(2))
+          ? parseFloat((totArea - areaEach * (rawNames.length - 1)).toFixed(3))
           : areaEach
       }));
     }
@@ -14734,11 +14747,11 @@ function printPastaCampoCapa(id) {
     const areaJaAlocada = varsData.filter(v => v.area > 0).reduce((sum, v) => sum + v.area, 0);
     const areaRestante = Math.max(0, mainAreaVal - areaJaAlocada);
     if (areaRestante > 0) {
-      const areaPorVar = parseFloat((areaRestante / varsSemArea.length).toFixed(2));
+      const areaPorVar = parseFloat((areaRestante / varsSemArea.length).toFixed(3));
       varsSemArea.forEach((v, idx) => {
         if (idx === varsSemArea.length - 1) {
           const somaOutras = varsSemArea.slice(0, -1).reduce((s, x) => s + (x.area || 0), 0);
-          v.area = parseFloat((areaRestante - somaOutras).toFixed(2));
+          v.area = parseFloat((areaRestante - somaOutras).toFixed(3));
         } else {
           v.area = areaPorVar;
         }
@@ -14766,8 +14779,8 @@ function printPastaCampoCapa(id) {
   });
 
   const areaFinal = normData.totalArea > 0 
-    ? normData.totalArea.toFixed(2) 
-    : (totalAreaCalculada > 0 ? totalAreaCalculada.toFixed(2) : (parseFloat(item.area || item.area_ha || 0).toFixed(2) || '—'));
+    ? normData.totalArea.toFixed(3) 
+    : (totalAreaCalculada > 0 ? totalAreaCalculada.toFixed(3) : (parseFloat(item.area || item.area_ha || 0).toFixed(3) || '—'));
   const areaFinalStr = String(areaFinal).replace('.', ',');
 
   // Linhas da tabela contendo exclusivamente Variedade e Hectares
@@ -14777,7 +14790,7 @@ function printPastaCampoCapa(id) {
       <tr>
         <td style="text-align:center; font-weight:bold; border:1px solid #000; padding:3px 4px; width:30px;">${i + 1}</td>
         <td style="font-weight:bold; border:1px solid #000; padding:3px 6px;">${v.nome}</td>
-        <td style="text-align:right; font-weight:bold; color:#16a34a; font-size:8.5pt; border:1px solid #000; padding:3px 6px; width:130px;">${areaCalc > 0 ? areaCalc.toFixed(2).replace('.', ',') + ' ha' : '—'}</td>
+        <td style="text-align:right; font-weight:bold; color:#16a34a; font-size:8.5pt; border:1px solid #000; padding:3px 6px; width:130px;">${areaCalc > 0 ? areaCalc.toFixed(3).replace('.', ',') + ' ha' : '—'}</td>
       </tr>
     `;
   }).join('');
@@ -15379,35 +15392,34 @@ function printPastaCampoOrdemPulv(itemStr) {
 
   if (isPor100L) {
     // Regra Oficial para Defensivos por 100 Litros de Calda:
-    // Exemplo: 2480 L calda / 100 * 30 mL = 744 mL!
     const totalRaw = (volCaldaTanque / 100) * doseRealVal;
     if (unitStr.toLowerCase().startsWith('ml')) {
       if (totalRaw >= 1000) {
-        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {maximumFractionDigits:1})} mL (${(totalRaw/1000).toLocaleString('pt-BR', {maximumFractionDigits:3})} L)`;
+        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} mL (${(totalRaw/1000).toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} L)`;
       } else {
-        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {maximumFractionDigits:1})} mL`;
+        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} mL`;
       }
-      doseAreaStr = `${doseRealVal.toLocaleString('pt-BR')} mL/100L`;
+      doseAreaStr = `${doseRealVal.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} mL/100 L`;
     } else if (unitStr.toLowerCase().startsWith('g')) {
       if (totalRaw >= 1000) {
-        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {maximumFractionDigits:1})} g (${(totalRaw/1000).toLocaleString('pt-BR', {maximumFractionDigits:3})} kg)`;
+        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} g (${(totalRaw/1000).toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} kg)`;
       } else {
-        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {maximumFractionDigits:1})} g`;
+        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} g`;
       }
-      doseAreaStr = `${doseRealVal.toLocaleString('pt-BR')} g/100L`;
+      doseAreaStr = `${doseRealVal.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} g/100 L`;
     } else if (unitStr.toLowerCase().startsWith('kg')) {
-      qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {maximumFractionDigits:3})} kg`;
-      doseAreaStr = `${doseRealVal.toLocaleString('pt-BR')} kg/100L`;
+      qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} kg`;
+      doseAreaStr = `${doseRealVal.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} kg/100 L`;
     } else {
-      qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {maximumFractionDigits:3})} L`;
-      doseAreaStr = `${doseRealVal.toLocaleString('pt-BR')} L/100L`;
+      qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} L`;
+      doseAreaStr = `${doseRealVal.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} L/100 L`;
     }
   } else {
     // Defensivo por hectare
     const totalRaw = doseRealVal * areaVal;
     const baseU = unitStr.replace(/\/ha/i, '').replace(/\/há/i, '').trim();
-    qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {maximumFractionDigits:3})} ${baseU || 'L'}`;
-    doseAreaStr = `${doseRealVal.toLocaleString('pt-BR')} ${unitStr}`;
+    qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} ${baseU || 'L'}`;
+    doseAreaStr = `${doseRealVal.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} ${unitStr}`;
   }
 
   const targetProdNorm = normProd(p.produto_nome);
@@ -25285,7 +25297,7 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
   const rtNome = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS';
   const rtCrea = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_crea) || '2100995243';
   const certNome = (window.tenantConfig && window.tenantConfig.agronomo_certificacao) || 'Emanuela Moreira';
-  const areaHa = item && item.area ? parseFloat(item.area).toFixed(2) : '3.00';
+  const areaHa = item && item.area ? parseFloat(item.area).toFixed(3) : '3.000';
   const info = (typeof getParcelaCompleteInfo === 'function') ? getParcelaCompleteInfo(parcelCode || item, _infoParcelas) : null;
   const variedadesStr = (info && info.variedadesList && info.variedadesList.length > 0)
     ? info.variedadesList.join(', ')
@@ -25373,7 +25385,7 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
         const val = pItems[p];
         if (val != null && val > 0) {
           productTotals[p] += val;
-          return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${val.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}</td>`;
+          return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</td>`;
         }
         return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; color:#999">-</td>`;
       }).join('');
@@ -25424,7 +25436,7 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
         const totalKg = doseBase * areaVal;
         if (totalKg > 0) {
           productTotals[p] = (productTotals[p] || 0) + totalKg;
-          return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${totalKg.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}</td>`;
+          return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${totalKg.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</td>`;
         }
         return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; color:#999">-</td>`;
       }).join('');
@@ -25449,7 +25461,7 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode) {
 
   const totalsColsHtml = uniqueProducts.map(p => {
     const tot = productTotals[p];
-    return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${tot > 0 ? tot.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) : '-'}</td>`;
+    return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${tot > 0 ? tot.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '-'}</td>`;
   }).join('');
 
   const printWin = window.open('', '_blank', 'width=1100,height=1250');
