@@ -104,3 +104,23 @@ Quando a ficha PC06 da Parcela 16 M for impressa amanhã:
      - **Linhas Iniciais (DAP 11 ao 17):** Apresentam os quilos calculados expostos como modelo de partida e referência de dosagem.
      - **Linhas Subsequentes (DAP 18 ao 65):** Apresentam Data, Ordem e DAP preenchidos, porém com as células de dosagem/elementos totalmente **em branco** para anotação manual diária pelo fertirrigador.
      - **Paginação A4 Perfeita:** Configurada com `thead { display: table-header-group; }` e `tr { page-break-inside: avoid; }`, dividindo o documento com precisão em exatamente 2 páginas ("PAG: 01 DE 02").
+
+---
+
+## 8. Início do Ciclo de Fertirrigação: 1 Dia Após o Plantio (DAP 1)
+1. **Solicitação do Usuário:**
+   - O usuário orientou via áudio: *"Pronto, em relação à fertirrigação, o processo, né, deve se iniciar um dia depois do plantio já. Certo? A gente precisa colocar isso aí: um dia depois do plantio já começar o processo."*
+2. **Diagnóstico Técnico:**
+   - Anteriormente, os protocolos de fertirrigação (`FERT_PROTOCOLS`, `FERT_PROTOCOLS_WEB`, `DEFAULT_FERT_PROTOCOLS`) estavam indexados pelas idades biológicas das mudas em viveiro (chaves `"11"` a `"65"` para melão, `"16"` a `"65"` para melancia).
+   - Como resultado, para a Parcela 16 M (plantada no campo em 26/08/2026), a primeira ordem de fertirrigação pulava os 10 primeiros dias e iniciava em 05/09/2026 com "DAP 11".
+3. **Implementação Realizada:**
+   - **Reindexação dos Protocolos:** Todas as doses dos protocolos foram reindexadas sequencialmente a partir do DAP 1:
+     - `MELAO_PADRAO`: DAP 1 ao 55 (55 aplicações).
+     - `MELANCIA_PADRAO`: DAP 1 ao 50 (50 aplicações).
+     - `ASTURIA`: DAP 1 ao 65 (65 aplicações).
+     - `GRAND_PRIX`: DAP 1 ao 60 (60 aplicações).
+   - **Cálculo de Data do Calendário:** Ajustado para `plantioDt + (dapNum * 86400000)`, garantindo que a Ordem 1 (DAP 1) inicie exatamente no dia seguinte ao plantio (`27/08/2026` para plantio em `26/08/2026`).
+   - **Modelo de Auditoria de Campo (PC07 & PC08):**
+     - **Ordem 1 a 7 (DAP 1 ao 7 - 27/08 a 02/09):** Doses de referência calculadas e preenchidas no topo da tabela.
+     - **Ordem 8 a 55 (DAP 8 ao 55 - 03/09 a 20/10):** Data, Ordem e DAP preenchidos, com células de produtos em branco para anotação diária à caneta pelo operador.
+   - **Arquivos Sincronizados:** [campo/resumoElementos.js](file:///c:/Users/mgcon/Desktop/prodtecweb/campo/resumoElementos.js), [campo/index.html](file:///c:/Users/mgcon/Desktop/prodtecweb/campo/index.html) e [index.html](file:///c:/Users/mgcon/Desktop/prodtecweb/index.html).
