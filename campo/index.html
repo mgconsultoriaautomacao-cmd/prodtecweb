@@ -7791,18 +7791,25 @@ async function printPastaCampoDefensivos(idOrStr) {
         let val = (numDose >= 10 ? numDose / 1000 : (numDose > 0 ? numDose : 0.25));
         doseValCalculo = val;
         doseUsada = `${val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} g/ha`;
-      } else if (targetUnit === 'mL/100 L') {
-        // Exemplo: 30 mL/100 L ou 100-150 mL/100 L -> A dosagem é em mL para cada 100 litros do tanque
+      } else if (targetUnit === 'mL/100 L' || targetUnit === 'g/100 L') {
+        // Regra Oficial Bom Jesus / Auditoria: Para dosagens por 100 L, o valor usado é SEMPRE fracionário (0,xxx)
+        // Exemplo: 30 mL/100 L -> Usada: 0,030 mL/100 L; 25 mL/100 L -> 0,025 mL/100 L
+        const isGram = targetUnit.startsWith('g');
+        const unitSuffix = isGram ? 'g/100 L' : 'mL/100 L';
+        finalQtdUnit = isGram ? 'g' : 'mL';
+
         let val = numDose;
-        if (val < 1 && val > 0) val = val * 1000;
-        if (!val || val === 1) {
-          if (pNormUpper.includes('DECIS')) val = 30;
-          else if (pNormUpper.includes('SCORE')) val = 30;
-          else if (pNormUpper.includes('FLUTRIAFOL')) val = 30;
-          else val = 30;
+        if (val >= 1) val = val / 1000;
+        if (!val || val <= 0) {
+          if (pNormUpper.includes('DECIS')) val = 0.030;
+          else if (pNormUpper.includes('SCORE')) val = 0.025;
+          else if (pNormUpper.includes('FLUTRIAFOL') || pNormUpper.includes('TENAZ') || pNormUpper.includes('TRINITY')) val = 0.030;
+          else if (pNormUpper.includes('CORAGEN') || pNormUpper.includes('PREMIO')) val = 0.0075;
+          else if (pNormUpper.includes('ABADIN')) val = 0.015;
+          else val = 0.030;
         }
         doseValCalculo = val;
-        doseUsada = `${val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} mL/100 L`;
+        doseUsada = `${val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${unitSuffix}`;
       } else if (targetUnit === 'kg/ha') {
         let val = numDose > 0 ? numDose : 1.0;
         doseValCalculo = val;
@@ -7818,10 +7825,10 @@ async function printPastaCampoDefensivos(idOrStr) {
       const numArea = parseFloat(areaHa) || 1.0;
       let totalCalculado = 0;
 
-      if (targetUnit === 'mL/100 L') {
+      if (targetUnit === 'mL/100 L' || targetUnit === 'g/100 L') {
         const volCaldaHa = parseFloat(op.volume_calda) || 500;
         totalCalculado = (numArea * volCaldaHa / 100) * doseValCalculo;
-        finalQtdUnit = 'mL';
+        finalQtdUnit = targetUnit.startsWith('g') ? 'g' : 'mL';
       } else if (targetUnit === 'mL/ha' || targetUnit === 'g/ha') {
         totalCalculado = doseValCalculo * numArea;
       } else {
@@ -7888,13 +7895,13 @@ async function printPastaCampoDefensivos(idOrStr) {
     };
 
     rowsData = [
-      { data: fmtPlantioOff(6), ordem: '1330', dap: 6, alvo: '- Mosca Branca<br/>- Broca dos Frutos', produto: 'Actara 250 WG<br/>Decis 25 EC', ingrediente: 'Tiametoxam - IV<br/>Deltametrina - IV', doseRecom: '200-300 g/ha<br/>30 mL/100 L', doseUsada: '0,250 g/ha<br/>30,000 mL/100 L', appRealizadas: '1ª<br/>1ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(0.25 * areaHa).toFixed(3).replace('.', ',')} g<br/>${((500 * areaHa / 100) * 30).toFixed(3).replace('.', ',')} mL`, horario: '17:00:00', dtColheita: fmtPlantioOff(13), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
-      { data: fmtPlantioOff(11), ordem: '1340', dap: 11, alvo: '- Broca dos Frutos', produto: 'Decis 25 EC', ingrediente: 'Deltametrina - IV', doseRecom: '30 mL/100 L', doseUsada: '30,000 mL/100 L', appRealizadas: '2ª', appPermitidas: '4', carencia: '7', isDias: '1', qtd: `${((500 * areaHa / 100) * 30).toFixed(3).replace('.', ',')} mL`, horario: '17:00:00', dtColheita: fmtPlantioOff(18), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
-      { data: fmtPlantioOff(19), ordem: '1357', dap: 19, alvo: '- Mosca Minadora<br/>- Broca dos Frutos', produto: 'Vertimec 84 SC<br/>Decis 25 EC', ingrediente: 'Abamectina - II<br/>Deltametrina - IV', doseRecom: '50-100 mL/ha<br/>30 mL/100 L', doseUsada: '0,100 mL/ha<br/>30,000 mL/100 L', appRealizadas: '1ª<br/>3ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(0.1 * areaHa).toFixed(3).replace('.', ',')} mL<br/>${((500 * areaHa / 100) * 30).toFixed(3).replace('.', ',')} mL`, horario: '17:00:00', dtColheita: fmtPlantioOff(26), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
+      { data: fmtPlantioOff(6), ordem: '1330', dap: 6, alvo: '- Mosca Branca<br/>- Broca dos Frutos', produto: 'Actara 250 WG<br/>Decis 25 EC', ingrediente: 'Tiametoxam - IV<br/>Deltametrina - IV', doseRecom: '200-300 g/ha<br/>30 mL/100 L', doseUsada: '0,250 g/ha<br/>0,030 mL/100 L', appRealizadas: '1ª<br/>1ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(0.25 * areaHa).toFixed(3).replace('.', ',')} g<br/>${((500 * areaHa / 100) * 0.03).toFixed(3).replace('.', ',')} mL`, horario: '17:00:00', dtColheita: fmtPlantioOff(13), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
+      { data: fmtPlantioOff(11), ordem: '1340', dap: 11, alvo: '- Broca dos Frutos', produto: 'Decis 25 EC', ingrediente: 'Deltametrina - IV', doseRecom: '30 mL/100 L', doseUsada: '0,030 mL/100 L', appRealizadas: '2ª', appPermitidas: '4', carencia: '7', isDias: '1', qtd: `${((500 * areaHa / 100) * 0.03).toFixed(3).replace('.', ',')} mL`, horario: '17:00:00', dtColheita: fmtPlantioOff(18), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
+      { data: fmtPlantioOff(19), ordem: '1357', dap: 19, alvo: '- Mosca Minadora<br/>- Broca dos Frutos', produto: 'Vertimec 84 SC<br/>Decis 25 EC', ingrediente: 'Abamectina - II<br/>Deltametrina - IV', doseRecom: '50-100 mL/ha<br/>30 mL/100 L', doseUsada: '0,100 mL/ha<br/>0,030 mL/100 L', appRealizadas: '1ª<br/>3ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(0.1 * areaHa).toFixed(3).replace('.', ',')} mL<br/>${((500 * areaHa / 100) * 0.03).toFixed(3).replace('.', ',')} mL`, horario: '17:00:00', dtColheita: fmtPlantioOff(26), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
       { data: fmtPlantioOff(21), ordem: '1362', dap: 21, alvo: 'Mosca Minadora (Liriomyza sativae)', produto: 'Benevia', ingrediente: 'Ciantraniliprole - NC', doseRecom: '0,75 L/ha', doseUsada: '0,750 L/ha', appRealizadas: '1ª', appPermitidas: '2', carencia: '1', isDias: '1', qtd: `${(0.75 * areaHa).toFixed(3).replace('.', ',')} L`, horario: '17:00:00', dtColheita: fmtPlantioOff(22), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' },
       { data: fmtPlantioOff(26), ordem: '1410', dap: 26, alvo: '- Mosca Branca', produto: 'Sivanto Prime 200 SL', ingrediente: 'Flupyradifurone - III', doseRecom: '0,75 a 1,0 L/ha', doseUsada: '0,750 L/ha', appRealizadas: '1ª', appPermitidas: '3', carencia: '14', isDias: '1', qtd: `${(0.75 * areaHa).toFixed(3).replace('.', ',')} L`, horario: '17:00:00', dtColheita: fmtPlantioOff(40), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' },
       { data: fmtPlantioOff(33), ordem: '1432', dap: 33, alvo: '- Mosca Minadora<br/>- Broca dos Frutos', produto: 'Vertimec 84 SC<br/>Trigard 750 WP', ingrediente: 'Abamectina - II<br/>Ciromazina - III', doseRecom: '100-150 mL/ha<br/>150 g/ha', doseUsada: '0,100 mL/ha<br/>0,150 g/ha', appRealizadas: '2ª<br/>1ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(0.1 * areaHa).toFixed(3).replace('.', ',')} mL<br/>${(0.15 * areaHa).toFixed(3).replace('.', ',')} g`, horario: '17:00:00', dtColheita: fmtPlantioOff(40), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' },
-      { data: fmtPlantioOff(38), ordem: '1446', dap: 38, alvo: '- Oídio (Sphaerotheca fuliginea)<br/>- Broca dos Frutos', produto: 'Score 250 EC<br/>Decis 25 EC', ingrediente: 'Difenoconazol - III<br/>Deltametrina - IV', doseRecom: '20-30 mL/100 L<br/>30 mL/100 L', doseUsada: '25,000 mL/100 L<br/>30,000 mL/100 L', appRealizadas: '1ª<br/>4ª', appPermitidas: '3<br/>4', carencia: '14<br/>7', isDias: '1<br/>1', qtd: `${((500 * areaHa / 100) * 25).toFixed(3).replace('.', ',')} mL<br/>${((500 * areaHa / 100) * 30).toFixed(3).replace('.', ',')} mL`, horario: '17:00:00', dtColheita: fmtPlantioOff(52), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' }
+      { data: fmtPlantioOff(38), ordem: '1446', dap: 38, alvo: '- Oídio (Sphaerotheca fuliginea)<br/>- Broca dos Frutos', produto: 'Score 250 EC<br/>Decis 25 EC', ingrediente: 'Difenoconazol - III<br/>Deltametrina - IV', doseRecom: '20-30 mL/100 L<br/>30 mL/100 L', doseUsada: '0,025 mL/100 L<br/>0,030 mL/100 L', appRealizadas: '1ª<br/>4ª', appPermitidas: '3<br/>4', carencia: '14<br/>7', isDias: '1<br/>1', qtd: `${((500 * areaHa / 100) * 0.025).toFixed(3).replace('.', ',')} mL<br/>${((500 * areaHa / 100) * 0.03).toFixed(3).replace('.', ',')} mL`, horario: '17:00:00', dtColheita: fmtPlantioOff(52), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' }
     ];
   }
 

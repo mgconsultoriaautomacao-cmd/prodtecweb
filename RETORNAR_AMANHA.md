@@ -11,7 +11,7 @@
    - Seguir rigorosamente o critério da unidade recomendada na aplicação de defensivos:
      - **Recomendação em `mL/ha` (ex: 50-100 mL/ha de Vertimec, 60-100 mL/ha de Trinca):** O resultado em **Dosagem Usada** deve ser em `mL/ha` (ex.: `0,100 mL/ha`) e a **Quantidade** em `mL` (ex.: `0,416 mL`). **Não usar `L/ha` e não usar `L`**.
      - **Recomendação em `g/ha` (ex: 250-300 g/ha de Acetamiprid, 150 g/ha de Trigard):** O resultado em **Dosagem Usada** deve ser em `g/ha` (ex.: `0,250 g/ha`) e a **Quantidade** em `g` (ex.: `1,040 g`). **Não usar `kg/ha` e não usar `kg`**.
-     - **Recomendação em `mL/100 L` (ex: 30 mL/100 L de Decis 25 CE, 20-40 mL/100 L de Flutriafol, Score):** A dosagem não é litros, é **mL para cada 100 litros do tanque** (ex.: `30,000 mL/100 L`). A quantidade total calcula com base no volume de calda por hectare (`op.volume_calda || 500` L/ha) resultando em `mL` (ex.: `624,000 mL`).
+     - **Recomendação em `mL/100 L` (ex: 30 mL/100 L de Decis 25 CE, 20-40 mL/100 L de Flutriafol, Score):** A dosagem é em **mL para cada 100 litros do tanque expressa em valor fracionário** (ex.: `0,030 mL/100 L`). A quantidade total calcula com base no volume de calda por hectare (`(areaHa * volCalda / 100) * doseFracionaria`), resultando em `mL` fracionário após a vírgula (ex.: `0,624 mL`).
 2. **Eliminação dos Traços (`—`) em Ingrediente Ativo e Dosagem Recomendada:**
    - Carregamento assíncrono garantido de `caderno_campo_defensivos_cadastro` pelo Supabase via `client`/`tId`.
    - Dicionário offline (`DEF_BULAS`) completo contendo todos os 60+ defensivos agrícolas registrados na Bom Jesus Agrícola (Acetamiprid, Trinca Caps, Vertimec, Flutriafol, Decis, etc.).
@@ -51,11 +51,11 @@ Quando a ficha PC06 da Parcela 16 M for impressa amanhã:
 | **28/08/2026** | VERTIMEC 84 SC | ABAMECTINA - II | 100 - 160 mL/ha | **0,100 mL/ha** | **0,416 mL** |
 | **17/09/2026** | VERTIMEC 84 SC | ABAMECTINA - II | 100 - 160 mL/ha | **0,100 mL/ha** | **0,416 mL** |
 | **17/09/2026** | TRINCA CAPS | LAMBDA-CIALOTRINA - II | 60 - 100 mL/ha | **1,000 mL/ha** | **4,160 mL** |
-| **22/09/2026** | DECIS 25 CE | DELTAMETRINA - IV | 30 mL/100 L | **30,000 mL/100 L** | **744,000 mL** |
+| **22/09/2026** | DECIS 25 CE | DELTAMETRINA - IV | 30 mL/100 L | **0,030 mL/100 L** | **0,744 mL** |
 | **29/09/2026** | VERTIMEC 84 SC | ABAMECTINA - II | 100 - 160 mL/ha | **0,100 mL/ha** | **0,416 mL** |
 | **29/09/2026** | TRINCA CAPS | LAMBDA-CIALOTRINA - II | 60 - 100 mL/ha | **1,000 mL/ha** | **4,160 mL** |
-| **29/09/2026** | FLUTRIAFOL NORTOX | FLUTRIAFOL - IV | 20 - 40 mL/100 L | **30,000 mL/100 L** | **624,000 mL** |
-| **14/10/2026** | DECIS 25 CE | DELTAMETRINA - IV | 30 mL/100 L | **30,000 mL/100 L** | **624,000 mL** |
+| **29/09/2026** | FLUTRIAFOL NORTOX | FLUTRIAFOL - IV | 20 - 40 mL/100 L | **0,030 mL/100 L** | **0,624 mL** |
+| **14/10/2026** | DECIS 25 CE | DELTAMETRINA - IV | 30 mL/100 L | **0,030 mL/100 L** | **0,624 mL** |
 
 ---
 
