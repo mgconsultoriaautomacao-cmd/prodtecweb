@@ -91,3 +91,16 @@ Quando a ficha PC06 da Parcela 16 M for impressa amanhã:
 3. **Preservação Integral da Lógica Digital:**
    - A metodologia digital de cálculo completo (DAP 11 ao 65/75) permanece 100% ativa no sistema para gráficos, indicadores e telas.
    - Ao clicar em imprimir (tanto na PC07 quanto na PC08), o sistema apresenta a opção rápida (com Enter padrão = 1 para o modelo manual de auditoria e 2 para o modelo digital completo), gravando a preferência do usuário.
+
+---
+
+## 7. Extensão do Calendário de Fertirrigação até Idades Avançadas (DAP 55 ao 65)
+
+1. **Ajuste Solicitado pelo Usuário:**
+   - O usuário solicitou que a tabela manual não ficasse restrita a vinte e poucos dias, mas sim que estendesse os dados de idade (DAP) cobrindo todo o ciclo ("cinquenta e poucos dias, igual ao original"), mantendo as informações de dosagem expostas apenas no início e deixando as colunas de produtos em branco para as idades subsequentes.
+2. **Implementação Realizada:**
+   - Em [campo/index.html](file:///c:/Users/mgcon/Desktop/prodtecweb/campo/index.html), [index.html](file:///c:/Users/mgcon/Desktop/prodtecweb/index.html) (PC07) e [campo/resumoElementos.js](file:///c:/Users/mgcon/Desktop/prodtecweb/campo/resumoElementos.js) (PC08):
+     - Todas as 55 linhas do ciclo (DAP 11 ao 65 para Melão Padrão) são geradas na tabela com sua Data do Calendário e o respectivo DAP.
+     - **Linhas Iniciais (DAP 11 ao 17):** Apresentam os quilos calculados expostos como modelo de partida e referência de dosagem.
+     - **Linhas Subsequentes (DAP 18 ao 65):** Apresentam Data, Ordem e DAP preenchidos, porém com as células de dosagem/elementos totalmente **em branco** para anotação manual diária pelo fertirrigador.
+     - **Paginação A4 Perfeita:** Configurada com `thead { display: table-header-group; }` e `tr { page-break-inside: avoid; }`, dividindo o documento com precisão em exatamente 2 páginas ("PAG: 01 DE 02").

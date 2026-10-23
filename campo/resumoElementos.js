@@ -879,10 +879,15 @@ async function printPastaCampoResumoElementos(parcelIdOrCode, forceManual) {
   const fmtVal = v => (v != null && v > 0) ? v.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '-';
 
   // Linhas de Fertirrigação (Modo Manual de Auditoria ou Digital Completo)
-  const fertEntriesToRender = isManualMode ? data.fertRows.slice(0, 7) : data.fertRows;
+  let fertRowsHtml = data.fertRows.map((r, i) => {
+    const isInitialReference = !isManualMode || (i < 7);
+    const cols = NUTRIENT_COLUMNS.map(c => {
+      if (!isInitialReference) {
+        return '<td style="border:1px solid #000; padding:1.5px 2px; text-align:center; height:19px;">&nbsp;</td>';
+      }
+      return `<td style="border:1px solid #000; padding:1.5px 2px; text-align:center">${fmtVal(r.nutrientes[c.key])}</td>`;
+    }).join('');
 
-  let fertRowsHtml = fertEntriesToRender.map((r, i) => {
-    const cols = NUTRIENT_COLUMNS.map(c => `<td style="border:1px solid #000; padding:1.5px 2px; text-align:center">${fmtVal(r.nutrientes[c.key])}</td>`).join('');
     return `
       <tr style="height:19px;">
         <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:5pt; font-weight:600">FERTIRRIGAÇÃO</td>
@@ -892,20 +897,6 @@ async function printPastaCampoResumoElementos(parcelIdOrCode, forceManual) {
       </tr>
     `;
   }).join('');
-
-  if (isManualMode) {
-    // Linhas pautadas em branco para preenchimento manual pelo fertirrigador / auditoria
-    for (let b = 0; b < 18; b++) {
-      fertRowsHtml += `
-        <tr style="height:22px;">
-          <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:5pt; font-weight:600; color:#555">FERTIRRIGAÇÃO</td>
-          <td style="border:1px solid #000; text-align:center; height:22px;">&nbsp;</td>
-          <td style="border:1px solid #000; text-align:center; height:22px;">&nbsp;</td>
-          ${NUTRIENT_COLUMNS.map(() => '<td style="border:1px solid #000; height:22px;">&nbsp;</td>').join('')}
-        </tr>
-      `;
-    }
-  }
 
   // Linhas de Totais (em branco no modo manual para preenchimento após conclusão da safra)
   const totalFertCols = isManualMode

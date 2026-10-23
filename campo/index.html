@@ -7199,10 +7199,8 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
 
     let orderCount = 1;
     const allSchedEntries = Object.entries(sched).sort((a,b) => Number(a[0]) - Number(b[0]));
-    // No modo manual: primeiras 7 aplicações no topo como modelo/guia + 19 linhas em branco
-    const schedEntries = isManualMode ? allSchedEntries.slice(0, 7) : allSchedEntries;
 
-    rowsHtml = schedEntries.map(([dapKey, doses]) => {
+    rowsHtml = allSchedEntries.map(([dapKey, doses], idx) => {
       const dapNum = Number(dapKey);
       let calcDtStr = '—';
       if (plantioDt && !isNaN(plantioDt.getTime())) {
@@ -7213,8 +7211,13 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
         calcDtStr = `${dd}/${mm}/${yy}`;
       }
       const faseStr = `DAP ${dapNum}`;
+      const isInitialReference = !isManualMode || (idx < 7);
 
       const colsHtml = uniqueProducts.map(p => {
+        if (!isInitialReference) {
+          return '<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px;">&nbsp;</td>';
+        }
+
         let doseBase = 0;
         Object.entries(doses).forEach(([fKey, val]) => {
           if (fKey === 'OBSERVAÇÕES') return;
@@ -7226,7 +7229,7 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
           productTotals[p] = (productTotals[p] || 0) + totalKg;
           return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold; height:20px;">${totalKg.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</td>`;
         }
-        return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; color:#999; height:20px;">-</td>`;
+        return '<td style="border:1px solid #000; padding:2px 2px; text-align:center; color:#999; height:20px;">-</td>';
       }).join('');
 
       return `
@@ -7238,20 +7241,6 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
         </tr>
       `;
     }).join('');
-
-    if (isManualMode) {
-      // 19 linhas em branco com altura confortável (23px) para preenchimento manual à caneta
-      for (let b = 0; b < 19; b++) {
-        rowsHtml += `
-          <tr style="height: 23px;">
-            <td style="border:1px solid #000; text-align:center; height:23px;">&nbsp;</td>
-            <td style="border:1px solid #000; text-align:center; font-weight:bold; color:#777; height:23px;">${orderCount++}</td>
-            <td style="border:1px solid #000; text-align:center; height:23px;">&nbsp;</td>
-            ${uniqueProducts.map(() => '<td style="border:1px solid #000; height:23px;">&nbsp;</td>').join('')}
-          </tr>
-        `;
-      }
-    }
   }
 
   let defaultOp = (fertData && fertData.find(f => f.operador && f.operador.trim())?.operador) || 
@@ -7286,6 +7275,8 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
   .info-table { width: 100%; border-collapse: collapse; margin-bottom: 2px; }
   .info-table td { border: 1px solid #000; padding: 2px 4px; font-size: 6.8pt; }
   .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 3px; font-size: 6.2pt; }
+  .grid-table thead { display: table-header-group; }
+  .grid-table tr { page-break-inside: avoid; }
   .grid-table th, .grid-table td { border: 1px solid #000; padding: 2px 2px; }
   .grid-table th { background: #e5e7eb; font-weight: bold; text-align: center; font-size: 6pt; }
   .obs-box { border: 1px solid #000; padding: 3px 5px; font-size: 5.4pt; line-height: 1.15; margin-bottom: 3px; background: #fafafa; }
@@ -7313,7 +7304,7 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
           <b>DEPARTAMENTO:</b> CAMPO<br/>
           <b>NOME DO DOC:</b> CONTROLE DO USO DE FERTILIZANTES NO DESENVOLVIMENTO DA CULTURA<br/>
           <b>EMISSÃO:</b> 15/06/2026 &nbsp;|&nbsp; <b>MOD E APROVAÇÃO:</b> 01/07/2026 &nbsp;|&nbsp; <b>U. REVISÃO:</b> 01/07/2026<br/>
-          <b>PAG:</b> 01 DE 01 &nbsp;\&nbsp; <b>COD:</b> PC 07 &nbsp;\&nbsp; <b>REVISÃO:</b> ANUAL &nbsp;\&nbsp; <b>VERSÃO:</b> 01
+          <b>PAG:</b> 01 DE 02 &nbsp;\&nbsp; <b>COD:</b> PC 07 &nbsp;\&nbsp; <b>REVISÃO:</b> ANUAL &nbsp;\&nbsp; <b>VERSÃO:</b> 01
         </td>
       </tr>
     </table>
