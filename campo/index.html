@@ -6012,16 +6012,21 @@ function printPastaCampoOrdemPulv(itemStr) {
     return dProd === targetProdNorm || (targetProdNorm.length > 3 && dProd.includes(targetProdNorm)) || (dProd.length > 3 && targetProdNorm.includes(dProd));
   });
 
-  const activeIng = p.ingrediente_ativo || match?.ingrediente_ativo || '—';
-  const toxicClass = match?.classe_toxicologica || match?.toxicidade || 'IV';
+  const bulaFound = Object.entries(DEF_BULAS).find(([k]) => targetProdNorm.includes(k))?.[1];
+
+  const activeIng = p.ingrediente_ativo || match?.ingrediente_ativo || (bulaFound?.ia ? bulaFound.ia.split(' - ')[0] : '—');
+  const toxicClass = match?.classe_toxicologica || match?.toxicidade || (bulaFound?.ia ? bulaFound.ia.split(' - ')[1] : 'IV');
   const concentration = match?.concentracao_ia || match?.concentracao || '—';
-  const numPermitidoCiclo = match?.num_aplicacoes_ciclo || '3';
+  const numPermitidoCiclo = match?.num_aplicacoes_ciclo || bulaFound?.maxApp || '4';
   const intervBula = match?.intervalo_aplicacao_dias || '7';
-  const doseBulaText = match?.dose_texto || `${match?.dose || doseRealVal} ${unitStr}`;
-  const reentradaDias = match?.reentrada_dias ? `${match.reentrada_dias} dia(s)` : '1 dia(s)';
+  let doseBulaText = match?.dose_texto || bulaFound?.recom || `${match?.dose || doseRealVal} ${unitStr}`;
+  if (doseBulaText === '—') {
+    doseBulaText = `${doseRealVal.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} ${unitStr}`;
+  }
+  const reentradaDias = match?.reentrada_dias ? `${match.reentrada_dias} dia(s)` : (bulaFound?.is ? `${bulaFound.is} dia(s)` : '1 dia(s)');
   const carenciaStr = (p.carencia_dias !== '' && p.carencia_dias !== undefined)
     ? `${p.carencia_dias}`
-    : (match?.carencia_dias ? `${match.carencia_dias}` : '—');
+    : (match?.carencia_dias ? `${match.carencia_dias}` : (bulaFound?.carencia || '—'));
 
   // Histórico de aplicações na mesma parcela para este defensivo
   const matchingOps = (allOps || []).filter(op => {
@@ -7557,6 +7562,28 @@ async function printPastaCampoDefensivos(idOrStr) {
     console.warn('Erro ao carregar OPs para relatório de defensivos:', e);
   }
 
+  // Buscar catálogo oficial de defensivos do banco de dados (garante ingrediente ativo, dose recomendada e carência)
+  let allDefCat = (typeof defensivosData !== 'undefined' && defensivosData.length > 0 ? defensivosData : [])
+    .concat(typeof webDefensivosData !== 'undefined' && webDefensivosData.length > 0 ? webDefensivosData : [])
+    .concat(window._defensivos && window._defensivos.length > 0 ? window._defensivos : []);
+
+  if (allDefCat.length === 0 && window.sb && tenantId) {
+    try {
+      const { data: defs } = await window.sb.from('caderno_campo_defensivos_cadastro')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('produto', { ascending: true });
+      if (defs && defs.length > 0) {
+        allDefCat = defs;
+        if (typeof defensivosData !== 'undefined') defensivosData = defs;
+        if (typeof webDefensivosData !== 'undefined') webDefensivosData = defs;
+        window._defensivos = defs;
+      }
+    } catch(e) {
+      console.warn('Erro ao carregar catálogo de defensivos para relatório:', e);
+    }
+  }
+
   const cleanNorm = s => String(s || '').toUpperCase().replace(/^(PC|PARCELA|TALHAO|TALHÃO)[_\s\-]*/i, '').replace(/[^A-Z0-9]/g, '');
   const targetCode = cleanNorm(pCode);
   const parcelOps = opList.filter(o => {
@@ -7600,24 +7627,38 @@ async function printPastaCampoDefensivos(idOrStr) {
       const appRealizadas = `${productCountMap[pNorm]}ª`;
 
       // 1. Busca em catálogo de defensivos
-      const allDefCat = (typeof defensivosData !== 'undefined' ? defensivosData : [])
-        .concat(typeof webDefensivosData !== 'undefined' ? webDefensivosData : [])
-        .concat(window._defensivos || []);
       const pNormPure = pNormUpper.replace(/[^A-Z0-9]/g, '');
       const defMatch = allDefCat.find(d => {
         const dn = String(d.produto || d.nome || d.produto_nome || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, '');
         return dn && (dn === pNormPure || pNormPure.includes(dn) || dn.includes(pNormPure));
       });
 
-      // Bulas oficiais de defensivos frequentes no melão (garante que nunca falte dose recomendada ou unidade)
+      // Bulas oficiais e dados agronômicos de defensivos (garante que nunca falte dose recomendada, IA, classe ou carência)
       const DEF_BULAS = {
+        'ACETAMIPRID': { recom: '250-300 g/ha', unit: 'g/ha', ia: 'Acetamiprido - IV', carencia: '14', is: '1', maxApp: '4' },
+        'ACEMIP': { recom: '250-300 g/ha', unit: 'g/ha', ia: 'Acetamiprido - IV', carencia: '14', is: '1', maxApp: '4' },
+        'CARNADINE': { recom: '250 a 300 mL/ha', unit: 'mL/ha', ia: 'Acetamiprido - II', carencia: '14', is: '1', maxApp: '3' },
+        'DINK': { recom: '250-300 g/ha', unit: 'g/ha', ia: 'Acetamiprido - II', carencia: '14', is: '1', maxApp: '3' },
+        'JAVA': { recom: '250-300 g/ha', unit: 'g/ha', ia: 'Acetamiprido - II', carencia: '14', is: '1', maxApp: '3' },
+        'TAFFETA': { recom: '250-300 g/ha', unit: 'g/ha', ia: 'Acetamiprido - II', carencia: '14', is: '1', maxApp: '3' },
+        'ELESTAL': { recom: '100-200 g/ha', unit: 'g/ha', ia: 'Acetamiprido - II', carencia: '7', is: '3', maxApp: '3' },
+        'TRIVOR': { recom: '200-300 mL/ha', unit: 'mL/ha', ia: 'Acetamiprido + Piriproxifem - I', carencia: '7', is: '1', maxApp: '3' },
+        'PRIVILEGE': { recom: '200-300 mL/ha', unit: 'mL/ha', ia: 'Acetamiprido + Piriproxifem - I', carencia: '7', is: '1', maxApp: '2' },
+        'TRINCA': { recom: '60-100 mL/ha', unit: 'mL/ha', ia: 'Lambda-cialotrina - II', carencia: '7', is: '1', maxApp: '4' },
+        'LAMBDA': { recom: '60-100 mL/ha', unit: 'mL/ha', ia: 'Lambda-cialotrina - II', carencia: '7', is: '1', maxApp: '4' },
+        'FLUTRIAFOL': { recom: '20-40 mL/100 L', unit: 'mL/100 L', ia: 'Flutriafol - IV', carencia: '7', is: '1', maxApp: '4' },
+        'TENAZ': { recom: '40-80 mL/100 L', unit: 'mL/100 L', ia: 'Flutriafol - III', carencia: '7', is: '1', maxApp: '4' },
+        'TRINITY': { recom: '40-80 mL/100 L', unit: 'mL/100 L', ia: 'Flutriafol - III', carencia: '7', is: '1', maxApp: '4' },
         'VERTIMEC': { recom: '50-100 mL/ha', unit: 'mL/ha', ia: 'Abamectina - II', carencia: '3', is: '1', maxApp: '4' },
-        'DECIS': { recom: '30 mL/100 L', unit: 'mL/100 L', ia: 'Deltametrina - IV', carencia: '7', is: '1', maxApp: '4' },
+        'ABAMEX': { recom: '50-100 mL/ha', unit: 'mL/ha', ia: 'Abamectina - IV', carencia: '7', is: '1', maxApp: '4' },
+        'ABADIN': { recom: '12,5 a 25 mL/100 L', unit: 'mL/100 L', ia: 'Abamectina - III', carencia: '7', is: '1', maxApp: '4' },
+        'DECIS': { recom: '30 mL/100 L', unit: 'mL/100 L', ia: 'Deltametrina - IV', carencia: '3', is: '1', maxApp: '4' },
         'ACTARA': { recom: '200-300 g/ha', unit: 'g/ha', ia: 'Tiametoxam - IV', carencia: '3', is: '1', maxApp: '4' },
         'BENEVIA': { recom: '0,75 L/ha', unit: 'L/ha', ia: 'Ciantraniliprole - NC', carencia: '1', is: '1', maxApp: '2' },
         'SIVANTO': { recom: '0,75 a 1,0 L/ha', unit: 'L/ha', ia: 'Flupyradifurone - III', carencia: '14', is: '1', maxApp: '3' },
         'TRIGARD': { recom: '150 g/ha', unit: 'g/ha', ia: 'Ciromazina - III', carencia: '3', is: '1', maxApp: '4' },
         'SCORE': { recom: '20-30 mL/100 L', unit: 'mL/100 L', ia: 'Difenoconazol - III', carencia: '14', is: '1', maxApp: '3' },
+        'DIFCOR': { recom: '30 mL/100 L', unit: 'mL/100 L', ia: 'Difenoconazol - II', carencia: '14', is: '1', maxApp: '4' },
         'PROCLAIM': { recom: '150 g/ha', unit: 'g/ha', ia: 'Benzoato de Emamectina - III', carencia: '7', is: '1', maxApp: '4' },
         'VOLIAM': { recom: '0,20 L/ha', unit: 'L/ha', ia: 'Clorantraniliprole - NC', carencia: '1', is: '1', maxApp: '3' },
         'VERISMO': { recom: '0,25 L/ha', unit: 'L/ha', ia: 'Metaflumizone - III', carencia: '7', is: '1', maxApp: '3' },
@@ -7629,8 +7670,34 @@ async function printPastaCampoDefensivos(idOrStr) {
         'CURENOX': { recom: '1,5 kg/ha', unit: 'kg/ha', ia: 'Oxicloreto de Cobre - IV', carencia: '1', is: '1', maxApp: '4' },
         'CUPROGARB': { recom: '1,5 kg/ha', unit: 'kg/ha', ia: 'Oxicloreto de Cobre - IV', carencia: '1', is: '1', maxApp: '4' },
         'POLYRAM': { recom: '2,0 kg/ha', unit: 'kg/ha', ia: 'Metiram - IV', carencia: '7', is: '1', maxApp: '4' },
-        'DACONIL': { recom: '1,5 a 2,0 L/ha', unit: 'L/ha', ia: 'Clorotalonil - I', carencia: '7', is: '1', maxApp: '4' }
+        'DACONIL': { recom: '1,5 a 2,0 L/ha', unit: 'L/ha', ia: 'Clorotalonil - I', carencia: '7', is: '1', maxApp: '4' },
+        'CORAGEN': { recom: '7,5 mL/100 L', unit: 'mL/100 L', ia: 'Clorantraniliprole - II', carencia: '2', is: '1', maxApp: '2' },
+        'PREMIO': { recom: '7,5 mL/100 L', unit: 'mL/100 L', ia: 'Clorantraniliprole - II', carencia: '2', is: '1', maxApp: '2' },
+        'DELEGATE': { recom: '120-160 g/100 L', unit: 'g/100 L', ia: 'Espinetoram - II', carencia: '4', is: '1', maxApp: '4' },
+        'EVIDENCE': { recom: '200-300 g/ha', unit: 'g/ha', ia: 'Imidacloprido - III', carencia: '1', is: '1', maxApp: '3' },
+        'IMIDAGOLD': { recom: '200-300 g/ha', unit: 'g/ha', ia: 'Imidacloprido - III', carencia: '1', is: '1', maxApp: '3' },
+        'NUPRID': { recom: '300 g/ha', unit: 'g/ha', ia: 'Imidacloprido - II', carencia: '1', is: '1', maxApp: '3' },
+        'WARRANT': { recom: '300 g/ha', unit: 'g/ha', ia: 'Imidacloprido - III', carencia: '1', is: '1', maxApp: '3' },
+        'INFINITO': { recom: '1,25 L/ha', unit: 'L/ha', ia: 'Propamocarbe + Fluopicolide - II', carencia: '3', is: '1', maxApp: '3' },
+        'EQUATION': { recom: '600 g/ha', unit: 'g/ha', ia: 'Famoxadona + Cimoxanil - II', carencia: '5', is: '1', maxApp: '4' },
+        'COLLIS': { recom: '400 a 600 mL/ha', unit: 'mL/ha', ia: 'Cresoxim-Metílico + Boscalida - II', carencia: '4', is: '1', maxApp: '4' },
+        'ARCADIA': { recom: '80 - 100 mL/100 L', unit: 'mL/100 L', ia: 'Cresoxim-Metílico + Tebuconazol - II', carencia: '3', is: '1', maxApp: '3' },
+        'AZIMUT': { recom: '750 mL/ha', unit: 'mL/ha', ia: 'Azoxistrobina + Tebuconazol - II', carencia: '4', is: '1', maxApp: '4' },
+        'MIRAVIS': { recom: '400 - 800 mL/ha', unit: 'mL/ha', ia: 'Difenoconazol + Pdiflumetofem - II', carencia: '3', is: '1', maxApp: '3' },
+        'ORONDIS': { recom: '0,8 a 2,0 L/ha', unit: 'L/ha', ia: 'Azoxistrobina + Oxatiapiprolina - II', carencia: '3', is: '1', maxApp: '3' },
+        'MINECTO': { recom: '200 - 400 mL/ha', unit: 'mL/ha', ia: 'Abamectina + Ciantraniliprole - II', carencia: '3', is: '1', maxApp: '3' },
+        'VERIMARK': { recom: '375 - 750 mL/ha', unit: 'mL/ha', ia: 'Ciantraniliprole - III', carencia: '2', is: '1', maxApp: '2' },
+        'VERANGO': { recom: '0,75 a 1,0 L/ha', unit: 'L/ha', ia: 'Fluopiram - III', carencia: '1', is: '1', maxApp: '1' },
+        'ZORVEC': { recom: '400 mL/ha', unit: 'mL/ha', ia: 'Oxatiapiprolina + Famoxadona - II', carencia: '3', is: '1', maxApp: '3' },
+        'SERENADE': { recom: '2,0 a 4,0 L/ha', unit: 'L/ha', ia: 'Bacillus subtilis - IV', carencia: '0', is: '1', maxApp: '4' },
+        'DIPEL': { recom: '0,5 - 1,0 L/ha', unit: 'L/ha', ia: 'Bacillus thuringiensis - IV', carencia: '0', is: '1', maxApp: '4' },
+        'BAC-CONTROL': { recom: '100 g/100 L', unit: 'g/100 L', ia: 'Bacillus thuringiensis - IV', carencia: '0', is: '1', maxApp: '4' },
+        'KOCIDE': { recom: '200 g/100 L', unit: 'g/100 L', ia: 'Hidróxido de Cobre - II', carencia: '5', is: '1', maxApp: '5' },
+        'KENTAN': { recom: '1,5 a 3,0 kg/ha', unit: 'kg/ha', ia: 'Hidróxido de Cobre - II', carencia: '4', is: '1', maxApp: '4' },
+        'SUPERA': { recom: '1,5 a 3,0 L/ha', unit: 'L/ha', ia: 'Hidróxido de Cobre - III', carencia: '4', is: '1', maxApp: '4' },
+        'TIMOREX': { recom: '150 mL/100 L', unit: 'mL/100 L', ia: 'Extrato de Melaleuca Alternifolia - IV', carencia: '0', is: '1', maxApp: '4' }
       };
+      window.DEF_BULAS = DEF_BULAS;
 
       let bulaFound = null;
       for (const [k, v] of Object.entries(DEF_BULAS)) {
@@ -7640,10 +7707,21 @@ async function printPastaCampoDefensivos(idOrStr) {
       // 2. Dosagem Recomendada
       let doseRecom = it.dose_recomendada || it.dose_texto || '';
       if ((!doseRecom || doseRecom === '—') && defMatch) {
-        doseRecom = defMatch.dose_texto || defMatch.dosagem_recomendada || defMatch.dose;
+        doseRecom = defMatch.dose_texto || defMatch.dosagem_recomendada || defMatch.dose || '';
       }
       if ((!doseRecom || doseRecom === '—') && bulaFound) {
         doseRecom = bulaFound.recom;
+      }
+      if (doseRecom && doseRecom !== '—') {
+        doseRecom = String(doseRecom)
+          .replace(/[\\\/]h[\ufffd\xe1a]?/gi, '/ha')
+          .replace(/g\/h[\ufffd\xe1a]?/gi, 'g/ha')
+          .replace(/ml\/h[\ufffd\xe1a]?/gi, 'mL/ha')
+          .replace(/L\/h[\ufffd\xe1a]?/gi, 'L/ha')
+          .replace(/kg\/h[\ufffd\xe1a]?/gi, 'kg/ha')
+          .replace(/\\/g, '/')
+          .replace(/\/100L/i, '/100 L')
+          .trim();
       }
       if (!doseRecom) doseRecom = '—';
 
@@ -7749,9 +7827,23 @@ async function printPastaCampoDefensivos(idOrStr) {
         totalCalculado = 1.0;
       }
 
+      let iaStr = '—';
+      const rawIA = (it.ingrediente_ativo && it.ingrediente_ativo !== '—') ? it.ingrediente_ativo : (defMatch?.ingrediente_ativo || '');
+      const rawTox = it.classe_toxicologica || defMatch?.classe_toxicologica || '';
+      if (rawIA && rawIA !== '—') {
+        iaStr = `${rawIA} - ${rawTox || (bulaFound?.ia ? bulaFound.ia.split(' - ')[1] : 'IV')}`;
+      } else if (bulaFound?.ia) {
+        iaStr = bulaFound.ia;
+      }
+
       const qtdTotal = `${totalCalculado.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${finalQtdUnit}`;
-      const carencia = it.carencia_dias || it.carencia || (bulaFound ? bulaFound.carencia : '7');
-      const isDias = it.intervalo_seguranca_horas ? Math.max(1, Math.round(it.intervalo_seguranca_horas / 24)) : (it.is_dias || (bulaFound ? bulaFound.is : '1'));
+      const carencia = (it.carencia_dias !== '' && it.carencia_dias !== undefined && it.carencia_dias !== null) 
+        ? it.carencia_dias 
+        : (defMatch?.carencia_dias || (bulaFound ? bulaFound.carencia : '7'));
+      const isDias = it.intervalo_seguranca_horas 
+        ? Math.max(1, Math.round(it.intervalo_seguranca_horas / 24)) 
+        : (it.is_dias || defMatch?.reentrada_dias || (bulaFound ? bulaFound.is : '1'));
+      const appPermitidas = it.limite_aplicacoes || defMatch?.num_aplicacoes_ciclo || (bulaFound ? bulaFound.maxApp : '4');
       const horario = op.horario_inicio || '17:00:00';
 
       let dtColheita = '—';
@@ -7770,11 +7862,11 @@ async function printPastaCampoDefensivos(idOrStr) {
         dap: dapCalc || (opIdx * 6 + 6),
         alvo: it.alvo || op.alvo || 'Mosca Minadora / Broca dos Frutos',
         produto: pName,
-        ingrediente: (it.ingrediente_ativo && it.ingrediente_ativo !== '—') ? `${it.ingrediente_ativo} - ${it.classe_toxicologica || 'IV'}` : (bulaFound ? bulaFound.ia : (defMatch ? `${defMatch.ingrediente_ativo || '—'} - ${defMatch.classe_toxicologica || 'IV'}` : '—')),
+        ingrediente: iaStr,
         doseRecom: doseRecom,
         doseUsada: doseUsada,
         appRealizadas: appRealizadas,
-        appPermitidas: it.limite_aplicacoes || (bulaFound ? bulaFound.maxApp : '4'),
+        appPermitidas: appPermitidas,
         carencia: carencia,
         isDias: isDias,
         qtd: qtdTotal,
@@ -8317,21 +8409,38 @@ async function printPastaCampoIdiarn(itemStr) {
   'MOSCA DAS FRUTAS': 'Anastrepha grandis / Ceratitis capitata'
   };
 
+  const allDefs = (window.defensivosData && window.defensivosData.length > 0)
+    ? window.defensivosData
+    : ((typeof defensivosData !== 'undefined' && defensivosData.length > 0)
+        ? defensivosData
+        : (window._defensivos || []));
+  const bulasObj = (typeof DEF_BULAS !== 'undefined' ? DEF_BULAS : (window.DEF_BULAS || {}));
+
   const pulverizacoes = [];
   ops.sort((a,b) => new Date(a.data_aplicacao) - new Date(b.data_aplicacao)).forEach(op => {
   const dt = op.data_aplicacao ? op.data_aplicacao.split('-').reverse().join('/') : '—';
   if (op.caderno_campo_op_itens) {
   op.caderno_campo_op_itens.forEach(it => {
-  let alvo = (it.alvo || '').toUpperCase().trim();
-  let nomeCientifico = mapCientifico[alvo] || '—';
-  pulverizacoes.push({
-  data: dt,
-  produto: it.produto_nome,
-  ingrediente: it.ingrediente_ativo || '—',
-  dosagem: `${it.dosagem_real || ''} ${it.unidade || ''}`.trim(),
-  alvo: alvo,
-  nome_cientifico: nomeCientifico
-  });
+    let alvo = (it.alvo || '').toUpperCase().trim();
+    let nomeCientifico = mapCientifico[alvo] || '—';
+    const pName = (it.produto_nome || '').trim();
+    const pNormUpper = pName.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const pNormPure = pNormUpper.replace(/[^A-Z0-9]/g, '');
+    const defMatch = (allDefs || []).find(d => {
+      const dn = String(d.produto || d.nome || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, '');
+      return dn && (dn === pNormPure || pNormPure.includes(dn) || dn.includes(pNormPure));
+    });
+    const bulaFound = Object.entries(bulasObj).find(([k]) => pNormUpper.includes(k))?.[1];
+    const ingrediente = it.ingrediente_ativo || defMatch?.ingrediente_ativo || (bulaFound?.ia ? bulaFound.ia.split(' - ')[0] : '—');
+
+    pulverizacoes.push({
+      data: dt,
+      produto: it.produto_nome,
+      ingrediente: ingrediente,
+      dosagem: `${it.dosagem_real || ''} ${it.unidade || ''}`.trim(),
+      alvo: alvo,
+      nome_cientifico: nomeCientifico
+    });
   });
   }
   });
