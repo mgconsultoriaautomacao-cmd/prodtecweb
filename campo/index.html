@@ -6131,47 +6131,43 @@ function printPastaCampoOrdemPulv(itemStr) {
   `;
   }
 
-  const doseRealVal = parseFloat(p.dosagem_real) || parseFloat(p.dosagem_corrigida) || 0;
-  const areaVal = parseFloat(areaHa) || 1.0;
-  const volCaldaLtHa = parseFloat(item.volume_calda) || 500;
-  const volCaldaTanque = item.volume_tanque ? parseFloat(item.volume_tanque) : Math.round(volCaldaLtHa * areaVal);
+  // Normalização e cálculo rigoroso conforme exigência da auditoria:
+  // "Se passar de 1, um ponto, é litros (ou kg): 1,040 L. E quando for mL, é 0, aí os três dígitos do mL: 0,624 L. E a dose é 0,xxx: 0,250 L/ha."
+  const rawDose = parseFloat(String(p.dosagem_real || p.dosagem_corrigida || p.dose || 0).replace(',', '.').replace(/[^0-9.]/g, '')) || 0;
   const unitStr = (p.unidade || 'L/ha').trim();
-  const isPor100L = unitStr.toLowerCase().includes('100l');
-  
-  let qtdTotalUtilizadaStr = '—';
-  let doseAreaStr = '—';
+  const isPor100L = unitStr.toLowerCase().includes('100');
+  const isSolid = (unitStr.toLowerCase().includes('g') && !unitStr.toLowerCase().includes('l')) || 
+                  (p.tipo_produto && String(p.tipo_produto).toLowerCase().includes('po'));
 
-  if (isPor100L) {
-    // Regra Oficial para Defensivos por 100 Litros de Calda:
-    const totalRaw = (volCaldaTanque / 100) * doseRealVal;
-    if (unitStr.toLowerCase().startsWith('ml')) {
-      if (totalRaw >= 1000) {
-        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} mL (${(totalRaw/1000).toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} L)`;
-      } else {
-        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} mL`;
-      }
-      doseAreaStr = `${doseRealVal.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} mL/100 L`;
-    } else if (unitStr.toLowerCase().startsWith('g')) {
-      if (totalRaw >= 1000) {
-        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} g (${(totalRaw/1000).toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} kg)`;
-      } else {
-        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} g`;
-      }
-      doseAreaStr = `${doseRealVal.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} g/100 L`;
-    } else if (unitStr.toLowerCase().startsWith('kg')) {
-      qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} kg`;
-      doseAreaStr = `${doseRealVal.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} kg/100 L`;
-    } else {
-      qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} L`;
-      doseAreaStr = `${doseRealVal.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} L/100 L`;
-    }
-  } else {
-    // Defensivo por hectare
-    const totalRaw = doseRealVal * areaVal;
-    const baseU = unitStr.replace(/\/ha/i, '').replace(/\/há/i, '').trim();
-    qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} ${baseU || 'L'}`;
-    doseAreaStr = `${doseRealVal.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} ${unitStr}`;
+  // Se digitado em mL (ex: 250, 100, 60, 30) ou em gramas (ex: 250, 150),
+  // converte para valor fracionário decimal (0,xxx L/ha ou 0,xxx kg/ha)
+  let doseFrac = rawDose;
+  if (doseFrac >= 10) {
+    doseFrac = doseFrac / 1000.0;
+  } else if (isPor100L && doseFrac >= 1) {
+    doseFrac = doseFrac / 1000.0;
   }
+
+  let doseUnitLabel = '';
+  let finalQtdUnit = '';
+  if (isPor100L) {
+    doseUnitLabel = isSolid ? 'kg/100 L' : 'L/100 L';
+    finalQtdUnit = isSolid ? 'kg' : 'L';
+  } else {
+    doseUnitLabel = isSolid ? 'kg/ha' : 'L/ha';
+    finalQtdUnit = isSolid ? 'kg' : 'L';
+  }
+
+  let totalCalculado = 0;
+  if (isPor100L) {
+    totalCalculado = (volCaldaTanque / 100.0) * doseFrac;
+  } else {
+    totalCalculado = doseFrac * areaVal;
+  }
+
+  // Formatação com 3 casas decimais: 1,040 L (se >= 1) ou 0,624 L (se < 1)
+  const doseAreaStr = `${doseFrac.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${doseUnitLabel}`;
+  const qtdTotalUtilizadaStr = `${totalCalculado.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${finalQtdUnit}`;
 
   const targetProdNorm = normProd(p.produto_nome);
   const match = (allDefs || []).find(d => {
@@ -7882,7 +7878,8 @@ async function printPastaCampoDefensivos(idOrStr) {
         'KOCIDE': { recom: '200 g/100 L', unit: 'g/100 L', ia: 'Hidróxido de Cobre - II', carencia: '5', is: '1', maxApp: '5' },
         'KENTAN': { recom: '1,5 a 3,0 kg/ha', unit: 'kg/ha', ia: 'Hidróxido de Cobre - II', carencia: '4', is: '1', maxApp: '4' },
         'SUPERA': { recom: '1,5 a 3,0 L/ha', unit: 'L/ha', ia: 'Hidróxido de Cobre - III', carencia: '4', is: '1', maxApp: '4' },
-        'TIMOREX': { recom: '150 mL/100 L', unit: 'mL/100 L', ia: 'Extrato de Melaleuca Alternifolia - IV', carencia: '0', is: '1', maxApp: '4' }
+        'TIMOREX': { recom: '150 mL/100 L', unit: 'mL/100 L', ia: 'Extrato de Melaleuca Alternifolia - IV', carencia: '0', is: '1', maxApp: '4' },
+        'PROPERTY': { recom: '0,3 - 0,4 L/ha', unit: 'L/ha', ia: 'Pyriofenone - V', carencia: '5', is: '1', maxApp: '4' }
       };
       window.DEF_BULAS = DEF_BULAS;
 
@@ -7942,19 +7939,12 @@ async function printPastaCampoDefensivos(idOrStr) {
         else targetUnit = 'L/ha';
       }
 
-      // Unidade de quantidade correspondente à unidade de aplicação (sempre em conformidade com a dosagem recomendada)
-      let finalQtdUnit = 'L';
-      if (targetUnit.includes('mL')) {
-        finalQtdUnit = 'mL';
-      } else if (targetUnit.includes('g/')) {
-        finalQtdUnit = 'g';
-      } else if (targetUnit.includes('kg/')) {
-        finalQtdUnit = 'kg';
-      } else {
-        finalQtdUnit = 'L';
-      }
-
       // 4. Extração e formatação da Dosagem Usada
+      // Regra de Auditoria Fitossanitária:
+      // Se passar de 1, é litros (ex: 1,040 L ou kg). Se for mL, é 0, seguido dos 3 dígitos (ex: 0,250 L/ha, 0,030 L/100 L, 0,624 L).
+      const isSolidProd = (targetUnit.includes('g') && !targetUnit.includes('L')) || (it.tipo && String(it.tipo).toLowerCase().includes('po'));
+      let finalQtdUnit = isSolidProd ? 'kg' : 'L';
+
       let rawDoseUsada = it.dosagem_corrigida || it.dosagem_real || it.dose || '—';
       let numDose = parseFloat(String(rawDoseUsada).replace(',', '.').replace(/[^0-9.]/g, '')) || 0;
       if (!numDose && bulaFound && bulaFound.recom) {
@@ -7965,22 +7955,22 @@ async function printPastaCampoDefensivos(idOrStr) {
       let doseUsada = '—';
       let doseValCalculo = 0;
 
-      if (targetUnit === 'mL/ha') {
-        // Exemplo: 50-100 mL/ha -> Usada: 0,100 mL/ha ou 0,060 mL/ha
-        let val = (numDose >= 10 ? numDose / 1000 : (numDose > 0 ? numDose : 0.1));
-        doseValCalculo = val;
-        doseUsada = `${val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} mL/ha`;
-      } else if (targetUnit === 'g/ha') {
-        // Exemplo: 250-300 g/ha -> Usada: 0,250 g/ha ou 0,150 g/ha (gramas e não kg)
+      if (targetUnit === 'mL/ha' || targetUnit === 'L/ha') {
+        // Exemplo: Carnadine 250 mL/ha -> 0,250 L/ha; Vertimec 100 mL/ha -> 0,100 L/ha; Property 0,3 L/ha -> 0,300 L/ha
         let val = (numDose >= 10 ? numDose / 1000 : (numDose > 0 ? numDose : 0.25));
         doseValCalculo = val;
-        doseUsada = `${val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} g/ha`;
-      } else if (targetUnit === 'mL/100 L' || targetUnit === 'g/100 L') {
-        // Regra Oficial Bom Jesus / Auditoria: Para dosagens por 100 L, o valor usado é SEMPRE fracionário (0,xxx)
-        // Exemplo: 30 mL/100 L -> Usada: 0,030 mL/100 L; 25 mL/100 L -> 0,025 mL/100 L
-        const isGram = targetUnit.startsWith('g');
-        const unitSuffix = isGram ? 'g/100 L' : 'mL/100 L';
-        finalQtdUnit = isGram ? 'g' : 'mL';
+        doseUsada = `${val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} L/ha`;
+        finalQtdUnit = 'L';
+      } else if (targetUnit === 'g/ha' || targetUnit === 'kg/ha') {
+        // Exemplo: Acetamiprid 250 g/ha -> 0,250 kg/ha; Trigard 150 g/ha -> 0,150 kg/ha
+        let val = (numDose >= 10 ? numDose / 1000 : (numDose > 0 ? numDose : 0.25));
+        doseValCalculo = val;
+        doseUsada = `${val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg/ha`;
+        finalQtdUnit = 'kg';
+      } else if (targetUnit.includes('100')) {
+        // Exemplo: Decis 30 mL/100 L -> 0,030 L/100 L; Flutriafol 30 mL/100 L -> 0,030 L/100 L
+        const unitSuffix = isSolidProd ? 'kg/100 L' : 'L/100 L';
+        finalQtdUnit = isSolidProd ? 'kg' : 'L';
 
         let val = numDose;
         if (val >= 1) val = val / 1000;
@@ -7994,27 +7984,20 @@ async function printPastaCampoDefensivos(idOrStr) {
         }
         doseValCalculo = val;
         doseUsada = `${val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${unitSuffix}`;
-      } else if (targetUnit === 'kg/ha') {
-        let val = numDose > 0 ? numDose : 1.0;
-        doseValCalculo = val;
-        doseUsada = `${val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg/ha`;
       } else {
-        // L/ha
         let val = numDose > 0 ? numDose : 1.0;
         doseValCalculo = val;
         doseUsada = `${val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} L/ha`;
+        finalQtdUnit = 'L';
       }
 
       // 5. CÁLCULO PRECISO DA QUANTIDADE TOTAL COM 3 CASAS DECIMAIS
       const numArea = parseFloat(areaHa) || 1.0;
       let totalCalculado = 0;
 
-      if (targetUnit === 'mL/100 L' || targetUnit === 'g/100 L') {
+      if (targetUnit.includes('100')) {
         const volCaldaHa = parseFloat(op.volume_calda) || 500;
-        totalCalculado = (numArea * volCaldaHa / 100) * doseValCalculo;
-        finalQtdUnit = targetUnit.startsWith('g') ? 'g' : 'mL';
-      } else if (targetUnit === 'mL/ha' || targetUnit === 'g/ha') {
-        totalCalculado = doseValCalculo * numArea;
+        totalCalculado = (numArea * volCaldaHa / 100.0) * doseValCalculo;
       } else {
         totalCalculado = doseValCalculo * numArea;
       }
