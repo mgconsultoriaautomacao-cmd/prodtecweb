@@ -14074,37 +14074,44 @@ async function printPastaCampoDefensivos(id) {
 
       const targetUnit = isPor100L ? (baseUnit + '/100 L') : (baseUnit + '/ha');
 
-      // 4. Extração e formatação da Dosagem Usada baseada na Bula
+      // 4. Extração e formatação da Dosagem Usada baseada na Bula (com formato fracionário 0,xxx mL/ha)
+      const parsedRecom = parseDoseTexto(doseRecom !== '—' ? doseRecom : (bulaFound ? bulaFound.recom : ''));
+      const bMin = parsedRecom ? parsedRecom.min : 0;
+      const bMax = parsedRecom ? parsedRecom.max : 0;
+
       let rawDoseUsada = it.dosagem_corrigida || it.dosagem_real || it.dose || '—';
       let numDose = parseFloat(String(rawDoseUsada).replace(',', '.').replace(/[^0-9.]/g, '')) || 0;
-      if (!numDose && bulaFound && bulaFound.recom) {
-        const mRecom = bulaFound.recom.match(/([0-9]+[.,]?[0-9]*)/);
-        if (mRecom) numDose = parseFloat(mRecom[1].replace(',', '.'));
-      }
-      if (!numDose && doseRecom && doseRecom !== '—') {
-        const mRecom = doseRecom.match(/([0-9]+[.,]?[0-9]*)/);
-        if (mRecom) numDose = parseFloat(mRecom[1].replace(',', '.'));
+
+      // Se veio em fração decimal legítima
+      if ((baseUnit === 'mL' || baseUnit === 'g') && numDose > 0 && numDose < 1.0) {
+        numDose = numDose * 1000;
       }
 
-      // Ajuste se o valor veio em escala incompatível no banco
-      if ((baseUnit === 'mL' || baseUnit === 'g') && numDose > 0 && numDose < 5) {
-        numDose = numDose * 1000;
-      } else if ((baseUnit === 'L' || baseUnit === 'kg') && numDose >= 50) {
-        numDose = numDose / 1000;
+      // Proteção contra falso 1.0 de formulário
+      if (bMax > 0) {
+        if (baseUnit === 'mL' || baseUnit === 'g') {
+          if (numDose <= 5 && bMin >= 10) {
+            numDose = bMin;
+          } else if (numDose > bMax * 2) {
+            numDose = bMax;
+          }
+        } else {
+          if (numDose > bMax * 1.5 || numDose < bMin * 0.5) {
+            numDose = bMin;
+          }
+        }
       }
+      if (!numDose && bMin) numDose = bMin;
 
       let doseUsada = '—';
       if (baseUnit === 'mL' || baseUnit === 'g') {
-        if (Math.abs(numDose - Math.round(numDose)) < 0.001) {
-          doseUsada = `${Math.round(numDose)} ${targetUnit}`;
-        } else {
-          doseUsada = `${numDose.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} ${targetUnit}`;
-        }
+        const valFrac = numDose >= 1 ? (numDose / 1000.0) : numDose;
+        doseUsada = `${valFrac.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${targetUnit}`;
       } else {
         doseUsada = `${numDose.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${targetUnit}`;
       }
 
-      // 5. CÁLCULO PRECISO DA QUANTIDADE TOTAL COM REGRA OFICIAL DE TRANSIÇÃO (mL -> L se > 0,999 L)
+      // 5. CÁLCULO PRECISO DA QUANTIDADE TOTAL COM REGRA OFICIAL (mL como 0,xxx mL e L se > 0,999 L)
       const numArea = parseFloat(areaHa) || 1.0;
       let totalRaw = 0;
       if (isPor100L) {
@@ -14120,22 +14127,16 @@ async function printPastaCampoDefensivos(id) {
           const emLitros = totalRaw / 1000.0;
           qtdTotal = `${emLitros.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} L`;
         } else {
-          if (Math.abs(totalRaw - Math.round(totalRaw)) < 0.001) {
-            qtdTotal = `${Math.round(totalRaw)} mL`;
-          } else {
-            qtdTotal = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} mL`;
-          }
+          const emFrac = totalRaw / 1000.0;
+          qtdTotal = `${emFrac.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} mL`;
         }
       } else if (baseUnit === 'g') {
         if (totalRaw > 999.5) {
           const emKg = totalRaw / 1000.0;
           qtdTotal = `${emKg.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`;
         } else {
-          if (Math.abs(totalRaw - Math.round(totalRaw)) < 0.001) {
-            qtdTotal = `${Math.round(totalRaw)} g`;
-          } else {
-            qtdTotal = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} g`;
-          }
+          const emFrac = totalRaw / 1000.0;
+          qtdTotal = `${emFrac.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} g`;
         }
       } else if (baseUnit === 'kg') {
         qtdTotal = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`;
@@ -15561,27 +15562,39 @@ function printPastaCampoOrdemPulv(itemStr) {
 
   const unitStr = isPor100L ? (baseUnit + '/100 L') : (baseUnit + '/ha');
 
+  const parsedRecom = parseDoseTexto(doseBulaText !== '—' ? doseBulaText : (bulaFound ? bulaFound.recom : ''));
+  const bMin = parsedRecom ? parsedRecom.min : 0;
+  const bMax = parsedRecom ? parsedRecom.max : 0;
+
   let numDose = parseFloat(String(p.dosagem_real || p.dosagem_corrigida || p.dose || 0).replace(',', '.').replace(/[^0-9.]/g, '')) || 0;
-  if (!numDose && doseBulaText && doseBulaText !== '—') {
-    const m = doseBulaText.match(/([0-9]+[.,]?[0-9]*)/);
-    if (m) numDose = parseFloat(m[1].replace(',', '.'));
-  }
 
-  // Normalização de escala caso tenha vindo em fração decimal legada no banco
-  if ((baseUnit === 'mL' || baseUnit === 'g') && numDose > 0 && numDose < 5) {
+  // Se veio em fração decimal legítima
+  if ((baseUnit === 'mL' || baseUnit === 'g') && numDose > 0 && numDose < 1.0) {
     numDose = numDose * 1000;
-  } else if ((baseUnit === 'L' || baseUnit === 'kg') && numDose >= 50) {
-    numDose = numDose / 1000;
   }
 
-  // Dose / Área Utilizada (formatação na unidade oficial da bula)
+  // Proteção contra falso 1.0 de formulário
+  if (bMax > 0) {
+    if (baseUnit === 'mL' || baseUnit === 'g') {
+      if (numDose <= 5 && bMin >= 10) {
+        numDose = bMin;
+      } else if (numDose > bMax * 2) {
+        numDose = bMax;
+      }
+    } else {
+      if (numDose > bMax * 1.5 || numDose < bMin * 0.5) {
+        numDose = bMin;
+      }
+    }
+  }
+
+  if (!numDose && bMin) numDose = bMin;
+
+  // Dose / Área Utilizada (formatação na unidade oficial da bula com formato fracionário 0,xxx)
   let doseAreaStr = '';
   if (baseUnit === 'mL' || baseUnit === 'g') {
-    if (Math.abs(numDose - Math.round(numDose)) < 0.001) {
-      doseAreaStr = `${Math.round(numDose)} ${unitStr}`;
-    } else {
-      doseAreaStr = `${numDose.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} ${unitStr}`;
-    }
+    const valFrac = numDose >= 1 ? (numDose / 1000.0) : numDose;
+    doseAreaStr = `${valFrac.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${unitStr}`;
   } else {
     doseAreaStr = `${numDose.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${unitStr}`;
   }
@@ -15594,29 +15607,23 @@ function printPastaCampoOrdemPulv(itemStr) {
     totalRaw = numDose * areaVal;
   }
 
-  // Regra de transição oficial: "a dosagem é ml passa a ser litro se ultrapassar 0,999ml" (ou se ultrapassar 999 g passa a kg)
+  // Regra oficial do Usuário: "ML TEM QUE SER 0,416ml" e "passa a ser litro se ultrapassar 0,999ml"
   let qtdTotalUtilizadaStr = '';
   if (baseUnit === 'mL') {
     if (totalRaw > 999.5) {
       const emLitros = totalRaw / 1000.0;
       qtdTotalUtilizadaStr = `${emLitros.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} L`;
     } else {
-      if (Math.abs(totalRaw - Math.round(totalRaw)) < 0.001) {
-        qtdTotalUtilizadaStr = `${Math.round(totalRaw)} mL`;
-      } else {
-        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} mL`;
-      }
+      const emFrac = totalRaw / 1000.0;
+      qtdTotalUtilizadaStr = `${emFrac.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} mL`;
     }
   } else if (baseUnit === 'g') {
     if (totalRaw > 999.5) {
       const emKg = totalRaw / 1000.0;
       qtdTotalUtilizadaStr = `${emKg.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`;
     } else {
-      if (Math.abs(totalRaw - Math.round(totalRaw)) < 0.001) {
-        qtdTotalUtilizadaStr = `${Math.round(totalRaw)} g`;
-      } else {
-        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} g`;
-      }
+      const emFrac = totalRaw / 1000.0;
+      qtdTotalUtilizadaStr = `${emFrac.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} g`;
     }
   } else if (baseUnit === 'kg') {
     qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`;
@@ -26239,24 +26246,26 @@ async function deleteOpRecord(id) {
  */
 function parseDoseTexto(texto) {
   if (!texto) return null;
-  const linha = texto.replace(/\n[\s\S]*/g, '').trim()
-    .replace(/,/g, '.') // vírgula → ponto
-    .replace(/há/g, 'ha')
+  let linha = String(texto).replace(/\n[\s\S]*/g, '').trim()
+    .replace(/,/g, '.')
+    .replace(/há/gi, 'ha')
     .replace(/\\/g, '/');
 
-  const rangeMatch = linha.match(/(\d+\.?\d*)\s*(?:a|-)\s*(\d+\.?\d*)/);
+  // Normalizar espaços entre unidade e barra (ex: "ml /ha" -> "ml/ha", "ml / 100 l" -> "ml/100L")
+  linha = linha.replace(/\s*\/\s*/g, '/').replace(/\/100\s*l/gi, '/100L');
+
+  const rangeMatch = linha.match(/(\d+\.?\d*)\s*(?:a|-)\s*(\d+\.?\d*)\s*([A-Za-z0-9\/]+)?/i);
   if (rangeMatch) {
     const v1 = parseFloat(rangeMatch[1]);
     const v2 = parseFloat(rangeMatch[2]);
-    const unitMatch = linha.match(/(\d+\.?\d*)\s*(?:a|-)\s*(\d+\.?\d*)\s*([A-Za-z\/\.]+)/);
-    const unit = unitMatch ? unitMatch[3].trim() : '';
+    let unit = (rangeMatch[3] || '').trim();
     return { min: Math.min(v1, v2), max: Math.max(v1, v2), unit };
   }
 
-  const singleMatch = linha.match(/(\d+\.?\d*)\s*([A-Za-z\/\.]+)/);
+  const singleMatch = linha.match(/(\d+\.?\d*)\s*([A-Za-z0-9\/]+)?/i);
   if (singleMatch) {
     const v = parseFloat(singleMatch[1]);
-    return { min: v, max: v, unit: singleMatch[2].trim() };
+    return { min: v, max: v, unit: (singleMatch[2] || '').trim() };
   }
   return null;
 }
