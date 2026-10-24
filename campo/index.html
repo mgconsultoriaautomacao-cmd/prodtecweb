@@ -6131,61 +6131,114 @@ function printPastaCampoOrdemPulv(itemStr) {
   `;
   }
 
-  // Normalização e cálculo rigoroso conforme exigência da auditoria:
-  // "Se passar de 1, um ponto, é litros (ou kg): 1,040 L. E quando for mL, é 0, aí os três dígitos do mL: 0,624 L. E a dose é 0,xxx: 0,250 L/ha."
-  const rawDose = parseFloat(String(p.dosagem_real || p.dosagem_corrigida || p.dose || 0).replace(',', '.').replace(/[^0-9.]/g, '')) || 0;
-  const unitStr = (p.unidade || 'L/ha').trim();
-  const isPor100L = unitStr.toLowerCase().includes('100');
-  const isSolid = (unitStr.toLowerCase().includes('g') && !unitStr.toLowerCase().includes('l')) || 
-                  (p.tipo_produto && String(p.tipo_produto).toLowerCase().includes('po'));
-
-  // Se digitado em mL (ex: 250, 100, 60, 30) ou em gramas (ex: 250, 150),
-  // converte para valor fracionário decimal (0,xxx L/ha ou 0,xxx kg/ha)
-  let doseFrac = rawDose;
-  if (doseFrac >= 10) {
-    doseFrac = doseFrac / 1000.0;
-  } else if (isPor100L && doseFrac >= 1) {
-    doseFrac = doseFrac / 1000.0;
-  }
-
-  let doseUnitLabel = '';
-  let finalQtdUnit = '';
-  if (isPor100L) {
-    doseUnitLabel = isSolid ? 'kg/100 L' : 'L/100 L';
-    finalQtdUnit = isSolid ? 'kg' : 'L';
-  } else {
-    doseUnitLabel = isSolid ? 'kg/ha' : 'L/ha';
-    finalQtdUnit = isSolid ? 'kg' : 'L';
-  }
-
-  let totalCalculado = 0;
-  if (isPor100L) {
-    totalCalculado = (volCaldaTanque / 100.0) * doseFrac;
-  } else {
-    totalCalculado = doseFrac * areaVal;
-  }
-
-  // Formatação com 3 casas decimais: 1,040 L (se >= 1) ou 0,624 L (se < 1)
-  const doseAreaStr = `${doseFrac.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${doseUnitLabel}`;
-  const qtdTotalUtilizadaStr = `${totalCalculado.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${finalQtdUnit}`;
-
   const targetProdNorm = normProd(p.produto_nome);
   const match = (allDefs || []).find(d => {
     const dProd = normProd(d.produto);
     return dProd === targetProdNorm || (targetProdNorm.length > 3 && dProd.includes(targetProdNorm)) || (dProd.length > 3 && targetProdNorm.includes(dProd));
   });
 
-  const bulaFound = Object.entries(DEF_BULAS).find(([k]) => targetProdNorm.includes(k))?.[1];
+  const bulasObj = (typeof DEF_BULAS !== 'undefined' ? DEF_BULAS : (window.DEF_BULAS || {}));
+  const bulaFound = Object.entries(bulasObj).find(([k]) => targetProdNorm.includes(k))?.[1];
 
   const activeIng = p.ingrediente_ativo || match?.ingrediente_ativo || (bulaFound?.ia ? bulaFound.ia.split(' - ')[0] : '—');
   const toxicClass = match?.classe_toxicologica || match?.toxicidade || (bulaFound?.ia ? bulaFound.ia.split(' - ')[1] : 'IV');
   const concentration = match?.concentracao_ia || match?.concentracao || '—';
   const numPermitidoCiclo = match?.num_aplicacoes_ciclo || bulaFound?.maxApp || '4';
   const intervBula = match?.intervalo_aplicacao_dias || '7';
-  let doseBulaText = match?.dose_texto || bulaFound?.recom || `${match?.dose || doseRealVal} ${unitStr}`;
-  if (doseBulaText === '—') {
-    doseBulaText = `${doseRealVal.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3})} ${unitStr}`;
+
+  let doseBulaText = match?.dose_texto || bulaFound?.recom || (p.dose_recomendada || '');
+  if (!doseBulaText || doseBulaText === '—') {
+    const rawVal = p.dosagem_real || p.dose || '';
+    doseBulaText = rawVal ? `${rawVal} ${p.unidade || ''}`.trim() : '—';
   }
+
+  // Resolução rigorosa da Unidade da Bula e Cálculo Fitossanitário Oficial
+  const dLow = (doseBulaText && doseBulaText !== '—') ? doseBulaText.toLowerCase() : '';
+  const isPor100L = (dLow.includes('/100') || dLow.includes('100 l') || dLow.includes('100l') || dLow.includes('100 litros')) &&
+                    !dLow.includes('/ha') && !dLow.includes('/ ha') && !dLow.includes('ml/ha');
+
+  let baseUnit = '';
+  if (dLow.includes('ml')) baseUnit = 'mL';
+  else if (dLow.includes('kg')) baseUnit = 'kg';
+  else if (dLow.includes('g/') || dLow.startsWith('g') || dLow.includes(' g ')) baseUnit = 'g';
+  else if (dLow.includes('l/') || dLow.includes('l\\') || dLow.includes('l/ha')) baseUnit = 'L';
+  else if (bulaFound && bulaFound.unit) {
+    baseUnit = bulaFound.unit.includes('mL') ? 'mL' : (bulaFound.unit.includes('kg') ? 'kg' : (bulaFound.unit.includes('g') ? 'g' : 'L'));
+  } else {
+    const uLow = (p.unidade || '').toLowerCase();
+    if (uLow.includes('100')) {
+      baseUnit = uLow.includes('g') ? 'g' : 'mL';
+    } else if (uLow.includes('ml')) baseUnit = 'mL';
+    else if (uLow.includes('kg')) baseUnit = 'kg';
+    else if (uLow.includes('g')) baseUnit = 'g';
+    else baseUnit = 'L';
+  }
+
+  const unitStr = isPor100L ? (baseUnit + '/100 L') : (baseUnit + '/ha');
+
+  let numDose = parseFloat(String(p.dosagem_real || p.dosagem_corrigida || p.dose || 0).replace(',', '.').replace(/[^0-9.]/g, '')) || 0;
+  if (!numDose && doseBulaText && doseBulaText !== '—') {
+    const m = doseBulaText.match(/([0-9]+[.,]?[0-9]*)/);
+    if (m) numDose = parseFloat(m[1].replace(',', '.'));
+  }
+
+  // Normalização de escala caso tenha vindo em fração decimal legada no banco
+  if ((baseUnit === 'mL' || baseUnit === 'g') && numDose > 0 && numDose < 5) {
+    numDose = numDose * 1000;
+  } else if ((baseUnit === 'L' || baseUnit === 'kg') && numDose >= 50) {
+    numDose = numDose / 1000;
+  }
+
+  // Dose / Área Utilizada (formatação na unidade oficial da bula)
+  let doseAreaStr = '';
+  if (baseUnit === 'mL' || baseUnit === 'g') {
+    if (Math.abs(numDose - Math.round(numDose)) < 0.001) {
+      doseAreaStr = `${Math.round(numDose)} ${unitStr}`;
+    } else {
+      doseAreaStr = `${numDose.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} ${unitStr}`;
+    }
+  } else {
+    doseAreaStr = `${numDose.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${unitStr}`;
+  }
+
+  // Quantidade Total Utilizada:
+  let totalRaw = 0;
+  if (isPor100L) {
+    totalRaw = (volCaldaTanque / 100.0) * numDose;
+  } else {
+    totalRaw = numDose * areaVal;
+  }
+
+  // Regra de transição oficial: "a dosagem é ml passa a ser litro se ultrapassar 0,999ml" (ou se ultrapassar 999 g passa a kg)
+  let qtdTotalUtilizadaStr = '';
+  if (baseUnit === 'mL') {
+    if (totalRaw > 999.5) {
+      const emLitros = totalRaw / 1000.0;
+      qtdTotalUtilizadaStr = `${emLitros.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} L`;
+    } else {
+      if (Math.abs(totalRaw - Math.round(totalRaw)) < 0.001) {
+        qtdTotalUtilizadaStr = `${Math.round(totalRaw)} mL`;
+      } else {
+        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} mL`;
+      }
+    }
+  } else if (baseUnit === 'g') {
+    if (totalRaw > 999.5) {
+      const emKg = totalRaw / 1000.0;
+      qtdTotalUtilizadaStr = `${emKg.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`;
+    } else {
+      if (Math.abs(totalRaw - Math.round(totalRaw)) < 0.001) {
+        qtdTotalUtilizadaStr = `${Math.round(totalRaw)} g`;
+      } else {
+        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} g`;
+      }
+    }
+  } else if (baseUnit === 'kg') {
+    qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`;
+  } else {
+    qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} L`;
+  }
+
   const reentradaDias = match?.reentrada_dias ? `${match.reentrada_dias} dia(s)` : (bulaFound?.is ? `${bulaFound.is} dia(s)` : '1 dia(s)');
   const carenciaStr = (p.carencia_dias !== '' && p.carencia_dias !== undefined)
     ? `${p.carencia_dias}`
@@ -7909,97 +7962,97 @@ async function printPastaCampoDefensivos(idOrStr) {
       }
       if (!doseRecom) doseRecom = '—';
 
-      // 3. Resolução rigorosa da Unidade de Medida oficial da recomendação
-      let targetUnit = '';
-      if (doseRecom && doseRecom !== '—') {
-        const dLow = doseRecom.toLowerCase();
-        if (dLow.includes('ml/h') || dLow.includes('ml /h') || dLow.includes('ml/ha') || dLow.includes('ml/ ha')) {
-          targetUnit = 'mL/ha';
-        } else if (dLow.includes('g/h') || dLow.includes('g /h') || dLow.includes('g/ha') || dLow.includes('g/ ha')) {
-          targetUnit = 'g/ha';
-        } else if (dLow.includes('kg/h') || dLow.includes('kg /h') || dLow.includes('kg/ha') || dLow.includes('kg/ ha')) {
-          targetUnit = 'kg/ha';
-        } else if (dLow.includes('l/h') || dLow.includes('l /h') || dLow.includes('l/ha') || dLow.includes('l/ ha')) {
-          targetUnit = 'L/ha';
-        } else if (dLow.includes('/100') || dLow.includes('100 l') || dLow.includes('100l') || dLow.includes('100 litros')) {
-          targetUnit = dLow.includes('g') ? 'g/100 L' : 'mL/100 L';
-        }
-      }
-      if (!targetUnit && bulaFound && bulaFound.unit) {
-        targetUnit = bulaFound.unit;
-      }
-      if (!targetUnit) {
+      // 3. Resolução rigorosa da Unidade de Medida oficial da recomendação da bula
+      const dLow = (doseRecom && doseRecom !== '—') ? doseRecom.toLowerCase() : '';
+      const isPor100L = (dLow.includes('/100') || dLow.includes('100 l') || dLow.includes('100l') || dLow.includes('100 litros')) &&
+                        !dLow.includes('/ha') && !dLow.includes('/ ha') && !dLow.includes('ml/ha');
+
+      let baseUnit = '';
+      if (dLow.includes('ml')) baseUnit = 'mL';
+      else if (dLow.includes('kg')) baseUnit = 'kg';
+      else if (dLow.includes('g/') || dLow.startsWith('g') || dLow.includes(' g ')) baseUnit = 'g';
+      else if (dLow.includes('l/') || dLow.includes('l\\') || dLow.includes('l/ha')) baseUnit = 'L';
+      else if (bulaFound && bulaFound.unit) {
+        baseUnit = bulaFound.unit.includes('mL') ? 'mL' : (bulaFound.unit.includes('kg') ? 'kg' : (bulaFound.unit.includes('g') ? 'g' : 'L'));
+      } else {
         let rawU = (it.unidade || it.unidade_medida || it.unidade_dose || (defMatch ? (defMatch.unidade_dose || defMatch.unidade) : '') || '').trim();
         const ruLow = rawU.toLowerCase();
-        if (ruLow.includes('100')) targetUnit = ruLow.includes('g') ? 'g/100 L' : 'mL/100 L';
-        else if (ruLow.includes('ml')) targetUnit = 'mL/ha';
-        else if (ruLow.includes('kg')) targetUnit = 'kg/ha';
-        else if (ruLow.startsWith('g')) targetUnit = 'g/ha';
-        else if (ruLow.includes('l/h') || ruLow.includes('l')) targetUnit = 'L/ha';
-        else targetUnit = 'L/ha';
+        if (ruLow.includes('100')) baseUnit = ruLow.includes('g') ? 'g' : 'mL';
+        else if (ruLow.includes('ml')) baseUnit = 'mL';
+        else if (ruLow.includes('kg')) baseUnit = 'kg';
+        else if (ruLow.startsWith('g')) baseUnit = 'g';
+        else baseUnit = 'L';
       }
 
-      // 4. Extração e formatação da Dosagem Usada
-      // Regra de Auditoria Fitossanitária:
-      // Se passar de 1, é litros (ex: 1,040 L ou kg). Se for mL, é 0, seguido dos 3 dígitos (ex: 0,250 L/ha, 0,030 L/100 L, 0,624 L).
-      const isSolidProd = (targetUnit.includes('g') && !targetUnit.includes('L')) || (it.tipo && String(it.tipo).toLowerCase().includes('po'));
-      let finalQtdUnit = isSolidProd ? 'kg' : 'L';
+      const targetUnit = isPor100L ? (baseUnit + '/100 L') : (baseUnit + '/ha');
 
+      // 4. Extração e formatação da Dosagem Usada baseada na Bula
       let rawDoseUsada = it.dosagem_corrigida || it.dosagem_real || it.dose || '—';
       let numDose = parseFloat(String(rawDoseUsada).replace(',', '.').replace(/[^0-9.]/g, '')) || 0;
       if (!numDose && bulaFound && bulaFound.recom) {
         const mRecom = bulaFound.recom.match(/([0-9]+[.,]?[0-9]*)/);
         if (mRecom) numDose = parseFloat(mRecom[1].replace(',', '.'));
       }
-
-      let doseUsada = '—';
-      let doseValCalculo = 0;
-
-      if (targetUnit === 'mL/ha' || targetUnit === 'L/ha') {
-        // Exemplo: Carnadine 250 mL/ha -> 0,250 L/ha; Vertimec 100 mL/ha -> 0,100 L/ha; Property 0,3 L/ha -> 0,300 L/ha
-        let val = (numDose >= 10 ? numDose / 1000 : (numDose > 0 ? numDose : 0.25));
-        doseValCalculo = val;
-        doseUsada = `${val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} L/ha`;
-        finalQtdUnit = 'L';
-      } else if (targetUnit === 'g/ha' || targetUnit === 'kg/ha') {
-        // Exemplo: Acetamiprid 250 g/ha -> 0,250 kg/ha; Trigard 150 g/ha -> 0,150 kg/ha
-        let val = (numDose >= 10 ? numDose / 1000 : (numDose > 0 ? numDose : 0.25));
-        doseValCalculo = val;
-        doseUsada = `${val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg/ha`;
-        finalQtdUnit = 'kg';
-      } else if (targetUnit.includes('100')) {
-        // Exemplo: Decis 30 mL/100 L -> 0,030 L/100 L; Flutriafol 30 mL/100 L -> 0,030 L/100 L
-        const unitSuffix = isSolidProd ? 'kg/100 L' : 'L/100 L';
-        finalQtdUnit = isSolidProd ? 'kg' : 'L';
-
-        let val = numDose;
-        if (val >= 1) val = val / 1000;
-        if (!val || val <= 0) {
-          if (pNormUpper.includes('DECIS')) val = 0.030;
-          else if (pNormUpper.includes('SCORE')) val = 0.025;
-          else if (pNormUpper.includes('FLUTRIAFOL') || pNormUpper.includes('TENAZ') || pNormUpper.includes('TRINITY')) val = 0.030;
-          else if (pNormUpper.includes('CORAGEN') || pNormUpper.includes('PREMIO')) val = 0.0075;
-          else if (pNormUpper.includes('ABADIN')) val = 0.015;
-          else val = 0.030;
-        }
-        doseValCalculo = val;
-        doseUsada = `${val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${unitSuffix}`;
-      } else {
-        let val = numDose > 0 ? numDose : 1.0;
-        doseValCalculo = val;
-        doseUsada = `${val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} L/ha`;
-        finalQtdUnit = 'L';
+      if (!numDose && doseRecom && doseRecom !== '—') {
+        const mRecom = doseRecom.match(/([0-9]+[.,]?[0-9]*)/);
+        if (mRecom) numDose = parseFloat(mRecom[1].replace(',', '.'));
       }
 
-      // 5. CÁLCULO PRECISO DA QUANTIDADE TOTAL COM 3 CASAS DECIMAIS
-      const numArea = parseFloat(areaHa) || 1.0;
-      let totalCalculado = 0;
+      // Ajuste se o valor veio em escala incompatível no banco
+      if ((baseUnit === 'mL' || baseUnit === 'g') && numDose > 0 && numDose < 5) {
+        numDose = numDose * 1000;
+      } else if ((baseUnit === 'L' || baseUnit === 'kg') && numDose >= 50) {
+        numDose = numDose / 1000;
+      }
 
-      if (targetUnit.includes('100')) {
-        const volCaldaHa = parseFloat(op.volume_calda) || 500;
-        totalCalculado = (numArea * volCaldaHa / 100.0) * doseValCalculo;
+      let doseUsada = '—';
+      if (baseUnit === 'mL' || baseUnit === 'g') {
+        if (Math.abs(numDose - Math.round(numDose)) < 0.001) {
+          doseUsada = `${Math.round(numDose)} ${targetUnit}`;
+        } else {
+          doseUsada = `${numDose.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} ${targetUnit}`;
+        }
       } else {
-        totalCalculado = doseValCalculo * numArea;
+        doseUsada = `${numDose.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${targetUnit}`;
+      }
+
+      // 5. CÁLCULO PRECISO DA QUANTIDADE TOTAL COM REGRA OFICIAL DE TRANSIÇÃO (mL -> L se > 0,999 L)
+      const numArea = parseFloat(areaHa) || 1.0;
+      let totalRaw = 0;
+      if (isPor100L) {
+        const volCaldaHa = parseFloat(op.volume_calda) || 500;
+        totalRaw = (numArea * volCaldaHa / 100.0) * numDose;
+      } else {
+        totalRaw = numDose * numArea;
+      }
+
+      let qtdTotal = '';
+      if (baseUnit === 'mL') {
+        if (totalRaw > 999.5) {
+          const emLitros = totalRaw / 1000.0;
+          qtdTotal = `${emLitros.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} L`;
+        } else {
+          if (Math.abs(totalRaw - Math.round(totalRaw)) < 0.001) {
+            qtdTotal = `${Math.round(totalRaw)} mL`;
+          } else {
+            qtdTotal = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} mL`;
+          }
+        }
+      } else if (baseUnit === 'g') {
+        if (totalRaw > 999.5) {
+          const emKg = totalRaw / 1000.0;
+          qtdTotal = `${emKg.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`;
+        } else {
+          if (Math.abs(totalRaw - Math.round(totalRaw)) < 0.001) {
+            qtdTotal = `${Math.round(totalRaw)} g`;
+          } else {
+            qtdTotal = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} g`;
+          }
+        }
+      } else if (baseUnit === 'kg') {
+        qtdTotal = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`;
+      } else {
+        qtdTotal = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} L`;
       }
 
       let iaStr = '—';
@@ -8010,8 +8063,7 @@ async function printPastaCampoDefensivos(idOrStr) {
       } else if (bulaFound?.ia) {
         iaStr = bulaFound.ia;
       }
-
-      const qtdTotal = `${totalCalculado.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${finalQtdUnit}`;
+
       const carencia = (it.carencia_dias !== '' && it.carencia_dias !== undefined && it.carencia_dias !== null) 
         ? it.carencia_dias 
         : (defMatch?.carencia_dias || (bulaFound ? bulaFound.carencia : '7'));
@@ -8062,13 +8114,13 @@ async function printPastaCampoDefensivos(idOrStr) {
     };
 
     rowsData = [
-      { data: fmtPlantioOff(6), ordem: '1330', dap: 6, alvo: '- Mosca Branca<br/>- Broca dos Frutos', produto: 'Actara 250 WG<br/>Decis 25 EC', ingrediente: 'Tiametoxam - IV<br/>Deltametrina - IV', doseRecom: '200-300 g/ha<br/>30 mL/100 L', doseUsada: '0,250 g/ha<br/>0,030 mL/100 L', appRealizadas: '1ª<br/>1ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(0.25 * areaHa).toFixed(3).replace('.', ',')} g<br/>${((500 * areaHa / 100) * 0.03).toFixed(3).replace('.', ',')} mL`, horario: '17:00:00', dtColheita: fmtPlantioOff(13), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
-      { data: fmtPlantioOff(11), ordem: '1340', dap: 11, alvo: '- Broca dos Frutos', produto: 'Decis 25 EC', ingrediente: 'Deltametrina - IV', doseRecom: '30 mL/100 L', doseUsada: '0,030 mL/100 L', appRealizadas: '2ª', appPermitidas: '4', carencia: '7', isDias: '1', qtd: `${((500 * areaHa / 100) * 0.03).toFixed(3).replace('.', ',')} mL`, horario: '17:00:00', dtColheita: fmtPlantioOff(18), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
-      { data: fmtPlantioOff(19), ordem: '1357', dap: 19, alvo: '- Mosca Minadora<br/>- Broca dos Frutos', produto: 'Vertimec 84 SC<br/>Decis 25 EC', ingrediente: 'Abamectina - II<br/>Deltametrina - IV', doseRecom: '50-100 mL/ha<br/>30 mL/100 L', doseUsada: '0,100 mL/ha<br/>0,030 mL/100 L', appRealizadas: '1ª<br/>3ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(0.1 * areaHa).toFixed(3).replace('.', ',')} mL<br/>${((500 * areaHa / 100) * 0.03).toFixed(3).replace('.', ',')} mL`, horario: '17:00:00', dtColheita: fmtPlantioOff(26), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
+      { data: fmtPlantioOff(6), ordem: '1330', dap: 6, alvo: '- Mosca Branca<br/>- Broca dos Frutos', produto: 'Actara 250 WG<br/>Decis 25 EC', ingrediente: 'Tiametoxam - IV<br/>Deltametrina - IV', doseRecom: '200-300 g/ha<br/>30 mL/100 L', doseUsada: '250 g/ha<br/>30 mL/100 L', appRealizadas: '1ª<br/>1ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(0.25 * areaHa >= 1.0) ? (0.25 * areaHa).toFixed(3).replace('.', ',') + ' kg' : Math.round(250 * areaHa) + ' g'}<br/>${((500 * areaHa / 100) * 30 > 999.5) ? (((500 * areaHa / 100) * 30) / 1000).toFixed(3).replace('.', ',') + ' L' : Math.round((500 * areaHa / 100) * 30) + ' mL'}`, horario: '17:00:00', dtColheita: fmtPlantioOff(13), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
+      { data: fmtPlantioOff(11), ordem: '1340', dap: 11, alvo: '- Broca dos Frutos', produto: 'Decis 25 EC', ingrediente: 'Deltametrina - IV', doseRecom: '30 mL/100 L', doseUsada: '30 mL/100 L', appRealizadas: '2ª', appPermitidas: '4', carencia: '7', isDias: '1', qtd: `${((500 * areaHa / 100) * 30 > 999.5) ? (((500 * areaHa / 100) * 30) / 1000).toFixed(3).replace('.', ',') + ' L' : Math.round((500 * areaHa / 100) * 30) + ' mL'}`, horario: '17:00:00', dtColheita: fmtPlantioOff(18), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
+      { data: fmtPlantioOff(19), ordem: '1357', dap: 19, alvo: '- Mosca Minadora<br/>- Broca dos Frutos', produto: 'Vertimec 84 SC<br/>Decis 25 EC', ingrediente: 'Abamectina - II<br/>Deltametrina - IV', doseRecom: '50-100 mL/ha<br/>30 mL/100 L', doseUsada: '100 mL/ha<br/>30 mL/100 L', appRealizadas: '1ª<br/>3ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(100 * areaHa > 999.5) ? ((100 * areaHa)/1000).toFixed(3).replace('.', ',') + ' L' : Math.round(100 * areaHa) + ' mL'}<br/>${((500 * areaHa / 100) * 30 > 999.5) ? (((500 * areaHa / 100) * 30) / 1000).toFixed(3).replace('.', ',') + ' L' : Math.round((500 * areaHa / 100) * 30) + ' mL'}`, horario: '17:00:00', dtColheita: fmtPlantioOff(26), destruicao: 'NÃO', operador: 'FRANCISCO ANTONIO' },
       { data: fmtPlantioOff(21), ordem: '1362', dap: 21, alvo: 'Mosca Minadora (Liriomyza sativae)', produto: 'Benevia', ingrediente: 'Ciantraniliprole - NC', doseRecom: '0,75 L/ha', doseUsada: '0,750 L/ha', appRealizadas: '1ª', appPermitidas: '2', carencia: '1', isDias: '1', qtd: `${(0.75 * areaHa).toFixed(3).replace('.', ',')} L`, horario: '17:00:00', dtColheita: fmtPlantioOff(22), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' },
       { data: fmtPlantioOff(26), ordem: '1410', dap: 26, alvo: '- Mosca Branca', produto: 'Sivanto Prime 200 SL', ingrediente: 'Flupyradifurone - III', doseRecom: '0,75 a 1,0 L/ha', doseUsada: '0,750 L/ha', appRealizadas: '1ª', appPermitidas: '3', carencia: '14', isDias: '1', qtd: `${(0.75 * areaHa).toFixed(3).replace('.', ',')} L`, horario: '17:00:00', dtColheita: fmtPlantioOff(40), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' },
-      { data: fmtPlantioOff(33), ordem: '1432', dap: 33, alvo: '- Mosca Minadora<br/>- Broca dos Frutos', produto: 'Vertimec 84 SC<br/>Trigard 750 WP', ingrediente: 'Abamectina - II<br/>Ciromazina - III', doseRecom: '100-150 mL/ha<br/>150 g/ha', doseUsada: '0,100 mL/ha<br/>0,150 g/ha', appRealizadas: '2ª<br/>1ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(0.1 * areaHa).toFixed(3).replace('.', ',')} mL<br/>${(0.15 * areaHa).toFixed(3).replace('.', ',')} g`, horario: '17:00:00', dtColheita: fmtPlantioOff(40), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' },
-      { data: fmtPlantioOff(38), ordem: '1446', dap: 38, alvo: '- Oídio (Sphaerotheca fuliginea)<br/>- Broca dos Frutos', produto: 'Score 250 EC<br/>Decis 25 EC', ingrediente: 'Difenoconazol - III<br/>Deltametrina - IV', doseRecom: '20-30 mL/100 L<br/>30 mL/100 L', doseUsada: '0,025 mL/100 L<br/>0,030 mL/100 L', appRealizadas: '1ª<br/>4ª', appPermitidas: '3<br/>4', carencia: '14<br/>7', isDias: '1<br/>1', qtd: `${((500 * areaHa / 100) * 0.025).toFixed(3).replace('.', ',')} mL<br/>${((500 * areaHa / 100) * 0.03).toFixed(3).replace('.', ',')} mL`, horario: '17:00:00', dtColheita: fmtPlantioOff(52), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' }
+      { data: fmtPlantioOff(33), ordem: '1432', dap: 33, alvo: '- Mosca Minadora<br/>- Broca dos Frutos', produto: 'Vertimec 84 SC<br/>Trigard 750 WP', ingrediente: 'Abamectina - II<br/>Ciromazina - III', doseRecom: '100-150 mL/ha<br/>150 g/ha', doseUsada: '100 mL/ha<br/>150 g/ha', appRealizadas: '2ª<br/>1ª', appPermitidas: '4<br/>4', carencia: '3<br/>7', isDias: '1<br/>1', qtd: `${(100 * areaHa > 999.5) ? ((100 * areaHa)/1000).toFixed(3).replace('.', ',') + ' L' : Math.round(100 * areaHa) + ' mL'}<br/>${(150 * areaHa > 999.5) ? ((150 * areaHa)/1000).toFixed(3).replace('.', ',') + ' kg' : Math.round(150 * areaHa) + ' g'}`, horario: '17:00:00', dtColheita: fmtPlantioOff(40), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' },
+      { data: fmtPlantioOff(38), ordem: '1446', dap: 38, alvo: '- Oídio (Sphaerotheca fuliginea)<br/>- Broca dos Frutos', produto: 'Score 250 EC<br/>Decis 25 EC', ingrediente: 'Difenoconazol - III<br/>Deltametrina - IV', doseRecom: '20-30 mL/100 L<br/>30 mL/100 L', doseUsada: '25 mL/100 L<br/>30 mL/100 L', appRealizadas: '1ª<br/>4ª', appPermitidas: '3<br/>4', carencia: '14<br/>7', isDias: '1<br/>1', qtd: `${((500 * areaHa / 100) * 25 > 999.5) ? (((500 * areaHa / 100) * 25) / 1000).toFixed(3).replace('.', ',') + ' L' : Math.round((500 * areaHa / 100) * 25) + ' mL'}<br/>${((500 * areaHa / 100) * 30 > 999.5) ? (((500 * areaHa / 100) * 30) / 1000).toFixed(3).replace('.', ',') + ' L' : Math.round((500 * areaHa / 100) * 30) + ' mL'}`, horario: '17:00:00', dtColheita: fmtPlantioOff(52), destruicao: 'NÃO', operador: 'ROBSON RAFAEL' }
     ];
   }
 
