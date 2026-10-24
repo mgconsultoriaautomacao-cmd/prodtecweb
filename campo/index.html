@@ -6208,8 +6208,11 @@ function printPastaCampoOrdemPulv(itemStr) {
   // Dose / Área Utilizada (formatação na unidade oficial da bula com formato fracionário 0,xxx)
   let doseAreaStr = '';
   if (baseUnit === 'mL' || baseUnit === 'g') {
-    const valFrac = numDose >= 1 ? (numDose / 1000.0) : numDose;
-    doseAreaStr = `${valFrac.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${unitStr}`;
+    if (Math.abs(numDose - Math.round(numDose)) < 0.001) {
+    doseAreaStr = `${Math.round(numDose)} ${unitStr}`;
+  } else {
+    doseAreaStr = `${numDose.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} ${unitStr}`;
+  }
   } else {
     doseAreaStr = `${numDose.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${unitStr}`;
   }
@@ -6229,16 +6232,22 @@ function printPastaCampoOrdemPulv(itemStr) {
       const emLitros = totalRaw / 1000.0;
       qtdTotalUtilizadaStr = `${emLitros.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} L`;
     } else {
-      const emFrac = totalRaw / 1000.0;
-      qtdTotalUtilizadaStr = `${emFrac.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} mL`;
+      if (Math.abs(totalRaw - Math.round(totalRaw)) < 0.001) {
+        qtdTotalUtilizadaStr = `${Math.round(totalRaw)} mL`;
+      } else {
+        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} mL`;
+      }
     }
   } else if (baseUnit === 'g') {
     if (totalRaw > 999.5) {
       const emKg = totalRaw / 1000.0;
       qtdTotalUtilizadaStr = `${emKg.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`;
     } else {
-      const emFrac = totalRaw / 1000.0;
-      qtdTotalUtilizadaStr = `${emFrac.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} g`;
+      if (Math.abs(totalRaw - Math.round(totalRaw)) < 0.001) {
+        qtdTotalUtilizadaStr = `${Math.round(totalRaw)} g`;
+      } else {
+        qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} g`;
+      }
     }
   } else if (baseUnit === 'kg') {
     qtdTotalUtilizadaStr = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`;
@@ -8028,8 +8037,11 @@ async function printPastaCampoDefensivos(idOrStr) {
 
       let doseUsada = '—';
       if (baseUnit === 'mL' || baseUnit === 'g') {
-        const valFrac = numDose >= 1 ? (numDose / 1000.0) : numDose;
-        doseUsada = `${valFrac.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${targetUnit}`;
+        if (Math.abs(numDose - Math.round(numDose)) < 0.001) {
+          doseUsada = `${Math.round(numDose)} ${targetUnit}`;
+        } else {
+          doseUsada = `${numDose.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} ${targetUnit}`;
+        }
       } else {
         doseUsada = `${numDose.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${targetUnit}`;
       }
@@ -8050,16 +8062,22 @@ async function printPastaCampoDefensivos(idOrStr) {
           const emLitros = totalRaw / 1000.0;
           qtdTotal = `${emLitros.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} L`;
         } else {
-          const emFrac = totalRaw / 1000.0;
-          qtdTotal = `${emFrac.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} mL`;
+          if (Math.abs(totalRaw - Math.round(totalRaw)) < 0.001) {
+            qtdTotal = `${Math.round(totalRaw)} mL`;
+          } else {
+            qtdTotal = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} mL`;
+          }
         }
       } else if (baseUnit === 'g') {
         if (totalRaw > 999.5) {
           const emKg = totalRaw / 1000.0;
           qtdTotal = `${emKg.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`;
         } else {
-          const emFrac = totalRaw / 1000.0;
-          qtdTotal = `${emFrac.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} g`;
+          if (Math.abs(totalRaw - Math.round(totalRaw)) < 0.001) {
+            qtdTotal = `${Math.round(totalRaw)} g`;
+          } else {
+            qtdTotal = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 })} g`;
+          }
         }
       } else if (baseUnit === 'kg') {
         qtdTotal = `${totalRaw.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`;
