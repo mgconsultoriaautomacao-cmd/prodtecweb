@@ -3184,8 +3184,8 @@
   <select id="newOpEquipamento" onchange="handleNewOpEquipmentSelect('PULVERIZADOR', this)" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px"></select>
   </div>
   <div>
-  <label class="flabel">Pressão / Rotação</label>
-  <input id="newOpPressao" type="text" value="Pressão: 70 PSI / Rotação 1900" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
+  <label class="flabel">Pressão</label>
+  <input id="newOpPressao" type="text" value="70 PSI" placeholder="Ex: 70 PSI" style="padding:6px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); width:100%; border-radius:6px">
   </div>
   </div>
   <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px">
@@ -13995,8 +13995,8 @@ async function printPastaCampoDefensivos(id) {
         'CUPROGARB': { recom: '1,5 kg/ha', unit: 'kg/ha', ia: 'Oxicloreto de Cobre - IV', carencia: '1', is: '1', maxApp: '4' },
         'POLYRAM': { recom: '2,0 kg/ha', unit: 'kg/ha', ia: 'Metiram - IV', carencia: '7', is: '1', maxApp: '4' },
         'DACONIL': { recom: '1,5 a 2,0 L/ha', unit: 'L/ha', ia: 'Clorotalonil - I', carencia: '7', is: '1', maxApp: '4' },
-        'CORAGEN': { recom: '7,5 mL/100 L', unit: 'mL/100 L', ia: 'Clorantraniliprole - II', carencia: '2', is: '1', maxApp: '2' },
-        'PREMIO': { recom: '7,5 mL/100 L', unit: 'mL/100 L', ia: 'Clorantraniliprole - II', carencia: '2', is: '1', maxApp: '2' },
+        'CORAGEN': { recom: '7,5 mL/100 L', unit: 'mL/100 L', ia: 'Clorantraniliprole - II', carencia: '7', is: '1', maxApp: '2', intervalo: '14' },
+        'PREMIO': { recom: '7,5 mL/100 L', unit: 'mL/100 L', ia: 'Clorantraniliprole - II', carencia: '7', is: '1', maxApp: '2', intervalo: '14' },
         'DELEGATE': { recom: '120-160 g/100 L', unit: 'g/100 L', ia: 'Espinetoram - II', carencia: '4', is: '1', maxApp: '4' },
         'EVIDENCE': { recom: '200-300 g/ha', unit: 'g/ha', ia: 'Imidacloprido - III', carencia: '1', is: '1', maxApp: '3' },
         'IMIDAGOLD': { recom: '200-300 g/ha', unit: 'g/ha', ia: 'Imidacloprido - III', carencia: '1', is: '1', maxApp: '3' },
@@ -15530,7 +15530,8 @@ function printPastaCampoOrdemPulv(itemStr) {
   const toxicClass = match?.classe_toxicologica || match?.toxicidade || (bulaFound?.ia ? bulaFound.ia.split(' - ')[1] : 'IV');
   const concentration = match?.concentracao_ia || match?.concentracao || '—';
   const numPermitidoCiclo = match?.num_aplicacoes_ciclo || bulaFound?.maxApp || '4';
-  const intervBula = match?.intervalo_aplicacao_dias || '7';
+  const isPremioCoragen = targetProdNorm.includes('PREMIO') || targetProdNorm.includes('CORAGEN') || (bulaFound?.ia && bulaFound.ia.toUpperCase().includes('CLORANTRANILIPROLE'));
+  const intervBula = isPremioCoragen ? '14' : (match?.intervalo_dias || match?.intervalo_aplicacao_dias || match?.intervalo || bulaFound?.intervalo || '7');
 
   let doseBulaText = match?.dose_texto || bulaFound?.recom || (p.dose_recomendada || '');
   if (!doseBulaText || doseBulaText === '—') {
@@ -15982,9 +15983,8 @@ function printPastaCampoOrdemPulv(itemStr) {
   <tr><td><strong>Volume Calda (Tanque):</strong></td><td>${volCaldaTanque} L</td></tr>
   <tr><td><strong>Velocidade do Trator:</strong></td><td>${item.velocidade_vento_kmh ? item.velocidade_vento_kmh + ' KM/H' : '5 KM/H'}</td></tr>
   <tr><td><strong>Nº do Trator:</strong></td><td>${item.trator || 'Trator 1'}</td></tr>
-  <tr><td><strong>Pulverizador / Equipamento:</strong></td><td>${item.equipamento || item.pulverizador || 'Pulverizador Turbo'}</td></tr>
-  <tr><td><strong>Bicos:</strong></td><td>${item.bicos || 'Cone Vazio'}</td></tr>
-  <tr><td><strong>Pressão:</strong></td><td>${item.pressao || '70 PSI'}</td></tr>
+  <tr><td><strong>Pulverizador / Equipamento:</strong></td><td>${item.equipamento || item.pulverizador || (window._sprayers && window._sprayers[0]?.code) || (typeof machines !== 'undefined' && machines.find(m => (m.type||'').toUpperCase() === 'PULVERIZADOR')?.code) || 'PULV 04'}</td></tr>
+    <tr><td><strong>Pressão:</strong></td><td>${(item.pressao || '70 PSI').replace(/^press[ãa]o\s*:\s*/i, '').replace(/\s*\/?\s*rota[çc][ãa]o.*$/i, '').trim() || '70 PSI'}</td></tr>
   <tr><td><strong>Rotação:</strong></td><td>1600 RPM</td></tr>
   <tr><td colspan="2"><strong>Horário de Aplicação:</strong><br/>Inicial: <strong>${item.horario_inicio || '07:00:00'}</strong> &nbsp; Final: <strong>${item.horario_fim || '08:00:00'}</strong></td></tr>
   </table>
@@ -16044,6 +16044,8 @@ function printPastaCampoOrdemPulv(itemStr) {
   <li>Caso sobre calda de pulverização, solicitar ajuda do responsável técnico para descarte da mesma;</li>
   <li>Respeitando às ordens de vestuário de EPI, o aplicador deve se dirigir ao vestuário para retirar seu EPI de acordo com o treinamento. As vestimentas devem ser colocadas em locais adequados para posterior lavagem e o profissional deve tomar banho com água e sabão;</li>
   <li>Não é permitido utilizar o EPI para outras atividades, tampouco levar o equipamento para ser lavado em casa;</li>
+  <li>Respeitar o trabalho desenvolvido, não sendo permitido nenhum tipo de brincadeira com os colegas nesse período de atividade;</li>
+  <li>Respeitar e preservar o Meio Ambiente, não sendo permitido nenhuma prática que possa degradar e/ou prejudicar a fauna e a flora local.</li>
   </ol>
   <div class="emerg-msg">QUALQUER SITUAÇÃO DE EMERGÊNCIA, COMUNICAR A SAÚDE, SEGURANÇA E GERÊNCIA DA EMPRESA.</div>
   </div>
