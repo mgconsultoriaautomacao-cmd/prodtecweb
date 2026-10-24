@@ -6318,7 +6318,10 @@ function printPastaCampoOrdemPulv(itemStr) {
     dataCarStr = appDate.toLocaleDateString('pt-BR');
   }
 
-  const tipoAplic = item.equipamento || item.tipo_aplicacao || 'Pulverização';
+  let tipoAplic = item.metodo || item.metodo_aplicacao || item.tipo_aplicacao || 'Barra';
+  if (tipoAplic === item.equipamento || tipoAplic === item.pulverizador) {
+    tipoAplic = 'Barra';
+  }
 
   return `
   <tr style="background: ${idx % 2 === 1 ? '#f8fafc' : '#ffffff'};">
