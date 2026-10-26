@@ -24,6 +24,7 @@
   <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
   <script src="campo/infoParcelasData.js"></script>
   <script src="campo/resumoElementos.js"></script>
+  <script src="campo/resumoDefensivos.js"></script>
   <script src="campo/parcelasCoords.js"></script>
   <script src="assets/idiarn_logos_b64.js"></script>
   <!-- Leaflet & Heatmap for High-Precision NOC GIS Mapping -->
@@ -707,6 +708,7 @@
   <select id="tenantSelect" onchange="switchTenant(this.value)" style="font-size:11px; padding:6px; background:rgba(59,130,246,0.1); border-color:rgba(59,130,246,0.2)"></select>
   </div>
 
+
   <div class="nav-group">Análise Estratégica</div>
   <div class="nav active" onclick="showTab('dash',this)"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span> Painel de Produção</div>
   <div class="nav" onclick="showTab('ranking',this)"><span class="nav-icon"><i data-lucide="trophy"></i></span> Ranking Performance</div>
@@ -720,6 +722,7 @@
   <div class="nav" onclick="showTab('certificacao_pack',this)"><span class="nav-icon"><i data-lucide="award"></i></span> Certificação Pack</div>
   <div class="nav" onclick="showTab('romaneio',this)"><span class="nav-icon"><i data-lucide="truck"></i></span> Romaneio Expedição</div>
   <div class="nav" onclick="showTab('bulk',this)"><span class="nav-icon"><i data-lucide="shopping-cart"></i></span> Refugo & Vendas</div>
+  <div class="nav" onclick="showTab('abastecimento',this)"><span class="nav-icon"><i data-lucide="fuel"></i></span> Frotas & Abastecimentos</div>
   <div class="nav" onclick="showTab('campo',this)"><span class="nav-icon"><i data-lucide="sprout"></i></span> Caderno de Campo</div>
   <div class="nav" style="color:#00ffb8;font-weight:800;background:rgba(0,255,184,0.08);border:1px solid rgba(0,255,184,0.25);border-radius:10px;margin-top:6px;cursor:pointer;" onclick="window.open('mapeiro.html','_blank')">
   <span class="nav-icon"><i data-lucide="scan-barcode"></i></span> Mapeiro Mobile (PWA) ↗
@@ -727,6 +730,7 @@
 
   <div class="nav-group">Configurações & Cadastros</div>
   <div class="nav" onclick="showTab('employees',this)"><span class="nav-icon"><i data-lucide="users"></i></span> Funcionários</div>
+  <div class="nav" onclick="showTab('rh_aso',this)"><span class="nav-icon"><i data-lucide="activity"></i></span> Recursos Humanos & ASO</div>
   <div class="nav" onclick="showTab('mapping',this)"><span class="nav-icon"><i data-lucide="qr-code"></i></span> Mapeamento Etiquetas</div>
   <div class="nav" onclick="showTab('weights',this)"><span class="nav-icon"><i data-lucide="weight"></i></span> Tipos de Peso</div>
   <div class="nav" onclick="showTab('stops',this)"><span class="nav-icon"><i data-lucide="ban"></i></span> Registro de Paradas</div>
@@ -1757,6 +1761,331 @@
   <div id="regParceirosList" class="card-list" style="max-height:260px; overflow-y:auto"></div>
   </div>
   </div>
+  </div>
+
+  <!-- ═══ RECURSOS HUMANOS & ASO (SAÚDE OCUPACIONAL) ═══ -->
+  <div id="tab-rh_aso" class="tab">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px">
+      <h1 class="ptitle" style="margin:0"><i data-lucide="activity"></i> Recursos Humanos & ASO</h1>
+      <div style="display:flex; gap:8px">
+        <button onclick="printAsoRelatorio()" class="btn on" style="font-size:12px; display:inline-flex; align-items:center; gap:6px"><i data-lucide="printer" style="width:14px;height:14px"></i> Imprimir Relatório ASO</button>
+        <button onclick="openModalNovoAso()" class="green" style="font-size:12px; display:inline-flex; align-items:center; gap:6px; background:var(--green)"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> + Novo Registro ASO</button>
+      </div>
+    </div>
+
+    <!-- KPI CARDS ASO -->
+    <div class="kcards" style="grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:12px; margin-bottom:20px">
+      <div class="kcard" style="border-top:3px solid var(--blue)">
+        <div class="ktitle"><i data-lucide="users" style="width:14px;height:14px;margin-right:4px"></i> TOTAL COLABORADORES</div>
+        <div class="kval" id="kpiAsoTotal">0</div>
+        <div class="ksub">Quadro ativo cadastrado</div>
+      </div>
+      <div class="kcard" style="border-top:3px solid var(--green)">
+        <div class="ktitle"><i data-lucide="check-circle" style="width:14px;height:14px;margin-right:4px;color:var(--green)"></i> ASOS EM DIA</div>
+        <div class="kval" id="kpiAsoEmDia" style="color:var(--green)">0</div>
+        <div class="ksub">Exames dentro da validade</div>
+      </div>
+      <div class="kcard" style="border-top:3px solid var(--yellow)">
+        <div class="ktitle"><i data-lucide="clock" style="width:14px;height:14px;margin-right:4px;color:var(--yellow)"></i> A VENCER (30 DIAS)</div>
+        <div class="kval" id="kpiAsoAVencer" style="color:var(--yellow)">0</div>
+        <div class="ksub">Agendar exame periódico</div>
+      </div>
+      <div class="kcard" style="border-top:3px solid var(--red)">
+        <div class="ktitle"><i data-lucide="alert-triangle" style="width:14px;height:14px;margin-right:4px;color:var(--red)"></i> ASOS VENCIDOS</div>
+        <div class="kval" id="kpiAsoVencidos" style="color:var(--red)">0</div>
+        <div class="ksub">Ação corretiva imediata</div>
+      </div>
+    </div>
+
+    <!-- FILTROS & BUSCA -->
+    <div class="card" style="margin-bottom:16px; padding:14px">
+      <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr auto; gap:10px; align-items:end">
+        <div>
+          <label class="flabel">Buscar Colaborador / CPF</label>
+          <input id="asoSearch" placeholder="Digite nome, CPF ou cargo..." oninput="filterAsoTable()"/>
+        </div>
+        <div>
+          <label class="flabel">Filtrar por Status</label>
+          <select id="asoFilterStatus" onchange="filterAsoTable()">
+            <option value="ALL">Todos os Status</option>
+            <option value="EM_DIA">Em Dia</option>
+            <option value="A_VENCER">A Vencer (≤30 dias)</option>
+            <option value="VENCIDO">Vencido</option>
+          </select>
+        </div>
+        <div>
+          <label class="flabel">Filtrar por Setor</label>
+          <select id="asoFilterSetor" onchange="filterAsoTable()">
+            <option value="ALL">Todos os Setores</option>
+          </select>
+        </div>
+        <div>
+          <label class="flabel">Tipo de Exame</label>
+          <select id="asoFilterTipo" onchange="filterAsoTable()">
+            <option value="ALL">Todos os Tipos</option>
+            <option value="ADMISSIONAL">Admissional</option>
+            <option value="PERIODICO">Periódico</option>
+            <option value="RETORNO">Retorno ao Trabalho</option>
+            <option value="MUDANCA_FUNCAO">Mudança de Função</option>
+            <option value="DEMISSIONAL">Demissional</option>
+          </select>
+        </div>
+        <div>
+          <button class="btn sec" onclick="resetAsoFilters()" style="padding:10px 14px; font-size:12px"><i data-lucide="rotate-ccw" style="width:14px;height:14px"></i> Limpar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABELA DE ASOS -->
+    <div class="card">
+      <div class="title" style="display:flex; justify-content:space-between; align-items:center">
+        <div style="display:flex; align-items:center; gap:8px"><i data-lucide="list" class="btn-i"></i> Quadro de Saúde Ocupacional & ASOs</div>
+        <span id="asoTableCount" style="font-size:12px; color:var(--muted)">0 registros</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="tbl" id="asoTable" style="width:100%; min-width:850px">
+          <thead>
+            <tr>
+              <th>Colaborador</th>
+              <th>CPF</th>
+              <th>Função / Cargo</th>
+              <th>Setor</th>
+              <th>Tipo Exame</th>
+              <th>Data Exame</th>
+              <th>Vencimento</th>
+              <th>Status</th>
+              <th>Clínica / Médico</th>
+              <th style="text-align:center">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="asoTableBody">
+            <tr><td colspan="10" style="text-align:center; padding:24px; color:var(--muted)">Carregando dados de ASO...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ FROTAS & ABASTECIMENTOS ═══ -->
+  <div id="tab-abastecimento" class="tab">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px">
+      <h1 class="ptitle" style="margin:0"><i data-lucide="fuel"></i> Frotas & Abastecimentos</h1>
+      <div style="display:flex; gap:8px">
+        <button onclick="printAbastecimentosRelatorio()" class="btn on" style="font-size:12px; display:inline-flex; align-items:center; gap:6px"><i data-lucide="printer" style="width:14px;height:14px"></i> Imprimir Relatório de Abastecimentos</button>
+        <button onclick="openModalNovoAbastecimento()" class="green" style="font-size:12px; display:inline-flex; align-items:center; gap:6px; background:var(--green)"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> + Novo Abastecimento</button>
+      </div>
+    </div>
+
+    <!-- KPI CARDS ABASTECIMENTO -->
+    <div class="kcards" style="grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:12px; margin-bottom:20px">
+      <div class="kcard" style="border-top:3px solid var(--blue)">
+        <div class="ktitle"><i data-lucide="droplet" style="width:14px;height:14px;margin-right:4px;color:var(--blue)"></i> TOTAL CONSUMIDO</div>
+        <div class="kval" id="kpiFuelLitros">0 L</div>
+        <div class="ksub">Volume total de combustível</div>
+      </div>
+      <div class="kcard" style="border-top:3px solid var(--green)">
+        <div class="ktitle"><i data-lucide="dollar-sign" style="width:14px;height:14px;margin-right:4px;color:var(--green)"></i> CUSTO TOTAL</div>
+        <div class="kval" id="kpiFuelCusto" style="color:var(--green)">R$ 0,00</div>
+        <div class="ksub">Gasto total no período</div>
+      </div>
+      <div class="kcard" style="border-top:3px solid var(--yellow)">
+        <div class="ktitle"><i data-lucide="fuel" style="width:14px;height:14px;margin-right:4px;color:var(--yellow)"></i> ABASTECIMENTOS</div>
+        <div class="kval" id="kpiFuelCount" style="color:var(--yellow)">0</div>
+        <div class="ksub">Registros efetuados</div>
+      </div>
+      <div class="kcard" style="border-top:3px solid var(--purple)">
+        <div class="ktitle"><i data-lucide="truck" style="width:14px;height:14px;margin-right:4px;color:var(--purple)"></i> TOP CONSUMO</div>
+        <div class="kval" id="kpiFuelTopVeiculo" style="font-size:16px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">—</div>
+        <div class="ksub" id="kpiFuelTopLitros">0 L no período</div>
+      </div>
+    </div>
+
+    <!-- FILTROS & BUSCA -->
+    <div class="card" style="margin-bottom:16px; padding:14px">
+      <div style="display:grid; grid-template-columns:1fr 1fr 1.2fr 1fr auto; gap:10px; align-items:end">
+        <div>
+          <label class="flabel">Data Inicial</label>
+          <input type="date" id="fuelFilterDateStart" onchange="filterFuelTable()"/>
+        </div>
+        <div>
+          <label class="flabel">Data Final</label>
+          <input type="date" id="fuelFilterDateEnd" onchange="filterFuelTable()"/>
+        </div>
+        <div>
+          <label class="flabel">Filtrar por Máquina / Veículo</label>
+          <select id="fuelFilterVeiculo" onchange="filterFuelTable()">
+            <option value="ALL">Todos os Veículos / Máquinas</option>
+          </select>
+        </div>
+        <div>
+          <label class="flabel">Tipo de Combustível</label>
+          <select id="fuelFilterTipo" onchange="filterFuelTable()">
+            <option value="ALL">Todos os Tipos</option>
+            <option value="DIESEL S10">Diesel S10</option>
+            <option value="DIESEL COMUM">Diesel Comum</option>
+            <option value="GASOLINA">Gasolina Comum</option>
+            <option value="ARLA 32">Arla 32</option>
+          </select>
+        </div>
+        <div>
+          <button class="btn sec" onclick="resetFuelFilters()" style="padding:10px 14px; font-size:12px"><i data-lucide="rotate-ccw" style="width:14px;height:14px"></i> Limpar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABELA DE ABASTECIMENTOS -->
+    <div class="card">
+      <div class="title" style="display:flex; justify-content:space-between; align-items:center">
+        <div style="display:flex; align-items:center; gap:8px"><i data-lucide="list" class="btn-i"></i> Histórico de Abastecimentos de Frotas</div>
+        <span id="fuelTableCount" style="font-size:12px; color:var(--muted)">0 abastecimentos</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="tbl" id="fuelTable" style="width:100%; min-width:850px">
+          <thead>
+            <tr>
+              <th>Data / Hora</th>
+              <th>Máquina / Veículo</th>
+              <th>Condutor / Operador</th>
+              <th>Combustível</th>
+              <th style="text-align:right">Litros</th>
+              <th style="text-align:right">Horímetro / Km</th>
+              <th style="text-align:right">R$ / Litro</th>
+              <th style="text-align:right">Total (R$)</th>
+              <th>Local / Tanque</th>
+              <th style="text-align:center">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="fuelTableBody">
+            <tr><td colspan="10" style="text-align:center; padding:24px; color:var(--muted)">Carregando dados de abastecimento...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE NOVO / EDITAR REGISTRO ASO -->
+  <div id="modalAsoOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); z-index:99999; align-items:center; justify-content:center; padding:16px">
+    <div class="card" style="width:100%; max-width:620px; background:var(--card); border:1px solid var(--border); box-shadow:0 20px 40px rgba(0,0,0,0.8); max-height:90vh; overflow-y:auto">
+      <div class="title" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; margin-bottom:16px">
+        <div style="display:flex; align-items:center; gap:8px"><i data-lucide="activity" class="btn-i" style="color:var(--green)"></i> <span id="modalAsoTitle">Novo Registro de ASO</span></div>
+        <button onclick="closeModalAso()" style="background:none; border:none; color:var(--muted); cursor:pointer; font-size:18px"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+      </div>
+      <input type="hidden" id="asoEditId"/>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+        <div style="grid-column: span 2">
+          <label class="flabel">Colaborador</label>
+          <select id="modalAsoFuncionario" onchange="onModalAsoFuncSelect(this)"></select>
+        </div>
+        <div>
+          <label class="flabel">CPF</label>
+          <input id="modalAsoCpf" placeholder="000.000.000-00"/>
+        </div>
+        <div>
+          <label class="flabel">Função / Cargo</label>
+          <input id="modalAsoCargo" placeholder="ex: Embalador(a)"/>
+        </div>
+        <div>
+          <label class="flabel">Setor</label>
+          <input id="modalAsoSetor" placeholder="ex: Packing House"/>
+        </div>
+        <div>
+          <label class="flabel">Tipo de Exame</label>
+          <select id="modalAsoTipo">
+            <option value="PERIODICO">Periódico</option>
+            <option value="ADMISSIONAL">Admissional</option>
+            <option value="RETORNO">Retorno ao Trabalho</option>
+            <option value="MUDANCA_FUNCAO">Mudança de Função</option>
+            <option value="DEMISSIONAL">Demissional</option>
+          </select>
+        </div>
+        <div>
+          <label class="flabel">Data do Exame</label>
+          <input type="date" id="modalAsoDataExame"/>
+        </div>
+        <div>
+          <label class="flabel">Data de Vencimento</label>
+          <input type="date" id="modalAsoDataVenc"/>
+        </div>
+        <div>
+          <label class="flabel">Clínica de Medicina</label>
+          <input id="modalAsoClinica" placeholder="Nome da Clínica"/>
+        </div>
+        <div>
+          <label class="flabel">Médico Coordenador / CRM</label>
+          <input id="modalAsoMedico" placeholder="Dr. Nome (CRM 0000/UF)"/>
+        </div>
+        <div style="grid-column: span 2">
+          <label class="flabel">Observações / Parecer</label>
+          <input id="modalAsoObs" placeholder="Apto para função sem restrições"/>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid rgba(255,255,255,0.08); padding-top:14px">
+        <button class="btn sec" onclick="closeModalAso()">Cancelar</button>
+        <button class="btn on" onclick="saveAsoRecord()" style="background:var(--green); border:none; font-weight:700"><i data-lucide="check" style="width:14px;height:14px"></i> Salvar ASO</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE NOVO / EDITAR ABASTECIMENTO -->
+  <div id="modalFuelOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); z-index:99999; align-items:center; justify-content:center; padding:16px">
+    <div class="card" style="width:100%; max-width:620px; background:var(--card); border:1px solid var(--border); box-shadow:0 20px 40px rgba(0,0,0,0.8); max-height:90vh; overflow-y:auto">
+      <div class="title" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; margin-bottom:16px">
+        <div style="display:flex; align-items:center; gap:8px"><i data-lucide="fuel" class="btn-i" style="color:var(--yellow)"></i> <span id="modalFuelTitle">Novo Registro de Abastecimento</span></div>
+        <button onclick="closeModalFuel()" style="background:none; border:none; color:var(--muted); cursor:pointer; font-size:18px"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+      </div>
+      <input type="hidden" id="fuelEditId"/>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+        <div>
+          <label class="flabel">Data e Hora</label>
+          <input type="datetime-local" id="modalFuelDataHora"/>
+        </div>
+        <div>
+          <label class="flabel">Combustível</label>
+          <select id="modalFuelTipo">
+            <option value="DIESEL S10">Diesel S10</option>
+            <option value="DIESEL COMUM">Diesel Comum</option>
+            <option value="GASOLINA">Gasolina Comum</option>
+            <option value="ARLA 32">Arla 32</option>
+          </select>
+        </div>
+        <div style="grid-column: span 2">
+          <label class="flabel">Máquina / Veículo</label>
+          <select id="modalFuelVeiculo"></select>
+        </div>
+        <div style="grid-column: span 2">
+          <label class="flabel">Condutor / Tratorista</label>
+          <select id="modalFuelCondutor"></select>
+        </div>
+        <div>
+          <label class="flabel">Quantidade (Litros)</label>
+          <input type="number" step="0.1" id="modalFuelLitros" placeholder="ex: 120.5" oninput="calcModalFuelTotal()"/>
+        </div>
+        <div>
+          <label class="flabel">Horímetro / Odômetro (Km)</label>
+          <input id="modalFuelHorimetro" placeholder="ex: 3450.5"/>
+        </div>
+        <div>
+          <label class="flabel">Preço por Litro (R$)</label>
+          <input type="number" step="0.01" id="modalFuelPrecoLitro" value="5.89" oninput="calcModalFuelTotal()"/>
+        </div>
+        <div>
+          <label class="flabel">Valor Total Calculado (R$)</label>
+          <input type="number" step="0.01" id="modalFuelTotal" readonly style="background:rgba(255,255,255,0.06); font-weight:800; color:var(--green)"/>
+        </div>
+        <div style="grid-column: span 2">
+          <label class="flabel">Local / Tanque de Abastecimento</label>
+          <input id="modalFuelTanque" value="TANQUE CENTRAL FAZENDA (5.000L)"/>
+        </div>
+        <div style="grid-column: span 2">
+          <label class="flabel">Observações</label>
+          <input id="modalFuelObs" placeholder="Opcional"/>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid rgba(255,255,255,0.08); padding-top:14px">
+        <button class="btn sec" onclick="closeModalFuel()">Cancelar</button>
+        <button class="btn on" onclick="saveFuelRecord()" style="background:var(--green); color:#fff; border:none; font-weight:800"><i data-lucide="check" style="width:14px;height:14px"></i> Confirmar Abastecimento</button>
+      </div>
+    </div>
   </div>
 
   <div id="tab-campo" class="tab">
@@ -5885,12 +6214,17 @@ async function afterLogin(user){
 
   try {
   await Promise.all([loadEmpSelectAll(), loadWeightSelectAll(), loadEmps(), loadStops()]);
-  await refreshDash();
+  const initialTab = getRouteTab(); const initialNav = document.querySelector(`.nav[onclick*="'${initialTab}'"]`) || document.querySelector('.nav'); showTab(initialTab, initialNav, false);
   } catch(e) {
   console.warn('Erro ao carregar dados iniciais:', e);
   }
   if (window.lucide) lucide.createIcons();
-  setInterval(()=>{ if($('tab-dash').classList.contains('active') && !_isRefreshingDash) refreshDash(true); }, 30000);
+  setInterval(()=>{ if(!document.hidden && $('tab-dash').classList.contains('active') && !_isRefreshingDash) refreshDash(true); }, 30000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && $('tab-dash') && $('tab-dash').classList.contains('active') && !_isRefreshingDash) {
+      refreshDash(true);
+    }
+  });
 }
 
 async function doLogout(){
@@ -5911,17 +6245,21 @@ async function switchTenant(id) {
   if (tenantConfig && tenantConfig.logo_url) localStorage.setItem('tenant_logo_url', tenantConfig.logo_url);
   else localStorage.removeItem('tenant_logo_url');
   updateTenantBadge();
-  showTab('dash', document.querySelector('.nav'));
+  const curTab = getRouteTab(); showTab(curTab, null, false);
   await Promise.all([loadEmpSelectAll(), loadWeightSelectAll()]);
   refreshDash();
 }
 
-function showTab(n,el){
+function getRouteTab(){ const p = window.location.pathname.replace(/^\/+|\/+$/g, '').toLowerCase(); const q = new URLSearchParams(window.location.search).get('tab'); const route = (q || p).toLowerCase(); const map = {'': 'dash', 'dash': 'dash', 'producao': 'dash', 'ranking': 'ranking', 'finance': 'finance', 'financeiro': 'finance', 'estoque3d': 'estoque3d', 'estoque': 'estoque3d', 'mass': 'mass', 'massa': 'mass', 'logs': 'logs', 'quality': 'quality', 'qualidade': 'quality', 'certificacao_pack': 'certificacao_pack', 'certificacao': 'certificacao_pack', 'romaneio': 'romaneio', 'bulk': 'bulk', 'abastecimento': 'abastecimento', 'abastecimentos': 'abastecimento', 'frotas': 'abastecimento', 'frota': 'abastecimento', 'campo': 'campo', 'employees': 'employees', 'funcionarios': 'employees', 'rh_aso': 'rh_aso', 'rh': 'rh_aso', 'aso': 'rh_aso', 'mapping': 'mapping', 'weights': 'weights', 'pesos': 'weights', 'stops': 'stops', 'paradas': 'stops', 'trace': 'trace', 'rastreabilidade': 'trace', 'registers': 'registers', 'cadastros': 'registers', 'users_mgmt': 'users_mgmt', 'usuarios': 'users_mgmt', 'integrations': 'integrations', 'settings': 'settings'}; return map[route] || 'dash'; }
+window.addEventListener('popstate', () => { const cur = getRouteTab(); showTab(cur, null, false); });
+function showTab(n,el,updateHistory=true){ if(updateHistory && window.history && window.history.pushState){ const r = (n==='dash')?'/':'/'+n; if(window.location.pathname !== r && window.location.pathname !== r+'.html'){ window.history.pushState({tab:n},'',r); } }
+  const pageTitles = { dash:'PRODTEC - Painel de Produção', ranking:'PRODTEC - Ranking Performance', finance:'PRODTEC - Gestão Financeira', estoque3d:'PRODTEC - WMS Estoque 3D', mass:'PRODTEC - Balanço de Massa', logs:'PRODTEC - Logs de Produção', quality:'PRODTEC - Auditoria & Qualidade', certificacao_pack:'PRODTEC - Certificação Pack', romaneio:'PRODTEC - Romaneio Expedição', bulk:'PRODTEC - Refugo & Vendas', abastecimento:'PRODTEC - Frotas & Abastecimentos', campo:'PRODTEC - Caderno de Campo', employees:'PRODTEC - Funcionários', rh_aso:'PRODTEC - Recursos Humanos & ASO', mapping:'PRODTEC - Mapeamento Etiquetas', weights:'PRODTEC - Tipos de Peso', stops:'PRODTEC - Registro de Paradas', trace:'PRODTEC - Rastreabilidade', registers:'PRODTEC - Cadastros Gerais', users_mgmt:'PRODTEC - Usuários & Empresas', integrations:'PRODTEC - Integrações API', settings:'PRODTEC - Configurações' };
+  if(pageTitles[n]) document.title = pageTitles[n];
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.nav').forEach(v=>v.classList.remove('active'));
   const targetId = 'tab-'+n;
   if($(targetId)) $(targetId).classList.add('active');
-  if(el)el.classList.add('active');
+  const navItem = el || document.querySelector(`.nav[onclick*="'${n}'"]`); if(navItem) navItem.classList.add('active');
 
   // Close sidebar on mobile/tablet after clicking a menu item
   if (window.innerWidth <= 1024) {
@@ -5933,7 +6271,7 @@ function showTab(n,el){
   }
   }
   const fns={
-  dash:refreshDash, employees:loadEmps, weights:loadWeights, stops:loadStops,
+  dash:refreshDash, employees:loadEmps, rh_aso:loadRhAso, abastecimento:loadAbastecimentos, weights:loadWeights, stops:loadStops,
   mapping:()=>{loadMappings();loadMapSelects();},
   users_mgmt:loadAdminData, settings:loadSettings,
   finance:refreshFin, ranking:refreshRanking, quality:refreshQuality,
@@ -5954,6 +6292,8 @@ function showTab(n,el){
   romaneio: 'Gerando Romaneio de Expedição...',
   estoque3d: 'Inicializando WMS Estoque 3D...',
   bulk: 'Carregando Vendas a Granel...',
+  abastecimento: 'Carregando Frotas & Abastecimentos...',
+  rh_aso: 'Sincronizando Recursos Humanos & ASO...',
   finalize: 'Carregando Apontamento Diário...'
   };
 
@@ -13847,7 +14187,10 @@ async function printPastaCampoTratos(id) {
 }
 
 // ── IMPRESSÃO OFICIAL: CONTROLE MENSAL DE AGROTÓXICOS NA CULTURA (PC06) ──
-async function printPastaCampoDefensivos(id) {
+async function printPastaCampoDefensivos(id, forceDirectPrint) {
+  if (typeof openModalResumoDefensivos === 'function' && !forceDirectPrint) {
+    return openModalResumoDefensivos(id);
+  }
   let item = null;
   const allList = (window.infoParcelasData || [])
     .concat(window.webInfoParcelasData || [])
@@ -14239,7 +14582,7 @@ async function printPastaCampoDefensivos(id) {
       <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold">${r.qtd}</td>
       <td style="border:1px solid #000; padding:2px 3px; text-align:center">${r.horario}</td>
       <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold">${r.dtColheita}</td>
-      <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-size:5.5pt">[ ] SIM &nbsp; <strong>[X] NÃO</strong></td>
+
       <td style="border:1px solid #000; padding:2px 4px; text-align:center">${r.operador}</td>
     </tr>
   `).join('');
@@ -14318,8 +14661,8 @@ async function printPastaCampoDefensivos(id) {
           <th rowspan="2" style="width: 44px;">Quantidade<br/>(L, Kg ou mL)</th>
           <th rowspan="2" style="width: 42px;">Horário de<br/>Aplicação</th>
           <th rowspan="2" style="width: 46px;">Data Autorizada<br/>p/ Colheita</th>
-          <th rowspan="2" style="width: 55px;">Colheita Realizada<br/>p/ Destruição</th>
-          <th rowspan="2" style="width: 72px;">Nome Sobre do<br/>Aplicador</th>
+
+          <th rowspan="2" style="width: 95px;">Nome do<br/>Aplicador</th>
         </tr>
         <tr>
           <th style="font-size:4.8pt; width:46px;">Recomendada</th>
@@ -17480,6 +17823,17 @@ function e3dClosePallet(idx) {
 }
 
 let e3dRealtimeChannel = null;
+let _realtimeScansBuffer = [];
+let _realtimeScansTimer = null;
+function _processRealtimeScansBuffer() {
+  if (!_realtimeScansBuffer.length) return;
+  const batch = _realtimeScansBuffer;
+  _realtimeScansBuffer = [];
+  for (const scan of batch) {
+    const info = e3dScanStockInfo(scan);
+    if (info) e3dRegisterBox(info.caliber, info.variety, info.boxType, info.parcel, 1);
+  }
+}
 
 function e3dSubscribeSupabase() {
   if (e3dRealtimeChannel) {
@@ -17491,8 +17845,8 @@ function e3dSubscribeSupabase() {
   console.log("[WMS Realtime] Mudança detectada na tabela pallets:", payload);
   e3dLoadGridState();
   })
-  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'production_scans', filter: `tenant_id=eq.${tenantId}` }, payload => {
-  console.log("[WMS Realtime] Nova caixa via App Local:", payload.new);
+  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'production_scans', filter: `tenant_id=eq.${tenantId}` }, payload => { if(payload && payload.new){ _realtimeScansBuffer.push(payload.new); if(_realtimeScansTimer) clearTimeout(_realtimeScansTimer); _realtimeScansTimer = setTimeout(_processRealtimeScansBuffer, 350); } return;
+  // processado via _realtimeScansBuffer
   const scan = payload.new;
   const info = e3dScanStockInfo(scan);
   if (info) {
@@ -30949,5 +31303,7 @@ function renderEstoqueSaldosTable(list) {
 <script src="noc-ui.js" defer></script>
 <script src="noc-risk.js" defer></script>
 <script src="estoque-ni.js" defer></script>
+<script src="rh_aso.js" defer></script>
+<script src="abastecimento.js" defer></script>
 </body>
 </html>

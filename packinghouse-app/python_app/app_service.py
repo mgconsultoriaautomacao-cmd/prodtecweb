@@ -6,9 +6,32 @@ Usa sqlite3 da stdlib Python (sem dependencies externas neste módulo).
 import time
 import math
 import json
+import uuid
+import threading
 import requests
 from datetime import datetime, timezone, timedelta
 from db_python import get_db, rows_to_list, row_to_dict, now_ms
+
+# ─── Profiler de Latência de Leitura (In-Memory, Zero I/O) ───────────────────
+_latency_lock = threading.Lock()
+_latency_samples = []
+
+def record_scan_latency(elapsed_ms: float):
+    with _latency_lock:
+        if len(_latency_samples) >= 500:
+            _latency_samples.pop(0)
+        _latency_samples.append(elapsed_ms)
+
+def get_scan_latency_stats() -> dict:
+    with _latency_lock:
+        if not _latency_samples:
+            return {'count': 0, 'avg_ms': 0.0, 'max_ms': 0.0, 'min_ms': 0.0}
+        return {
+            'count': len(_latency_samples),
+            'avg_ms': round(sum(_latency_samples) / len(_latency_samples), 2),
+            'max_ms': round(max(_latency_samples), 2),
+            'min_ms': round(min(_latency_samples), 2),
+        }
 
 # ─── Constantes de Produção ───────────────────────────────────────────────────
 DEFAULT_SUPA_URL = 'https://yiigaohjvvieeooxsban.supabase.co'
@@ -492,100 +515,106 @@ def context_set(station_id='ST01', role='EMBALADOR', parcel_id=None, fruit_id=No
 def scan_submit(station_id='ST01', scanner_id='SC01', role='EMBALADOR',
                 raw_barcode='', caliber=None, cv_box_model=None, cv_weight=None,
                 cv_unidentified=False) -> dict:
-    ts = now_ms()
-    st, sc, rl = norm_station(station_id), str(scanner_id or 'SC01'), norm_role(role)
-    raw = str(raw_barcode or '').strip()
-    if not raw:
-        return {'ok': False, 'error': 'EMPTY_BARCODE'}
+    _t0 = time.perf_counter()
+    try:
+        ts = now_ms()
+        st, sc, rl = norm_station(station_id), str(scanner_id or 'SC01'), norm_role(role)
+        raw = str(raw_barcode or '').strip()
+        if not raw:
+            return {'ok': False, 'error': 'EMPTY_BARCODE'}
 
-    # PALIATIVO: bloqueio anti-duplicata (1s) REMOVIDO. Com o relógio do PC voltando,
-    # (ts - last.ts) ficava negativo e toda leitura era descartada como "repetida".
-    # Toda leitura válida agora é contada.
+        # PALIATIVO: bloqueio anti-duplicata (1s) REMOVIDO. Com o relógio do PC voltando,
+        # (ts - last.ts) ficava negativo e toda leitura era descartada como "repetida".
+        # Toda leitura válida agora é contada.
 
-    ctx = context_get(st, rl)
+        ctx = context_get(st, rl)
 
-    # Tenta mapping (barcode combinado)
-    mapping = _get("""
-        SELECT m.employee_id, m.weight_id, e.name, e.photo_path
-        FROM barcode_mappings m
-        JOIN employees e ON e.id=m.employee_id
-        WHERE m.barcode=? AND e.role=? AND e.active=1
-    """, (raw, rl))
+        # Tenta mapping (barcode combinado)
+        mapping = _get("""
+            SELECT m.employee_id, m.weight_id, e.name, e.photo_path
+            FROM barcode_mappings m
+            JOIN employees e ON e.id=m.employee_id
+            WHERE m.barcode=? AND e.role=? AND e.active=1
+        """, (raw, rl))
 
-    emp, weight_id = None, None
-    if mapping:
-        weight_id = mapping['weight_id']
-        emp = {'id': mapping['employee_id'], 'name': mapping['name'], 'photo_path': mapping['photo_path']}
-    else:
-        emp = _get("SELECT id, name, photo_path FROM employees WHERE barcode=? AND role=? AND active=1", (raw, rl))
-        weight_id = ctx.get('weight_id') if rl == 'EMBALADOR' else None
+        emp, weight_id = None, None
+        if mapping:
+            weight_id = mapping['weight_id']
+            emp = {'id': mapping['employee_id'], 'name': mapping['name'], 'photo_path': mapping['photo_path']}
+        else:
+            emp = _get("SELECT id, name, photo_path FROM employees WHERE barcode=? AND role=? AND active=1", (raw, rl))
+            weight_id = ctx.get('weight_id') if rl == 'EMBALADOR' else None
 
-    # Override por CV
-    base_weight_name = None
-    if cv_box_model and cv_box_model != 'NÃO IDENTIF.':
-        base_weight_name = cv_box_model
-        bw = _get("SELECT id FROM box_weights WHERE (name=? OR name LIKE ?) AND active=1 LIMIT 1",
-                  (base_weight_name, f'%{base_weight_name}%'))
-        if bw:
-            weight_id = bw['id']
-    elif weight_id:
-        bw = _get("SELECT name FROM box_weights WHERE id=?", (weight_id,))
-        if bw:
-            base_weight_name = bw['name']
+        # Override por CV
+        base_weight_name = None
+        if cv_box_model and cv_box_model != 'NÃO IDENTIF.':
+            base_weight_name = cv_box_model
+            bw = _get("SELECT id FROM box_weights WHERE (name=? OR name LIKE ?) AND active=1 LIMIT 1",
+                      (base_weight_name, f'%{base_weight_name}%'))
+            if bw:
+                weight_id = bw['id']
+        elif weight_id:
+            bw = _get("SELECT name FROM box_weights WHERE id=?", (weight_id,))
+            if bw:
+                base_weight_name = bw['name']
 
-    # Calibre-specific weight lookup
-    if base_weight_name and caliber:
-        import re
-        m = re.search(r'\d+', str(caliber))
-        if m:
-            cal_num = m.group(0)
-            candidates = [
-                f'{base_weight_name} - Calibre {cal_num}',
-                f'{base_weight_name} - Cal. {cal_num}',
-                f'{base_weight_name} - {cal_num}',
-                f'{base_weight_name} Calibre {cal_num}',
-                f'{base_weight_name} Cal. {cal_num}',
-                f'{base_weight_name} {cal_num}',
-            ]
-            placeholders = ','.join(['?'] * len(candidates))
-            specific = _get(f"SELECT id FROM box_weights WHERE name IN ({placeholders}) AND active=1", candidates)
-            if specific:
-                weight_id = specific['id']
+        # Calibre-specific weight lookup
+        if base_weight_name and caliber:
+            import re
+            m = re.search(r'\d+', str(caliber))
+            if m:
+                cal_num = m.group(0)
+                candidates = [
+                    f'{base_weight_name} - Calibre {cal_num}',
+                    f'{base_weight_name} - Cal. {cal_num}',
+                    f'{base_weight_name} - {cal_num}',
+                    f'{base_weight_name} Calibre {cal_num}',
+                    f'{base_weight_name} Cal. {cal_num}',
+                    f'{base_weight_name} {cal_num}',
+                ]
+                placeholders = ','.join(['?'] * len(candidates))
+                specific = _get(f"SELECT id FROM box_weights WHERE name IN ({placeholders}) AND active=1", candidates)
+                if specific:
+                    weight_id = specific['id']
 
-    if not emp:
-        return {'ok': False, 'error': 'Código não pertence à função ativa ou colaborador não encontrado.'}
+        if not emp:
+            return {'ok': False, 'error': 'Código não pertence à função ativa ou colaborador não encontrado.'}
 
-    # Caixa sem identificação (sem câmera / IA offline / sem contagem): a contagem
-    # NÃO é interrompida. Ela entra no estoque como calibre 'N/I' e, se a câmera
-    # falhou e o código de barras não define o tipo de caixa, sem peso
-    # ("NÃO IDENTIFICADA"). O mapeamento é feito depois no sistema web.
-    unidentified = False
-    if rl == 'EMBALADOR' and not caliber:
-        caliber = 'N/I'
-        unidentified = True
-        if cv_unidentified and not mapping:
-            weight_id = None
+        # Caixa sem identificação (sem câmera / IA offline / sem contagem): a contagem
+        # NÃO é interrompida. Ela entra no estoque como calibre 'N/I' e, se a câmera
+        # falhou e o código de barras não define o tipo de caixa, sem peso
+        # ("NÃO IDENTIFICADA"). O mapeamento é feito depois no sistema web.
+        unidentified = False
+        if rl == 'EMBALADOR' and not caliber:
+            caliber = 'N/I'
+            unidentified = True
+            if cv_unidentified and not mapping:
+                weight_id = None
 
-    _run("""
-        INSERT INTO scan_events(ts,station_id,scanner_id,role,employee_id,raw_barcode,weight_id,parcel_id,fruit_id,variety_id,caliber)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?)
-    """, (ts, st, sc, rl, emp['id'], raw, weight_id,
-          ctx.get('parcel_id'), ctx.get('fruit_id'), ctx.get('variety_id'), caliber))
+        client_event_id = f"{st}_{ts}_{uuid.uuid4().hex[:12]}"
 
-    hs = hour_start_ms(ts)
-    conn = get_db()
-    conn.execute("""
-        INSERT INTO hourly_stats(hour_start,station_id,role,employee_id,produced_count,quality_deducted)
-        VALUES(?,?,?,?,0,0)
-        ON CONFLICT(hour_start,station_id,role,employee_id) DO NOTHING
-    """, (hs, st, rl, emp['id']))
-    conn.execute("""
-        UPDATE hourly_stats SET produced_count=produced_count+1
-        WHERE hour_start=? AND station_id=? AND role=? AND employee_id=?
-    """, (hs, st, rl, emp['id']))
-    conn.commit()
+        _run("""
+            INSERT INTO scan_events(ts,station_id,scanner_id,role,employee_id,raw_barcode,weight_id,parcel_id,fruit_id,variety_id,caliber,client_event_id)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (ts, st, sc, rl, emp['id'], raw, weight_id,
+              ctx.get('parcel_id'), ctx.get('fruit_id'), ctx.get('variety_id'), caliber, client_event_id))
 
-    return {'ok': True, 'counted': True, 'employee': emp, 'context': ctx, 'usedWeightId': weight_id, 'unidentified': unidentified}
+        hs = hour_start_ms(ts)
+        conn = get_db()
+        conn.execute("""
+            INSERT INTO hourly_stats(hour_start,station_id,role,employee_id,produced_count,quality_deducted)
+            VALUES(?,?,?,?,0,0)
+            ON CONFLICT(hour_start,station_id,role,employee_id) DO NOTHING
+        """, (hs, st, rl, emp['id']))
+        conn.execute("""
+            UPDATE hourly_stats SET produced_count=produced_count+1
+            WHERE hour_start=? AND station_id=? AND role=? AND employee_id=?
+        """, (hs, st, rl, emp['id']))
+        conn.commit()
+
+        return {'ok': True, 'counted': True, 'employee': emp, 'context': ctx, 'usedWeightId': weight_id, 'unidentified': unidentified}
+    finally:
+        record_scan_latency((time.perf_counter() - _t0) * 1000.0)
 
 
 # ─── stateGet (Ranking) ────────────────────────────────────────────────────────

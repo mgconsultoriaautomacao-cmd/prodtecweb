@@ -554,6 +554,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 </style>
 <script src="dragDropTouch.js"></script>
 <script src="resumoElementos.js"></script>
+<script src="resumoDefensivos.js"></script>
 </head>
 <body>
 
@@ -886,7 +887,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
 
   <div class="section"><div class="section-title">Data</div></div>
   <div style="padding:0 16px">
-  <input type="date" id="cDate" onchange="updateCampoJulianPreview()">
+  <input type="date" id="cDate" onchange="updateCampoJulianPreview(); carregarEquipeDoDia(); renderCEmpList(getHarvestEmployees()); updateCalcPreview();">
   </div>
 
   <div class="section"><div class="section-title">Turno</div></div>
@@ -978,6 +979,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   <div class="section">
   <div class="section-title">Funcionários do Turno</div>
   <div class="emp-search" style="margin-top:10px"><span style="display:inline-flex;align-items:center;justify-content:center;padding:0 4px;color:var(--muted)"><i data-lucide="search" style="width:16px;height:16px"></i></span><input id="cEmpSearch" oninput="filterCEmp()" placeholder="Buscar funcionário..." autocomplete="off"></div>
+  <div id="cEquipeSalvaBadge" style="display:none; align-items:center; justify-content:space-between; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:6px 12px; margin-top:8px; font-size:12px; color:var(--green)">
+  <span style="display:flex;align-items:center;gap:6px"><i data-lucide="users" style="width:14px;height:14px"></i> <b id="cEquipeSalvaText">Equipe de hoje pré-selecionada</b></span>
+  <button type="button" onclick="limparEquipeDoDia(event)" style="background:none; border:none; color:var(--red); font-size:11px; font-weight:700; cursor:pointer; padding:2px 6px">Desmarcar Todos</button>
+  </div>
   <div id="cEmpSelectAll" class="emp-select-all" onclick="toggleAllCEmp()">
   <span>Selecionar todos</span><span id="cEmpCount">0 selecionados</span>
   </div>
@@ -7782,7 +7787,10 @@ async function printPastaCampoTratos(idOrStr) {
 }
 
 // ── IMPRESSÃO OFICIAL: CONTROLE MENSAL DE AGROTÓXICOS NA CULTURA (PC06) ──
-async function printPastaCampoDefensivos(idOrStr) {
+async function printPastaCampoDefensivos(idOrStr, forceDirectPrint) {
+  if (typeof openModalResumoDefensivos === 'function' && !forceDirectPrint) {
+    return openModalResumoDefensivos(idOrStr);
+  }
   let item = null;
   if (typeof idOrStr === 'string' && idOrStr.startsWith('{')) {
     try { item = JSON.parse(decodeURIComponent(idOrStr)); } catch(e){}
@@ -8171,7 +8179,7 @@ async function printPastaCampoDefensivos(idOrStr) {
       <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold">${r.qtd}</td>
       <td style="border:1px solid #000; padding:2px 3px; text-align:center">${r.horario}</td>
       <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold">${r.dtColheita}</td>
-      <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-size:5.5pt">[ ] SIM &nbsp; <strong>[X] NÃO</strong></td>
+
       <td style="border:1px solid #000; padding:2px 4px; text-align:center">${r.operador}</td>
     </tr>
   `).join('');
@@ -8250,8 +8258,8 @@ async function printPastaCampoDefensivos(idOrStr) {
           <th rowspan="2" style="width: 44px;">Quantidade<br/>(L, Kg ou mL)</th>
           <th rowspan="2" style="width: 42px;">Horário de<br/>Aplicação</th>
           <th rowspan="2" style="width: 46px;">Data Autorizada<br/>p/ Colheita</th>
-          <th rowspan="2" style="width: 55px;">Colheita Realizada<br/>p/ Destruição</th>
-          <th rowspan="2" style="width: 72px;">Nome Sobre do<br/>Aplicador</th>
+
+          <th rowspan="2" style="width: 95px;">Nome do<br/>Aplicador</th>
         </tr>
         <tr>
           <th style="font-size:4.8pt; width:46px;">Recomendada</th>
@@ -10920,10 +10928,83 @@ function getHarvestEmployees() {
   return (employees || []).filter(e => isHarvestWorker(e));
 }
 
+function salvarEquipeDoDia() {
+  if (cState.workers.size === 0) return;
+  const dia = $('cDate')?.value || today();
+  const arr = Array.from(cState.workers.entries()).map(([id, name]) => ({ id, name }));
+  try {
+    localStorage.setItem('prodtec_colheita_equipe_' + dia, JSON.stringify(arr));
+    if ($('cMachineOperator') && $('cMachineOperator').value) {
+      localStorage.setItem('prodtec_colheita_operador_' + dia, $('cMachineOperator').value);
+    }
+    if ($('cMachine') && $('cMachine').value) {
+      localStorage.setItem('prodtec_colheita_maquina_' + dia, $('cMachine').value);
+    }
+    if ($('cPincelador') && $('cPincelador').value) {
+      localStorage.setItem('prodtec_colheita_pincelador_' + dia, $('cPincelador').value);
+    }
+  } catch(e){}
+}
+
+function carregarEquipeDoDia() {
+  const dia = $('cDate')?.value || today();
+  try {
+    const raw = localStorage.getItem('prodtec_colheita_equipe_' + dia);
+    if (!raw) {
+      const badge = $('cEquipeSalvaBadge');
+      if (badge) badge.style.display = 'none';
+      return false;
+    }
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr) && arr.length > 0) {
+      cState.workers.clear();
+      arr.forEach(w => cState.workers.set(String(w.id), w.name));
+
+      const op = localStorage.getItem('prodtec_colheita_operador_' + dia);
+      if (op && $('cMachineOperator')) $('cMachineOperator').value = op;
+
+      const maq = localStorage.getItem('prodtec_colheita_maquina_' + dia);
+      if (maq && $('cMachine')) {
+        $('cMachine').value = maq;
+        cState.machineId = maq;
+      }
+
+      const pinc = localStorage.getItem('prodtec_colheita_pincelador_' + dia);
+      if (pinc && $('cPincelador')) $('cPincelador').value = pinc;
+
+      const badge = $('cEquipeSalvaBadge');
+      const bText = $('cEquipeSalvaText');
+      if (badge && bText) {
+        bText.textContent = `Equipe de hoje pré-selecionada (${arr.length} colhedores)`;
+        badge.style.display = 'flex';
+        if (window.lucide) lucide.createIcons();
+      }
+      return true;
+    }
+  } catch(e){}
+  return false;
+}
+
+function limparEquipeDoDia(ev) {
+  if (ev) ev.stopPropagation();
+  cState.workers.clear();
+  const dia = $('cDate')?.value || today();
+  try {
+    localStorage.removeItem('prodtec_colheita_equipe_' + dia);
+  } catch(e){}
+  const badge = $('cEquipeSalvaBadge');
+  if (badge) badge.style.display = 'none';
+  renderCEmpList(getHarvestEmployees());
+  updateCalcPreview();
+  toast('Equipe desmarcada', 'ok');
+}
+
 function initCarraoForm() {
   $('cDate').value = today();
   renderCFruitList();
+  carregarEquipeDoDia();
   renderCEmpList(getHarvestEmployees());
+  updateCalcPreview();
 
   // 1. Carrega tratoristas
   const tSel = $('cTractor');
@@ -11506,7 +11587,10 @@ async function pushCarrao({ session, workers, carriageIds = [] }) {
 
 function resetCForm() {
   cQty = 1; $('cQtyVal').textContent = 1;
-  cState.workers.clear();
+  salvarEquipeDoDia();
+  if ($('cTractor')) $('cTractor').value = '';
+  const hasEquipe = carregarEquipeDoDia();
+  if (!hasEquipe) cState.workers.clear();
   $('cRegisteredBy').value = '';
   if ($('cEmpSearch')) $('cEmpSearch').value = '';
   // Renderiza colaboradores de colheita no reset

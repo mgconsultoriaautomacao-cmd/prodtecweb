@@ -28,6 +28,7 @@ from PyQt6.QtGui import QIcon
 import db_python
 import app_service
 import sync_service
+from batch_sync_worker import BatchSyncWorker
 
 # ─── Caminhos ────────────────────────────────────────────────────────────────
 _APP_DIR      = _THIS_DIR.parent                          # packinghouse-app/
@@ -437,6 +438,7 @@ class MainWindow(QMainWindow):
         self._closing = False
         self._backoff = 20_000
         self._sync_thread = None
+        self._batch_worker = None
 
         # ── Bridge QWebChannel ────────────────────────────────────────────────
         self._channel = QWebChannel(self._page)
@@ -472,10 +474,32 @@ class MainWindow(QMainWindow):
         self._view.page().runJavaScript(js)
 
     # ── Sincronização ─────────────────────────────────────────────────────────
+    def _is_batch_sync_enabled(self) -> bool:
+        """Verifica se o modo de envio em lote está ativo via env var ou banco local."""
+        if os.getenv('ENABLE_BATCH_SYNC') in ('1', 'true', 'TRUE'):
+            return True
+        try:
+            conn = db_python.get_db()
+            row = conn.execute("SELECT value FROM config WHERE key='enable_batch_sync'").fetchone()
+            if row and str(row['value']).strip().lower() in ('1', 'true'):
+                return True
+        except Exception:
+            pass
+        return False
+
     def _start_sync_worker(self):
-        if self._sync_thread is None or not self._sync_thread.is_alive():
-            self._sync_thread = threading.Thread(target=self._sync_worker_loop, daemon=True)
-            self._sync_thread.start()
+        if self._is_batch_sync_enabled():
+            print("App: Modo BATCH SYNC ativado (Envio em Lote de 500 & Conexão Isolada).")
+            self._batch_worker = BatchSyncWorker(
+                push_event_fn=self._api.pushEvent.emit,
+                on_auth_error_fn=self._on_sync_auth_error
+            )
+            self._batch_worker.start()
+        else:
+            print("App: Modo SYNC LEGADO ativo.")
+            if self._sync_thread is None or not self._sync_thread.is_alive():
+                self._sync_thread = threading.Thread(target=self._sync_worker_loop, daemon=True)
+                self._sync_thread.start()
 
     def _sync_worker_loop(self):
         time.sleep(5)  # Espera inicial para UI inicializar
@@ -488,9 +512,13 @@ class MainWindow(QMainWindow):
                 time.sleep(1)
 
     def _trigger_sync(self):
-        threading.Thread(target=self._run_sync_cycle, daemon=True).start()
+        if self._batch_worker and self._batch_worker.is_alive():
+            print("App: Acionamento manual de sincronização repassado para BatchSyncWorker.")
+            self._batch_worker.trigger_sync(full=True)
+        else:
+            threading.Thread(target=lambda: self._run_sync_cycle(force_full_sync=True), daemon=True).start()
 
-    def _run_sync_cycle(self):
+    def _run_sync_cycle(self, force_full_sync: bool = False):
         if self._is_syncing or self._closing:
             return
         self._is_syncing = True
@@ -498,7 +526,7 @@ class MainWindow(QMainWindow):
         try:
             conn = db_python.get_db()
             sync_service.sync_to_supabase(conn)
-            new_scans = sync_service.sync_from_supabase(conn, on_auth_error=self._on_sync_auth_error)
+            new_scans = sync_service.sync_from_supabase(conn, on_auth_error=self._on_sync_auth_error, force_full_sync=force_full_sync)
             if new_scans and new_scans > 0:
                 self._api.pushEvent.emit('scan:new', json.dumps({'role': 'EMPILHADOR', 'count': new_scans}))
             self._backoff = 6_000
@@ -558,6 +586,11 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         self._closing = True
+        if self._batch_worker:
+            try:
+                self._batch_worker.stop()
+            except Exception:
+                pass
         if self._py_process:
             try:
                 self._py_process.terminate()

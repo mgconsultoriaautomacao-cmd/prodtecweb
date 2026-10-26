@@ -238,6 +238,45 @@ def _create_schema(conn: sqlite3.Connection):
             synced        INTEGER NOT NULL DEFAULT 0
         )
         """,
+        """
+        CREATE TABLE IF NOT EXISTS rh_asos (
+            id               TEXT PRIMARY KEY,
+            tenant_id        TEXT,
+            employee_name    TEXT NOT NULL,
+            cpf              TEXT,
+            role             TEXT,
+            sector           TEXT,
+            tipo_exame       TEXT NOT NULL DEFAULT 'PERIODICO',
+            data_exame       TEXT NOT NULL,
+            data_vencimento  TEXT NOT NULL,
+            clinica          TEXT,
+            medico           TEXT,
+            apto             INTEGER NOT NULL DEFAULT 1,
+            observacoes      TEXT,
+            created_at       INTEGER NOT NULL,
+            updated_at       INTEGER NOT NULL,
+            synced           INTEGER NOT NULL DEFAULT 0
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS frota_abastecimentos (
+            id             TEXT PRIMARY KEY,
+            tenant_id      TEXT,
+            data_hora      TEXT NOT NULL,
+            veiculo        TEXT NOT NULL,
+            condutor       TEXT,
+            combustivel    TEXT NOT NULL DEFAULT 'DIESEL S10',
+            litros         REAL NOT NULL,
+            horimetro_km   REAL,
+            valor_litro    REAL,
+            valor_total    REAL,
+            local_tanque   TEXT DEFAULT 'TANQUE CENTRAL FAZENDA (5.000L)',
+            observacoes    TEXT,
+            created_at     INTEGER NOT NULL,
+            updated_at     INTEGER NOT NULL,
+            synced         INTEGER NOT NULL DEFAULT 0
+        )
+        """,
     ]
 
     for ddl in ddl_statements:
@@ -265,6 +304,8 @@ def _run_migrations(conn: sqlite3.Connection):
         ('scan_events',           'weight_id', 'INTEGER'),
         ('scan_events',           'synced',    'INTEGER NOT NULL DEFAULT 0'),
         ('scan_events',           'caliber',   'TEXT'),
+        ('scan_events',           'client_event_id', 'TEXT'),
+        ('quality_audits',        'client_event_id', 'TEXT'),
         ('barcode_mappings',      'synced',    'INTEGER NOT NULL DEFAULT 0'),
         ('daily_production_summary', 'synced', 'INTEGER NOT NULL DEFAULT 0'),
     ]
@@ -283,11 +324,16 @@ def _run_migrations(conn: sqlite3.Connection):
         'CREATE UNIQUE INDEX IF NOT EXISTS idx_fruits_remote_id        ON fruits(remote_id)',
         'CREATE UNIQUE INDEX IF NOT EXISTS idx_varieties_remote_id     ON varieties(remote_id)',
         'CREATE UNIQUE INDEX IF NOT EXISTS idx_box_weights_remote_id   ON box_weights(remote_id)',
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_scan_events_client_event_id ON scan_events(client_event_id)',
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_quality_audits_client_event_id ON quality_audits(client_event_id)',
         'CREATE INDEX IF NOT EXISTS idx_scan_events_ts          ON scan_events(ts)',
         'CREATE INDEX IF NOT EXISTS idx_scan_events_employee_id ON scan_events(employee_id)',
         'CREATE INDEX IF NOT EXISTS idx_scan_events_station_id  ON scan_events(station_id)',
         'CREATE INDEX IF NOT EXISTS idx_scan_events_synced      ON scan_events(synced)',
+        'CREATE INDEX IF NOT EXISTS idx_scan_events_synced_id   ON scan_events(synced, id)',
+        'CREATE INDEX IF NOT EXISTS idx_scan_events_ts_barcode  ON scan_events(ts, raw_barcode)',
         'CREATE INDEX IF NOT EXISTS idx_quality_audits_synced   ON quality_audits(synced)',
+        'CREATE INDEX IF NOT EXISTS idx_quality_audits_synced_id ON quality_audits(synced, id)',
         'CREATE INDEX IF NOT EXISTS idx_hourly_stats_station    ON hourly_stats(station_id, role, hour_start)',
     ]
     for idx in indexes:

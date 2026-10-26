@@ -9,12 +9,12 @@ import requests
 from db_python import get_db, rows_to_list, now_ms
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
-def _get_headers(key: str, tenant_id: str = None, auth_token: str = None) -> dict:
+def _get_headers(key: str, tenant_id: str = None, auth_token: str = None, prefer: str = 'return=minimal') -> dict:
     h = {
         'apikey': key,
         'Authorization': f'Bearer {auth_token}' if (auth_token and '.' in auth_token) else f'Bearer {key}',
         'Content-Type': 'application/json',
-        'Prefer': 'return=representation',
+        'Prefer': prefer,
     }
     if tenant_id:
         h['x-tenant-id'] = tenant_id
@@ -221,11 +221,24 @@ def _upload_dict(conn, base_url, table, headers, tenant_id, sql, map_fn, match_f
 # ═══════════════════════════════════════════════════════════════════════════════
 # DOWNLOAD (Supabase → Local)
 # ═══════════════════════════════════════════════════════════════════════════════
-def sync_from_supabase(conn: sqlite3.Connection, on_auth_error=None):
+_last_dict_download_time = 0.0
+_last_mapeiro_download_time = 0.0
+DICT_DOWNLOAD_INTERVAL = 900.0   # 15 minutos (cadastros e dicionários)
+MAPEIRO_DOWNLOAD_INTERVAL = 120.0 # 2 minutos (scans do Mapeiro mobile)
+
+def sync_from_supabase(conn: sqlite3.Connection, on_auth_error=None, force_full_sync=False):
+    global _last_dict_download_time, _last_mapeiro_download_time
+    now = time.time()
+    should_sync_dict = force_full_sync or ((now - _last_dict_download_time) >= DICT_DOWNLOAD_INTERVAL)
+    should_sync_mapeiro = force_full_sync or ((now - _last_mapeiro_download_time) >= MAPEIRO_DOWNLOAD_INTERVAL)
+
+    if not should_sync_dict and not should_sync_mapeiro:
+        return 0
+
     config = _get_config(conn)
     if not config.get('supabase_url') or not config.get('supabase_key'):
         print('Sync [down]: Credenciais ausentes. Download pulado.')
-        return
+        return 0
 
     url        = config['supabase_url'].rstrip('/')
     key        = config['supabase_key']
@@ -249,6 +262,22 @@ def sync_from_supabase(conn: sqlite3.Connection, on_auth_error=None):
                     on_auth_error(401, 'Token inválido')
         return res
 
+    new_scans_count = 0
+
+    if should_sync_dict:
+        _sync_dictionaries_from_supabase(conn, get, tenant_id, tf)
+        _last_dict_download_time = now
+
+    if should_sync_mapeiro:
+        new_scans_count = _sync_mapeiro_from_supabase(conn, get, tenant_id, tf)
+        _last_mapeiro_download_time = now
+
+    print('Sync [down]: Ciclo de download concluído.')
+    return new_scans_count
+
+
+def _sync_dictionaries_from_supabase(conn: sqlite3.Connection, get, tenant_id: str, tf: str):
+    """Sincroniza cadastros e dicionários (executado a cada 15 min ou via botão)."""
     # ── 0. Tenant Config (Metas) ──────────────────────────────────────────────
     if tenant_id:
         r = get(f'/rest/v1/tenants?id=eq.{tenant_id}&select=target_per_hour_packer,target_per_hour_stacker,value_per_box_packer,value_per_box_stacker')
@@ -352,7 +381,6 @@ def sync_from_supabase(conn: sqlite3.Connection, on_auth_error=None):
                           code=excluded.code, active=excluded.active, updated_at=excluded.updated_at, synced=1
                     """, (full_code, 0 if ip.get('ativo') is False else 1, ip['id'], now_ms(), now_ms()))
 
-                    # Auto-vínculo de fruta e variedades da parcela a partir do Caderno de Campo
                     fruta_name = ip.get('fruta') or ip.get('cultura') or ip.get('especie') or ip.get('fruta_nome')
                     if fruta_name:
                         conn.execute("INSERT OR IGNORE INTO fruits(name,active,created_at,updated_at,synced) VALUES(?,1,?,?,0)", (fruta_name, now_ms(), now_ms()))
@@ -438,28 +466,45 @@ def sync_from_supabase(conn: sqlite3.Connection, on_auth_error=None):
                     print(f'Sync [down]: Erro parcel_link: {ex}')
         conn.commit()
 
-    # ── 9. Production Scans (Mapeiro Mobile / Nuvem → Local) ───────────────────
+
+def _sync_mapeiro_from_supabase(conn: sqlite3.Connection, get, tenant_id: str, tf: str) -> int:
+    """Sincroniza leituras de empilhador geradas pelo app Mapeiro Mobile com cursor incremental."""
     new_scans_count = 0
     try:
         from datetime import datetime, timezone
-        today_iso = datetime.now(timezone.utc).strftime('%Y-%m-%dT00:00:00Z')
-        r = get(f'/rest/v1/production_scans?ts=gte.{today_iso}&order=ts.asc&limit=5000{tf}')
+        cursor_row = conn.execute("SELECT value FROM config WHERE key='last_mapeiro_cursor_ms'").fetchone()
+        last_cursor_ms = None
+        if cursor_row and cursor_row[0]:
+            try:
+                last_cursor_ms = int(cursor_row[0])
+            except (ValueError, TypeError):
+                last_cursor_ms = None
+
+        if last_cursor_ms and last_cursor_ms > 0:
+            # Overlap de 120s para capturar scans de celulares com relógio ligeiramente defasado
+            overlap_ms = max(0, last_cursor_ms - 120_000)
+            since_iso = _ms_to_iso(overlap_ms)
+        else:
+            since_iso = datetime.now(timezone.utc).strftime('%Y-%m-%dT00:00:00Z')
+
+        r = get(f'/rest/v1/production_scans?role=eq.EMPILHADOR&ts=gte.{since_iso}&order=ts.asc&limit=1000{tf}')
         if r.ok:
             remote_scans = r.json() or []
+            max_seen_ts = last_cursor_ms or 0
             for s in remote_scans:
                 ts_ms = _iso_to_ms(s.get('ts'))
                 raw = str(s.get('raw_barcode') or '').strip()
                 if not ts_ms or not raw:
                     continue
 
-                # Mapeiro é exclusivo para Empilhadores! Força papel EMPILHADOR
-                emp_role = 'EMPILHADOR'
+                if ts_ms > max_seen_ts:
+                    max_seen_ts = ts_ms
+
                 station_id = s.get('station_id') or 'ST01'
                 emp_barcode = str(s.get('employee_barcode') or '').strip()
                 emp_name = str(s.get('employee_name') or '').strip()
                 rem_emp_id = s.get('employee_id')
 
-                # Localiza o funcionário correspondente no banco local
                 emp_row = None
                 if rem_emp_id:
                     emp_row = conn.execute("SELECT id, role, name FROM employees WHERE remote_id=?", (rem_emp_id,)).fetchone()
@@ -468,11 +513,9 @@ def sync_from_supabase(conn: sqlite3.Connection, on_auth_error=None):
                 if not emp_row and emp_name:
                     emp_row = conn.execute("SELECT id, role, name FROM employees WHERE name=?", (emp_name,)).fetchone()
 
-                # Se não encontrou por crachá/nome, tenta encontrar qualquer empilhador ativo
                 if not emp_row:
                     emp_row = conn.execute("SELECT id, role, name FROM employees WHERE role='EMPILHADOR' AND active=1 LIMIT 1", ()).fetchone()
 
-                # Se mesmo assim não houver nenhum cadastrado localmente, cria o colaborador Empilhador automaticamente
                 if not emp_row:
                     c_name = emp_name or (f'Empilhador {emp_barcode}' if emp_barcode else 'Empilhador Mapeiro')
                     c_bc = emp_barcode or f'EMP_{ts_ms}'
@@ -484,7 +527,6 @@ def sync_from_supabase(conn: sqlite3.Connection, on_auth_error=None):
                 else:
                     local_emp_id = emp_row[0]
 
-                # Verifica duplicidade
                 exists = conn.execute(
                     "SELECT 1 FROM scan_events WHERE ts=? AND raw_barcode=?",
                     (ts_ms, raw)
@@ -498,13 +540,11 @@ def sync_from_supabase(conn: sqlite3.Connection, on_auth_error=None):
                         if bw_row:
                             weight_id = bw_row[0]
 
-                    # Insere registro no scan_events com papel EMPILHADOR
                     conn.execute("""
                         INSERT INTO scan_events(ts, station_id, scanner_id, role, employee_id, raw_barcode, weight_id, caliber, synced)
                         VALUES(?, ?, 'MAPEIRO', 'EMPILHADOR', ?, ?, ?, ?, 1)
                     """, (ts_ms, station_id, local_emp_id, raw, weight_id, caliber))
 
-                    # Atualiza estatísticas por hora estritamente para EMPILHADOR
                     hs = ts_ms - (ts_ms % 3_600_000)
                     conn.execute("""
                         INSERT INTO hourly_stats(hour_start, station_id, role, employee_id, produced_count, quality_deducted)
@@ -518,13 +558,15 @@ def sync_from_supabase(conn: sqlite3.Connection, on_auth_error=None):
 
                     new_scans_count += 1
 
+            if max_seen_ts > 0:
+                conn.execute("INSERT INTO config(key, value) VALUES('last_mapeiro_cursor_ms', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (str(max_seen_ts),))
+
             if new_scans_count > 0:
                 conn.commit()
                 print(f'Sync [down]: {new_scans_count} novos scans (Mapeiro/Nuvem) sincronizados com sucesso.')
     except Exception as ex:
         print(f'Sync [down]: Erro ao baixar scans do Mapeiro: {ex}')
 
-    print('Sync [down]: Ciclo de download concluído.')
     return new_scans_count
 
 
