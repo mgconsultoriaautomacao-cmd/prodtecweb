@@ -77,7 +77,7 @@ def norm_role(r: str) -> str:
 
 
 def norm_station(s) -> str:
-    return str(s or 'ST01')
+    return str(s or 'ST01').strip().upper()
 
 
 def sanitize_num(v, default=0):
@@ -534,15 +534,18 @@ def scan_submit(station_id='ST01', scanner_id='SC01', role='EMBALADOR',
             SELECT m.employee_id, m.weight_id, e.name, e.photo_path
             FROM barcode_mappings m
             JOIN employees e ON e.id=m.employee_id
-            WHERE m.barcode=? AND e.role=? AND e.active=1
-        """, (raw, rl))
+            WHERE m.barcode=? AND (e.role=? OR (e.role='PACKER' AND ?='EMBALADOR') OR (e.role='STACKER' AND ?='EMPILHADOR')) AND e.active=1
+        """, (raw, rl, rl, rl))
 
         emp, weight_id = None, None
         if mapping:
             weight_id = mapping['weight_id']
             emp = {'id': mapping['employee_id'], 'name': mapping['name'], 'photo_path': mapping['photo_path']}
         else:
-            emp = _get("SELECT id, name, photo_path FROM employees WHERE barcode=? AND role=? AND active=1", (raw, rl))
+            emp = _get("""
+                SELECT id, name, photo_path FROM employees
+                WHERE barcode=? AND (role=? OR (role='PACKER' AND ?='EMBALADOR') OR (role='STACKER' AND ?='EMPILHADOR')) AND active=1
+            """, (raw, rl, rl, rl))
             weight_id = ctx.get('weight_id') if rl == 'EMBALADOR' else None
 
         # Override por CV
@@ -637,13 +640,13 @@ def state_get(station_id='ST01', role='EMBALADOR') -> dict:
                COUNT(hs.hour_start) as hours_active
         FROM hourly_stats hs
         JOIN employees e ON e.id=hs.employee_id
-        WHERE hs.hour_start>=? AND hs.station_id=? AND hs.role=?
+        WHERE hs.hour_start>=? AND UPPER(hs.station_id)=UPPER(?) AND (hs.role=? OR (hs.role='PACKER' AND ?='EMBALADOR') OR (hs.role='STACKER' AND ?='EMPILHADOR'))
         GROUP BY e.id, e.name, e.photo_path
         ORDER BY (SUM(hs.produced_count) - COALESCE((
           SELECT SUM(penalty_boxes) FROM quality_audits
           WHERE employee_id=e.id AND ts BETWEEN ? AND ?
         ),0)) DESC, e.name ASC
-    """, (ds, de, ds, st, rl, ds, de))
+    """, (ds, de, ds, st, rl, rl, rl, ds, de))
 
     candidates = []
     for r in rows:

@@ -21,7 +21,16 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo.
-echo [2/3] Baixando ultimas atualizacoes do servidor GitHub...
+echo [2/4] Criando backup preventivo do banco de dados local...
+if exist "packinghouse-app\data\packing.sqlite3" (
+    copy /y "packinghouse-app\data\packing.sqlite3" "packinghouse-app\data\packing_backup_auto.sqlite3" >nul 2>&1
+    echo [OK] Copia de seguranca salva em packinghouse-app\data\packing_backup_auto.sqlite3
+) else (
+    echo [INFO] Nenhum banco anterior para copiar, prosseguindo...
+)
+
+echo.
+echo [3/4] Baixando ultimas atualizacoes do servidor GitHub...
 git pull origin main
 if %ERRORLEVEL% NEQ 0 (
     echo.
@@ -30,7 +39,7 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo.
-echo [3/3] Verificando dependencias Python...
+echo [4/4] Verificando dependencias Python...
 set "PYCMD="
 python --version >nul 2>&1 && set "PYCMD=python"
 if not defined PYCMD (

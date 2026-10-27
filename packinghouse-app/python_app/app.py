@@ -475,17 +475,17 @@ class MainWindow(QMainWindow):
 
     # ── Sincronização ─────────────────────────────────────────────────────────
     def _is_batch_sync_enabled(self) -> bool:
-        """Verifica se o modo de envio em lote está ativo via env var ou banco local."""
-        if os.getenv('ENABLE_BATCH_SYNC') in ('1', 'true', 'TRUE'):
-            return True
+        """Verifica se o modo de envio em lote está ativo via env var ou banco local. Padrão: True."""
+        if os.getenv('ENABLE_BATCH_SYNC') in ('0', 'false', 'FALSE'):
+            return False
         try:
             conn = db_python.get_db()
             row = conn.execute("SELECT value FROM config WHERE key='enable_batch_sync'").fetchone()
-            if row and str(row['value']).strip().lower() in ('1', 'true'):
-                return True
+            if row and str(row['value']).strip().lower() in ('0', 'false'):
+                return False
         except Exception:
             pass
-        return False
+        return True
 
     def _start_sync_worker(self):
         if self._is_batch_sync_enabled():

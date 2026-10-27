@@ -658,6 +658,13 @@ window.addEventListener('DOMContentLoaded', () => {
           status.textContent = `Contado: ${rawBarcode}${res.employee?.name ? ` - ${res.employee.name}` : ''}${niTag}`;
           
           // Se o carrossel estiver ativo na tela, atualiza status e dados em segundo plano
+          if (res.employee && typeof showcaseCollabs !== 'undefined' && showcaseCollabs && showcaseCollabs.length > 0) {
+            const targetCollab = showcaseCollabs.find(col => col.id == res.employee.id);
+            if (targetCollab) {
+              targetCollab.boxes = (targetCollab.boxes || 0) + 1;
+              targetCollab.rawBoxes = (targetCollab.rawBoxes || targetCollab.boxes || 0) + 1;
+            }
+          }
           const scLive = document.getElementById('showcaseLiveStatus');
           if (scLive) {
             const empTxt = res.employee?.name ? ` (${res.employee.name})` : '';
@@ -3200,6 +3207,15 @@ async function renderShowcaseSlide() {
       endMs: todayEMs,
       employeeId: c.id
     });
+
+    if (singleStats && typeof singleStats.totalBoxes === 'number') {
+      const liveTotalRaw = singleStats.totalBoxes;
+      const liveNet = Math.max(0, liveTotalRaw - pen);
+      c.boxes = liveNet;
+      c.rawBoxes = liveTotalRaw;
+      if (boxesNet) boxesNet.innerHTML = `${liveNet} <span style="font-size: 12px; font-weight: 400; color: var(--muted);">cx</span>`;
+      if (boxesRaw) boxesRaw.textContent = `Bruto: ${liveTotalRaw} cx`;
+    }
 
     const cad = singleStats.avgScanGapSec || 0;
     if (cadVal) {
