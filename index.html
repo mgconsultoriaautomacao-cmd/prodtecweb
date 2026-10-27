@@ -6750,6 +6750,32 @@ async function sbFetchAll(queryBuilder, onProgress = null) {
   return allRows;
 }
 
+// Helper: busca períodos longos dividindo em janelas diárias (evita OFFSET profundo → statement timeout)
+// buildQuery(startIso, endIso) deve retornar um query builder NOVO já filtrado pelo intervalo.
+async function sbFetchByDays(startDate, endDate, buildQuery, onProgress = null, concurrency = 4) {
+  const days = [];
+  const d0 = new Date(startDate + 'T00:00:00Z');
+  const d1 = new Date(endDate + 'T00:00:00Z');
+  for (let d = new Date(d0); d <= d1; d.setUTCDate(d.getUTCDate() + 1)) {
+    days.push(d.toISOString().slice(0, 10));
+  }
+  const results = new Array(days.length);
+  let total = 0, idx = 0;
+  const worker = async () => {
+    while (idx < days.length) {
+      const i = idx++;
+      const day = days[i];
+      const rows = await sbFetchAll(buildQuery(toISO(day), toISO(day, '23:59:59')));
+      results[i] = rows;
+      total += rows.length;
+      if (typeof onProgress === 'function') { try { onProgress(total); } catch(_) {} }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, days.length) }, worker));
+  // mais recentes primeiro (equivalente a order ts desc)
+  return results.reverse().flat();
+}
+
 // Helper: get role config for a given role name
 function getRoleConfig(roleName) {
   let target = tenantConfig.target_per_hour_packer;
@@ -6864,22 +6890,19 @@ async function refreshRanking(isBackground = false){
     if (type === 'PACKING') {
       let scans = [], audits = [], stops = [];
       try {
-        let qScans = sb.from('production_scans')
-          .select('id, ts, role, weight_kg, weight_name, employee_name, raw_barcode, parcel_code, variety_name, fruit_name, caliber')
-          .eq('tenant_id', tenantId)
-          .gte('ts', toISO(s))
-          .lte('ts', toISO(e, '23:59:59'))
-          .order('ts', { ascending: false });
-
-        if (selectedRole) {
-          qScans = qScans.eq('role', selectedRole);
-        }
-        if (targetBarcode) {
-          qScans = qScans.eq('raw_barcode', targetBarcode);
-        }
+        const buildScans = (fromIso, toIso) => {
+          let qScans = sb.from('production_scans')
+            .select('id, ts, role, weight_kg, weight_name, employee_name, raw_barcode, parcel_code, variety_name, fruit_name, caliber')
+            .eq('tenant_id', tenantId)
+            .gte('ts', fromIso)
+            .lte('ts', toIso);
+          if (selectedRole) qScans = qScans.eq('role', selectedRole);
+          if (targetBarcode) qScans = qScans.eq('raw_barcode', targetBarcode);
+          return qScans.order('ts', { ascending: false });
+        };
 
         [scans, audits, stops] = await Promise.all([
-          sbFetchAll(qScans, (count) => {
+          sbFetchByDays(s, e, buildScans, (count) => {
             if (!isBackground) {
               const sEl = $('tractorReportSub');
               if (sEl) sEl.textContent = `Consultando apontamentos... (${count.toLocaleString()} registros lidos)`;
@@ -7439,15 +7462,14 @@ async function refreshDash(isBackground = false){
   }
 
   try {
-    let q = sb.from('production_scans')
-      .select('id, ts, role, weight_kg, weight_name, employee_name, raw_barcode, parcel_code, variety_name, fruit_name, caliber')
-      .eq('tenant_id', tenantId)
-      .gte('ts', toISO(s))
-      .lte('ts', toISO(e, '23:59:59'));
-
-    if(empId) {
-      const emp = _employees.find(ex => ex.id === empId);
-      if(emp) {
+    const emp = empId ? _employees.find(ex => ex.id === empId) : null;
+    const buildQ = (fromIso, toIso) => {
+      let q = sb.from('production_scans')
+        .select('id, ts, role, weight_kg, weight_name, employee_name, raw_barcode, parcel_code, variety_name, fruit_name, caliber')
+        .eq('tenant_id', tenantId)
+        .gte('ts', fromIso)
+        .lte('ts', toIso);
+      if (emp) {
         if (emp.barcode && emp.name) {
           q = q.or(`raw_barcode.eq.${emp.barcode},employee_name.eq.${emp.name}`);
         } else if (emp.barcode) {
@@ -7456,11 +7478,12 @@ async function refreshDash(isBackground = false){
           q = q.eq('employee_name', emp.name);
         }
       }
-    }
+      return q.order('ts', { ascending: false });
+    };
 
     let scans = [];
     try {
-      scans = await sbFetchAll(q.order('ts', { ascending: false }), (count) => {
+      scans = await sbFetchByDays(s, e, buildQ, (count) => {
         if (!isBackground) {
           const sEl = $('tractorReportSub');
           if (sEl) sEl.textContent = `Carregando dados da produção... (${count.toLocaleString()} registros lidos)`;
