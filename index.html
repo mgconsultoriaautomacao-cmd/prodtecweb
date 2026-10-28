@@ -6721,28 +6721,24 @@ async function delCarriage(id) { if(confirm('Excluir este carrocão?')) { await 
 async function delMachine(id) { if(confirm('Excluir esta máquina?')) { await sb.from('machines').delete().eq('id', id); loadMachines(); } }
 async function delOperation(id) { if(confirm('Excluir esta operação?')) { await sb.from('operations').delete().eq('id', id); loadOperations(); } }
 
-// Helper: fetch all records handling Supabase PostgREST limit with retry + backoff
-// Usa páginas de 500 registros (reduz profundidade de OFFSET e pressão no servidor).
+// Helper: fetch all records handling Supabase 1000 row default PostgREST limit with retry
 async function sbFetchAll(queryBuilder, onProgress = null) {
   let allRows = [];
   let from = 0;
-  let step = 500; // páginas menores → OFFSET mais raso → menos statement timeout
+  let step = 1000;
   while (true) {
     let res = null;
     let retries = 3;
-    let waitMs = 800;
     while (retries > 0) {
       res = await queryBuilder.range(from, from + step - 1);
       if (!res.error) break;
       retries--;
       if (retries > 0) {
-        const msg = res.error?.message || String(res.error);
-        console.warn(`[sbFetchAll] Falha no offset ${from}. Tentando novamente em ${waitMs}ms (${retries} tentativas restantes)...`, msg);
-        if (msg.includes('timeout') && step > 200) {
-          step = Math.max(200, Math.floor(step / 2)); // Reduz página na metade a cada timeout
+        console.warn(`[sbFetchAll] Falha no offset ${from}. Tentando novamente em 1000ms (${retries} tentativas restantes)...`, res.error?.message || res.error);
+        if ((res.error?.message || '').includes('timeout') && step > 500) {
+          step = 500;
         }
-        await new Promise(r => setTimeout(r, waitMs));
-        waitMs = Math.min(waitMs * 2, 5000); // Backoff exponencial até 5s
+        await new Promise(r => setTimeout(r, 1000));
       }
     }
     const { data, error } = res || {};
@@ -6761,16 +6757,13 @@ async function sbFetchAll(queryBuilder, onProgress = null) {
     }
     if (data.length < step) break;
     from += step;
-    // Pequena pausa entre páginas para não sobrecarregar o banco
-    if (from > 0) await new Promise(r => setTimeout(r, 50));
   }
   return allRows;
 }
 
 // Helper: busca períodos longos dividindo em janelas diárias (evita OFFSET profundo → statement timeout)
 // buildQuery(startIso, endIso) deve retornar um query builder NOVO já filtrado pelo intervalo.
-// concurrency=1 (padrão) serializa as janelas para não sobrecarregar o banco.
-async function sbFetchByDays(startDate, endDate, buildQuery, onProgress = null, concurrency = 1) {
+async function sbFetchByDays(startDate, endDate, buildQuery, onProgress = null, concurrency = 2) {
   const days = [];
   const d0 = new Date(startDate + 'T00:00:00Z');
   const d1 = new Date(endDate + 'T00:00:00Z');
@@ -6945,9 +6938,6 @@ async function refreshRanking(isBackground = false){
   
   // Apply client side filters if selected
   let filteredData = scans || [];
-  window._rankScans = filteredData;
-  window._lastDashScans = filteredData;
-  _rankScans = filteredData;
   if (selectedRole) {
     filteredData = filteredData.filter(x => x.role === selectedRole);
   }
@@ -7165,20 +7155,10 @@ async function refreshFin(){
 
   let scans = [];
   try {
-    scans = await sbFetchByDays(s, e, (fromIso, toIso) => 
-      sb.from('production_scans')
-        .select('id, ts, role, weight_kg, employee_name, raw_barcode')
-        .eq('tenant_id', tenantId)
-        .gte('ts', fromIso)
-        .lte('ts', toIso)
-        .order('ts', { ascending: true }),
-      null,
-      1
+    scans = await sbFetchByDays(s, e,
+      (startIso, endIso) => sb.from('production_scans').select('id, ts, role, weight_kg, employee_name, raw_barcode').eq('tenant_id',tenantId).gte('ts',startIso).lte('ts',endIso)
     );
-  } catch(err) { 
-    console.error('Error fetching production_scans for finance:', err); 
-    if (!scans || !scans.length) scans = window._lastDashScans || [];
-  }
+  } catch(err) { console.error('Error fetching production_scans for finance:', err); }
   const {data:abs}=await sb.from('employee_absences').select('*').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -7566,9 +7546,6 @@ async function refreshDash(isBackground = false){
     updateStopBanner();
 
     const safeScans = scans || [];
-    window._lastDashScans = safeScans;
-    window._rankScans = safeScans;
-    _rankScans = safeScans;
     const packerScans = safeScans.filter(s=>s.role==='PACKER' || s.role==='EMBALADOR');
     const kg = packerScans.reduce((a,x)=>a+(x.weight_kg||0),0);
 
@@ -8578,14 +8555,7 @@ async function openEmpDrawer(idOrName) {
   const [qAudits, qAbs, allScans, qFieldServices, qCarraoServices] = await Promise.all([
     qualityQuery.gte('ts', toISO(sDateOnly)).lte('ts', toISO(eDateOnly, '23:59:59')).then(r => r).catch(() => ({ data: [] })),
     absenceQuery.then(r => r).catch(() => ({ data: [] })),
-    sbFetchByDays(sDateOnly, eDateOnly, (fromIso, toIso) => {
-      let q = sb.from('production_scans').select('ts, weight_kg, role, raw_barcode, employee_name')
-        .eq('tenant_id', tenantId).gte('ts', fromIso).lte('ts', toIso);
-      if (emp.barcode && emp.name) q = q.or(`raw_barcode.eq.${empBarcode},employee_name.eq.${empName}`);
-      else if (emp.barcode) q = q.eq('raw_barcode', empBarcode);
-      else if (emp.name) q = q.eq('employee_name', empName);
-      return q.order('ts', { ascending: true });
-    }, null, 1).catch(() => []),
+    sbFetchAll(scanQuery.order('ts', {ascending: true})).catch(() => []),
     sb.from('field_service_employees').select('*, field_services(*)').eq('employee_id', emp.id).then(r => r).catch(() => ({ data: [] })),
     sb.from('field_carrao_employees').select('*, field_carrao_sessions(*)').eq('employee_id', emp.id).then(r => r).catch(() => ({ data: [] }))
   ]);
@@ -10490,117 +10460,27 @@ function pdfHeader(doc,title,sub){
 }
 
 function exportDashPDF(){
-  try {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const s = $('dashStart')?.value || today();
-    const e = $('dashEnd')?.value || today();
-    pdfHeader(doc, 'Dashboard de Produção', `${s} a ${e}`);
-
-    const scans = (window._lastDashScans && window._lastDashScans.length) 
-      ? window._lastDashScans 
-      : ((typeof _rankScans !== 'undefined' && _rankScans && _rankScans.length) ? _rankScans : []);
-
-    const totalCaixas = $('kpiTotalDia')?.textContent || '0';
-    const totalKg = $('kpiTotalKg')?.textContent || '0 Ton';
-    const mediaHora = $('kpiMediaHora')?.textContent || '--';
-    const qualidade = $('kpiQualidadeDash')?.textContent || '100%';
-
-    const eb = {};
-    scans.forEach(x => {
-      const name = x.employee_name || 'Desconhecido';
-      if (!eb[name]) eb[name] = { boxes: 0, kg: 0, role: x.role || 'EMBALADOR', parcelas: new Set(), variedades: new Set() };
-      eb[name].boxes++;
-      eb[name].kg += (x.weight_kg || 0);
-      if (x.parcel_code) eb[name].parcelas.add(x.parcel_code);
-      if (x.variety_name) eb[name].variedades.add(x.variety_name);
-    });
-
-    const activeCount = Object.keys(eb).length;
-
-    doc.setFontSize(9.5);
-    doc.setFont('helvetica', 'bold');
-    doc.setFillColor(241, 245, 249);
-    doc.roundedRect(14, 36, 182, 12, 2, 2, 'F');
-    doc.setTextColor(15, 23, 42);
-    doc.text(`Caixas: ${totalCaixas}  |  Peso: ${totalKg}  |  Colaboradores: ${activeCount}  |  Média/h: ${mediaHora}  |  Qualidade: ${qualidade}`, 18, 44);
-
-    const rows = Object.entries(eb).sort((a, b) => b[1].boxes - a[1].boxes).map(([name, d], i) => [
-      i + 1,
-      name,
-      d.role,
-      d.boxes.toLocaleString() + ' cx',
-      d.kg > 0 ? d.kg.toFixed(1) + ' kg' : '—',
-      Array.from(d.parcelas).slice(0, 3).join(', ') || '—'
-    ]);
-
-    if (rows.length > 0) {
-      doc.autoTable({
-        startY: 52,
-        head: [['#', 'Colaborador', 'Função', 'Caixas Embaladas', 'Peso Total (Kg)', 'Parcela(s)']],
-        body: rows,
-        headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold' },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
-        theme: 'grid',
-        styles: { fontSize: 8.5, cellPadding: 3 }
-      });
-    } else {
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(100, 116, 139);
-      doc.text('Nenhum apontamento de produção filtrado para o período informado.', 14, 60);
-    }
-
-    doc.save(`prodtech-dashboard-${s}-a-${e}.pdf`);
-    toast(' PDF da produção gerado com sucesso!', 'ok');
-  } catch(err) {
-    console.error('Erro ao gerar PDF da produção:', err);
-    alert('Erro ao gerar o PDF da produção: ' + (err.message || err));
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  const s=$('dashStart').value,e=$('dashEnd').value;
+  pdfHeader(doc,'Dashboard de Produção',`${s} a ${e}`);
+  doc.setFontSize(11);doc.setFont('helvetica','bold');
+  doc.text(`Caixas: ${$('kpiTotalDia').textContent} | KG: ${$('kpiTotalKg').textContent} | Ativos: ${$('kpiAtivos').textContent}`,14,42);
+  if(_rankScans.length){
+  const eb={};_rankScans.forEach(x=>{if(!eb[x.employee_name])eb[x.employee_name]={boxes:0,kg:0,role:x.role};eb[x.employee_name].boxes++;eb[x.employee_name].kg+=(x.weight_kg||0);});
+  const rows=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes).map(([name,d],i)=>[i+1,name,d.role,d.boxes+' cx',d.kg.toFixed(1)+' kg']);
+  doc.autoTable({startY:52,head:[['#','Nome','Função','Caixas','KG']],body:rows,headStyles:{fillColor:[59,130,246]},alternateRowStyles:{fillColor:[245,247,250]},theme:'grid',styles:{fontSize:10,cellPadding:5}});
   }
+  doc.save(`prodtech-dashboard-${s}.pdf`);
 }
 
 function exportRankPDF(){
-  try {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const s = $('rankStart')?.value || today();
-    const e = $('rankEnd')?.value || today();
-    pdfHeader(doc, 'Ranking de Produtividade', `${s} a ${e}`);
-
-    const scans = (window._rankScans && window._rankScans.length)
-      ? window._rankScans
-      : ((window._lastDashScans && window._lastDashScans.length) ? window._lastDashScans : []);
-
-    const eb = {};
-    scans.forEach(x => {
-      const name = x.employee_name || 'Desconhecido';
-      if (!eb[name]) eb[name] = { boxes: 0, kg: 0, role: x.role || 'EMBALADOR' };
-      eb[name].boxes++;
-      eb[name].kg += (x.weight_kg || 0);
-    });
-
-    const rows = Object.entries(eb).sort((a, b) => b[1].boxes - a[1].boxes).map(([name, d], i) => [
-      i + 1,
-      name,
-      d.role,
-      d.boxes.toLocaleString() + ' cx',
-      d.kg > 0 ? d.kg.toFixed(1) + ' kg' : '—'
-    ]);
-
-    doc.autoTable({
-      startY: 42,
-      head: [['#', 'Colaborador', 'Função', 'Caixas', 'KG']],
-      body: rows,
-      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [245, 247, 250] },
-      theme: 'grid',
-      styles: { fontSize: 9, cellPadding: 4 }
-    });
-    doc.save(`prodtech-ranking-${s}-${e}.pdf`);
-    toast(' PDF do ranking gerado com sucesso!', 'ok');
-  } catch(err) {
-    console.error('Erro ao gerar PDF do ranking:', err);
-    alert('Erro ao gerar PDF do ranking: ' + (err.message || err));
-  }
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  const s=$('rankStart').value,e=$('rankEnd').value;
+  pdfHeader(doc,'Ranking de Produtividade',`${s} a ${e}`);
+  const eb={};_rankScans.forEach(x=>{if(!eb[x.employee_name])eb[x.employee_name]={boxes:0,kg:0,role:x.role};eb[x.employee_name].boxes++;eb[x.employee_name].kg+=(x.weight_kg||0);});
+  const rows=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes).map(([name,d],i)=>[i+1,name,d.role,d.boxes,d.kg.toFixed(1)+' kg']);
+  doc.autoTable({startY:42,head:[['#','Colaborador','Função','Caixas','KG']],body:rows,headStyles:{fillColor:[99,102,241]},alternateRowStyles:{fillColor:[245,247,250]},theme:'grid',styles:{fontSize:10,cellPadding:5}});
+  doc.save(`prodtech-ranking-${s}-${e}.pdf`);
 }
 
 function exportFinPDF(){
@@ -11084,17 +10964,20 @@ function exportAuditPDF(){
 
 async function exportProducaoPDF(dateParam){
   // Exporta o relatório de produção diária em PDF
+  // Usa sbFetchByDays para evitar timeout por offset profundo em dias de alto volume
   const date = dateParam || $('finDate')?.value || today();
-  console.log('Gerando PDF de produção...');
+  console.log('Gerando PDF de produção para:', date);
   let data = [];
   try {
-    data = await sbFetchAll(sb.from('production_scans')
-      .select('*, employees(name)')
-      .eq('tenant_id', tenantId)
-      .gte('ts', toISO(date))
-      .lte('ts', toISO(date, '23:59:59'))
-      .order('ts', {ascending: false}));
-  } catch(err) { console.error(err); }
+    data = await sbFetchByDays(date, date,
+      (startIso, endIso) => sb.from('production_scans')
+        .select('id, ts, role, weight_kg, employee_name, raw_barcode, weight_name, parcel_code')
+        .eq('tenant_id', tenantId)
+        .gte('ts', startIso)
+        .lte('ts', endIso)
+        .order('ts', {ascending: false})
+    );
+  } catch(err) { console.error('Erro ao buscar scans para PDF:', err); }
   if(!data?.length) { alert('Nenhum dado de produção para esta data.'); return; }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
@@ -11102,12 +10985,12 @@ async function exportProducaoPDF(dateParam){
   // Add logo if exists
   const logo = (window.tenantConfig && window.tenantConfig.logo_url) || window._tenantLogoBase64;
   if (logo && logo.startsWith('data:image')) {
-  try {
-  const format = logo.includes('image/png') ? 'PNG' : 'JPEG';
-  doc.addImage(logo, format, 175, 10, 20, 20);
-  } catch(e) {
-  console.warn('Erro ao desenhar logo no PDF:', e);
-  }
+    try {
+      const format = logo.includes('image/png') ? 'PNG' : 'JPEG';
+      doc.addImage(logo, format, 175, 10, 20, 20);
+    } catch(e) {
+      console.warn('Erro ao desenhar logo no PDF:', e);
+    }
   }
 
   doc.setFontSize(16); doc.setTextColor(15,23,42);
@@ -11115,16 +10998,16 @@ async function exportProducaoPDF(dateParam){
   doc.setFontSize(10); doc.setTextColor(100,116,139);
   doc.text(`Empresa: ${tenantName} | Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
   doc.autoTable({
-  startY: 35,
-  head:[['Hora','Funcionário','Caixa/Peso','Kg','Parcela']],
-  body: data.map(r => [
-  new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-  r.employees?.name || r.employee_name || '—',
-  r.weight_name || '—',
-  (r.weight_kg||0).toFixed(1),
-  r.parcel_code || '—'
-  ]),
-  theme:'striped', styles:{fontSize:9}, headStyles:{fillColor:[15,23,42]}
+    startY: 35,
+    head:[['Hora','Funcionário','Caixa/Peso','Kg','Parcela']],
+    body: data.map(r => [
+      new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+      r.employee_name || '—',
+      r.weight_name || '—',
+      (r.weight_kg||0).toFixed(1),
+      r.parcel_code || '—'
+    ]),
+    theme:'striped', styles:{fontSize:9}, headStyles:{fillColor:[15,23,42]}
   });
   doc.save(`producao-${date}.pdf`);
 }
