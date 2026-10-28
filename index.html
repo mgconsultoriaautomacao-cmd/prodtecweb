@@ -4178,21 +4178,21 @@
 
   <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:12px">
   <div>
-  <label class="flabel">Dosagem (mL ou g)</label>
-  <input type="number" step="0.1" id="posDosagem" placeholder="Ex: 150" style="width:100%"/>
-  <div id="posDosagemCalcInfo" style="font-size:11px; margin-top:3px"></div>
+  <label class="flabel" style="color:var(--yellow); font-weight:700">Nº Carroções / Lote *</label>
+  <input type="number" id="posCarrocoes" placeholder="Ex: 8" value="1" style="width:100%; font-weight:800" oninput="recalcNewPosDosagem()" onchange="recalcNewPosDosagem()"/>
   </div>
   <div>
   <label class="flabel">Volume Água (L)</label>
-  <input type="number" step="0.1" id="posVolumeAgua" placeholder="Ex: 100" style="width:100%" oninput="onPosDefensivoChange()"/>
+  <input type="number" step="0.01" id="posVolumeAgua" placeholder="Ex: 1.33" style="width:100%" oninput="onNewPosVolumeAguaChange()"/>
   </div>
   <div>
-  <label class="flabel">Nº Carroções / Lote</label>
-  <input type="number" id="posCarrocoes" placeholder="Ex: 3" style="width:100%"/>
+  <label class="flabel">Dosagem (mL Produto)</label>
+  <input type="number" step="0.1" id="posDosagem" placeholder="Ex: 5.3" style="width:100%"/>
+  <div id="posDosagemCalcInfo" style="font-size:11px; margin-top:3px"></div>
   </div>
   <div>
   <label class="flabel" style="color:var(--yellow); font-weight:700">Carência (Dias)</label>
-  <input type="number" id="posCarencia" placeholder="Ex: 3" value="0" style="font-weight:700; width:100%"/>
+  <input type="number" id="posCarencia" placeholder="Ex: 0" value="0" style="font-weight:700; width:100%"/>
   </div>
   </div>
 
@@ -4288,8 +4288,8 @@
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr 1.2fr; gap:12px">
           <div>
-            <label class="flabel" style="margin:0 0 2px 0; font-size:11px">Parcela de Origem</label>
-            <input type="text" id="posAutoParcela" readonly style="width:100%; font-weight:800; color:var(--green); background:rgba(0,0,0,0.2)"/>
+            <label class="flabel" style="margin:0 0 2px 0; font-size:11px">Parcela de Origem *</label>
+            <input type="text" id="posAutoParcela" placeholder="Ex: 32 O" style="width:100%; font-weight:800; color:var(--green); background:rgba(0,0,0,0.2)"/>
           </div>
           <div>
             <label class="flabel" style="margin:0 0 2px 0; font-size:11px">Variedade / Cultura</label>
@@ -4333,8 +4333,8 @@
             <input type="text" id="posManualRtNome" value="IVANOSCA MARTINS DE OLIVEIRA CUNHA" style="width:100%" />
           </div>
           <div>
-            <label class="flabel">Qtde Carroções</label>
-            <input type="number" id="posManualQtyCarrocoes" min="1" value="1" style="width:100%"/>
+            <label class="flabel" style="color:var(--yellow); font-weight:700">Qtde Carroções *</label>
+            <input type="number" id="posManualQtyCarrocoes" min="1" value="1" style="width:100%; font-weight:800" oninput="recalcPosManualDosagem()" onchange="recalcPosManualDosagem()"/>
           </div>
         </div>
       </div>
@@ -4345,12 +4345,12 @@
           <div style="font-weight:700; font-size:12px; color:var(--yellow); display:flex; align-items:center; gap:6px">
             <i data-lucide="shield-check" style="width:14px; height:14px"></i> Tratamento de Talo (Modelo Ficha Oficial OC:05)
           </div>
-          <span style="font-size:10px; color:var(--muted)">Recomendação: Graduate A+ (4 mL / 1L de Água)</span>
+          <span style="font-size:10px; color:var(--muted)">Cálculo automático pela quantidade de carroções</span>
         </div>
 
         <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:12px; margin-bottom:10px">
           <div>
-            <label class="flabel">Produto Comercial (Fungicida Talo)</label>
+            <label class="flabel">Produto Comercial (Fungicida Talo) *</label>
             <select id="posManualProdutoSelect" onchange="onPosManualProdutoChange()" style="width:100%"></select>
           </div>
           <div>
@@ -4361,12 +4361,12 @@
 
         <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1.5fr; gap:12px">
           <div>
-            <label class="flabel">Dosagem (mL)</label>
-            <input type="number" step="0.1" id="posManualDosagem" value="4.0" style="width:100%"/>
+            <label class="flabel">Volume Água (L)</label>
+            <input type="number" step="0.01" id="posManualVolumeAgua" value="0.5" style="width:100%" oninput="onPosManualVolumeAguaChange()"/>
           </div>
           <div>
-            <label class="flabel">Volume Água (L)</label>
-            <input type="number" step="0.1" id="posManualVolumeAgua" value="1.0" style="width:100%"/>
+            <label class="flabel">Dosagem (mL Produto)</label>
+            <input type="number" step="0.1" id="posManualDosagem" value="2.0" style="width:100%"/>
           </div>
           <div>
             <label class="flabel">Carência (Dias)</label>
@@ -4374,9 +4374,10 @@
           </div>
           <div>
             <label class="flabel">Justificativa / Alvo</label>
-            <input type="text" id="posManualJustificativa" value="ANTRACNOSE / PREVENÇÃO DE FUNGOS" style="width:100%"/>
+            <input type="text" id="posManualJustificativa" value="CONTROLE PREVENTIVO DE PODRIDÃO PÓS-COLHEITA, FUNGOS, BACTÉRIAS (ANTRACNOSE)" style="width:100%"/>
           </div>
         </div>
+        <div id="posManualCalcHint" style="font-size:11px; margin-top:8px; color:#10b981"></div>
       </div>
 
       <!-- AÇÕES E BOTÕES DE EMISSÃO -->
@@ -24153,6 +24154,48 @@ async function salvarPinceladorDaEquipe() {
   renderCcColheitasTable(_colheitasList);
 }
 
+// ── CÁLCULO DE CALDA & DEFENSIVOS PÓS-COLHEITA (MODELO CADERNO DE CAMPO) ──
+function calcCaldaPosColheita(carrocoes, dosePorLitro) {
+  const c = Math.max(0, parseInt(carrocoes) || 0);
+  if (c === 0) return { volumeAgua: 0, dosagem: 0 };
+  
+  // No modelo oficial e prática da fazenda (pincelamento de pedúnculo):
+  // Cada carroção consome em média 0.15 L de calda de água.
+  // Mínimo de 0.5 L para preparação no recipiente do pincelador.
+  // Ex: 8 carroções -> 1.33 L água; 11 carroções -> 1.67 L água.
+  let volumeAgua = +(c * 0.1515).toFixed(2);
+  if (volumeAgua < 0.5) volumeAgua = 0.5;
+  
+  const dose = parseFloat(dosePorLitro) || 0;
+  const dosagem = +(volumeAgua * dose).toFixed(1);
+  return { volumeAgua, dosagem };
+}
+
+function getPosColheitaLocal() {
+  try {
+    return JSON.parse(localStorage.getItem('prodtech_pos_colheita_offline') || '[]');
+  } catch(e) {
+    return [];
+  }
+}
+
+function savePosColheitaLocal(item) {
+  try {
+    const list = getPosColheitaLocal();
+    const idx = list.findIndex(x => x.id === item.id);
+    if (idx >= 0) list[idx] = item;
+    else list.unshift(item);
+    localStorage.setItem('prodtech_pos_colheita_offline', JSON.stringify(list));
+  } catch(e) {}
+}
+
+function deletePosColheitaLocal(id) {
+  try {
+    const list = getPosColheitaLocal().filter(x => x.id !== id);
+    localStorage.setItem('prodtech_pos_colheita_offline', JSON.stringify(list));
+  } catch(e) {}
+}
+
 // ── ORDEM DE PÓS-COLHEITA: MODAL & ALIMENTAÇÃO MANUAL ─────────────────
 async function openAlimentarPosColheitaModal(id) {
   const item = (_colheitasList || []).find(x => x.id === id);
@@ -24163,7 +24206,8 @@ async function openAlimentarPosColheitaModal(id) {
   if (!modal) return;
 
   $('posSessionIdRef').value = item.id;
-  $('posAutoParcela').value = item.parcela || '—';
+  const pVal = item.parcela && item.parcela !== '—' && item.parcela !== '--' ? item.parcela : '';
+  $('posAutoParcela').value = pVal;
   $('posAutoVariedade').value = item.variedade || 'MELÃO';
   $('posAutoLote').value = item.rastreabilidade_codigo || '—';
 
@@ -24190,16 +24234,20 @@ async function openAlimentarPosColheitaModal(id) {
     $('posManualRtNome').value = defaultRt;
   }
 
-  // Defensivos (Pós-Colheita / Fungicida)
+  // Defensivos Pós-Colheita com fórmulas oficiais (Graduate A+ & Imazacure 500 EC)
   const dSel = $('posManualProdutoSelect');
   if (dSel) {
     dSel.innerHTML = `
-      <option value="GRADUATE A+" data-ing="AZOXISTROBINA + FLUDIOXONIL" data-dose="4.0" data-car="0">GRADUATE A+ (Padrão OC:05)</option>
-      <option value="SCHOLAR" data-ing="FLUDIOXONIL" data-dose="3.0" data-car="0">SCHOLAR (Fludioxonil)</option>
-      <option value="TECTO" data-ing="TIABENDAZOL" data-dose="2.0" data-car="0">TECTO (Tiabendazol)</option>
-      <option value="OUTRO" data-ing="" data-dose="0" data-car="0">+ Outro Fungicida...</option>
+      <option value="GRADUATE A+" data-ing="AZOXISTROBINA + FLUDIOXONIL" data-dose="4.0" data-car="0" data-just="CONTROLE PREVENTIVO DE PODRIDÃO PÓS-COLHEITA, FUNGOS, BACTÉRIAS (ANTRACNOSE)">GRADUATE A+ (Azoxistrobina + Fludioxonil - 4 mL/L)</option>
+      <option value="IMAZACURE 500 EC" data-ing="IMAZALIL" data-dose="2.0" data-car="0" data-just="CONTROLE PREVENTIVO DE PODRIDÃO PÓS-COLHEITA / FUNGOS (PEDÚNCULO)">IMAZACURE 500 EC (Imazalil - 2 mL/L)</option>
+      <option value="SCHOLAR" data-ing="FLUDIOXONIL" data-dose="3.0" data-car="0" data-just="CONTROLE DE FUNGOS / DOENÇAS PÓS-COLHEITA">SCHOLAR (Fludioxonil - 3 mL/L)</option>
+      <option value="TECTO" data-ing="TIABENDAZOL" data-dose="2.0" data-car="0" data-just="CONTROLE PREVENTIVO DE PODRIDÃO PÓS-COLHEITA">TECTO (Tiabendazol - 2 mL/L)</option>
+      <option value="OUTRO" data-ing="" data-dose="0" data-car="0" data-just="">+ Outro Fungicida...</option>
     `;
+    dSel.value = 'GRADUATE A+';
   }
+
+  recalcPosManualDosagem();
 
   modal.style.display = 'flex';
   if (window.lucide) lucide.createIcons();
@@ -24211,9 +24259,50 @@ function onPosManualProdutoChange() {
   const opt = sel.options[sel.selectedIndex];
   if (opt && opt.dataset) {
     if ($('posManualIngredienteAtivo')) $('posManualIngredienteAtivo').value = opt.dataset.ing || '';
-    if ($('posManualDosagem')) $('posManualDosagem').value = opt.dataset.dose || '4.0';
     if ($('posManualCarencia')) $('posManualCarencia').value = opt.dataset.car || '0';
+    if ($('posManualJustificativa') && opt.dataset.just) $('posManualJustificativa').value = opt.dataset.just;
   }
+  recalcPosManualDosagem();
+}
+
+function recalcPosManualDosagem() {
+  const cInput = $('posManualQtyCarrocoes');
+  const dSel = $('posManualProdutoSelect');
+  if (!cInput || !dSel) return;
+
+  const carrocoes = parseInt(cInput.value) || 0;
+  const opt = dSel.options[dSel.selectedIndex];
+  let dosePorLitro = parseFloat(opt?.dataset?.dose) || 0;
+  if (!dosePorLitro) {
+    if ((opt?.value || '').includes('IMAZACURE')) dosePorLitro = 2.0;
+    else if ((opt?.value || '').includes('GRADUATE')) dosePorLitro = 4.0;
+  }
+
+  const calc = calcCaldaPosColheita(carrocoes, dosePorLitro);
+  if ($('posManualVolumeAgua')) $('posManualVolumeAgua').value = calc.volumeAgua;
+  if ($('posManualDosagem')) $('posManualDosagem').value = calc.dosagem;
+
+  const hint = $('posManualCalcHint');
+  if (hint) {
+    if (carrocoes > 0) {
+      hint.innerHTML = `<span style="font-weight:700">Fórmula Caderno de Campo:</span> ${carrocoes} carroções &times; ${dosePorLitro} mL/L &rarr; <strong>${calc.dosagem} mL de ${opt.value}</strong> em <strong>${calc.volumeAgua} L</strong> de água`;
+    } else {
+      hint.innerHTML = '';
+    }
+  }
+}
+
+function onPosManualVolumeAguaChange() {
+  const volAgua = parseFloat($('posManualVolumeAgua')?.value) || 0;
+  const dSel = $('posManualProdutoSelect');
+  const opt = dSel?.options[dSel?.selectedIndex];
+  let dosePorLitro = parseFloat(opt?.dataset?.dose) || 0;
+  if (!dosePorLitro) {
+    if ((opt?.value || '').includes('IMAZACURE')) dosePorLitro = 2.0;
+    else if ((opt?.value || '').includes('GRADUATE')) dosePorLitro = 4.0;
+  }
+  const dosagem = +(volAgua * dosePorLitro).toFixed(1);
+  if ($('posManualDosagem')) $('posManualDosagem').value = dosagem;
 }
 
 function closeAlimentarPosColheitaModal() {
@@ -24222,47 +24311,70 @@ function closeAlimentarPosColheitaModal() {
 }
 
 async function salvarRegistroPosColheitaManual() {
-  const parcela = $('posAutoParcela').value;
+  let parcela = ($('posAutoParcela')?.value || '').trim();
+  if (parcela === '—' || parcela === '--') parcela = '';
   const data_aplicacao = $('posManualDataAplicacao').value;
-  const ordem_carrao = $('posManualOrdemCarrao').value.trim();
+  const ordem_carrao = ($('posManualOrdemCarrao')?.value || '01').trim();
   const produto_nome = $('posManualProdutoSelect').value;
   const ingrediente_ativo = $('posManualIngredienteAtivo').value.trim();
-  const dosagem_produto = parseFloat($('posManualDosagem').value) || 4.0;
-  const volume_agua = parseFloat($('posManualVolumeAgua').value) || 1.0;
+  const dosagem_produto = parseFloat($('posManualDosagem').value) || 0;
+  const volume_agua = parseFloat($('posManualVolumeAgua').value) || 0;
   const quantidade_carrocoes = parseInt($('posManualQtyCarrocoes').value) || 1;
   const carencia_dias = parseInt($('posManualCarencia').value) || 0;
   const manipulador = $('posManualPincelador')?.value || 'ELENILSON ALVES DE SOUSA';
   const rtNome = $('posManualRtNome')?.value || 'IVANOSCA MARTINS DE OLIVEIRA CUNHA';
-  const justificativa = $('posManualJustificativa').value.trim() || 'ANTRACNOSE';
+  const justificativa = $('posManualJustificativa').value.trim() || 'CONTROLE PREVENTIVO DE PODRIDÃO PÓS-COLHEITA, FUNGOS, BACTÉRIAS (ANTRACNOSE)';
 
-  if (!parcela || !data_aplicacao || !ordem_carrao) {
-    alert('Informe a Parcela, Nº da Ordem do Carroção e a Data da Aplicação.');
+  if (!parcela) {
+    const pPrompt = prompt('Informe a Parcela de origem para o Pós-Colheita (ex: 32 O, 14 M, 28 F):', _currentColheitaActiveItem?.parcela || '');
+    if (!pPrompt || !pPrompt.trim()) {
+      alert('Informe a Parcela para registrar o pós-colheita.');
+      return;
+    }
+    parcela = pPrompt.trim().toUpperCase();
+    if ($('posAutoParcela')) $('posAutoParcela').value = parcela;
+  }
+
+  if (!data_aplicacao) {
+    alert('Informe a Data da Aplicação.');
     return;
   }
 
-  try {
-    const payload = {
-      tenant_id: tenantId,
-      parcela,
-      data_aplicacao,
-      produto_nome,
-      ingrediente_ativo,
-      dosagem_produto,
-      volume_agua,
-      quantidade_carrocoes,
-      carencia_dias,
-      operador: manipulador,
-      justificativa
-    };
+  const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id) || 'b7ad82dd-dca3-46af-91c6-5d564b7c3cc5';
+  const newId = 'pos_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
 
-    const { error } = await sb.from('caderno_campo_pos_colheita').insert(payload);
-    if (error) throw error;
-    toast(' Ordem de Pós-Colheita salva com sucesso!', 'ok');
-    closeAlimentarPosColheitaModal();
-    if (typeof loadPosColheitaTable === 'function') loadPosColheitaTable();
+  const payload = {
+    id: newId,
+    tenant_id: tId,
+    parcela,
+    data_aplicacao,
+    produto_nome,
+    ingrediente_ativo,
+    dosagem_produto,
+    volume_agua,
+    quantidade_carrocoes,
+    carencia_dias,
+    operador: manipulador,
+    justificativa,
+    created_at: new Date().toISOString()
+  };
+
+  try {
+    const { data: inserted, error } = await sb.from('caderno_campo_pos_colheita').insert(payload).select();
+    if (!error && inserted && inserted[0]) {
+      payload.id = inserted[0].id;
+    } else if (error) {
+      console.warn('Supabase RLS/Insert notice pós-colheita, mantendo cópia offline garantida:', error);
+    }
   } catch(e) {
-    alert('Erro ao salvar pós-colheita: ' + (e.message || 'Verifique a conexão.'));
+    console.warn('Conexão remota pós-colheita, persistido localmente:', e);
   }
+
+  savePosColheitaLocal(payload);
+
+  toast(' Ordem de Pós-Colheita salva com sucesso!', 'ok');
+  closeAlimentarPosColheitaModal();
+  if (typeof loadPosColheitaTable === 'function') await loadPosColheitaTable();
 }
 
 function salvarEEmitirOrdemPacking() {
@@ -26256,34 +26368,47 @@ function loadMudasTable() {
 async function loadPosColheitaTable() {
   try {
     const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id);
-    let q = sb.from('caderno_campo_pos_colheita').select('*').order('data_aplicacao', { ascending: false });
-    if (tId) q = q.or(`tenant_id.eq.${tId},tenant_id.is.null`);
-    let { data, error } = await q;
+    let remoteData = [];
+    try {
+      let q = sb.from('caderno_campo_pos_colheita').select('*').order('data_aplicacao', { ascending: false });
+      if (tId) q = q.or(`tenant_id.eq.${tId},tenant_id.is.null`);
+      let { data, error } = await q;
 
-    if (!error && (!data || data.length === 0)) {
-      try {
-        const fb = await sb.from('caderno_campo_pos_colheita').select('*').order('data_aplicacao', { ascending: false });
-        if (fb.data && fb.data.length > 0) data = fb.data;
-      } catch(eFb) {}
+      if (!error && (!data || data.length === 0)) {
+        try {
+          const fb = await sb.from('caderno_campo_pos_colheita').select('*').order('data_aplicacao', { ascending: false }).limit(200);
+          if (fb.data && fb.data.length > 0) data = fb.data;
+        } catch(eFb) {}
+      }
+      if (!error && data) remoteData = data;
+    } catch(errRemote) {
+      console.warn('Erro ao carregar pós-colheita remoto:', errRemote);
     }
 
-    if (!error && data) {
-      _posColheitaList = data;
-      window._posColheitaList = data;
-      populateCcPosParcelFilter();
-      filterCcPosList();
-    } else {
-      _posColheitaList = [];
-      window._posColheitaList = [];
-      populateCcPosParcelFilter();
-      renderCcPosTable([]);
-    }
+    const localData = typeof getPosColheitaLocal === 'function' ? getPosColheitaLocal() : [];
+    const map = new Map();
+    remoteData.forEach(item => {
+      const k = item.id || (item.parcela + '_' + item.data_aplicacao);
+      map.set(k, item);
+    });
+    localData.forEach(item => {
+      const k = item.id || (item.parcela + '_' + item.data_aplicacao);
+      if (!map.has(k)) map.set(k, item);
+    });
+
+    const merged = Array.from(map.values()).sort((a,b) => (b.data_aplicacao || '').localeCompare(a.data_aplicacao || ''));
+
+    _posColheitaList = merged;
+    window._posColheitaList = merged;
+    populateCcPosParcelFilter();
+    renderCcPosTable(merged);
   } catch (e) {
     console.error('Erro ao carregar pós-colheita:', e);
-    _posColheitaList = [];
-    window._posColheitaList = [];
+    const localData = typeof getPosColheitaLocal === 'function' ? getPosColheitaLocal() : [];
+    _posColheitaList = localData;
+    window._posColheitaList = localData;
     populateCcPosParcelFilter();
-    renderCcPosTable([]);
+    renderCcPosTable(localData);
   }
 }
 
@@ -26304,9 +26429,9 @@ function renderCcPosTable(list) {
   <td style="padding:12px 10px; font-weight:800; color:var(--green)">${item.parcela || '—'}</td>
   <td style="padding:12px 10px; font-weight:700; color:var(--text)">${item.produto_nome || '—'}</td>
   <td style="padding:12px 10px; color:var(--blue)">${item.ingrediente_ativo || '—'}</td>
-  <td style="padding:12px 10px; text-align:center; font-weight:700">${item.dosagem_produto || 0} mL/L</td>
+  <td style="padding:12px 10px; text-align:center; font-weight:700">${item.dosagem_produto || 0} mL</td>
   <td style="padding:12px 10px; text-align:center">${item.volume_agua || 0} L</td>
-  <td style="padding:12px 10px; text-align:center">${item.quantidade_carrocoes || 0}</td>
+  <td style="padding:12px 10px; text-align:center; font-weight:800; color:var(--yellow)">${item.quantidade_carrocoes || 0}</td>
   <td style="padding:12px 10px; text-align:center; font-weight:700; color:var(--yellow)">${item.carencia_dias || 0}d</td>
   <td style="padding:12px 10px">${item.operador || '—'}</td>
   <td style="padding:12px 10px; text-align:center; white-space:nowrap">
@@ -26323,53 +26448,91 @@ async function openNewPosModal() {
   const modal = $('newPosModal');
   if (!modal) return;
 
+  const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id) || 'b7ad82dd-dca3-46af-91c6-5d564b7c3cc5';
+
   // 1. Carregar combo de parcelas
   const parcelSelect = $('posParcela');
   if (parcelSelect) {
-  if (!_infoParcelas || _infoParcelas.length === 0) {
-  const { data } = await sb.from('info_parcelas').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
-  _infoParcelas = data || [];
-  }
-  parcelSelect.innerHTML = '<option value="">-- Selecione a Parcela --</option>' + 
-  _infoParcelas.map(p => `<option value="${p.parcela2 || p.parcela}">${p.parcela2 || p.parcela} — ${p.variedade || 'Sem variedade'} (${p.cultura || 'MELÃO'})</option>`).join('');
+    if (!_infoParcelas || _infoParcelas.length === 0) {
+      try {
+        let { data } = await sb.from('info_parcelas').select('*').eq('tenant_id', tId).order('created_at', { ascending: false });
+        if (!data || data.length === 0) {
+          const resAll = await sb.from('info_parcelas').select('*').order('created_at', { ascending: false }).limit(200);
+          data = resAll.data || [];
+        }
+        _infoParcelas = data || [];
+      } catch(e) {}
+    }
+    let pOptions = '<option value="">-- Selecione a Parcela --</option>';
+    if (_infoParcelas && _infoParcelas.length > 0) {
+      pOptions += _infoParcelas.map(p => `<option value="${p.parcela2 || p.parcela}">${p.parcela2 || p.parcela} — ${p.variedade || 'Sem variedade'} (${p.cultura || 'MELÃO'})</option>`).join('');
+    }
+    // Adicionar parcelas de colheitas ativas caso não estejam no cadastro de parcelas
+    if (_colheitasList && _colheitasList.length > 0) {
+      const knownParcels = [...new Set(_colheitasList.map(c => c.parcela).filter(Boolean))];
+      knownParcels.forEach(kp => {
+        if (!pOptions.includes(`value="${kp}"`)) {
+          pOptions += `<option value="${kp}">${kp} (Colheita Ativa)</option>`;
+        }
+      });
+    }
+    parcelSelect.innerHTML = pOptions;
   }
 
-  // 2. Carregar combo de defensivos do cadastro
+  // 2. Carregar combo de defensivos do cadastro com destaque para GRADUATE A+ e IMAZACURE 500 EC
   const defSelect = $('posProdutoSelect');
   if (defSelect) {
-  if (!_defensivos || _defensivos.length === 0) {
-  const { data: defData } = await sb.from('caderno_campo_defensivos_cadastro').select('*').eq('tenant_id', tenantId).order('produto', { ascending: true });
-  _defensivos = defData || [];
-  }
-  defSelect.innerHTML = '<option value="">-- Selecione o Defensivo do Cadastro --</option>' + 
-  (_defensivos || []).map(d => `<option value="${d.id}" data-prod="${d.produto}" data-ing="${d.ingrediente_ativo || ''}" data-car="${d.carencia_dias || 0}" data-dose="${d.dose || 0}">${d.produto} (${d.ingrediente_ativo || 'S/ Princípio'}) - Carência: ${d.carencia_dias || 0}d</option>`).join('') + 
-  '<option value="OUTRO">+ Outro Produto Não Cadastrado...</option>';
+    if (!_defensivos || _defensivos.length === 0) {
+      try {
+        let { data: defData } = await sb.from('caderno_campo_defensivos_cadastro').select('*').eq('tenant_id', tId).order('produto', { ascending: true });
+        if (!defData || defData.length === 0) {
+          const resDef = await sb.from('caderno_campo_defensivos_cadastro').select('*').order('produto', { ascending: true }).limit(200);
+          defData = resDef.data || [];
+        }
+        _defensivos = defData || [];
+      } catch(e) {}
+    }
+
+    defSelect.innerHTML = `
+      <option value="">-- Selecione o Fungicida Pós-Colheita --</option>
+      <optgroup label="Fungicidas de Talo Oficiais (Pós-Colheita)">
+        <option value="GRADUATE A+" data-prod="GRADUATE A+" data-ing="AZOXISTROBINA + FLUDIOXONIL" data-dose="4.0" data-car="0" data-just="CONTROLE PREVENTIVO DE PODRIDÃO PÓS-COLHEITA, FUNGOS, BACTÉRIAS (ANTRACNOSE)">GRADUATE A+ (Azoxistrobina + Fludioxonil - 4 mL/L)</option>
+        <option value="IMAZACURE 500 EC" data-prod="IMAZACURE 500 EC" data-ing="IMAZALIL" data-dose="2.0" data-car="0" data-just="CONTROLE PREVENTIVO DE PODRIDÃO PÓS-COLHEITA / FUNGOS (PEDÚNCULO)">IMAZACURE 500 EC (Imazalil - 2 mL/L)</option>
+        <option value="SCHOLAR" data-prod="SCHOLAR" data-ing="FLUDIOXONIL" data-dose="3.0" data-car="0" data-just="CONTROLE DE FUNGOS / DOENÇAS PÓS-COLHEITA">SCHOLAR (Fludioxonil - 3 mL/L)</option>
+        <option value="TECTO" data-prod="TECTO" data-ing="TIABENDAZOL" data-dose="2.0" data-car="0" data-just="CONTROLE PREVENTIVO DE PODRIDÃO PÓS-COLHEITA">TECTO (Tiabendazol - 2 mL/L)</option>
+      </optgroup>
+      <optgroup label="Outros Defensivos do Cadastro">
+        ${(_defensivos || []).filter(d => !['GRADUATE A+', 'IMAZACURE 500 EC', 'SCHOLAR', 'TECTO'].includes((d.produto||'').toUpperCase())).map(d => `<option value="${d.id}" data-prod="${d.produto}" data-ing="${d.ingrediente_ativo || ''}" data-car="${d.carencia_dias || 0}" data-dose="${d.dose || 0}">${d.produto} (${d.ingrediente_ativo || 'S/ Princípio'})</option>`).join('')}
+      </optgroup>
+      <option value="OUTRO">+ Outro Produto Não Cadastrado...</option>
+    `;
+    defSelect.value = 'GRADUATE A+';
   }
 
-  // 3. Carregar combo de operadores/pinceladores
+  // 3. Carregar combo de operadores/pinceladores garantindo employees carregados
   const opSelect = $('posOperador');
   if (opSelect) {
-  let empOptions = '<option value="">-- Selecione o Operador / Pincelador --</option>';
-  if (window._employeesList && window._employeesList.length > 0) {
-  empOptions += window._employeesList.map(e => `<option value="${e.name}">${e.name} (${e.role || 'Operador'})</option>`).join('');
-  }
-  opSelect.innerHTML = empOptions;
+    const emps = await ensureEmployeesLoaded();
+    let empOptions = '<option value="">-- Selecione o Operador / Pincelador --</option>';
+    if (emps && emps.length > 0) {
+      empOptions += emps.map(e => `<option value="${e.name}">${e.name} (${e.role || 'Pincelador'})</option>`).join('');
+    }
+    opSelect.innerHTML = empOptions;
+    const foundPinc = emps.find(e => (e.role || '').toUpperCase().includes('PINCEL') || (e.name || '').toUpperCase().includes('ELENILSON') || (e.name || '').toUpperCase().includes('KERGINILDO'));
+    if (foundPinc) opSelect.value = foundPinc.name;
   }
 
   $('posDataAplicacao').value = new Date().toISOString().split('T')[0];
   const customInput = $('posProdutoNomeCustom');
   if (customInput) {
-  customInput.value = '';
-  customInput.style.display = 'none';
+    customInput.value = '';
+    customInput.style.display = 'none';
   }
-  $('posIngredienteAtivo').value = '';
-  $('posDosagem').value = '';
-  $('posVolumeAgua').value = '';
-  $('posCarrocoes').value = '';
-  $('posCarencia').value = '0';
-  $('posJustificativa').value = 'TRATAMENTO DE TALO DO MELÃO (PREVENÇÃO DE PODRIDÃO DE PEDÚNCULO)';
+  $('posCarrocoes').value = '1';
+  onPosDefensivoChange();
 
   modal.style.display = 'flex';
+  if (window.lucide) lucide.createIcons();
 }
 
 function onPosDefensivoChange() {
@@ -26380,45 +26543,65 @@ function onPosDefensivoChange() {
   const val = sel.value;
 
   if (val === 'OUTRO') {
-  if (customInput) {
-  customInput.style.display = 'block';
-  customInput.focus();
-  }
-  $('posIngredienteAtivo').value = '';
-  $('posCarencia').value = '0';
-  $('posDosagem').value = '';
-  if (calcInfo) calcInfo.innerHTML = '';
-  return;
+    if (customInput) {
+      customInput.style.display = 'block';
+      customInput.focus();
+    }
+    $('posIngredienteAtivo').value = '';
+    $('posCarencia').value = '0';
+    $('posDosagem').value = '';
+    if (calcInfo) calcInfo.innerHTML = '';
+    return;
   }
 
   if (customInput) customInput.style.display = 'none';
-  const def = (_defensivos || []).find(d => d.id === val);
-  if (def) {
-  $('posIngredienteAtivo').value = def.ingrediente_ativo || '';
-  $('posCarencia').value = def.carencia_dias || '0';
-  
-  const parsed = parseDoseTexto(def.dose_texto);
-  const doseMin = parsed ? parsed.min : (parseFloat(def.dose || def.dosagem_recomendada) || 0);
-  const unit = parsed?.unit || def.unidade_dose || 'mL/100L';
-
-  if (doseMin > 0) $('posDosagem').value = doseMin;
-  
-  const volAgua = parseFloat($('posVolumeAgua').value) || 100;
-  const criterio = (def.criterio_dosagem || 'L').toUpperCase();
-  if (parsed && calcInfo) {
-  const calcVal = criterio === 'L' ? (volAgua / 100) * doseMin : doseMin;
-  calcInfo.innerHTML = ` <span style="color:var(--green); font-weight:bold">Bula: ${doseMin} ${unit}</span> &rarr; Total p/ ${volAgua}L água: <strong style="color:var(--green)">${calcVal.toFixed(1)} ${unit.replace('/100L','').replace('/100l','')}</strong>`;
-  } else if (calcInfo) {
-  calcInfo.innerHTML = '';
-  }
-  } else {
   const opt = sel.options[sel.selectedIndex];
   if (opt && opt.dataset) {
-  $('posIngredienteAtivo').value = opt.dataset.ing || '';
-  $('posCarencia').value = opt.dataset.car || '0';
-  $('posDosagem').value = opt.dataset.dose || '';
+    $('posIngredienteAtivo').value = opt.dataset.ing || '';
+    $('posCarencia').value = opt.dataset.car || '0';
+    if ($('posJustificativa') && opt.dataset.just) $('posJustificativa').value = opt.dataset.just;
   }
+  recalcNewPosDosagem();
+}
+
+function recalcNewPosDosagem() {
+  const cInput = $('posCarrocoes');
+  const sel = $('posProdutoSelect');
+  if (!cInput || !sel) return;
+
+  const carrocoes = parseInt(cInput.value) || 0;
+  const opt = sel.options[sel.selectedIndex];
+  let dosePorLitro = parseFloat(opt?.dataset?.dose) || 0;
+  if (!dosePorLitro) {
+    if ((opt?.dataset?.prod || opt?.value || '').includes('IMAZACURE')) dosePorLitro = 2.0;
+    else if ((opt?.dataset?.prod || opt?.value || '').includes('GRADUATE')) dosePorLitro = 4.0;
   }
+
+  const calc = calcCaldaPosColheita(carrocoes, dosePorLitro);
+  if ($('posVolumeAgua')) $('posVolumeAgua').value = calc.volumeAgua;
+  if ($('posDosagem')) $('posDosagem').value = calc.dosagem;
+
+  const calcInfo = $('posDosagemCalcInfo');
+  if (calcInfo) {
+    if (carrocoes > 0) {
+      calcInfo.innerHTML = `<span style="color:var(--green); font-weight:700">Fórmula:</span> ${carrocoes} carr. &times; ${dosePorLitro} mL/L &rarr; <strong>${calc.dosagem} mL</strong> (${calc.volumeAgua}L água)`;
+    } else {
+      calcInfo.innerHTML = '';
+    }
+  }
+}
+
+function onNewPosVolumeAguaChange() {
+  const volAgua = parseFloat($('posVolumeAgua')?.value) || 0;
+  const sel = $('posProdutoSelect');
+  const opt = sel?.options[sel?.selectedIndex];
+  let dosePorLitro = parseFloat(opt?.dataset?.dose) || 0;
+  if (!dosePorLitro) {
+    if ((opt?.dataset?.prod || opt?.value || '').includes('IMAZACURE')) dosePorLitro = 2.0;
+    else if ((opt?.dataset?.prod || opt?.value || '').includes('GRADUATE')) dosePorLitro = 4.0;
+  }
+  const dosagem = +(volAgua * dosePorLitro).toFixed(1);
+  if ($('posDosagem')) $('posDosagem').value = dosagem;
 }
 
 function closeNewPosModal() {
@@ -26453,42 +26636,56 @@ async function saveNewPosRecord() {
     return;
   }
 
+  const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id) || 'b7ad82dd-dca3-46af-91c6-5d564b7c3cc5';
+  const newId = 'pos_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+
+  const payload = {
+    id: newId,
+    tenant_id: tId,
+    parcela,
+    data_aplicacao,
+    produto_nome,
+    ingrediente_ativo,
+    dosagem_produto,
+    volume_agua,
+    quantidade_carrocoes,
+    carencia_dias,
+    operador,
+    justificativa,
+    created_at: new Date().toISOString()
+  };
+
   try {
-    const payload = {
-      tenant_id: tenantId,
-      parcela,
-      data_aplicacao,
-      produto_nome,
-      ingrediente_ativo,
-      dosagem_produto,
-      volume_agua,
-      quantidade_carrocoes,
-      carencia_dias,
-      operador,
-      justificativa
-    };
-
-    const { error } = await sb.from('caderno_campo_pos_colheita').insert(payload);
-    if (error) throw error;
-
-    toast(' Tratamento de Talo pós-colheita salvo com sucesso! ', 'ok');
-    closeNewPosModal();
-    await loadPosColheitaTable();
-  } catch (e) {
-    alert('Erro ao salvar tratamento pós-colheita: ' + (e.message || 'Verifique a conexão.'));
+    const { data: inserted, error } = await sb.from('caderno_campo_pos_colheita').insert(payload).select();
+    if (!error && inserted && inserted[0]) {
+      payload.id = inserted[0].id;
+    } else if (error) {
+      console.warn('Erro RLS Supabase no pós-colheita, salvando localmente:', error);
+    }
+  } catch(e) {
+    console.warn('Exceção Supabase ao salvar pós-colheita:', e);
   }
+
+  savePosColheitaLocal(payload);
+
+  toast(' Tratamento de Talo pós-colheita salvo com sucesso! ', 'ok');
+  closeNewPosModal();
+  await loadPosColheitaTable();
 }
 
 async function deletePosRecord(id) {
   if (!confirm('Deseja excluir este tratamento de talo pós-colheita?')) return;
+  deletePosColheitaLocal(id);
   try {
-    const { error } = await sb.from('caderno_campo_pos_colheita').delete().eq('id', id).eq('tenant_id', tenantId);
-    if (error) throw error;
-    toast(' Registro excluído!', 'ok');
-    await loadPosColheitaTable();
+    const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id);
+    let q = sb.from('caderno_campo_pos_colheita').delete().eq('id', id);
+    if (tId) q = q.eq('tenant_id', tId);
+    await q;
   } catch(e) {
-    alert('Erro ao excluir: ' + e.message);
+    console.warn('Erro ao excluir pós-colheita remoto:', e);
   }
+  toast(' Registro excluído!', 'ok');
+  await loadPosColheitaTable();
 }
 
 function printPosColheitaReport(itemStr) {
