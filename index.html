@@ -4156,7 +4156,8 @@
   <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
   <div>
   <label class="flabel">Parcela Origem *</label>
-  <select id="posParcela" style="width:100%"></select>
+  <select id="posParcela" onchange="onNewPosParcelaChange()" style="width:100%"></select>
+  <div id="posParcelaCadInfo" style="font-size:11px; margin-top:4px"></div>
   </div>
   <div>
   <label class="flabel">Data de Aplicação *</label>
@@ -4289,11 +4290,11 @@
         <div style="display:grid; grid-template-columns:1fr 1fr 1.2fr; gap:12px">
           <div>
             <label class="flabel" style="margin:0 0 2px 0; font-size:11px">Parcela de Origem *</label>
-            <input type="text" id="posAutoParcela" placeholder="Ex: 32 O" style="width:100%; font-weight:800; color:var(--green); background:rgba(0,0,0,0.2)"/>
+            <input type="text" id="posAutoParcela" placeholder="Ex: 32 O" oninput="onPosAutoParcelaChange()" onchange="onPosAutoParcelaChange()" style="width:100%; font-weight:800; color:var(--green); background:rgba(0,0,0,0.2)"/>
           </div>
           <div>
-            <label class="flabel" style="margin:0 0 2px 0; font-size:11px">Variedade / Cultura</label>
-            <input type="text" id="posAutoVariedade" readonly style="width:100%; font-weight:700; background:rgba(0,0,0,0.2)"/>
+            <label class="flabel" style="margin:0 0 2px 0; font-size:11px">Variedades no Cadastro Oficial</label>
+            <input type="text" id="posAutoVariedade" placeholder="Puxando do Cadastro..." style="width:100%; font-weight:700; color:var(--yellow); background:rgba(0,0,0,0.2)"/>
           </div>
           <div>
             <label class="flabel" style="margin:0 0 2px 0; font-size:11px">Lote / Rastreabilidade Oficial</label>
@@ -15636,6 +15637,135 @@ function normalizeParcelCode(val) {
   s = s.replace(/[\s\-_]/g, '');
   return s;
 }
+window.normalizeParcelCode = normalizeParcelCode;
+
+// Garantir que a base de info_parcelas (cadastro oficial) esteja sempre carregada na memória
+async function ensureInfoParcelasLoaded() {
+  if (Array.isArray(_infoParcelas) && _infoParcelas.length > 0) {
+    window._infoParcelas = _infoParcelas;
+    return _infoParcelas;
+  }
+  if (Array.isArray(window._infoParcelas) && window._infoParcelas.length > 0) {
+    _infoParcelas = window._infoParcelas;
+    return _infoParcelas;
+  }
+  try {
+    const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id);
+    let q = sb.from('info_parcelas').select('*').order('created_at', { ascending: false });
+    if (tId) q = q.eq('tenant_id', tId);
+    let { data, error } = await q;
+    if (!data || data.length === 0 || error) {
+      const fb = await sb.from('info_parcelas').select('*').order('created_at', { ascending: false }).limit(300);
+      if (fb.data && fb.data.length > 0) data = fb.data;
+    }
+    if (data && data.length > 0) {
+      _infoParcelas = data;
+      window._infoParcelas = data;
+      return data;
+    }
+  } catch(e) {
+    console.warn('Erro ao carregar info_parcelas do cadastro:', e);
+  }
+  return _infoParcelas || [];
+}
+window.ensureInfoParcelasLoaded = ensureInfoParcelasLoaded;
+
+// Puxa a verdade oficial do CADASTRO de parcelas (todas as variedades cadastradas e cultura oficial)
+function getCadastroParcelaInfo(parcelInput) {
+  if (!parcelInput) return null;
+  const list = (Array.isArray(_infoParcelas) && _infoParcelas.length > 0)
+    ? _infoParcelas
+    : (Array.isArray(window._infoParcelas) ? window._infoParcelas : []);
+  if (!list || list.length === 0) return null;
+
+  let rawTarget = '';
+  if (typeof parcelInput === 'object') {
+    rawTarget = parcelInput.parcela2 || 
+                ((parcelInput.parcela || '') + (parcelInput.letra ? parcelInput.letra : '')) || 
+                parcelInput.parcela || 
+                parcelInput.code || '';
+  } else {
+    rawTarget = String(parcelInput || '').trim();
+  }
+  if (!rawTarget) return null;
+
+  const normTarget = normalizeParcelCode(rawTarget);
+  if (!normTarget) return null;
+
+  // Filtrar correspondências na lista do cadastro oficial
+  let matches = list.filter(p => {
+    if (!p) return false;
+    const p1 = normalizeParcelCode(p.parcela2);
+    const p2 = normalizeParcelCode((p.parcela || '') + (p.letra || ''));
+    const pRaw = normalizeParcelCode(p.parcela);
+    const pCode = normalizeParcelCode(p.code);
+
+    if (p1 && p1 === normTarget) return true;
+    if (p2 && p2 === normTarget) return true;
+    if (pCode && pCode === normTarget) return true;
+    if (pRaw && pRaw === normTarget) return true;
+
+    // Se o input não tinha letra (ex: '39') e o cadastro é '39T'
+    if (pRaw && normTarget && pRaw === normTarget.replace(/[A-Z]$/, '')) return true;
+    if (p1 && normTarget && p1.replace(/[A-Z]$/, '') === normTarget) return true;
+
+    return false;
+  });
+
+  if (matches.length === 0) return null;
+
+  const varietiesSet = new Set();
+  let cultura = '';
+
+  matches.forEach(m => {
+    if (!cultura && m.cultura) cultura = m.cultura.trim().toUpperCase();
+
+    // Varrer colunas variedade, variedade2 ... variedade10
+    for (let i = 1; i <= 10; i++) {
+      const colName = i === 1 ? 'variedade' : `variedade${i}`;
+      const rawVal = m[colName];
+      if (rawVal && typeof rawVal === 'string') {
+        rawVal.split(/[,;\/]+|\s+e\s+/i).forEach(v => {
+          const clean = v.trim().toUpperCase();
+          if (clean && clean !== '—' && clean !== '--' && clean !== 'SEM VARIEDADE' && clean !== 'MELÃO' && clean !== 'MELANCIA') {
+            varietiesSet.add(clean);
+          }
+        });
+      }
+    }
+
+    // Checar obs para SEMENTES_EXT
+    if (m.obs && m.obs.includes('<!--SEMENTES_EXT:')) {
+      try {
+        const matchExt = m.obs.match(/<!--SEMENTES_EXT:([\s\S]*?)-->/);
+        if (matchExt && matchExt[1]) {
+          const arr = JSON.parse(matchExt[1]);
+          if (Array.isArray(arr)) {
+            arr.forEach(s => {
+              const sv = (s.nome || '').trim().toUpperCase();
+              if (sv && sv !== '—' && sv !== '--' && sv !== 'SEM VARIEDADE') varietiesSet.add(sv);
+            });
+          }
+        }
+      } catch(e) {}
+    }
+  });
+
+  const varietiesList = Array.from(varietiesSet);
+  const formattedVariedade = varietiesList.length > 0 
+    ? varietiesList.join(', ') 
+    : (matches[0].variedade ? matches[0].variedade.trim().toUpperCase() : '');
+
+  return {
+    parcela: matches[0].parcela2 || matches[0].parcela || rawTarget,
+    cultura: cultura || matches[0].cultura || 'MELÃO',
+    variedade: formattedVariedade,
+    variedadesList: varietiesList,
+    raw: matches[0],
+    matches: matches
+  };
+}
+window.getCadastroParcelaInfo = getCadastroParcelaInfo;
 
 // Normalização e extração precisa de variedades e áreas individuais
 function extractNormalizedParcelVarieties(item) {
@@ -15843,7 +15973,23 @@ function getParcelaCompleteInfo(parcelInput, dataArray) {
     if (m.previsao_colheita) prevColheitaDates.push(m.previsao_colheita);
   });
 
-  if (typeof parcelInput === 'object') {
+  // Integrar todas as variedades oficiais do cadastro de parcelas
+  const cadInfo = getCadastroParcelaInfo(parcelInput);
+  if (cadInfo && cadInfo.variedadesList && cadInfo.variedadesList.length > 0) {
+    cadInfo.variedadesList.forEach(vName => {
+      if (!varietiesSet.has(vName)) {
+        varietiesSet.add(vName);
+        varietiesWithArea.push({
+          nome: vName,
+          area: '—',
+          semeadura: null,
+          transplante: null
+        });
+      }
+    });
+  }
+
+  if (typeof parcelInput === 'object' && varietiesSet.size === 0) {
     const normObj = extractNormalizedParcelVarieties(parcelInput);
     normObj.vars.forEach(v => {
       if (v.nome && !varietiesSet.has(v.nome)) {
@@ -24205,10 +24351,14 @@ async function openAlimentarPosColheitaModal(id) {
   const modal = $('alimentarPosColheitaModal');
   if (!modal) return;
 
+  await ensureInfoParcelasLoaded();
+
   $('posSessionIdRef').value = item.id;
   const pVal = item.parcela && item.parcela !== '—' && item.parcela !== '--' ? item.parcela : '';
   $('posAutoParcela').value = pVal;
-  $('posAutoVariedade').value = item.variedade || 'MELÃO';
+
+  const cadInfo = getCadastroParcelaInfo(pVal || item);
+  $('posAutoVariedade').value = cadInfo?.variedade || item.variedade || 'MELÃO';
   $('posAutoLote').value = item.rastreabilidade_codigo || '—';
 
   // Alimentação manual pré-preenchida
@@ -24251,6 +24401,14 @@ async function openAlimentarPosColheitaModal(id) {
 
   modal.style.display = 'flex';
   if (window.lucide) lucide.createIcons();
+}
+
+function onPosAutoParcelaChange() {
+  const pVal = $('posAutoParcela')?.value || '';
+  const cadInfo = getCadastroParcelaInfo(pVal);
+  if (cadInfo && cadInfo.variedade && cadInfo.variedade !== '—') {
+    if ($('posAutoVariedade')) $('posAutoVariedade').value = cadInfo.variedade;
+  }
 }
 
 function onPosManualProdutoChange() {
@@ -24313,6 +24471,9 @@ function closeAlimentarPosColheitaModal() {
 async function salvarRegistroPosColheitaManual() {
   let parcela = ($('posAutoParcela')?.value || '').trim();
   if (parcela === '—' || parcela === '--') parcela = '';
+  const cadInfo = getCadastroParcelaInfo(parcela);
+  const variedade = $('posAutoVariedade')?.value || cadInfo?.variedade || '';
+  const cultura = cadInfo?.cultura || _currentColheitaActiveItem?.cultura || 'MELÃO';
   const data_aplicacao = $('posManualDataAplicacao').value;
   const ordem_carrao = ($('posManualOrdemCarrao')?.value || '01').trim();
   const produto_nome = $('posManualProdutoSelect').value;
@@ -24347,6 +24508,8 @@ async function salvarRegistroPosColheitaManual() {
     id: newId,
     tenant_id: tId,
     parcela,
+    cultura,
+    variedade,
     data_aplicacao,
     produto_nome,
     ingrediente_ativo,
@@ -24397,9 +24560,10 @@ function salvarEEmitirOrdemPacking() {
 }
 
 function salvarEEmitirFichaOficialOC05() {
-  if (!_currentColheitaActiveItem) return;
+  if (!_currentColheitaActiveItem && !$('posAutoParcela')?.value) return;
   const pCode = $('posAutoParcela').value;
-  const varNome = $('posAutoVariedade').value;
+  const cadInfo = getCadastroParcelaInfo(pCode);
+  const varNome = $('posAutoVariedade').value || cadInfo?.variedade || _currentColheitaActiveItem?.variedade || '';
   const dataAplicacao = $('posManualDataAplicacao').value;
   const carrocoes = $('posManualQtyCarrocoes').value;
   const prodNome = $('posManualProdutoSelect').value;
@@ -24414,6 +24578,7 @@ function salvarEEmitirFichaOficialOC05() {
   const mockItem = {
     parcela: pCode,
     variedade: varNome,
+    cultura: cadInfo?.cultura || _currentColheitaActiveItem?.cultura || 'MELÃO',
     data_aplicacao: dataAplicacao,
     quantidade_carrocoes: carrocoes,
     produto_nome: prodNome,
@@ -24441,14 +24606,16 @@ async function openNewColheitaModal() {
   // 1. Carregar parcelas
   const parcelSelect = $('colheitaParcelaSelect');
   if (parcelSelect) {
-  try {
-  const { data } = await sb.from('info_parcelas').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
-  _infoParcelas = data || [];
-  } catch(e) {}
+    await ensureInfoParcelasLoaded();
 
-  parcelSelect.innerHTML = '<option value="">-- Selecione a Parcela --</option>' + 
-  (_infoParcelas || []).map(p => `<option value="${p.parcela2 || p.parcela}" data-vars="${p.variedade || ''}">${p.parcela2 || p.parcela} — ${p.variedade || 'Sem variedade'} (${p.cultura || 'MELÃO'})</option>`).join('') +
-  '<option value="OUTRO">+ Outra Parcela Não Cadastrada...</option>';
+    parcelSelect.innerHTML = '<option value="">-- Selecione a Parcela --</option>' + 
+    (_infoParcelas || []).map(p => {
+      const cad = getCadastroParcelaInfo(p);
+      const vStr = cad?.variedade || p.variedade || 'Sem variedade';
+      const cStr = cad?.cultura || p.cultura || 'MELÃO';
+      return `<option value="${p.parcela2 || p.parcela}" data-vars="${vStr}" data-cultura="${cStr}">${p.parcela2 || p.parcela} — ${vStr} (${cStr})</option>`;
+    }).join('') +
+    '<option value="OUTRO">+ Outra Parcela Não Cadastrada...</option>';
   }
 
   // 2. Carregar funcionários (pinceladores / equipe)
@@ -24602,9 +24769,12 @@ function onColheitaParcelaChange() {
     return;
   }
   if (customInput) customInput.style.display = 'none';
+  const cad = getCadastroParcelaInfo(sel.value);
   const opt = sel.options[sel.selectedIndex];
-  if (opt && opt.dataset.vars) {
-    $('colheitaVariedade').value = opt.dataset.vars.split(',')[0].trim();
+  if (cad && cad.variedade && cad.variedade !== '—') {
+    $('colheitaVariedade').value = cad.variedade;
+  } else if (opt && opt.dataset.vars) {
+    $('colheitaVariedade').value = opt.dataset.vars;
   }
   updateColheitaRastreabilidadeAuto();
 }
@@ -26448,31 +26618,29 @@ async function openNewPosModal() {
   const modal = $('newPosModal');
   if (!modal) return;
 
+  await ensureInfoParcelasLoaded();
   const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id) || 'b7ad82dd-dca3-46af-91c6-5d564b7c3cc5';
 
   // 1. Carregar combo de parcelas
   const parcelSelect = $('posParcela');
   if (parcelSelect) {
-    if (!_infoParcelas || _infoParcelas.length === 0) {
-      try {
-        let { data } = await sb.from('info_parcelas').select('*').eq('tenant_id', tId).order('created_at', { ascending: false });
-        if (!data || data.length === 0) {
-          const resAll = await sb.from('info_parcelas').select('*').order('created_at', { ascending: false }).limit(200);
-          data = resAll.data || [];
-        }
-        _infoParcelas = data || [];
-      } catch(e) {}
-    }
     let pOptions = '<option value="">-- Selecione a Parcela --</option>';
     if (_infoParcelas && _infoParcelas.length > 0) {
-      pOptions += _infoParcelas.map(p => `<option value="${p.parcela2 || p.parcela}">${p.parcela2 || p.parcela} — ${p.variedade || 'Sem variedade'} (${p.cultura || 'MELÃO'})</option>`).join('');
+      pOptions += _infoParcelas.map(p => {
+        const cad = getCadastroParcelaInfo(p);
+        const vDisplay = cad?.variedade || p.variedade || 'Sem variedade';
+        const cDisplay = cad?.cultura || p.cultura || 'MELÃO';
+        return `<option value="${p.parcela2 || p.parcela}">${p.parcela2 || p.parcela} — ${vDisplay} (${cDisplay})</option>`;
+      }).join('');
     }
     // Adicionar parcelas de colheitas ativas caso não estejam no cadastro de parcelas
     if (_colheitasList && _colheitasList.length > 0) {
       const knownParcels = [...new Set(_colheitasList.map(c => c.parcela).filter(Boolean))];
       knownParcels.forEach(kp => {
         if (!pOptions.includes(`value="${kp}"`)) {
-          pOptions += `<option value="${kp}">${kp} (Colheita Ativa)</option>`;
+          const cad = getCadastroParcelaInfo(kp);
+          const vDisplay = cad?.variedade ? ` — ${cad.variedade}` : ' (Colheita Ativa)';
+          pOptions += `<option value="${kp}">${kp}${vDisplay}</option>`;
         }
       });
     }
@@ -26530,9 +26698,27 @@ async function openNewPosModal() {
   }
   $('posCarrocoes').value = '1';
   onPosDefensivoChange();
+  onNewPosParcelaChange();
 
   modal.style.display = 'flex';
   if (window.lucide) lucide.createIcons();
+}
+
+function onNewPosParcelaChange() {
+  const pVal = $('posParcela')?.value || '';
+  const infoDiv = $('posParcelaCadInfo');
+  if (!pVal) {
+    if (infoDiv) infoDiv.innerHTML = '';
+    return;
+  }
+  const cadInfo = getCadastroParcelaInfo(pVal);
+  if (infoDiv) {
+    if (cadInfo && cadInfo.variedade && cadInfo.variedade !== '—') {
+      infoDiv.innerHTML = `<span style="color:var(--green); font-weight:700">🌱 Cadastro Oficial:</span> Cultura: <strong>${cadInfo.cultura || 'MELÃO'}</strong> | Variedades: <strong>${cadInfo.variedade}</strong>`;
+    } else {
+      infoDiv.innerHTML = `<span style="color:var(--muted)">Parcela sem variedades vinculadas no cadastro.</span>`;
+    }
+  }
 }
 
 function onPosDefensivoChange() {
@@ -26636,6 +26822,7 @@ async function saveNewPosRecord() {
     return;
   }
 
+  const cadInfo = getCadastroParcelaInfo(parcela);
   const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id) || 'b7ad82dd-dca3-46af-91c6-5d564b7c3cc5';
   const newId = 'pos_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
 
@@ -26643,6 +26830,8 @@ async function saveNewPosRecord() {
     id: newId,
     tenant_id: tId,
     parcela,
+    cultura: cadInfo?.cultura || 'MELÃO',
+    variedade: cadInfo?.variedade || '',
     data_aplicacao,
     produto_nome,
     ingrediente_ativo,
@@ -26696,11 +26885,14 @@ function printPosColheitaReport(itemStr) {
   const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'DINA DINAMARCA INDUSTRIAL AGRÍCOLA LTDA';
   const pCode = item.parcela || '10';
 
-  // Buscar variedades da parcela
-  const ip = _infoParcelas.find(x => x.parcela2 === pCode || x.parcela === pCode);
+  // Buscar variedades e cultura da parcela no cadastro oficial info_parcelas
+  const cadInfo = getCadastroParcelaInfo(pCode || item);
+  const ip = cadInfo?.raw || _infoParcelas.find(x => x.parcela2 === pCode || x.parcela === pCode);
   const info = ip ? getParcelaCompleteInfo(ip, _infoParcelas) : null;
-  const variedadesStr = (info && info.variedade) ? info.variedade : (item.variedade || 'JADEAL, GOLDEX, GRAND PRIX, ASTURIA, GOLDMINE');
-  const culturaStr = (ip && ip.cultura) || item.cultura || 'Melão';
+  const variedadesStr = (cadInfo && cadInfo.variedade && cadInfo.variedade !== '—')
+    ? cadInfo.variedade
+    : ((info && info.variedade && info.variedade !== '—') ? info.variedade : (item.variedade || '—'));
+  const culturaStr = (cadInfo && cadInfo.cultura) || (ip && ip.cultura) || item.cultura || 'Melão';
 
   const fmtDate = item.data_aplicacao ? item.data_aplicacao.split('-').reverse().join('/') : '';
   const prodNome = item.produto_nome || 'Graduate A+';
