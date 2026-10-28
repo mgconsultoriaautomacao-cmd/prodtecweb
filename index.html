@@ -5898,6 +5898,8 @@ const MEDALS = ['','',''];
 
 let sb=null, tenantId=null, tenantName='', tenantConfig={};
 let charts = {};
+let _rankScans = [];
+let _lastDashScans = [];
 let _massEvents = [];
 let _massSessions = [];
 let _massEmployees = [];
@@ -6719,26 +6721,37 @@ async function delCarriage(id) { if(confirm('Excluir este carrocão?')) { await 
 async function delMachine(id) { if(confirm('Excluir esta máquina?')) { await sb.from('machines').delete().eq('id', id); loadMachines(); } }
 async function delOperation(id) { if(confirm('Excluir esta operação?')) { await sb.from('operations').delete().eq('id', id); loadOperations(); } }
 
-// Helper: fetch all records handling Supabase 1000 row default PostgREST limit with retry
+// Helper: fetch all records handling Supabase PostgREST limit with retry + backoff
+// Usa páginas de 500 registros (reduz profundidade de OFFSET e pressão no servidor).
 async function sbFetchAll(queryBuilder, onProgress = null) {
   let allRows = [];
   let from = 0;
-  const step = 1000;
+  let step = 500; // páginas menores → OFFSET mais raso → menos statement timeout
   while (true) {
     let res = null;
     let retries = 3;
+    let waitMs = 800;
     while (retries > 0) {
       res = await queryBuilder.range(from, from + step - 1);
       if (!res.error) break;
       retries--;
       if (retries > 0) {
-        console.warn(`[sbFetchAll] Falha no offset ${from}. Tentando novamente em 800ms (${retries} tentativas restantes)...`, res.error?.message || res.error);
-        await new Promise(r => setTimeout(r, 800));
+        const msg = res.error?.message || String(res.error);
+        console.warn(`[sbFetchAll] Falha no offset ${from}. Tentando novamente em ${waitMs}ms (${retries} tentativas restantes)...`, msg);
+        if (msg.includes('timeout') && step > 200) {
+          step = Math.max(200, Math.floor(step / 2)); // Reduz página na metade a cada timeout
+        }
+        await new Promise(r => setTimeout(r, waitMs));
+        waitMs = Math.min(waitMs * 2, 5000); // Backoff exponencial até 5s
       }
     }
     const { data, error } = res || {};
     if (error) {
       console.error('sbFetchAll error:', error);
+      if (allRows.length > 0) {
+        console.warn(`[sbFetchAll] Retornando ${allRows.length} registros parciais devido a erro no offset ${from}.`);
+        return allRows;
+      }
       throw error;
     }
     if (!data || data.length === 0) break;
@@ -6748,13 +6761,16 @@ async function sbFetchAll(queryBuilder, onProgress = null) {
     }
     if (data.length < step) break;
     from += step;
+    // Pequena pausa entre páginas para não sobrecarregar o banco
+    if (from > 0) await new Promise(r => setTimeout(r, 50));
   }
   return allRows;
 }
 
 // Helper: busca períodos longos dividindo em janelas diárias (evita OFFSET profundo → statement timeout)
 // buildQuery(startIso, endIso) deve retornar um query builder NOVO já filtrado pelo intervalo.
-async function sbFetchByDays(startDate, endDate, buildQuery, onProgress = null, concurrency = 4) {
+// concurrency=1 (padrão) serializa as janelas para não sobrecarregar o banco.
+async function sbFetchByDays(startDate, endDate, buildQuery, onProgress = null, concurrency = 1) {
   const days = [];
   const d0 = new Date(startDate + 'T00:00:00Z');
   const d1 = new Date(endDate + 'T00:00:00Z');
@@ -6767,15 +6783,20 @@ async function sbFetchByDays(startDate, endDate, buildQuery, onProgress = null, 
     while (idx < days.length) {
       const i = idx++;
       const day = days[i];
-      const rows = await sbFetchAll(buildQuery(toISO(day), toISO(day, '23:59:59')));
-      results[i] = rows;
-      total += rows.length;
+      try {
+        const rows = await sbFetchAll(buildQuery(toISO(day), toISO(day, '23:59:59')));
+        results[i] = rows || [];
+        total += (rows || []).length;
+      } catch(e) {
+        console.warn(`[sbFetchByDays] Falha ao ler dia ${day}:`, e);
+        results[i] = [];
+      }
       if (typeof onProgress === 'function') { try { onProgress(total); } catch(_) {} }
     }
   };
   await Promise.all(Array.from({ length: Math.min(concurrency, days.length) }, worker));
   // mais recentes primeiro (equivalente a order ts desc)
-  return results.reverse().flat();
+  return results.reverse().flat().filter(Boolean);
 }
 
 // Helper: get role config for a given role name
@@ -6924,6 +6945,9 @@ async function refreshRanking(isBackground = false){
   
   // Apply client side filters if selected
   let filteredData = scans || [];
+  window._rankScans = filteredData;
+  window._lastDashScans = filteredData;
+  _rankScans = filteredData;
   if (selectedRole) {
     filteredData = filteredData.filter(x => x.role === selectedRole);
   }
@@ -7141,8 +7165,20 @@ async function refreshFin(){
 
   let scans = [];
   try {
-    scans = await sbFetchAll(sb.from('production_scans').select('id, ts, role, weight_kg, employee_name, raw_barcode').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')));
-  } catch(err) { console.error('Error fetching production_scans for finance:', err); }
+    scans = await sbFetchByDays(s, e, (fromIso, toIso) => 
+      sb.from('production_scans')
+        .select('id, ts, role, weight_kg, employee_name, raw_barcode')
+        .eq('tenant_id', tenantId)
+        .gte('ts', fromIso)
+        .lte('ts', toIso)
+        .order('ts', { ascending: true }),
+      null,
+      1
+    );
+  } catch(err) { 
+    console.error('Error fetching production_scans for finance:', err); 
+    if (!scans || !scans.length) scans = window._lastDashScans || [];
+  }
   const {data:abs}=await sb.from('employee_absences').select('*').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -7530,6 +7566,9 @@ async function refreshDash(isBackground = false){
     updateStopBanner();
 
     const safeScans = scans || [];
+    window._lastDashScans = safeScans;
+    window._rankScans = safeScans;
+    _rankScans = safeScans;
     const packerScans = safeScans.filter(s=>s.role==='PACKER' || s.role==='EMBALADOR');
     const kg = packerScans.reduce((a,x)=>a+(x.weight_kg||0),0);
 
@@ -8539,7 +8578,14 @@ async function openEmpDrawer(idOrName) {
   const [qAudits, qAbs, allScans, qFieldServices, qCarraoServices] = await Promise.all([
     qualityQuery.gte('ts', toISO(sDateOnly)).lte('ts', toISO(eDateOnly, '23:59:59')).then(r => r).catch(() => ({ data: [] })),
     absenceQuery.then(r => r).catch(() => ({ data: [] })),
-    sbFetchAll(scanQuery.order('ts', {ascending: true})).catch(() => []),
+    sbFetchByDays(sDateOnly, eDateOnly, (fromIso, toIso) => {
+      let q = sb.from('production_scans').select('ts, weight_kg, role, raw_barcode, employee_name')
+        .eq('tenant_id', tenantId).gte('ts', fromIso).lte('ts', toIso);
+      if (emp.barcode && emp.name) q = q.or(`raw_barcode.eq.${empBarcode},employee_name.eq.${empName}`);
+      else if (emp.barcode) q = q.eq('raw_barcode', empBarcode);
+      else if (emp.name) q = q.eq('employee_name', empName);
+      return q.order('ts', { ascending: true });
+    }, null, 1).catch(() => []),
     sb.from('field_service_employees').select('*, field_services(*)').eq('employee_id', emp.id).then(r => r).catch(() => ({ data: [] })),
     sb.from('field_carrao_employees').select('*, field_carrao_sessions(*)').eq('employee_id', emp.id).then(r => r).catch(() => ({ data: [] }))
   ]);
@@ -10444,27 +10490,117 @@ function pdfHeader(doc,title,sub){
 }
 
 function exportDashPDF(){
-  const {jsPDF}=window.jspdf;const doc=new jsPDF();
-  const s=$('dashStart').value,e=$('dashEnd').value;
-  pdfHeader(doc,'Dashboard de Produção',`${s} a ${e}`);
-  doc.setFontSize(11);doc.setFont('helvetica','bold');
-  doc.text(`Caixas: ${$('kpiTotalDia').textContent} | KG: ${$('kpiTotalKg').textContent} | Ativos: ${$('kpiAtivos').textContent}`,14,42);
-  if(_rankScans.length){
-  const eb={};_rankScans.forEach(x=>{if(!eb[x.employee_name])eb[x.employee_name]={boxes:0,kg:0,role:x.role};eb[x.employee_name].boxes++;eb[x.employee_name].kg+=(x.weight_kg||0);});
-  const rows=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes).map(([name,d],i)=>[i+1,name,d.role,d.boxes+' cx',d.kg.toFixed(1)+' kg']);
-  doc.autoTable({startY:52,head:[['#','Nome','Função','Caixas','KG']],body:rows,headStyles:{fillColor:[59,130,246]},alternateRowStyles:{fillColor:[245,247,250]},theme:'grid',styles:{fontSize:10,cellPadding:5}});
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const s = $('dashStart')?.value || today();
+    const e = $('dashEnd')?.value || today();
+    pdfHeader(doc, 'Dashboard de Produção', `${s} a ${e}`);
+
+    const scans = (window._lastDashScans && window._lastDashScans.length) 
+      ? window._lastDashScans 
+      : ((typeof _rankScans !== 'undefined' && _rankScans && _rankScans.length) ? _rankScans : []);
+
+    const totalCaixas = $('kpiTotalDia')?.textContent || '0';
+    const totalKg = $('kpiTotalKg')?.textContent || '0 Ton';
+    const mediaHora = $('kpiMediaHora')?.textContent || '--';
+    const qualidade = $('kpiQualidadeDash')?.textContent || '100%';
+
+    const eb = {};
+    scans.forEach(x => {
+      const name = x.employee_name || 'Desconhecido';
+      if (!eb[name]) eb[name] = { boxes: 0, kg: 0, role: x.role || 'EMBALADOR', parcelas: new Set(), variedades: new Set() };
+      eb[name].boxes++;
+      eb[name].kg += (x.weight_kg || 0);
+      if (x.parcel_code) eb[name].parcelas.add(x.parcel_code);
+      if (x.variety_name) eb[name].variedades.add(x.variety_name);
+    });
+
+    const activeCount = Object.keys(eb).length;
+
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setFillColor(241, 245, 249);
+    doc.roundedRect(14, 36, 182, 12, 2, 2, 'F');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Caixas: ${totalCaixas}  |  Peso: ${totalKg}  |  Colaboradores: ${activeCount}  |  Média/h: ${mediaHora}  |  Qualidade: ${qualidade}`, 18, 44);
+
+    const rows = Object.entries(eb).sort((a, b) => b[1].boxes - a[1].boxes).map(([name, d], i) => [
+      i + 1,
+      name,
+      d.role,
+      d.boxes.toLocaleString() + ' cx',
+      d.kg > 0 ? d.kg.toFixed(1) + ' kg' : '—',
+      Array.from(d.parcelas).slice(0, 3).join(', ') || '—'
+    ]);
+
+    if (rows.length > 0) {
+      doc.autoTable({
+        startY: 52,
+        head: [['#', 'Colaborador', 'Função', 'Caixas Embaladas', 'Peso Total (Kg)', 'Parcela(s)']],
+        body: rows,
+        headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        theme: 'grid',
+        styles: { fontSize: 8.5, cellPadding: 3 }
+      });
+    } else {
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 116, 139);
+      doc.text('Nenhum apontamento de produção filtrado para o período informado.', 14, 60);
+    }
+
+    doc.save(`prodtech-dashboard-${s}-a-${e}.pdf`);
+    toast(' PDF da produção gerado com sucesso!', 'ok');
+  } catch(err) {
+    console.error('Erro ao gerar PDF da produção:', err);
+    alert('Erro ao gerar o PDF da produção: ' + (err.message || err));
   }
-  doc.save(`prodtech-dashboard-${s}.pdf`);
 }
 
 function exportRankPDF(){
-  const {jsPDF}=window.jspdf;const doc=new jsPDF();
-  const s=$('rankStart').value,e=$('rankEnd').value;
-  pdfHeader(doc,'Ranking de Produtividade',`${s} a ${e}`);
-  const eb={};_rankScans.forEach(x=>{if(!eb[x.employee_name])eb[x.employee_name]={boxes:0,kg:0,role:x.role};eb[x.employee_name].boxes++;eb[x.employee_name].kg+=(x.weight_kg||0);});
-  const rows=Object.entries(eb).sort((a,b)=>b[1].boxes-a[1].boxes).map(([name,d],i)=>[i+1,name,d.role,d.boxes,d.kg.toFixed(1)+' kg']);
-  doc.autoTable({startY:42,head:[['#','Colaborador','Função','Caixas','KG']],body:rows,headStyles:{fillColor:[99,102,241]},alternateRowStyles:{fillColor:[245,247,250]},theme:'grid',styles:{fontSize:10,cellPadding:5}});
-  doc.save(`prodtech-ranking-${s}-${e}.pdf`);
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const s = $('rankStart')?.value || today();
+    const e = $('rankEnd')?.value || today();
+    pdfHeader(doc, 'Ranking de Produtividade', `${s} a ${e}`);
+
+    const scans = (window._rankScans && window._rankScans.length)
+      ? window._rankScans
+      : ((window._lastDashScans && window._lastDashScans.length) ? window._lastDashScans : []);
+
+    const eb = {};
+    scans.forEach(x => {
+      const name = x.employee_name || 'Desconhecido';
+      if (!eb[name]) eb[name] = { boxes: 0, kg: 0, role: x.role || 'EMBALADOR' };
+      eb[name].boxes++;
+      eb[name].kg += (x.weight_kg || 0);
+    });
+
+    const rows = Object.entries(eb).sort((a, b) => b[1].boxes - a[1].boxes).map(([name, d], i) => [
+      i + 1,
+      name,
+      d.role,
+      d.boxes.toLocaleString() + ' cx',
+      d.kg > 0 ? d.kg.toFixed(1) + ' kg' : '—'
+    ]);
+
+    doc.autoTable({
+      startY: 42,
+      head: [['#', 'Colaborador', 'Função', 'Caixas', 'KG']],
+      body: rows,
+      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
+      theme: 'grid',
+      styles: { fontSize: 9, cellPadding: 4 }
+    });
+    doc.save(`prodtech-ranking-${s}-${e}.pdf`);
+    toast(' PDF do ranking gerado com sucesso!', 'ok');
+  } catch(err) {
+    console.error('Erro ao gerar PDF do ranking:', err);
+    alert('Erro ao gerar PDF do ranking: ' + (err.message || err));
+  }
 }
 
 function exportFinPDF(){
