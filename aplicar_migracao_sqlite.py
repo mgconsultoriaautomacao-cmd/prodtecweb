@@ -8,11 +8,14 @@ import sqlite3
 from pathlib import Path
 
 # Adiciona o caminho do python_app
-sys.path.insert(0, str(Path(__file__).parent / 'packinghouse-app' / 'python_app'))
+python_app_path = Path(__file__).parent / 'packinghouse-app' / 'python_app'
+if str(python_app_path) not in sys.path:
+    sys.path.insert(0, str(python_app_path))
 
 try:
-    from db_python import get_db_path
-    db_path = get_db_path()
+    import importlib
+    db_python = importlib.import_module('db_python')
+    db_path = db_python.get_db_path()
 except Exception:
     db_path = Path(__file__).parent / 'packinghouse-app' / 'data' / 'packing.sqlite3'
 

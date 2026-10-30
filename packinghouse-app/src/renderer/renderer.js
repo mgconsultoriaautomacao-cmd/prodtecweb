@@ -1561,11 +1561,12 @@ window.addEventListener('DOMContentLoaded', () => {
       const tableBody = document.getElementById('collabAnalyticsTableBody');
       if (tableBody) {
         if (dsStats.collaboratorStats && dsStats.collaboratorStats.length > 0) {
-          const sorted = [...dsStats.collaboratorStats].sort((a, b) => b.boxes - a.boxes);
+          const sorted = [...dsStats.collaboratorStats].sort((a, b) => (b.score || 0) !== (a.score || 0) ? (b.score || 0) - (a.score || 0) : b.boxes - a.boxes);
           tableBody.innerHTML = sorted.map((c, idx) => {
             const errBadgeColor = (c.penaltyBoxes && c.penaltyBoxes > 0) ? 'var(--red)' : 'var(--muted)';
             const qualColor = colorByPct(c.qualityPct);
             const prodColor = colorByPct(c.yieldPct);
+            const scoreColor = (c.score || 0) >= 90 ? '#60a5fa' : ((c.score || 0) >= 75 ? 'var(--green)' : 'var(--yellow)');
             return `
               <tr onclick="window.openCollaboratorModal('${c.id}')" style="border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.08)'" onmouseout="this.style.background='transparent'" title="Clique para abrir Raio-X detalhado de ${esc(c.name)}">
                 <td style="padding:10px 12px; font-weight:600; display:flex; align-items:center; gap:8px;">
@@ -1591,11 +1592,14 @@ window.addEventListener('DOMContentLoaded', () => {
                 <td style="padding:10px 12px; text-align:right; font-weight:700; color:var(--blue);">
                   ${c.avgPerHour || 0} <span class="muted" style="font-size:10px; font-weight:400;">cx/h</span>
                 </td>
+                <td style="padding:10px 12px; text-align:right; font-weight:800; color:${scoreColor}; font-size:13px;">
+                  ${Math.round(c.score || 0)}
+                </td>
               </tr>
             `;
           }).join('');
         } else {
-          tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--muted);">Nenhum colaborador registrado no período.</td></tr>';
+          tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--muted);">Nenhum colaborador registrado no período.</td></tr>';
         }
       }
 
@@ -1707,14 +1711,17 @@ window.addEventListener('DOMContentLoaded', () => {
 
       const collabList = document.getElementById('collabDetailList');
       if (collabList) {
-        const sortedCollabs = [...dsStats.collaboratorStats].sort((a, b) => b.boxes - a.boxes);
+        const sortedCollabs = [...dsStats.collaboratorStats].sort((a, b) => (b.score || 0) !== (a.score || 0) ? (b.score || 0) - (a.score || 0) : b.boxes - a.boxes);
         collabList.innerHTML = sortedCollabs.map((c, i) => `
           <div onclick="window.openCollaboratorModal('${c.id}')" style="cursor:pointer; display:flex; gap:12px; align-items:center; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.2); transition: all 0.2s;" onmouseover="this.style.borderColor='var(--blue)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='rgba(59, 130, 246, 0.2)'; this.style.transform='none'" title="Clique para abrir Raio-X detalhado de ${esc(c.name)}">
             <div style="font-size: 16px; font-weight:800; color: rgba(255,255,255,0.2); width: 20px;">#${i + 1}</div>
             <div style="${photoStyle(c.photoPath, 42)}"></div>
             <div style="flex:1; min-width:0;">
               <div style="font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(c.name)}</div>
-              <div style="margin-top:2px;"><span class="badge ${c.role.toLowerCase()}" style="font-size:10px; padding:2px 4px;">${c.role}</span></div>
+              <div style="margin-top:2px; display:flex; gap:6px; align-items:center;">
+                <span class="badge ${c.role.toLowerCase()}" style="font-size:10px; padding:2px 4px;">${c.role}</span>
+                <span style="font-size:10px; font-weight:700; color:#60a5fa;">Score: ${Math.round(c.score || 0)}</span>
+              </div>
             </div>
             <div style="text-align:right;">
               <div style="font-size:16px; font-weight:800; color:var(--green)">${c.boxes} <span class="muted" style="font-size:11px; font-weight:400;">cx</span></div>

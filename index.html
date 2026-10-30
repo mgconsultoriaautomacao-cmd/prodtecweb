@@ -6750,6 +6750,96 @@ async function sbFetchAll(queryBuilder, onProgress = null) {
   return allRows;
 }
 
+// Helper de Alta Performance: Busca registros de production_scans via paginação por cursor (Keyset),
+// eliminando completamente o OFFSET do PostgreSQL que causa "statement timeout" em intervalos longos (> 15.000 linhas).
+async function sbFetchScansKeyset({ start, end, empId = null, role = null, barcode = null, select = null }, onProgress = null) {
+  const allRows = [];
+  const seenIds = new Set();
+  const fields = select || 'id, ts, role, weight_kg, weight_name, employee_name, raw_barcode, parcel_code, variety_name, fruit_name, caliber';
+  let cursorTs = toISO(end, '23:59:59');
+  const minTs = toISO(start, '00:00:00');
+  const pageSize = 1000;
+  let hasMore = true;
+
+  while (hasMore) {
+    let q = sb.from('production_scans')
+      .select(fields)
+      .eq('tenant_id', tenantId)
+      .gte('ts', minTs)
+      .lte('ts', cursorTs)
+      .order('ts', { ascending: false })
+      .limit(pageSize);
+
+    if (role) {
+      q = q.eq('role', role);
+    }
+    if (barcode) {
+      q = q.eq('raw_barcode', barcode);
+    } else if (empId) {
+      const emp = _employees.find(ex => ex.id === empId);
+      if (emp) {
+        if (emp.barcode && emp.name) {
+          q = q.or(`raw_barcode.eq.${emp.barcode},employee_name.eq.${emp.name}`);
+        } else if (emp.barcode) {
+          q = q.eq('raw_barcode', emp.barcode);
+        } else {
+          q = q.eq('employee_name', emp.name);
+        }
+      }
+    }
+
+    let res = null;
+    let retries = 3;
+    while (retries > 0) {
+      res = await q;
+      if (!res.error) break;
+      retries--;
+      if (retries > 0) {
+        console.warn(`[sbFetchScansKeyset] Tentativa falhou no cursor ${cursorTs}. Retentando em 800ms (${retries} restantes)...`, res.error?.message || res.error);
+        await new Promise(r => setTimeout(r, 800));
+      }
+    }
+
+    const { data, error } = res || {};
+    if (error) {
+      console.error('[sbFetchScansKeyset] Erro no Supabase:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      break;
+    }
+
+    let newCount = 0;
+    for (let i = 0; i < data.length; i++) {
+      const r = data[i];
+      if (!seenIds.has(r.id)) {
+        seenIds.add(r.id);
+        allRows.push(r);
+        newCount++;
+      }
+    }
+
+    if (typeof onProgress === 'function') {
+      try { onProgress(allRows.length); } catch(_) {}
+    }
+
+    if (data.length < pageSize) {
+      break;
+    }
+
+    if (newCount === 0) {
+      // Caso improvável de colisão de timestamp na borda da página: recua 1 milissegundo para continuar avançando
+      const prevMs = new Date(cursorTs).getTime() - 1;
+      cursorTs = new Date(prevMs).toISOString();
+    } else {
+      cursorTs = data[data.length - 1].ts;
+    }
+  }
+
+  return allRows;
+}
+
 // Helper: get role config for a given role name
 function getRoleConfig(roleName) {
   let target = tenantConfig.target_per_hour_packer;
@@ -6864,22 +6954,13 @@ async function refreshRanking(isBackground = false){
     if (type === 'PACKING') {
       let scans = [], audits = [], stops = [];
       try {
-        let qScans = sb.from('production_scans')
-          .select('id, ts, role, weight_kg, weight_name, employee_name, raw_barcode, parcel_code, variety_name, fruit_name, caliber')
-          .eq('tenant_id', tenantId)
-          .gte('ts', toISO(s))
-          .lte('ts', toISO(e, '23:59:59'))
-          .order('ts', { ascending: false });
-
-        if (selectedRole) {
-          qScans = qScans.eq('role', selectedRole);
-        }
-        if (targetBarcode) {
-          qScans = qScans.eq('raw_barcode', targetBarcode);
-        }
-
         [scans, audits, stops] = await Promise.all([
-          sbFetchAll(qScans, (count) => {
+          sbFetchScansKeyset({
+            start: s,
+            end: e,
+            role: selectedRole || null,
+            barcode: targetBarcode || null
+          }, (count) => {
             if (!isBackground) {
               const sEl = $('tractorReportSub');
               if (sEl) sEl.textContent = `Consultando apontamentos... (${count.toLocaleString()} registros lidos)`;
@@ -6903,7 +6984,7 @@ async function refreshRanking(isBackground = false){
     filteredData = filteredData.filter(x => x.role === selectedRole);
   }
   if (targetBarcode) {
-    filteredData = filteredData.filter(x => x.employee_barcode === targetBarcode);
+    filteredData = filteredData.filter(x => (x.raw_barcode || x.employee_barcode) === targetBarcode);
   }
   
   // Constrói grid e consolida métricas pelos 3 Pilares (Qualidade, Produtividade vs Meta, Volume)
@@ -7116,7 +7197,13 @@ async function refreshFin(){
 
   let scans = [];
   try {
-    scans = await sbFetchAll(sb.from('production_scans').select('id, ts, role, weight_kg, employee_name, raw_barcode').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')));
+    scans = await sbFetchScansKeyset({
+      start: s,
+      end: e,
+      role: selectedRole || null,
+      barcode: targetBarcode || null,
+      select: 'id, ts, role, weight_kg, employee_name, raw_barcode'
+    });
   } catch(err) { console.error('Error fetching production_scans for finance:', err); }
   const {data:abs}=await sb.from('employee_absences').select('*').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
 
@@ -7439,28 +7526,13 @@ async function refreshDash(isBackground = false){
   }
 
   try {
-    let q = sb.from('production_scans')
-      .select('id, ts, role, weight_kg, weight_name, employee_name, raw_barcode, parcel_code, variety_name, fruit_name, caliber')
-      .eq('tenant_id', tenantId)
-      .gte('ts', toISO(s))
-      .lte('ts', toISO(e, '23:59:59'));
-
-    if(empId) {
-      const emp = _employees.find(ex => ex.id === empId);
-      if(emp) {
-        if (emp.barcode && emp.name) {
-          q = q.or(`raw_barcode.eq.${emp.barcode},employee_name.eq.${emp.name}`);
-        } else if (emp.barcode) {
-          q = q.eq('raw_barcode', emp.barcode);
-        } else {
-          q = q.eq('employee_name', emp.name);
-        }
-      }
-    }
-
     let scans = [];
     try {
-      scans = await sbFetchAll(q.order('ts', { ascending: false }), (count) => {
+      scans = await sbFetchScansKeyset({
+        start: s,
+        end: e,
+        empId: empId || null
+      }, (count) => {
         if (!isBackground) {
           const sEl = $('tractorReportSub');
           if (sEl) sEl.textContent = `Carregando dados da produção... (${count.toLocaleString()} registros lidos)`;
@@ -7469,7 +7541,7 @@ async function refreshDash(isBackground = false){
     } catch(err) {
       console.error('Error in refreshDash scans:', err);
       if (!isBackground) {
-        alert('Erro ao carregar dados de produção do servidor. Se o período for muito extenso, tente um intervalo menor.');
+        alert('Erro ao carregar dados de produção do servidor: ' + (err.message || err));
       }
       return;
     }
@@ -7805,6 +7877,45 @@ function buildRankingGrid(scans, containerId, audits = []){
   const targetPacker = parseFloat(tenantConfig.target_per_hour_packer || $('cfgTargetPacker')?.value || 100);
   const targetStacker = parseFloat(tenantConfig.target_per_hour_stacker || $('cfgTargetStacker')?.value || 100);
 
+  // ─── TEMPO DECORRIDO DA LINHA (Metodologia Lean Seis Sigma) ───
+  // O tempo decorrido é o tempo ativo de operação da linha no período.
+  // Evita distorções artificiais por intervalo individual que multiplicavam caixas por 2.
+  let lineStartTs = null;
+  let lineEndTs = null;
+  if (scans && scans.length > 0) {
+    const allTs = scans.map(x => new Date(x.ts).getTime()).filter(t => !isNaN(t) && t > 0);
+    if (allTs.length > 0) {
+      lineStartTs = Math.min(...allTs);
+      lineEndTs = Math.max(...allTs);
+    }
+  }
+
+  const nowTs = Date.now();
+  // Se a operação for de hoje (tempo real), a linha está correndo até agora;
+  // se for data passada já fechada, a linha correu até o último apontamento registrado.
+  const isTodayOperation = lineStartTs && (nowTs - lineStartTs) > 0 && (nowTs - lineStartTs) < 24 * 3600 * 1000;
+  const effectiveLineEndTs = isTodayOperation ? nowTs : (lineEndTs || nowTs);
+
+  // Desconta Paradas Gerais da Linha (esteira desligada, falta de fruta, almoço/refeição)
+  let globalStopMinutes = 0;
+  if (lineStartTs && effectiveLineEndTs > lineStartTs) {
+    (window._currentStops || []).forEach(gs => {
+      const gsStart = new Date(gs.start_ts).getTime();
+      const gsEnd = gs.end_ts ? new Date(gs.end_ts).getTime() : nowTs;
+      const iStart = Math.max(lineStartTs, gsStart);
+      const iEnd = Math.min(effectiveLineEndTs, gsEnd);
+      if (iEnd > iStart) globalStopMinutes += (iEnd - iStart) / 60000;
+    });
+  }
+
+  // Tempo decorrido ativo de linha em horas (mínimo de 1 minuto = 1/60h para proteger divisão nos primeiros segundos)
+  let lineElapsedHours = 1.0;
+  if (lineStartTs && effectiveLineEndTs > lineStartTs) {
+    const rawElapsedHours = (effectiveLineEndTs - lineStartTs) / 3600000;
+    const stopHours = globalStopMinutes / 60;
+    lineElapsedHours = Math.max(1 / 60, rawElapsedHours - stopHours);
+  }
+
   // Calcula para cada colaborador os 3 pilares
   const collabs = Object.entries(eb).map(([name, d]) => {
     const emp = _employees.find(e => e.name?.trim().toLowerCase() === name.trim().toLowerCase() || (e.barcode && e.barcode === d.barcode));
@@ -7819,22 +7930,19 @@ function buildRankingGrid(scans, containerId, audits = []){
     const netBoxes = Math.max(0, d.rawBoxes - penalties);
     const qualityPct = d.rawBoxes > 0 ? Math.round(Math.max(0, 100 - (penalties / d.rawBoxes * 100)) * 10) / 10 : 100.0;
 
-    // Ociosidade e jornada ativa
+    // Ociosidade individual apenas para exibição e acompanhamento
     const idleMinutes = calculateIdleTime(d.scans, window._currentStops || []);
-    let hoursActive = 1;
-    if (d.scans.length >= 2) {
-      const sortedScans = [...d.scans].sort((a,b) => new Date(a.ts) - new Date(b.ts));
-      const firstTs = new Date(sortedScans[0].ts).getTime();
-      const lastTs = new Date(sortedScans[sortedScans.length - 1].ts).getTime();
-      const grossHours = Math.max(0.5, (lastTs - firstTs) / 3600000);
-      const idleHours = idleMinutes / 60;
-      hoursActive = Math.max(0.5, grossHours - idleHours);
-    }
-    const cadencePerHour = Math.round((netBoxes / hoursActive) * 10) / 10;
+
+    // Cadência e Produtividade baseadas no TEMPO DECORRIDO DA LINHA (Lean Six Sigma)
+    // Se o colaborador começou mais tarde ou parou, ele arca com o tempo decorrido da linha
+    const cadencePerHour = Math.round((netBoxes / lineElapsedHours) * 10) / 10;
     const yieldPct = targetPerHour > 0 ? Math.round((cadencePerHour / targetPerHour * 100)) : 0;
 
-    // Score Ponderado (3 Pilares: Qualidade 40%, Produtividade 35%, Volume 25%)
-    const volScore = Math.min(100.0, (netBoxes / (targetPerHour * hoursActive) * 100.0));
+    // Meta acumulada esperada até o momento atual da linha
+    const expectedBoxes = targetPerHour * lineElapsedHours;
+    const volScore = expectedBoxes > 0 ? Math.min(100.0, (netBoxes / expectedBoxes * 100.0)) : 0.0;
+
+    // Score Ponderado (3 Pilares: Qualidade 40%, Produtividade vs Meta 35%, Volume Real vs Esperado 25%)
     let score = (qualityPct * 0.40) + (Math.min(120.0, yieldPct) * 0.35) + (volScore * 0.25);
     if (qualityPct < 85.0) {
       score *= (qualityPct / 100.0);

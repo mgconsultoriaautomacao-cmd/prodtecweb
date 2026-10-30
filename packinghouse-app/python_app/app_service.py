@@ -10,6 +10,7 @@ import uuid
 import threading
 import requests
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 from db_python import get_db, rows_to_list, row_to_dict, now_ms
 
 # ─── Profiler de Latência de Leitura (In-Memory, Zero I/O) ───────────────────
@@ -924,8 +925,27 @@ def dashboard_get_stats(station_id='ST01', start_ms=0, end_ms=0, employee_id=Non
 
     raw_total_boxes = int((total_stats or {}).get('totalBoxes') or 0)
     net_boxes = max(0, raw_total_boxes - penalty_count)
-    hours_active = max(1, round((e - s) / 3_600_000))
-    avg_per_hour = round(net_boxes / hours_active)
+
+    # ─── TEMPO DECORRIDO DA LINHA (Metodologia Lean Seis Sigma) ───
+    time_bounds = _get(f"""
+        SELECT MIN(se.ts) as first_ts, MAX(se.ts) as last_ts
+        FROM scan_events se
+        WHERE se.station_id=? AND se.ts BETWEEN ? AND ?
+    """, [st, s, e])
+    first_ts = (time_bounds or {}).get('first_ts')
+    last_ts = (time_bounds or {}).get('last_ts')
+
+    now_ms_val = int(time.time() * 1000)
+    is_today = (s <= now_ms_val <= e)
+
+    if first_ts and last_ts and first_ts > 0:
+        effective_end = now_ms_val if is_today else last_ts
+        line_elapsed_hours = max(1.0 / 60.0, (effective_end - first_ts) / 3_600_000.0)
+    else:
+        line_elapsed_hours = 1.0
+
+    avg_per_hour = round(net_boxes / line_elapsed_hours, 1) if line_elapsed_hours > 0 else net_boxes
+    hours_active = round(line_elapsed_hours, 2)
 
     quality_breakdown = _all(f"""
         SELECT COALESCE(issue_type,'Outros') as label, SUM(penalty_boxes) as count
@@ -960,8 +980,8 @@ def dashboard_get_stats(station_id='ST01', start_ms=0, end_ms=0, employee_id=Non
         tot_c = max(raw, 1)
         c_qual = round(max(0.0, 100.0 - (pen / tot_c * 100.0)), 1) if raw > 0 else 100.0
         c_err = round((pen / tot_c * 100.0), 1) if raw > 0 else 0.0
-        c_avg = round(net / hours_active, 1) if hours_active > 0 else net
-        c_target_tot = target * hours_active if hours_active > 0 else target
+        c_avg = round(net / line_elapsed_hours, 1) if line_elapsed_hours > 0 else net
+        c_target_tot = round(target * line_elapsed_hours, 1) if line_elapsed_hours > 0 else target
         c_yield = round((net / c_target_tot * 100.0), 1) if c_target_tot > 0 else 0.0
 
         # Score Ponderado (3 Pilares): Qualidade (40%), Produtividade vs Meta (35%), Volume de Caixas (25%)
