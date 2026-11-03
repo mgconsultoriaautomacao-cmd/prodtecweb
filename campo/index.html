@@ -1768,7 +1768,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   </div>
   <div class="form-field">
   <label class="field-label">Eng. Agrônomo</label>
-  <input id="opAgronomoInput" type="text" value="Reinaldo Chotten" style="font-size:13px">
+  <input id="opAgronomoInput" type="text" value="" placeholder="Nome do Agrônomo / RT" style="font-size:13px">
   </div>
   </div>
   <div class="form-field">
@@ -7739,7 +7739,7 @@ async function printPastaCampoTratos(idOrStr) {
     <table class="header-box">
       <tr>
         <td style="width: 35%; font-size: 6.8pt; line-height: 1.3;">
-          <strong>EMITIDO OU REVISADO POR:</strong> Reinaldo Chottan / Emanuela Moreira<br/>
+          <strong>EMITIDO OU REVISADO POR:</strong> ${window.tenantConfig && (window.tenantConfig.agronomo_certificacao || window.tenantConfig.responsavel_tecnico_nome) ? (window.tenantConfig.agronomo_certificacao || window.tenantConfig.responsavel_tecnico_nome) : "EMANUELA MOREIRA"}<br/>
           AVALIADO POR: JMLL<br/>
           APROVADO POR: JMLL<br/>
           FREQUÊNCIA: POR PARCELA DE CAMPO.
@@ -8101,7 +8101,8 @@ async function printPastaCampoDefensivos(idOrStr, forceDirectPrint) {
       } else if (bulaFound?.ia) {
         iaStr = bulaFound.ia;
       }
-
+
+
       const carencia = (it.carencia_dias !== '' && it.carencia_dias !== undefined && it.carencia_dias !== null) 
         ? it.carencia_dias 
         : (defMatch?.carencia_dias || (bulaFound ? bulaFound.carencia : '7'));
