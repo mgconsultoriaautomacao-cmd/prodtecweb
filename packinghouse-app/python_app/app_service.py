@@ -706,8 +706,8 @@ def state_get(station_id='ST01', role='EMBALADOR') -> dict:
             'fraudPenalty': 0
         })
 
-    # Ordena pelo Score de Performance; desempate por caixas líquidas
-    candidates.sort(key=lambda x: (x['score'], x['produced']), reverse=True)
+    # Ordena pelas caixas líquidas (já descontando os defeitos da qualidade) e desempata pela qualidade/produtividade
+    candidates.sort(key=lambda x: (x['produced'], x['qualityPct'], x['productivityPct']), reverse=True)
     top_all = candidates
 
     return {'role': rl, 'leader': top_all[0] if top_all else None, 'top10': top_all, 'targetPerHour': hourly_target}
@@ -938,7 +938,7 @@ def dashboard_get_stats(station_id='ST01', start_ms=0, end_ms=0, employee_id=Non
         LEFT JOIN box_weights bw ON bw.id=se.weight_id
         WHERE se.station_id=? AND se.ts BETWEEN ? AND ? {emp_where_se}
         GROUP BY e.id, e.name, e.photo_path, e.role
-        LIMIT 100
+        LIMIT 500
     """, [s, e, st, s, e] + emp_param)
 
     box_stats = _all(f"""
@@ -1062,7 +1062,7 @@ def dashboard_get_stats(station_id='ST01', start_ms=0, end_ms=0, employee_id=Non
         }
 
     enriched_collabs = [enrich_collab(c) for c in collab]
-    enriched_collabs.sort(key=lambda x: (x['score'], x['boxes']), reverse=True)
+    enriched_collabs.sort(key=lambda x: (x['boxes'], x['qualityPct'], x['yieldPct']), reverse=True)
 
     return {
         'collaboratorStats': enriched_collabs,

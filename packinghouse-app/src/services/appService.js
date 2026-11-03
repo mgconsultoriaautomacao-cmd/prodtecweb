@@ -842,7 +842,7 @@ function createAppService(db) {
 
 
 
-    const top10 = rows.slice(0, 10).map(r => {
+    const top10 = rows.map(r => {
       const produced = Number(r.produced_count || 0);
       const deducted = Number(r.quality_deducted || 0);
       const hoursActive = Number(r.hours_active || 1);

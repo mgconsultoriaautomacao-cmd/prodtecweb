@@ -535,16 +535,74 @@ window.addEventListener('DOMContentLoaded', () => {
     let lastRanks = {};
 
     async function refreshState() {
-      const st = (await window.api.stateGet({ stationId, role: roleSelect.value })) || {};
+      const activeRole = roleSelect.value;
+      const st = (await window.api.stateGet({ stationId, role: activeRole })) || {};
+      const byId = new Map();
 
-      if (st.leader) {
-        leaderName.textContent = st.leader.name;
-        leaderBoxes.textContent = `${st.leader.produced} caixas`;
-        leaderProd.textContent = `Produtividade: ${st.leader.productivityPct}%`;
-        leaderQual.textContent = `Qualidade: ${st.leader.qualityPct}%`;
-        leaderProd.style.color = colorByPct(st.leader.productivityPct);
-        leaderQual.style.color = colorByPct(st.leader.qualityPct);
-        setPhoto(leaderPhoto, st.leader.photoPath || '');
+      (st.top10 || []).forEach((r) => {
+        byId.set(String(r.id), { ...r });
+      });
+
+      // Garante que TODOS os colaboradores do dia apareçam no ranking (mesmo acima de 10
+      // ou caso o processo Python em execução ainda estivesse com o limite antigo de top 10 em memória)
+      try {
+        const todayStart = startOfDayMs(isoDateToday());
+        const todayEnd = endOfDayMs(isoDateToday());
+        const ds = await window.api.dashboardsGetStats({
+          stationId,
+          startMs: todayStart,
+          endMs: todayEnd
+        });
+        if (ds && Array.isArray(ds.collaboratorStats)) {
+          const isRoleMatch = (empRole) => {
+            const rNorm = String(empRole || '').toUpperCase();
+            const targetNorm = String(activeRole || 'EMBALADOR').toUpperCase();
+            if (!rNorm || rNorm === targetNorm) return true;
+            if ((rNorm === 'PACKER' || rNorm === 'EMBALADOR') && (targetNorm === 'PACKER' || targetNorm === 'EMBALADOR')) return true;
+            if ((rNorm === 'STACKER' || rNorm === 'EMPILHADOR') && (targetNorm === 'STACKER' || targetNorm === 'EMPILHADOR')) return true;
+            return false;
+          };
+          ds.collaboratorStats.forEach((c) => {
+            if (!isRoleMatch(c.role)) return;
+            const key = String(c.id);
+            if (!byId.has(key)) {
+              byId.set(key, {
+                id: c.id,
+                name: c.name,
+                photoPath: c.photoPath || '',
+                produced: Number(c.boxes || 0),
+                rawProduced: Number(c.rawBoxes || c.boxes || 0),
+                penaltyBoxes: Number(c.penaltyBoxes || 0),
+                qualityPct: Number(c.qualityPct != null ? c.qualityPct : 100),
+                productivityPct: Number(c.yieldPct != null ? c.yieldPct : 0)
+              });
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('[Ranking] Fallback dashboardsGetStats:', e);
+      }
+
+      const allRanked = Array.from(byId.values()).sort((a, b) => {
+        if (Number(b.produced || 0) !== Number(a.produced || 0)) {
+          return Number(b.produced || 0) - Number(a.produced || 0);
+        }
+        if (Number(b.qualityPct || 0) !== Number(a.qualityPct || 0)) {
+          return Number(b.qualityPct || 0) - Number(a.qualityPct || 0);
+        }
+        return Number(b.productivityPct || 0) - Number(a.productivityPct || 0);
+      });
+
+      const leader = allRanked[0] || st.leader || null;
+
+      if (leader) {
+        leaderName.textContent = leader.name;
+        leaderBoxes.textContent = `${leader.produced} caixas`;
+        leaderProd.textContent = `Produtividade: ${leader.productivityPct}%`;
+        leaderQual.textContent = `Qualidade: ${leader.qualityPct}%`;
+        leaderProd.style.color = colorByPct(leader.productivityPct);
+        leaderQual.style.color = colorByPct(leader.qualityPct);
+        setPhoto(leaderPhoto, leader.photoPath || '');
       } else {
         leaderName.textContent = '-';
         leaderBoxes.textContent = '-';
@@ -555,7 +613,6 @@ window.addEventListener('DOMContentLoaded', () => {
         setPhoto(leaderPhoto, '');
       }
 
-      const allRanked = st.top10 || [];
       const rankCountBadge = document.getElementById('rankCountBadge');
       if (rankCountBadge) {
         rankCountBadge.textContent = allRanked.length > 0 ? `${allRanked.length} COLAB.` : 'GERAL';
