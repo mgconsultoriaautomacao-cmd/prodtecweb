@@ -708,9 +708,9 @@ def state_get(station_id='ST01', role='EMBALADOR') -> dict:
 
     # Ordena pelo Score de Performance; desempate por caixas líquidas
     candidates.sort(key=lambda x: (x['score'], x['produced']), reverse=True)
-    top10 = candidates[:10]
+    top_all = candidates
 
-    return {'role': rl, 'leader': top10[0] if top10 else None, 'top10': top10, 'targetPerHour': hourly_target}
+    return {'role': rl, 'leader': top_all[0] if top_all else None, 'top10': top_all, 'targetPerHour': hourly_target}
 
 
 # ─── totalsNow ────────────────────────────────────────────────────────────────

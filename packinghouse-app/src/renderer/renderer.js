@@ -210,28 +210,82 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * Auto-scrolls a list if its content exceeds the container height.
+   * Auto-scrolls a list smoothly (ping-pong) if its content exceeds the container height,
+   * preserving the current scroll offset across frequent scan/sync DOM updates.
    */
   function applyScrollRoll(element) {
     if (!element) return;
     const container = element.parentElement;
     if (!container || !container.classList.contains('scroll-roll-container')) return;
 
-    // Reset animation
     element.style.animation = 'none';
-    element.offsetHeight; // trigger reflow
-    element.style.setProperty('--scroll-dist', '0px');
+    element.style.transform = 'none';
 
-    const contentHeight = element.scrollHeight;
-    const containerHeight = container.offsetHeight;
+    if (!container._autoScrollState) {
+      const state = {
+        pos: 0,
+        dir: 1, // 1 = descendo, -1 = subindo
+        pauseUntil: performance.now() + 1500,
+        lastTs: performance.now(),
+        rafId: null
+      };
+      container._autoScrollState = state;
 
-    if (contentHeight > containerHeight + 5) {
-      const dist = containerHeight - contentHeight;
-      const duration = Math.max(10, Math.floor(contentHeight / 40)); // ~40px per second
+      // Se o operador rolar manualmente na roda do mouse, respeita a posição e retoma após 3s
+      container.addEventListener('wheel', () => {
+        state.pos = container.scrollTop;
+        state.pauseUntil = performance.now() + 3000;
+      }, { passive: true });
 
-      element.style.setProperty('--scroll-dist', `${dist}px`);
-      element.style.setProperty('--scroll-duration', `${duration}s`);
-      element.style.animation = 'scroll-roll var(--scroll-duration) linear infinite';
+      const step = (now) => {
+        if (!container.isConnected) {
+          state.rafId = null;
+          return;
+        }
+        const dt = Math.min(0.1, Math.max(0, (now - state.lastTs) / 1000));
+        state.lastTs = now;
+
+        const maxScroll = container.scrollHeight - container.clientHeight;
+        if (maxScroll > 6) {
+          if (now >= state.pauseUntil) {
+            const speed = 38; // ~38px por segundo
+            state.pos += state.dir * speed * dt;
+
+            if (state.pos >= maxScroll) {
+              state.pos = maxScroll;
+              state.dir = -1;
+              state.pauseUntil = now + 2000; // Pausa 2s no final para leitura dos últimos colaboradores
+            } else if (state.pos <= 0) {
+              state.pos = 0;
+              state.dir = 1;
+              state.pauseUntil = now + 2000; // Pausa 2s no topo
+            }
+            container.scrollTop = Math.round(state.pos);
+          }
+        } else {
+          state.pos = 0;
+          state.dir = 1;
+          if (container.scrollTop !== 0) container.scrollTop = 0;
+        }
+
+        state.rafId = requestAnimationFrame(step);
+      };
+
+      state.rafId = requestAnimationFrame(step);
+    } else {
+      // Preserva a posição atual após re-render do innerHTML (bipe/sync)
+      const st = container._autoScrollState;
+      requestAnimationFrame(() => {
+        const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+        if (maxScroll <= 6) {
+          st.pos = 0;
+          st.dir = 1;
+          container.scrollTop = 0;
+        } else {
+          st.pos = Math.min(st.pos, maxScroll);
+          container.scrollTop = Math.round(st.pos);
+        }
+      });
     }
   }
 
@@ -501,8 +555,14 @@ window.addEventListener('DOMContentLoaded', () => {
         setPhoto(leaderPhoto, '');
       }
 
+      const allRanked = st.top10 || [];
+      const rankCountBadge = document.getElementById('rankCountBadge');
+      if (rankCountBadge) {
+        rankCountBadge.textContent = allRanked.length > 0 ? `${allRanked.length} COLAB.` : 'GERAL';
+      }
+
       const currentRanks = {};
-      rankList.innerHTML = (st.top10 || [])
+      rankList.innerHTML = allRanked
         .map((r, idx) => {
           const pos = idx + 1;
           currentRanks[r.id] = pos;
