@@ -1410,9 +1410,26 @@
   <!-- ═══ PARADAS GERAIS ═══ -->
   <div id="tab-stops" class="tab">
   <h1 class="ptitle"><i data-lucide="ban"></i> Registro de Paradas Gerais</h1>
-  <div class="fbar">
+  <div class="fbar" style="flex-wrap:wrap; align-items:flex-end;">
   <div class="f"><label class="flabel">Início da Parada</label><input type="datetime-local" id="stopStart"/></div>
-  <div class="f"><label class="flabel">Motivo / Descrição</label><input type="text" id="stopReason" placeholder="Ex: Queda de Energia"/></div>
+  <div class="f" style="min-width:290px; flex:1.5; position:relative;">
+    <label class="flabel">Motivo da Parada (Pesquisar ou Selecionar)</label>
+    <div style="position:relative;">
+      <input type="text" id="stopReason" autocomplete="off" placeholder="Clique para selecionar ou digite para pesquisar..." onfocus="openStopReasonDropdown()" oninput="filterStopReasonDropdown(this.value)" style="width:100%; padding-right:34px;"/>
+      <button type="button" onclick="toggleStopReasonDropdown(event)" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:var(--muted); cursor:pointer; padding:4px; display:flex; align-items:center; box-shadow:none;">
+        <i data-lucide="chevron-down" style="width:16px;height:16px"></i>
+      </button>
+    </div>
+    <div id="stopReasonDropdown" style="display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; background:var(--card, #1e293b); border:1px solid var(--border, #334155); border-radius:10px; max-height:280px; overflow-y:auto; z-index:2500; box-shadow:0 12px 28px rgba(0,0,0,0.45);"></div>
+  </div>
+  <div class="f" style="min-width:240px; flex:1.2;">
+    <label id="stopObsLabel" class="flabel">Observações / Detalhes (Opcional)</label>
+    <input type="text" id="stopObs" placeholder="Detalhes adicionais ou especifique Outros..." style="width:100%;"/>
+  </div>
+  <div class="f" style="min-width:200px; flex:0.9;">
+    <label class="flabel">Responsável pelo Registro</label>
+    <input type="text" id="stopRegisteredBy" placeholder="Usuário logado" style="width:100%;"/>
+  </div>
   <button onclick="saveStop()"><i data-lucide="ban" class="btn-i"></i> Registrar Parada</button>
   </div>
   <div class="card">
@@ -6139,6 +6156,7 @@ function getTractorLoaderHTML(msg = 'Carregando dados agrícolas...') {
 }
 
 async function afterLogin(user){
+  window._loggedUser = user;
   const cleanEmail = (user.email || '').toLowerCase().trim();
   const isGlobalAdmin = ['mgconsultoriaautomacao@gmail.com', 'admin@prodtech.com'].includes(cleanEmail);
 
@@ -9342,7 +9360,165 @@ function calculateIdleDetails(scans, globalStops = []) {
   return { totalMinutes, gaps, avgGapMinutes };
 }
 
+const STOP_STANDARD_REASONS = [
+  '1 - Problema na prodol',
+  '2 - Problema na mesa de embalagem',
+  '3 - Falta de fruto',
+  '4 - Problema mecânico interno',
+  '5 - Problema mecânico externo',
+  '6 - Troca de material de embalagem',
+  '7 - Pausa para revisão',
+  '8 - Reuniões',
+  '9 - Troca de setores',
+  '10 - Falta de energia',
+  '11 - Treinamentos',
+  '12 - Pane sistema',
+  '13 - Jantar',
+  '14 - Muito defeito no fruto (pausa para resolução)',
+  '15 - Outros (descrever em observações)'
+];
+
+function getLoggedUserName() {
+  const u = window._loggedUser;
+  if (!u) return '';
+  const metaName = u.user_metadata?.full_name || u.user_metadata?.name || u.user_metadata?.nome || u.user_metadata?.display_name;
+  if (metaName && String(metaName).trim()) return String(metaName).trim();
+  const emailPrefix = String(u.email || '').split('@')[0].replace(/[._-]+/g, ' ').trim();
+  return emailPrefix ? emailPrefix.toUpperCase() : '';
+}
+
+function normStopSearch(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function renderStopReasonDropdown(query = '') {
+  const dd = $('stopReasonDropdown');
+  if (!dd) return;
+  const q = normStopSearch(query);
+  const items = !q
+    ? STOP_STANDARD_REASONS
+    : STOP_STANDARD_REASONS.filter(item => normStopSearch(item).includes(q));
+
+  if (items.length === 0) {
+    dd.innerHTML = `<div style="padding:10px 14px; font-size:12px; color:var(--muted);">Nenhuma opção padrão encontrada — o texto digitado será usado.</div>`;
+    return;
+  }
+
+  dd.innerHTML = items.map(item => `
+    <div onclick="selectStopReasonOption('${item.replace(/'/g, "\\'")}')"
+         style="padding:10px 14px; font-size:13px; font-weight:600; color:var(--text, #f8fafc); border-bottom:1px solid rgba(255,255,255,0.06); cursor:pointer;"
+         onmouseover="this.style.background='rgba(59,130,246,0.14)'"
+         onmouseout="this.style.background='transparent'">
+      ${esc(item)}
+    </div>
+  `).join('');
+}
+
+function openStopReasonDropdown() {
+  const dd = $('stopReasonDropdown');
+  if (!dd) return;
+  const inp = $('stopReason');
+  const curVal = inp ? inp.value.trim() : '';
+  const isExactOption = STOP_STANDARD_REASONS.includes(curVal);
+  renderStopReasonDropdown(isExactOption ? '' : curVal);
+  dd.style.display = 'block';
+}
+
+function toggleStopReasonDropdown(ev) {
+  if (ev) ev.stopPropagation();
+  const dd = $('stopReasonDropdown');
+  if (!dd) return;
+  if (dd.style.display === 'block') {
+    dd.style.display = 'none';
+  } else {
+    renderStopReasonDropdown('');
+    dd.style.display = 'block';
+    if ($('stopReason')) $('stopReason').focus();
+  }
+}
+
+function filterStopReasonDropdown(val) {
+  renderStopReasonDropdown(val);
+  const dd = $('stopReasonDropdown');
+  if (dd) dd.style.display = 'block';
+  updateStopObsRequirement(val);
+}
+
+function updateStopObsRequirement(reasonVal) {
+  const isOutros = normStopSearch(reasonVal).includes('15') || normStopSearch(reasonVal).includes('outros');
+  const lbl = $('stopObsLabel');
+  const obsInp = $('stopObs');
+  if (lbl) {
+    lbl.textContent = isOutros
+      ? 'Observações / Descrição (Obrigatório) *'
+      : 'Observações / Detalhes (Opcional)';
+    lbl.style.color = isOutros ? 'var(--orange, #f59e0b)' : '';
+  }
+  if (obsInp) {
+    obsInp.placeholder = isOutros
+      ? 'Descreva obrigatoriamente o motivo da parada...'
+      : 'Detalhes adicionais ou especifique Outros...';
+  }
+}
+
+function selectStopReasonOption(optionText) {
+  const inp = $('stopReason');
+  const dd = $('stopReasonDropdown');
+  if (inp) inp.value = optionText;
+  if (dd) dd.style.display = 'none';
+  updateStopObsRequirement(optionText);
+  if (normStopSearch(optionText).includes('outros') && $('stopObs')) {
+    setTimeout(() => $('stopObs').focus(), 50);
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const dd = $('stopReasonDropdown');
+  const inp = $('stopReason');
+  if (dd && dd.style.display === 'block') {
+    if (!dd.contains(e.target) && e.target !== inp) {
+      dd.style.display = 'none';
+    }
+  }
+});
+
+function initStopFormFields() {
+  const startInp = $('stopStart');
+  if (startInp && !startInp.value) {
+    const now = new Date();
+    const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    startInp.value = localIso;
+  }
+  const regInp = $('stopRegisteredBy');
+  const loggedName = getLoggedUserName();
+  if (regInp && loggedName && !regInp.value.trim()) {
+    regInp.value = loggedName;
+  }
+  updateStopObsRequirement($('stopReason') ? $('stopReason').value : '');
+}
+
+function parseStopReasonDisplay(rawReason) {
+  let text = String(rawReason || '').trim();
+  let resp = '';
+  let obs = '';
+
+  const respMatch = text.match(/\s*\[Resp:\s*([^\]]+)\]\s*$/i);
+  if (respMatch) {
+    resp = respMatch[1].trim();
+    text = text.slice(0, respMatch.index).trim();
+  }
+
+  const obsMatch = text.match(/\s*—\s*Obs:\s*(.+)$/i);
+  if (obsMatch) {
+    obs = obsMatch[1].trim();
+    text = text.slice(0, obsMatch.index).trim();
+  }
+
+  return { title: text || rawReason || 'Parada Geral', obs, resp };
+}
+
 async function loadStops() {
+  initStopFormFields();
   const { data, error } = await sb.from('global_stops').select('*').eq('tenant_id', tenantId).order('start_ts', { ascending: false });
   if (error) {
   if (error.code === 'PGRST205') console.warn('Tabela global_stops ainda não criada.');
@@ -9352,33 +9528,57 @@ async function loadStops() {
   _globalStops = data || [];
   updateStopBanner();
   
-  $('stopList').innerHTML = (data||[]).map(s => `
-  <div class="rcard pbi-card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center">
+  $('stopList').innerHTML = (data||[]).map(s => {
+  const parsed = parseStopReasonDisplay(s.reason);
+  return `
+  <div class="rcard pbi-card" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
   <div>
-  <div style="font-weight:800; color:var(--red); display:flex; align-items:center; gap:6px"><i data-lucide="ban" style="width:16px; height:16px;"></i> ${s.reason}</div>
-  <div style="font-size:11px; color:var(--muted)">Início: ${new Date(s.start_ts).toLocaleString('pt-BR')}</div>
+  <div style="font-weight:800; color:var(--red); display:flex; align-items:center; gap:6px"><i data-lucide="ban" style="width:16px; height:16px;"></i> ${esc(parsed.title)}</div>
+  ${parsed.obs ? `<div style="font-size:12px; color:var(--text); margin-top:3px;"><strong>Obs:</strong> ${esc(parsed.obs)}</div>` : ''}
+  ${parsed.resp ? `<div style="font-size:11px; color:var(--muted); margin-top:2px;"><strong>Registrado por:</strong> ${esc(parsed.resp)}</div>` : ''}
+  <div style="font-size:11px; color:var(--muted); margin-top:3px;">Início: ${new Date(s.start_ts).toLocaleString('pt-BR')}</div>
   <div style="font-size:11px; color:var(--muted)">Fim: ${s.end_ts ? new Date(s.end_ts).toLocaleString('pt-BR') : '<span style="color:var(--green)">EM ANDAMENTO</span>'}</div>
   </div>
   ${!s.end_ts ? `<button onclick="endStop('${s.id}')" class="sec">Encerrar Parada</button>` : ''}
   </div>
-  `).join('') || '<div style="padding:20px; color:var(--muted)">Nenhuma parada registrada.</div>';
+  `;
+  }).join('') || '<div style="padding:20px; color:var(--muted)">Nenhuma parada registrada.</div>';
   if(window.lucide) lucide.createIcons();
 }
 
 async function saveStop() {
-  const start = $('stopStart').value;
-  const reason = $('stopReason').value.trim();
-  if(!start || !reason) return alert('Informe o início e o motivo.');
+  let start = $('stopStart').value;
+  if (!start) {
+    const now = new Date();
+    start = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    $('stopStart').value = start;
+  }
+  const reason = ($('stopReason')?.value || '').trim();
+  const obs = ($('stopObs')?.value || '').trim();
+  const resp = ($('stopRegisteredBy')?.value || getLoggedUserName() || '').trim();
+
+  if(!start || !reason) return alert('Informe o início e o motivo da parada.');
+  const isOutros = normStopSearch(reason).includes('15') || normStopSearch(reason).includes('outros');
+  if (isOutros && !obs) {
+    if ($('stopObs')) $('stopObs').focus();
+    return alert('Descreva o motivo em Observações para a opção Outros.');
+  }
+
+  let formattedReason = reason;
+  if (obs) formattedReason += ` — Obs: ${obs}`;
+  if (resp) formattedReason += ` [Resp: ${resp}]`;
   
   const { error } = await sb.from('global_stops').insert({
   tenant_id: tenantId,
   start_ts: new Date(start).toISOString(),
-  reason: reason
+  reason: formattedReason
   });
   
   if (error) alert(error.message);
   else {
-  $('stopReason').value = '';
+  if ($('stopReason')) $('stopReason').value = '';
+  if ($('stopObs')) $('stopObs').value = '';
+  initStopFormFields();
   loadStops();
   }
 }

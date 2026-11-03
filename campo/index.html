@@ -1126,11 +1126,25 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   <div class="section">
   <div class="card">
   <div class="section-title">Registrar Nova Parada</div>
-  <div class="form-field">
-  <label class="field-label">Motivo da Parada</label>
-  <input id="stopReason" placeholder="Ex: Manutenção, Falta de Energia...">
+  <div class="form-field" style="position:relative;">
+  <label class="field-label">Motivo da Parada (Pesquisar ou Selecionar)</label>
+  <div style="position:relative;">
+    <input id="stopReason" autocomplete="off" placeholder="Clique para selecionar ou digite para pesquisar..." onfocus="openStopReasonDropdown()" oninput="filterStopReasonDropdown(this.value)" style="padding-right:36px;">
+    <button type="button" onclick="toggleStopReasonDropdown(event)" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:var(--muted); cursor:pointer; padding:4px; display:flex; align-items:center;">
+      <i data-lucide="chevron-down" style="width:18px;height:18px"></i>
+    </button>
   </div>
-  <button class="btn btn-danger btn-full" onclick="saveStop()" style="display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="ban" style="width:18px;height:18px"></i> Iniciar Parada Agora</button>
+  <div id="stopReasonDropdown" style="display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; background:var(--card, #1e293b); border:1px solid var(--border, #334155); border-radius:10px; max-height:260px; overflow-y:auto; z-index:1200; box-shadow:0 12px 28px rgba(0,0,0,0.45);"></div>
+  </div>
+  <div class="form-field">
+  <label id="stopObsLabel" class="field-label">Observações / Detalhes (Opcional)</label>
+  <input id="stopObs" placeholder="Descreva detalhes adicionais ou especifique o motivo...">
+  </div>
+  <div class="form-field">
+  <label class="field-label">Responsável pelo Registro (Usuário Logado)</label>
+  <input id="stopRegisteredBy" placeholder="Responsável pelo registro">
+  </div>
+  <button class="btn btn-danger btn-full" onclick="saveStop(event)" style="display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="ban" style="width:18px;height:18px"></i> Iniciar Parada Agora</button>
   </div>
   </div>
 
@@ -2341,8 +2355,16 @@ function showScreen(name) {
     if ($('mipTecnicoInput')) $('mipTecnicoInput').value = window.currentInspector || (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'David Ferreira';
     captureMipGps(false);
   }
-  if (name === 'stops') loadStops();
-  if (name === 'fieldOp') loadFieldOpSelects();
+  if (name === 'stops') {
+    initStopForm();
+    loadStops();
+  }
+  if (name === 'fieldOp') {
+    loadFieldOpSelects();
+    if ($('fRegisteredBy') && !$('fRegisteredBy').value.trim()) {
+      $('fRegisteredBy').value = getLoggedUserName();
+    }
+  }
   if (name === 'infoParcelas') renderInfoParcelas();
   if (name === 'plantios') loadPlantiosScreen();
   if (name === 'mip' || name === 'op') initMipAndOpForm();
@@ -11847,7 +11869,7 @@ function resetCForm() {
   if ($('cTractor')) $('cTractor').value = '';
   const hasEquipe = carregarEquipeDoDia();
   if (!hasEquipe) cState.workers.clear();
-  $('cRegisteredBy').value = '';
+  $('cRegisteredBy').value = getLoggedUserName();
   if ($('cEmpSearch')) $('cEmpSearch').value = '';
   // Renderiza colaboradores de colheita no reset
   renderCEmpList(getHarvestEmployees());
@@ -12332,54 +12354,235 @@ async function loadCHistory() {
 // ═══════════════════════════════════════════
 // PARADAS GERAIS
 // ═══════════════════════════════════════════
+const STOP_STANDARD_REASONS = [
+  '1 - Problema na prodol',
+  '2 - Problema na mesa de embalagem',
+  '3 - Falta de fruto',
+  '4 - Problema mecânico interno',
+  '5 - Problema mecânico externo',
+  '6 - Troca de material de embalagem',
+  '7 - Pausa para revisão',
+  '8 - Reuniões',
+  '9 - Troca de setores',
+  '10 - Falta de energia',
+  '11 - Treinamentos',
+  '12 - Pane sistema',
+  '13 - Jantar',
+  '14 - Muito defeito no fruto (pausa para resolução)',
+  '15 - Outros (descrever em observações)'
+];
+
+function getLoggedUserName() {
+  let u = user;
+  if (!u) {
+    try { u = JSON.parse(localStorage.getItem('prodtech_user') || 'null'); } catch (e) { u = null; }
+  }
+  if (u) {
+    const metaName = u.user_metadata?.full_name || u.user_metadata?.name || u.user_metadata?.nome || u.user_metadata?.display_name;
+    if (metaName && String(metaName).trim()) return String(metaName).trim();
+    const emailPrefix = String(u.email || '').split('@')[0].replace(/[._-]+/g, ' ').trim();
+    if (emailPrefix) {
+      const empMatch = (employees || []).find(e => e.name && e.name.toUpperCase().split(/\s+/)[0] === emailPrefix.toUpperCase().split(/\s+/)[0]);
+      if (empMatch) return empMatch.name;
+      return emailPrefix.toUpperCase();
+    }
+  }
+  return (window.currentInspector || '').replace(/[._-]+/g, ' ').trim().toUpperCase();
+}
+
+function normStopSearch(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function renderStopReasonDropdown(query = '') {
+  const dd = $('stopReasonDropdown');
+  if (!dd) return;
+  const q = normStopSearch(query);
+  const items = !q
+    ? STOP_STANDARD_REASONS
+    : STOP_STANDARD_REASONS.filter(item => normStopSearch(item).includes(q));
+
+  if (items.length === 0) {
+    dd.innerHTML = `<div style="padding:10px 14px; font-size:12px; color:var(--muted);">Nenhuma opção padrão encontrada — o texto digitado será usado.</div>`;
+    return;
+  }
+
+  dd.innerHTML = items.map(item => `
+    <div onclick="selectStopReasonOption('${item.replace(/'/g, "\\'")}')"
+         style="padding:11px 14px; font-size:13px; font-weight:600; color:var(--text, #f8fafc); border-bottom:1px solid rgba(255,255,255,0.06); cursor:pointer; display:flex; align-items:center; justify-content:space-between;"
+         onmouseover="this.style.background='rgba(59,130,246,0.14)'"
+         onmouseout="this.style.background='transparent'">
+      <span>${item}</span>
+    </div>
+  `).join('');
+}
+
+function openStopReasonDropdown() {
+  const dd = $('stopReasonDropdown');
+  if (!dd) return;
+  const inp = $('stopReason');
+  const curVal = inp ? inp.value.trim() : '';
+  const isExactOption = STOP_STANDARD_REASONS.includes(curVal);
+  renderStopReasonDropdown(isExactOption ? '' : curVal);
+  dd.style.display = 'block';
+}
+
+function toggleStopReasonDropdown(ev) {
+  if (ev) ev.stopPropagation();
+  const dd = $('stopReasonDropdown');
+  if (!dd) return;
+  if (dd.style.display === 'block') {
+    dd.style.display = 'none';
+  } else {
+    renderStopReasonDropdown('');
+    dd.style.display = 'block';
+    if ($('stopReason')) $('stopReason').focus();
+  }
+}
+
+function filterStopReasonDropdown(val) {
+  renderStopReasonDropdown(val);
+  const dd = $('stopReasonDropdown');
+  if (dd) dd.style.display = 'block';
+  updateStopObsRequirement(val);
+}
+
+function updateStopObsRequirement(reasonVal) {
+  const isOutros = normStopSearch(reasonVal).includes('15') || normStopSearch(reasonVal).includes('outros');
+  const lbl = $('stopObsLabel');
+  const obsInp = $('stopObs');
+  if (lbl) {
+    lbl.textContent = isOutros
+      ? 'Observações / Descrição do Problema (Obrigatório) *'
+      : 'Observações / Detalhes (Opcional)';
+    lbl.style.color = isOutros ? 'var(--orange, #f59e0b)' : '';
+  }
+  if (obsInp && isOutros) {
+    obsInp.placeholder = 'Descreva obrigatoriamente o motivo da parada...';
+  } else if (obsInp) {
+    obsInp.placeholder = 'Descreva detalhes adicionais (opcional)...';
+  }
+}
+
+function selectStopReasonOption(optionText) {
+  const inp = $('stopReason');
+  const dd = $('stopReasonDropdown');
+  if (inp) inp.value = optionText;
+  if (dd) dd.style.display = 'none';
+  updateStopObsRequirement(optionText);
+  if (normStopSearch(optionText).includes('outros') && $('stopObs')) {
+    setTimeout(() => $('stopObs').focus(), 50);
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const dd = $('stopReasonDropdown');
+  const inp = $('stopReason');
+  if (dd && dd.style.display === 'block') {
+    if (!dd.contains(e.target) && e.target !== inp) {
+      dd.style.display = 'none';
+    }
+  }
+});
+
+function initStopForm() {
+  const regInp = $('stopRegisteredBy');
+  const loggedName = getLoggedUserName();
+  if (regInp && loggedName) {
+    regInp.value = loggedName;
+  }
+  updateStopObsRequirement($('stopReason') ? $('stopReason').value : '');
+}
+
+function parseStopReasonDisplay(rawReason) {
+  let text = String(rawReason || '').trim();
+  let resp = '';
+  let obs = '';
+
+  const respMatch = text.match(/\s*\[Resp:\s*([^\]]+)\]\s*$/i);
+  if (respMatch) {
+    resp = respMatch[1].trim();
+    text = text.slice(0, respMatch.index).trim();
+  }
+
+  const obsMatch = text.match(/\s*—\s*Obs:\s*(.+)$/i);
+  if (obsMatch) {
+    obs = obsMatch[1].trim();
+    text = text.slice(0, obsMatch.index).trim();
+  }
+
+  return { title: text || rawReason || 'Parada Geral', obs, resp };
+}
+
 async function loadStops() {
   const el = $('stopList');
   if (!el) return;
+  initStopForm();
   el.innerHTML = '<div class="loading"><div class="spinner"></div>Carregando...</div>';
   
-  const { data, error } = await sb.from('global_stops').select('*').eq('tenant_id', tenantId).order('start_ts', { ascending: false }).limit(10);
+  const { data, error } = await sb.from('global_stops').select('*').eq('tenant_id', tenantId).order('start_ts', { ascending: false }).limit(15);
   if (error) {
   el.innerHTML = '<div class="empty">Erro ao carregar paradas.</div>';
   return;
   }
   
-  el.innerHTML = (data||[]).map(s => `
+  el.innerHTML = (data||[]).map(s => {
+  const parsed = parseStopReasonDisplay(s.reason);
+  return `
   <div class="card" style="margin-bottom:10px; border-left:4px solid ${s.end_ts ? 'var(--muted)' : 'var(--red)'}">
-  <div style="display:flex; justify-content:space-between; align-items:flex-start">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
   <div>
-  <div style="font-weight:800; font-size:16px">${s.reason}</div>
+  <div style="font-weight:800; font-size:15px">${parsed.title}</div>
+  ${parsed.obs ? `<div style="font-size:12px; color:var(--text); margin-top:3px; opacity:0.9;"><strong>Obs:</strong> ${parsed.obs}</div>` : ''}
+  ${parsed.resp ? `<div style="font-size:11px; color:var(--muted); margin-top:3px;"><strong>Registrado por:</strong> ${parsed.resp}</div>` : ''}
   <div style="font-size:11px; color:var(--muted); margin-top:4px">
   Início: ${new Date(s.start_ts).toLocaleString('pt-BR')}
+  ${s.end_ts ? ` • Fim: ${new Date(s.end_ts).toLocaleString('pt-BR')}` : ''}
   </div>
-  <div style="font-size:11px; color:${s.end_ts ? 'var(--muted)' : 'var(--green)'}; font-weight:700; display:inline-flex; align-items:center; gap:4px">
+  <div style="font-size:11px; color:${s.end_ts ? 'var(--muted)' : 'var(--green)'}; font-weight:700; display:inline-flex; align-items:center; gap:4px; margin-top:2px;">
   Status: ${s.end_ts ? 'Encerrada' : 'EM ANDAMENTO <i data-lucide="alert-triangle" style="width:14px;height:14px;color:var(--orange)"></i>'}
   </div>
   </div>
-  ${!s.end_ts ? `<button class="btn btn-danger" style="padding:8px 12px; font-size:11px" onclick="endStop('${s.id}')">Encerrar</button>` : ''}
+  ${!s.end_ts ? `<button class="btn btn-danger" style="padding:8px 12px; font-size:11px; flex-shrink:0;" onclick="endStop('${s.id}')">Encerrar</button>` : ''}
   </div>
   </div>
-  `).join('') || '<div class="empty">Nenhuma parada registrada.</div>';
+  `;
+  }).join('') || '<div class="empty">Nenhuma parada registrada.</div>';
   if (window.lucide) lucide.createIcons();
 }
 
-async function saveStop() {
-  const reason = $('stopReason').value.trim();
-  if (!reason) return toast('Informe o motivo', 'err');
+async function saveStop(ev) {
+  const reason = ($('stopReason')?.value || '').trim();
+  const obs = ($('stopObs')?.value || '').trim();
+  const resp = ($('stopRegisteredBy')?.value || getLoggedUserName() || '').trim();
+
+  if (!reason) return toast('Selecione ou informe o motivo da parada', 'err');
+  const isOutros = normStopSearch(reason).includes('15') || normStopSearch(reason).includes('outros');
+  if (isOutros && !obs) {
+    if ($('stopObs')) $('stopObs').focus();
+    return toast('Descreva o motivo em Observações para a opção Outros', 'err');
+  }
+
+  let formattedReason = reason;
+  if (obs) formattedReason += ` — Obs: ${obs}`;
+  if (resp) formattedReason += ` [Resp: ${resp}]`;
   
-  const btn = event.target;
-  btn.disabled = true;
+  const btn = ev?.currentTarget || ev?.target || document.querySelector('#screenStops .btn-danger');
+  if (btn) btn.disabled = true;
   
   const { error } = await sb.from('global_stops').insert({
   tenant_id: tenantId,
-  reason: reason,
+  reason: formattedReason,
   start_ts: new Date().toISOString()
   });
   
-  btn.disabled = false;
+  if (btn) btn.disabled = false;
   if (error) {
-  toast('Erro ao salvar', 'err');
+  toast('Erro ao salvar parada: ' + (error.message || ''), 'err');
   } else {
-  $('stopReason').value = '';
+  if ($('stopReason')) $('stopReason').value = '';
+  if ($('stopObs')) $('stopObs').value = '';
+  initStopForm();
   toast('Parada iniciada!', 'ok');
   loadStops();
   }
