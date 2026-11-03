@@ -943,10 +943,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   </select>
   </div>
 
-  <div class="section"><div class="section-title" style="display:flex;align-items:center;gap:4px"><i data-lucide="brush" style="width:12px;height:12px"></i> Pincelador / Líder</div></div>
+  <div class="section"><div class="section-title" style="display:flex;align-items:center;gap:4px"><i data-lucide="brush" style="width:12px;height:12px"></i> Responsável pela Colheita / Pincelador</div></div>
   <div style="padding:0 16px">
-  <select id="cPincelador">
-  <option value="">— Selecionar Pincelador (Opcional) —</option>
+  <select id="cPincelador" onchange="updateCalcPreview()">
+  <option value="">— Selecionar Responsável pela Colheita / Pincelador —</option>
   </select>
   </div>
 
@@ -994,20 +994,28 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green)}
   <div style="padding:14px 16px 8px">
   <div class="calc-card" id="calcCard">
   <div class="calc-row">
-  <span class="calc-label">Carrões × Valor</span>
+  <span class="calc-label">Equipe (Carrões × Valor)</span>
   <span class="calc-val" id="calcFormula">1 × R$ 3,00</span>
   </div>
   <div class="calc-row">
-  <span class="calc-label">Total Bruto</span>
+  <span class="calc-label">Total Equipe Colhedores</span>
   <span class="calc-val calc-total" id="calcTotal">R$ 3,00</span>
   </div>
   <div class="calc-row">
-  <span class="calc-label">Funcionários</span>
+  <span class="calc-label">Colhedores</span>
   <span class="calc-val" id="calcEmpCount">0 selecionados</span>
   </div>
   <div class="calc-row">
-  <span class="calc-label">Valor por Funcionário</span>
+  <span class="calc-label">Valor por Colhedor</span>
   <span class="calc-val calc-per" id="calcPerEmp">— selecione funcionários</span>
+  </div>
+  <div class="calc-row" id="calcRespRow" style="border-top:1px dashed var(--border);margin-top:4px;padding-top:6px">
+  <span class="calc-label">Resp. Colheita (Pincelador)</span>
+  <span class="calc-val" id="calcRespVal" style="color:var(--orange)">R$ 0,00</span>
+  </div>
+  <div class="calc-row" id="calcOpRow">
+  <span class="calc-label">Operador Máquina Colheita</span>
+  <span class="calc-val" id="calcOpVal" style="color:var(--blue)">R$ 0,00</span>
   </div>
   </div>
   </div>
@@ -2343,6 +2351,8 @@ function showScreen(name) {
     if (!parcelas || parcelas.length === 0) {
       loadInfoParcelas();
     }
+    if (typeof populateCarraoEmployeeSelects === 'function') populateCarraoEmployeeSelects();
+    loadCarraoSelects();
   }
   if (name === 'fertirrigacao') loadFertSelects();
   if (name === 'idiarn') loadIdiarnSelects();
@@ -3103,6 +3113,7 @@ async function loadEmployees() {
   employees = [];
   }
   if (typeof populateOpEmployeeSelects === 'function') populateOpEmployeeSelects();
+  if (typeof populateCarraoEmployeeSelects === 'function') populateCarraoEmployeeSelects();
 }
 
 let parcelLinks = [];
@@ -3113,58 +3124,129 @@ async function loadParcelLinks() {
   parcelLinks = data || [];
 }
 
+function normVarKey(s) {
+  return String(s || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function resolveVarietyFruitId(vObjOrName, fruitsList, fallbackCultura) {
+  const fList = Array.isArray(fruitsList) && fruitsList.length ? fruitsList : (fruits || []);
+  if (!fList.length) return null;
+
+  const vObj = typeof vObjOrName === 'object' && vObjOrName !== null ? vObjOrName : null;
+  const vName = (vObj ? vObj.name : vObjOrName || '').toString().trim().toUpperCase();
+
+  // 1. Regras diretas por nome da variedade (ex: ASTURIA = Pele de Sapo, JADEAL = Melão Amarelo / Melão)
+  const findFruitByType = (typeKey) => {
+    if (typeKey === 'SAPO') {
+      return fList.find(f => f.name.toUpperCase().includes('SAPO') || f.name.toUpperCase().includes('PIEL'));
+    }
+    if (typeKey === 'MELANCIA') {
+      return fList.find(f => f.name.toUpperCase().includes('MELANCIA'));
+    }
+    if (typeKey === 'MELAO') {
+      return fList.find(f => {
+        const fn = f.name.toUpperCase();
+        return (fn.includes('MELAO') || fn.includes('MELÃO') || fn.includes('AMARELO')) && !fn.includes('SAPO');
+      });
+    }
+    return null;
+  };
+
+  if (vName.includes('ASTURIA') || vName.includes('SAPO') || vName.includes('RICURA') || vName.includes('SANCHO')) {
+    const fSapo = findFruitByType('SAPO');
+    if (fSapo) return fSapo.id;
+  }
+
+  const melanciaVars = ['QUETZALI', 'EXPERT', 'MIELHEART', 'SERVAL', 'BELADONA', 'DURLINDA', 'LOLA', 'SCARLET', 'NUMBAT', 'EXCEED', 'EXTAZ', 'EXTAZY', 'HARMONIUM', 'SARABI'];
+  if (melanciaVars.some(mv => vName.includes(mv))) {
+    const fMelancia = findFruitByType('MELANCIA');
+    if (fMelancia) return fMelancia.id;
+  }
+
+  const melaoVars = ['JADEAL', 'JADIAL', 'GOLDEX', 'GOLD MINE', 'GOLDMINE', 'GOLD NEWS', 'AMARELO', 'BAMBINO', 'ORANGE', 'CANTALOUPE', 'CHARENTAIS', 'GALIA', 'GRAND PRIX', 'SV6276', 'SV 6276', 'YACAL', 'ORALI', 'CRUCIAL', 'IROKOA', 'MELISOL', 'MELISSOL', '23330', 'JICARAL'];
+  if (melaoVars.some(mv => normVarKey(vName).includes(normVarKey(mv)))) {
+    const fMelao = findFruitByType('MELAO');
+    if (fMelao) return fMelao.id;
+  }
+
+  // 2. Se o objeto variedade já possui fruit_id válido no banco
+  if (vObj && vObj.fruit_id && fList.some(f => f.id == vObj.fruit_id)) {
+    return vObj.fruit_id;
+  }
+
+  // 3. Fallback pela cultura da parcela
+  const cult = String(fallbackCultura || '').toUpperCase();
+  if (cult.includes('SAPO')) {
+    const fSapo = findFruitByType('SAPO');
+    if (fSapo) return fSapo.id;
+  }
+  if (cult.includes('MELANCIA')) {
+    const fMelancia = findFruitByType('MELANCIA');
+    if (fMelancia) return fMelancia.id;
+  }
+  if (cult.includes('MELAO') || cult.includes('MELÃO')) {
+    const fMelao = findFruitByType('MELAO');
+    if (fMelao) return fMelao.id;
+  }
+
+  return vObj?.fruit_id || null;
+}
+
+function getParcelFilteredVarieties(pId) {
+  if (!pId) return { filteredVars: varieties || [], pObj: null };
+  const pObj = (infoParcelasData || []).find(p => p.parcel_id == pId || p.id == pId);
+  const pCode = pObj ? String(pObj.parcela2 || pObj.parcela || '').trim().toUpperCase() : null;
+
+  const parcelVarNorms = new Set();
+  if (pCode) {
+    (infoParcelasData || []).filter(ip => String(ip.parcela2 || ip.parcela || '').trim().toUpperCase() === pCode).forEach(ip => {
+      [ip.variedade, ip.variedade2, ip.variedade3, ip.variedade4, ip.variedade5, ip.variedade6, ip.variedade7, ip.variedade8, ip.variedade9, ip.variedade10].forEach(vRaw => {
+        if (!vRaw) return;
+        String(vRaw).split(/[\/,;+]+/).forEach(part => {
+          const nk = normVarKey(part);
+          if (nk) parcelVarNorms.add(nk);
+          if (nk === 'JADIAL') parcelVarNorms.add('JADEAL');
+        });
+      });
+    });
+  }
+
+  const validVIds = (parcelLinks || []).filter(l => l.parcel_id == pId).map(l => l.variety_id);
+  const filteredVars = (varieties || []).filter(v => {
+    const nk = normVarKey(v.name);
+    return parcelVarNorms.has(nk) || validVIds.includes(v.id);
+  });
+
+  return { filteredVars, pObj };
+}
+
 function updateVarietyFilter() {
   const pId = $('cParcela').value;
   const vSel = $('cVariety');
   if (!vSel) return;
 
   if (!pId) {
-  vSel.innerHTML = '<option value="">— Variedade —</option>';
-  varieties.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
-  renderCFruitList(fruits);
-  return;
+    vSel.innerHTML = '<option value="">— Variedade —</option>';
+    varieties.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
+    renderCFruitList(fruits);
+    return;
   }
 
-  // Encontra o código da parcela selecionada
-  const pObj = infoParcelasData.find(p => p.parcel_id == pId || p.id == pId);
-  const pCode = pObj ? (pObj.parcela2 || pObj.parcela) : null;
-
-  // Busca todas as variedades vinculadas a esta parcela física no infoParcelasData
-  let parcelVarNames = [];
-  if (pCode) {
-  infoParcelasData.filter(ip => (ip.parcela2 || ip.parcela) === pCode).forEach(ip => {
-  [ip.variedade, ip.variedade2, ip.variedade3, ip.variedade4, ip.variedade5].forEach(vName => {
-  if (vName && vName.trim()) parcelVarNames.push(vName.trim().toUpperCase());
-  });
-  });
-  }
-
-  const validVIds = parcelLinks.filter(l => l.parcel_id == pId).map(l => l.variety_id);
-
-  // Filtra as variedades por nome da parcela ou ID legado
-  const filteredVars = varieties.filter(v => {
-  const nameMatch = parcelVarNames.includes(v.name.trim().toUpperCase());
-  const idMatch = validVIds.includes(v.id);
-  return nameMatch || idMatch;
-  });
+  const { filteredVars, pObj } = getParcelFilteredVarieties(pId);
 
   vSel.innerHTML = '<option value="">— Variedade —</option>';
   if (filteredVars.length === 0) {
-  varieties.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
-  renderCFruitList(fruits);
+    varieties.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
+    renderCFruitList(fruits);
   } else {
-  filteredVars.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
-  const validFruitIds = [...new Set(filteredVars.map(v => v.fruit_id))];
-  const filteredFruits = fruits.filter(f => validFruitIds.includes(f.id));
-  renderCFruitList(filteredFruits);
+    filteredVars.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
+    const validFruitIds = [...new Set(filteredVars.map(v => resolveVarietyFruitId(v, fruits, pObj?.cultura)).filter(Boolean))];
+    const filteredFruits = validFruitIds.length > 0 ? fruits.filter(f => validFruitIds.includes(f.id)) : fruits;
+    renderCFruitList(filteredFruits);
 
-  // Se a parcela tiver apenas 1 variedade cadastrada, seleciona-a automaticamente!
-  if (filteredVars.length === 1) {
+    // Seleciona a primeira variedade automaticamente e sincroniza a fruta correspondente
     vSel.value = filteredVars[0].id;
     onVarietyChange();
-  } else {
-    updateCampoJulianPreview();
-  }
   }
 }
 
@@ -3198,7 +3280,7 @@ function getFruitTrackCode(varietyName, fruitName) {
   // 3. Procura em cache de frutas salvas no sistema
   if (Array.isArray(fruits) && fruits.length > 0) {
     const foundFruit = fruits.find(x => x.name && x.name.toUpperCase() === f);
-    if (foundFruit && foundFruit.track_code) return String(foundFruit.track_code).trim();
+    if (foundFruit && foundFruit.track_code) return String(foundFruit.track_code).split('|')[0].trim();
   }
 
   // 4. Regras por Categoria da Fruta
@@ -3239,6 +3321,26 @@ function updateCampoJulianPreview() {
   el.title = `F:${F} Parcela:${PPP} Fruta:${V} Juliano:${DDD}`;
 }
 
+function parseFruitHarvestRates(f) {
+  if (!f) return { code: '1', carraoRate: 0, respRate: 0, opRate: 0 };
+  const raw = String(f.track_code || '');
+  const parts = raw.split('|');
+  const code = (parts[0] || '').trim() || '1';
+  let respRate = Number(f.resp_value_per_carrao || 0);
+  let opRate = Number(f.op_value_per_carrao || 0);
+  for (let i = 1; i < parts.length; i++) {
+    const [k, v] = parts[i].split('=');
+    if (k === 'resp') respRate = parseFloat(v) || 0;
+    if (k === 'op') opRate = parseFloat(v) || 0;
+  }
+  return {
+    code,
+    carraoRate: Number(f.value_per_carrao || 0),
+    respRate,
+    opRate
+  };
+}
+
 function onVarietyChange() {
   const vId = $('cVariety')?.value;
   if (!vId) {
@@ -3246,8 +3348,11 @@ function onVarietyChange() {
     return;
   }
   const v = varieties.find(x => x.id == vId);
-  if (v && v.fruit_id) {
-    setFruit(v.fruit_id);
+  const pId = $('cParcela')?.value;
+  const pObj = (infoParcelasData || []).find(p => p.parcel_id == pId || p.id == pId);
+  const resolvedFruitId = resolveVarietyFruitId(v, fruits, pObj?.cultura);
+  if (resolvedFruitId) {
+    setFruit(resolvedFruitId, true);
   }
   updateCampoJulianPreview();
 }
@@ -3255,11 +3360,12 @@ function onVarietyChange() {
 let fruits = [];
 async function loadFruits() {
   const { data } = await sb.from('fruits')
-  .select('id, name, value_per_carrao')
+  .select('id, name, value_per_carrao, track_code')
   .eq('tenant_id', tenantId)
   .eq('active', true)
   .order('name');
   fruits = data || [];
+  renderCFruitList();
 }
 
 let varieties = [];
@@ -9061,7 +9167,9 @@ function validateMipForOp(parcelId, parcelCode, alvo, opDate) {
 
     if (tSel) {
       const cur = tSel.value;
-      tSel.innerHTML = '<option value="">— Selecionar Tratorista —</option>' + opts;
+      const tractorOnly = empList.filter(e => e.active !== false && e.role && e.role.toUpperCase().includes('TRATORISTA'));
+      const tOpts = tractorOnly.map(e => `<option value="${e.name}">${e.name}${e.role ? ' (' + e.role + ')' : ''}</option>`).join('');
+      tSel.innerHTML = '<option value="">— Selecionar Tratorista —</option>' + tOpts;
       if (cur) tSel.value = cur;
     }
     if (bSel) {
@@ -10896,11 +11004,12 @@ function onMachineOperatorChange(sel) {
   const custom = $('cMachineOperatorCustom');
   if (!sel || !custom) return;
   if (sel.value === 'OUTRO') {
-  custom.style.display = 'block';
-  custom.focus();
+    custom.style.display = 'block';
+    custom.focus();
   } else {
-  custom.style.display = 'none';
+    custom.style.display = 'none';
   }
+  updateCalcPreview();
 }
 
 function onRegisteredByChange(sel) {
@@ -11000,52 +11109,54 @@ function limparEquipeDoDia(ev) {
   toast('Equipe desmarcada', 'ok');
 }
 
-function initCarraoForm() {
-  $('cDate').value = today();
-  renderCFruitList();
-  carregarEquipeDoDia();
-  renderCEmpList(getHarvestEmployees());
-  updateCalcPreview();
-
-  // 1. Carrega tratoristas
+function populateCarraoEmployeeSelects() {
+  // 1. Carrega SOMENTES tratoristas
   const tSel = $('cTractor');
   if (tSel) {
+    const prevTractor = tSel.value;
     tSel.innerHTML = '<option value="">— Selecionar Tratorista —</option>';
-    const tractorists = (employees || []).filter(e => e.active !== false && e.role && (e.role.toUpperCase().includes('TRATORISTA') || e.role.toUpperCase().includes('OPERADOR')));
-    (tractorists.length > 0 ? tractorists : employees).forEach(t => tSel.insertAdjacentHTML('beforeend', `<option value="${t.id}">${t.name}${t.role ? ' ('+t.role+')' : ''}</option>`));
+    const tractorists = (employees || []).filter(e => e.active !== false && e.role && e.role.toUpperCase().includes('TRATORISTA'));
+    tractorists.forEach(t => tSel.insertAdjacentHTML('beforeend', `<option value="${t.id}">${t.name}${t.role ? ' ('+t.role+')' : ''}</option>`));
+    if (prevTractor) tSel.value = prevTractor;
   }
 
-  // 1.1 Carrega pinceladores
+  // 1.1 Carrega Responsáveis pela Colheita / Pinceladores
   const pSel = $('cPincelador');
   if (pSel) {
-    pSel.innerHTML = '<option value="">— Selecionar Pincelador / Líder —</option>';
+    const prevPinc = pSel.value;
+    pSel.innerHTML = '<option value="">— Selecionar Responsável pela Colheita / Pincelador —</option>';
     (employees || []).forEach(e => {
       pSel.insertAdjacentHTML('beforeend', `<option value="${e.name}">${e.name}${e.role ? ' ('+e.role+')' : ''}</option>`);
     });
+    if (prevPinc) pSel.value = prevPinc;
   }
 
   // 2. Carrega operadores de máquina
   const mOpSel = $('cMachineOperator');
   if (mOpSel) {
+    const prevOp = mOpSel.value;
     mOpSel.innerHTML = '<option value="">— Selecionar Operador da Máquina (Opcional) —</option>';
     const machineOps = (employees || []).filter(e => e.active !== false && e.role && (e.role.toUpperCase().includes('OPERADOR') || e.role.toUpperCase().includes('TRATORISTA')));
     (machineOps.length > 0 ? machineOps : employees).forEach(m => mOpSel.insertAdjacentHTML('beforeend', `<option value="${m.name}">${m.name} (${m.role || 'Operador'})</option>`));
     mOpSel.insertAdjacentHTML('beforeend', '<option value="OUTRO">+ Outro Operador...</option>');
+    if (prevOp) mOpSel.value = prevOp;
   }
 
-  // 3. Carrega e preenche responsável logado automaticamente
+  // 3. Preenche responsável logado
   const regSel = $('cRegisteredBy');
   const loggedUserName = (user && user.email) ? user.email.split('@')[0].toUpperCase() : (window.currentInspector || 'ADMIN');
-  if (regSel) {
-    regSel.innerHTML = `<option value="${loggedUserName}">${loggedUserName} (Usuário Logado)</option>`;
-    (employees || []).forEach(e => {
-      if (e.name.toUpperCase() !== loggedUserName) {
-        regSel.insertAdjacentHTML('beforeend', `<option value="${e.name}">${e.name}</option>`);
-      }
-    });
-    regSel.insertAdjacentHTML('beforeend', '<option value="OUTRO">+ Digitar Outro Responsável...</option>');
+  if (regSel && !regSel.value) {
     regSel.value = loggedUserName;
   }
+}
+
+function initCarraoForm() {
+  if ($('cDate') && !$('cDate').value) $('cDate').value = today();
+  renderCFruitList();
+  populateCarraoEmployeeSelects();
+  carregarEquipeDoDia();
+  renderCEmpList(getHarvestEmployees());
+  updateCalcPreview();
 }
 
 function renderCFruitList(list) {
@@ -11053,16 +11164,23 @@ function renderCFruitList(list) {
   const el = $('cFruitList');
   if (!el) return;
   if (!list.length) { el.innerHTML = '<div class="empty">Nenhuma fruta encontrada</div>'; return; }
-  el.innerHTML = list.map((f, i) => `
-  <div class="toggle-opt ${i===0?'on':''}" data-id="${f.id}" onclick="setFruit('${f.id}')">
-  <span class="icon" style="display:flex;justify-content:center;margin-bottom:6px">
-  <i data-lucide="${f.name.toLowerCase().includes('melancia') ? 'leaf' : 'citrus'}" style="width:24px;height:24px"></i>
-  </span>
-  ${f.name}
-  <div class="price">R$ ${f.value_per_carrao || 0} / carrocão</div>
-  </div>
-  `).join('');
-  if (list.length > 0) setFruit(list[0].id);
+  el.innerHTML = list.map((f, i) => {
+    const rates = parseFruitHarvestRates(f);
+    const subRates = [];
+    if (rates.respRate > 0) subRates.push(`Resp: R$ ${rates.respRate.toFixed(2).replace('.',',')}`);
+    if (rates.opRate > 0) subRates.push(`Op. Máq: R$ ${rates.opRate.toFixed(2).replace('.',',')}`);
+    return `
+    <div class="toggle-opt ${i===0?'on':''}" data-id="${f.id}" onclick="setFruit('${f.id}')">
+      <span class="icon" style="display:flex;justify-content:center;margin-bottom:6px">
+        <i data-lucide="${f.name.toLowerCase().includes('melancia') ? 'leaf' : 'citrus'}" style="width:24px;height:24px"></i>
+      </span>
+      ${f.name}
+      <div class="price">Equipe: R$ ${rates.carraoRate.toFixed(2).replace('.',',')} / carrocão</div>
+      ${subRates.length ? `<div style="font-size:10px;color:var(--muted);margin-top:2px">${subRates.join(' • ')}</div>` : ''}
+    </div>
+    `;
+  }).join('');
+  if (list.length > 0) setFruit(list[0].id, true);
   if (window.lucide) lucide.createIcons();
 }
 
@@ -11130,40 +11248,104 @@ function setShift(shift) {
   );
 }
 
-function setFruit(id) {
+function setFruit(id, fromVarietyChange = false) {
   const f = fruits.find(x => x.id == id);
   if (!f) return;
+  const rates = parseFruitHarvestRates(f);
   cState.fruitId = id;
   cState.fruitName = f.name;
-  window.pricePerCarrao = parseFloat(f.value_per_carrao || 0);
+  window.pricePerCarrao = rates.carraoRate;
+  window.respPricePerCarrao = rates.respRate;
+  window.opPricePerCarrao = rates.opRate;
 
   document.querySelectorAll('#cFruitList .toggle-opt').forEach(opt => {
-  opt.classList.toggle('on', opt.getAttribute('data-id') == id);
+    opt.classList.toggle('on', opt.getAttribute('data-id') == id);
   });
+
+  // Se o usuário clicou na fruta manualmente e a parcela tem múltiplas variedades de frutas diferentes, seleciona a variedade compatível
+  if (!fromVarietyChange) {
+    const pId = $('cParcela')?.value;
+    const vSel = $('cVariety');
+    if (pId && vSel) {
+      const { filteredVars, pObj } = getParcelFilteredVarieties(pId);
+      const curVar = (varieties || []).find(v => v.id == vSel.value);
+      const curFruitId = curVar ? resolveVarietyFruitId(curVar, fruits, pObj?.cultura) : null;
+      if (curFruitId != id) {
+        const matchingVar = filteredVars.find(v => resolveVarietyFruitId(v, fruits, pObj?.cultura) == id);
+        if (matchingVar) {
+          vSel.value = matchingVar.id;
+        }
+      }
+    }
+    updateCampoJulianPreview();
+  }
+
   updateCalcPreview();
 }
 
 let cQty = 1;
 
+function onCarriageSelectChange(changedSel) {
+  const selects = Array.from(document.querySelectorAll('.c-carriage-select'));
+  if (changedSel && changedSel.value) {
+    const duplicate = selects.some(s => s !== changedSel && s.value === changedSel.value);
+    if (duplicate) {
+      toast('Este carrocão já foi selecionado nesta mesma ordem! Selecione outro carrocão.', 'err');
+      changedSel.value = '';
+    }
+  }
+  const chosenValues = new Set(selects.map(s => s.value).filter(Boolean));
+  selects.forEach(sel => {
+    const currentVal = sel.value;
+    Array.from(sel.options).forEach(opt => {
+      if (!opt.value) return;
+      const baseLabel = opt.getAttribute('data-label') || opt.textContent.replace(' (Já selecionado)', '');
+      opt.setAttribute('data-label', baseLabel);
+      if (opt.value !== currentVal && chosenValues.has(opt.value)) {
+        opt.disabled = true;
+        opt.textContent = baseLabel + ' (Já selecionado)';
+      } else {
+        opt.disabled = false;
+        opt.textContent = baseLabel;
+      }
+    });
+  });
+}
+
 function renderCarriageSelectors() {
   const container = $('cCarriageContainer');
   if (!container) return;
-  
+
+  const prevValues = Array.from(container.querySelectorAll('.c-carriage-select')).map(s => s.value);
   let html = '';
-  const optionsHtml = (carriages || []).map(c => `<option value="${c.id}">${c.code} ${c.name ? '- '+c.name : ''}</option>`).join('');
-  
+  const optionsHtml = (carriages || []).map(c => {
+    const label = `${c.code}${c.name ? ' - ' + c.name : ''}`;
+    return `<option value="${c.id}" data-label="${label}">${label}</option>`;
+  }).join('');
+
   for (let i = 0; i < cQty; i++) {
-  html += `
-  <div style="margin-bottom: 8px">
-  <label class="flabel" style="font-size: 11px; margin-bottom: 4px; display: block; color: var(--muted)">Carrocão ${i + 1}</label>
-  <select class="c-carriage-select" style="width: 100%; font-size: 13px" required>
-  <option value="">— Selecionar Carrocão —</option>
-  ${optionsHtml}
-  </select>
-  </div>
-  `;
+    html += `
+    <div style="margin-bottom: 8px">
+      <label class="flabel" style="font-size: 11px; margin-bottom: 4px; display: block; color: var(--muted)">Carrocão ${i + 1}</label>
+      <select class="c-carriage-select" onchange="onCarriageSelectChange(this)" style="width: 100%; font-size: 13px" required>
+        <option value="">— Selecionar Carrocão —</option>
+        ${optionsHtml}
+      </select>
+    </div>
+    `;
   }
   container.innerHTML = html;
+
+  const newSelects = Array.from(container.querySelectorAll('.c-carriage-select'));
+  const used = new Set();
+  newSelects.forEach((sel, idx) => {
+    const v = prevValues[idx];
+    if (v && !used.has(v)) {
+      sel.value = v;
+      used.add(v);
+    }
+  });
+  onCarriageSelectChange(null);
 }
 
 function cQtyChange(d) {
@@ -11174,7 +11356,9 @@ function cQtyChange(d) {
 }
 
 function updateCalcPreview() {
-  const price = window.pricePerCarrao || 2.00;
+  const price = window.pricePerCarrao ?? 0;
+  const respRate = window.respPricePerCarrao ?? 0;
+  const opRate = window.opPricePerCarrao ?? 0;
   const total = cQty * price;
   const empCount = cState.workers.size;
   const perEmp = empCount > 0 ? total / empCount : null;
@@ -11184,6 +11368,22 @@ function updateCalcPreview() {
   $('calcEmpCount').textContent = empCount > 0 ? `${empCount} funcionário(s)` : '0 selecionados';
   $('calcPerEmp').textContent = perEmp !== null ? BRL(perEmp) + ' / pessoa' : '— selecione funcionários';
   $('cEmpCount').textContent = empCount + ' selecionado(s)';
+
+  const respEl = $('calcRespVal');
+  if (respEl) {
+    const hasResp = !!(($('cPincelador')?.value || $('cRegisteredBy')?.value || '').trim());
+    respEl.textContent = respRate > 0
+      ? `${cQty} × ${BRL(respRate)} = ${BRL(cQty * respRate)}${hasResp ? '' : ' (selecione resp.)'}`
+      : 'R$ 0,00 (configurar em Frutas)';
+  }
+  const opEl = $('calcOpVal');
+  if (opEl) {
+    const opSelVal = $('cMachineOperator')?.value || '';
+    const hasOp = !!(opSelVal === 'OUTRO' ? $('cMachineOperatorCustom')?.value.trim() : opSelVal.trim());
+    opEl.textContent = opRate > 0
+      ? `${cQty} × ${BRL(opRate)} = ${BRL(cQty * opRate)}${hasOp ? '' : ' (selecione op.)'}`
+      : 'R$ 0,00 (configurar em Frutas)';
+  }
 }
 
 async function submitCarrao() {
@@ -11200,6 +11400,10 @@ async function submitCarrao() {
   const carriageIds = Array.from(carriageSelects).map(sel => sel.value).filter(Boolean);
   
   if (carriageIds.length < cQty) { toast('Selecione todos os carrocões', 'err'); return; }
+  if (new Set(carriageIds).size !== carriageIds.length) {
+    toast('Não é permitido selecionar o mesmo carrocão duas vezes na mesma ordem!', 'err');
+    return;
+  }
 
   const price = window.pricePerCarrao || 2.00;
   const total = cQty * price;
@@ -11227,6 +11431,12 @@ async function submitCarrao() {
   const tractorId = $('cTractor').value;
   const tractor = employees.find(e => e.id == tractorId);
 
+  const pincVal = ($('cPincelador')?.value || '').trim();
+  const opSelVal = ($('cMachineOperator')?.value || '').trim();
+  const resolvedMachineOp = (opSelVal === 'OUTRO' ? ($('cMachineOperatorCustom')?.value || '').trim() : opSelVal) || null;
+  const resolvedMachineId = $('cMachine')?.value || null;
+  const resolvedMachineCode = resolvedMachineId ? (cState.machineCode || $('cMachine')?.options[$('cMachine')?.selectedIndex]?.text || null) : null;
+
   const session = {
   tenant_id : tenantId,
   date : date,
@@ -11236,18 +11446,18 @@ async function submitCarrao() {
   parcel_id : parcelaId || null,
   parcela : parcela ? (parcela.code || parcela.label) : null,
   parcel_code : parcela ? (parcela.code || parcela.label) : null,
-  pincelador1 : $('cPincelador')?.value || null,
+  pincelador1 : pincVal || regBy || null,
   variety_id : $('cVariety').value || null,
   tractor_driver : tractor ? tractor.name : null,
-  machine_code : cState.machineCode || $('cMachine')?.options[$('cMachine')?.selectedIndex]?.text || null,
-  machine_operator : $('cMachineOperator')?.value.trim() || null,
-  machine_id : $('cMachine')?.value || null,
+  machine_code : resolvedMachineCode,
+  machine_operator : resolvedMachineOp,
+  machine_id : resolvedMachineId,
   qty_carrocoes : cQty,
   price_per_carrao : price,
   total_value : parseFloat(total.toFixed(2)),
   value_per_employee: parseFloat(perEmp.toFixed(2)),
   employee_count : cState.workers.size,
-  registered_by : regBy,
+  registered_by : pincVal || regBy,
   julian_lot : julianLot,
   synced : true,
   carriage_id : carriageIds[0] || null,
@@ -11296,10 +11506,11 @@ function renderSingleOrdemCard(item, nowStr, dateStr, timeStr) {
   const { session, workers } = item;
   const parcela = parcelas.find(p => p.id == session.parcel_id);
   const variety = varieties.find(v => v.id == session.variety_id);
-  const parcelaCode = parcela?.code || '—';
+  const parcelaCode = parcela?.code || session.parcela || session.parcel_code || '—';
   const varietyName = variety?.name || '—';
   const shiftLabel = session.shift === 'MANHA' ? 'Manhã' : 'Tarde';
-  const fruitIcon = session.fruit_type === 'MELANCIA' ? 'Melancia' : 'Melão';
+  const ftUpper = String(session.fruit_type || '').toUpperCase();
+  const fruitIcon = ftUpper.includes('MELANCIA') ? 'Melancia' : (ftUpper.includes('SAPO') ? 'Pele de Sapo' : 'Melão');
   const seqNum = (() => {
   const carriageObj = carriages.find(c => c.id == session.carriage_id);
   return carriageObj ? carriageObj.code : (session.carrao_seq ? `#${session.carrao_seq}` : (session.qty_carrocoes || '—'));
@@ -11502,23 +11713,59 @@ async function pushCarrao({ session, workers, carriageIds = [] }) {
   console.warn('Erro ao buscar carrao_seq:', e);
   }
 
+  // Se ainda não achou parcel_id em dbParcels, tenta buscar ou criar na tabela parcels para manter FK íntegra
+  const parcelLabel = session.parcela || session.parcel_code || (cycleMatch ? (cycleMatch.parcela2 || cycleMatch.parcela) : null);
+  if (resolvedParcelId && !(dbParcels || []).some(dp => dp.id === resolvedParcelId)) {
+    const byCode = (dbParcels || []).find(dp => dp.code && parcelLabel && dp.code.trim().toUpperCase() === parcelLabel.trim().toUpperCase());
+    if (byCode) {
+      resolvedParcelId = byCode.id;
+    } else if (parcelLabel) {
+      try {
+        const { data: newP } = await sb.from('parcels').insert([{ tenant_id: session.tenant_id, code: parcelLabel.trim(), active: true }]).select('id, code').single();
+        if (newP && newP.id) {
+          resolvedParcelId = newP.id;
+          dbParcels.push(newP);
+        } else {
+          resolvedParcelId = null;
+        }
+      } catch (e) {
+        resolvedParcelId = null;
+      }
+    } else {
+      resolvedParcelId = null;
+    }
+  }
+
+  const ALLOWED_SESSION_COLS = [
+    'id', 'tenant_id', 'ts', 'date', 'shift', 'corte', 'fruit_type',
+    'parcel_id', 'variety_id', 'tractor_driver', 'machine_code',
+    'machine_operator', 'machine_id', 'qty_carrocoes', 'price_per_carrao',
+    'total_value', 'value_per_employee', 'employee_count', 'registered_by',
+    'julian_lot', 'carrao_seq', 'carriage_id', 'carriage_code'
+  ];
+
   const qty = session.qty_carrocoes;
   const sessionsToInsert = [];
   
   for (let i = 0; i < qty; i++) {
-  const sObj = {
-  id: clientUUID(),
-  ...session,
-  parcel_id: resolvedParcelId || null,
-  parcela: session.parcela || (cycleMatch ? (cycleMatch.parcela2 || cycleMatch.parcela) : null),
-  qty_carrocoes: 1, 
-  total_value: session.price_per_carrao, 
-  value_per_employee: session.price_per_carrao / session.employee_count,
-  carrao_seq: nextSeq + i,
-  carriage_id: carriageIds[i] || session.carriage_id || null
-  };
-  delete sObj.synced;
-  sessionsToInsert.push(sObj);
+    const cId = carriageIds[i] || session.carriage_id || null;
+    const cObj = (carriages || []).find(c => c.id == cId);
+    const rawObj = {
+      ...session,
+      id: clientUUID(),
+      parcel_id: resolvedParcelId || null,
+      qty_carrocoes: 1,
+      total_value: parseFloat(Number(session.price_per_carrao || 0).toFixed(2)),
+      value_per_employee: parseFloat((Number(session.price_per_carrao || 0) / Math.max(1, session.employee_count || 1)).toFixed(2)),
+      carrao_seq: nextSeq + i,
+      carriage_id: cId,
+      carriage_code: cObj ? cObj.code : null
+    };
+    const dbRow = {};
+    ALLOWED_SESSION_COLS.forEach(col => {
+      if (rawObj[col] !== undefined) dbRow[col] = rawObj[col];
+    });
+    sessionsToInsert.push(dbRow);
   }
 
   // Tenta inserção normal primeiro; se der 409 (Conflict), tenta upsert
@@ -11583,7 +11830,15 @@ async function pushCarrao({ session, workers, carriageIds = [] }) {
   if (empErr) console.warn('Aviso ao inserir funcionários:', empErr.message);
   }
   
-  return sessList.map(sess => ({ session: sess, workers: empRows.filter(r => r.session_id === sess.id) }));
+  return sessList.map(sess => ({
+    session: {
+      ...sess,
+      parcela: parcelLabel,
+      parcel_code: parcelLabel,
+      pincelador1: session.pincelador1 || sess.registered_by || null
+    },
+    workers: empRows.filter(r => r.session_id === sess.id)
+  }));
 }
 
 function resetCForm() {

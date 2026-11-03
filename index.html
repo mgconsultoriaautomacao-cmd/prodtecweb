@@ -4982,11 +4982,13 @@
   <h1 class="ptitle"><i data-lucide="leaf"></i> Rastreabilidade</h1>
   <div class="grid3">
   <div class="card">
-  <div class="title"><i data-lucide="apple" class="btn-i"></i> Frutas</div>
-  <div style="display:flex;gap:8px;margin-bottom:10px">
-  <input id="fruitName" placeholder="Nova fruta" style="flex:2"/>
-  <input id="fruitPrice" placeholder="R$ Carrocão" style="flex:1" type="number" step="0.01"/>
-  <button onclick="addFruit()" style="padding:9px 14px"><i data-lucide="plus" style="width:16px;height:16px"></i></button>
+  <div class="title"><i data-lucide="apple" class="btn-i"></i> Frutas &amp; Valores de Colheita (por Carrocão)</div>
+  <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr auto;gap:6px;margin-bottom:10px;align-items:end">
+  <div><label class="flabel" style="font-size:10px">Fruta</label><input id="fruitName" placeholder="Ex: MELAO"/></div>
+  <div><label class="flabel" style="font-size:10px">R$ Equipe</label><input id="fruitPrice" placeholder="0,00" type="number" step="0.01"/></div>
+  <div><label class="flabel" style="font-size:10px">R$ Resp. Colheita</label><input id="fruitRespPrice" placeholder="0,00" type="number" step="0.01"/></div>
+  <div><label class="flabel" style="font-size:10px">R$ Op. Máquina</label><input id="fruitOpPrice" placeholder="0,00" type="number" step="0.01"/></div>
+  <button onclick="addFruit()" style="padding:9px 14px" title="Adicionar Fruta"><i data-lucide="plus" style="width:16px;height:16px"></i></button>
   </div>
   <div id="fruitList" class="card-list"></div>
   </div>
@@ -7340,6 +7342,12 @@ async function refreshFin(){
   });
 
   // 3. Colheita (Carrocao)
+  if (!window._fruits || window._fruits.length === 0) {
+    try {
+      const { data: fData } = await sb.from('fruits').select('*').eq('tenant_id', tenantId).eq('active', true);
+      window._fruits = fData || [];
+    } catch(e) {}
+  }
   const {data:cServices} = await sb.from('field_carrao_sessions').select('*, field_carrao_employees(*)').eq('tenant_id',tenantId).gte('date',s).lte('date',e);
   (cServices||[]).forEach(srv => {
     if (!roleMatches(selectedRole, 'COLHEITA')) return;
@@ -7366,6 +7374,49 @@ async function refreshFin(){
       eb[key].fieldOps++;
       eb[key].activities.push({ date: srv.date, sector: 'COLHEITA', operation: 'CARROCÃO', value: v });
     });
+
+    // Pagamento do Responsável pela Colheita (Pincelador / Líder) e Operador da Máquina de Colheita por Tipo de Fruta
+    const fMatch = (window._fruits || []).find(f => normStr(f.name) === normStr(srv.fruit_type));
+    const fRates = typeof parseFruitHarvestRates === 'function' ? parseFruitHarvestRates(fMatch) : { respRate: 0, opRate: 0 };
+    const qtyCar = Math.max(1, Number(srv.qty_carrocoes || 1));
+
+    const respNameRaw = (srv.pincelador1 || srv.registered_by || '').trim();
+    if (fRates.respRate > 0 && respNameRaw && !['ADMIN', 'SISTEMA'].includes(respNameRaw.toUpperCase())) {
+      const respEmp = _employees.find(em => normStr(em.name) === normStr(respNameRaw));
+      if (empMatches(respEmp, respEmp?.barcode, respNameRaw, respEmp?.id)) {
+        const dName = respEmp?.name || respNameRaw;
+        const barcode = respEmp?.barcode || null;
+        const key = resolveCanonicalKey(respEmp, barcode, dName, respEmp?.id);
+        ensureEntry(key, { displayName: dName, barcode, role: 'COLHEITA' });
+        if (respEmp && eb[key].displayName !== respEmp.name) eb[key].displayName = respEmp.name;
+        if (respEmp?.barcode && !eb[key].barcode) eb[key].barcode = respEmp.barcode;
+        if (!['EMBALADOR','EMPILHADOR'].includes(eb[key].role)) eb[key].role = 'COLHEITA';
+        const vResp = Number((fRates.respRate * qtyCar).toFixed(2));
+        eb[key].fieldVal += vResp;
+        eb[key].val += vResp;
+        eb[key].fieldOps++;
+        eb[key].activities.push({ date: srv.date, sector: 'COLHEITA', operation: `RESP. COLHEITA (${srv.fruit_type || 'FRUTA'})`, value: vResp });
+      }
+    }
+
+    const opNameRaw = (srv.machine_operator || '').trim();
+    if (fRates.opRate > 0 && opNameRaw && opNameRaw.toUpperCase() !== 'OUTRO') {
+      const opEmp = _employees.find(em => normStr(em.name) === normStr(opNameRaw));
+      if (empMatches(opEmp, opEmp?.barcode, opNameRaw, opEmp?.id)) {
+        const dName = opEmp?.name || opNameRaw;
+        const barcode = opEmp?.barcode || null;
+        const key = resolveCanonicalKey(opEmp, barcode, dName, opEmp?.id);
+        ensureEntry(key, { displayName: dName, barcode, role: 'COLHEITA' });
+        if (opEmp && eb[key].displayName !== opEmp.name) eb[key].displayName = opEmp.name;
+        if (opEmp?.barcode && !eb[key].barcode) eb[key].barcode = opEmp.barcode;
+        if (!['EMBALADOR','EMPILHADOR'].includes(eb[key].role)) eb[key].role = 'COLHEITA';
+        const vOp = Number((fRates.opRate * qtyCar).toFixed(2));
+        eb[key].fieldVal += vOp;
+        eb[key].val += vOp;
+        eb[key].fieldOps++;
+        eb[key].activities.push({ date: srv.date, sector: 'COLHEITA', operation: `OP. MÁQUINA COLHEITA (${srv.fruit_type || 'FRUTA'})`, value: vOp });
+      }
+    }
   });
 
   const {data:qAudits}=await sb.from('quality_audits').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
@@ -9653,20 +9704,60 @@ async function delMapping(id){await sb.from('barcode_mappings').delete().eq('id'
 // ══════════════════════════════════════
 // RASTREABILIDADE
 // ══════════════════════════════════════
+function parseFruitHarvestRates(f) {
+  if (!f) return { code: '1', carraoRate: 0, respRate: 0, opRate: 0 };
+  const raw = String(f.track_code || '');
+  const parts = raw.split('|');
+  const code = (parts[0] || '').trim() || (typeof getFruitTrackCode === 'function' ? getFruitTrackCode('', f.name) : '1');
+  let respRate = Number(f.resp_value_per_carrao || 0);
+  let opRate = Number(f.op_value_per_carrao || 0);
+  for (let i = 1; i < parts.length; i++) {
+    const [k, v] = parts[i].split('=');
+    if (k === 'resp') respRate = parseFloat(v) || 0;
+    if (k === 'op') opRate = parseFloat(v) || 0;
+  }
+  return {
+    code,
+    carraoRate: Number(f.value_per_carrao || 0),
+    respRate,
+    opRate
+  };
+}
+
+function encodeFruitTrackCode(code, respRate, opRate) {
+  const cleanCode = String(code || '1').split('|')[0].trim() || '1';
+  const r = Number(respRate || 0);
+  const o = Number(opRate || 0);
+  if (r > 0 || o > 0) {
+    return `${cleanCode}|resp=${r.toFixed(2)}|op=${o.toFixed(2)}`;
+  }
+  return cleanCode;
+}
+
 const simpleList=(tbl,el,label,keyCol)=>async(items)=>{
-  $(el).innerHTML=(items||[]).map(i=>`
+  $(el).innerHTML=(items||[]).map(i=>{
+  const rates = tbl === 'fruit' ? parseFruitHarvestRates(i) : null;
+  const displayCode = rates ? rates.code : (i.track_code||'—');
+  return `
   <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
   <div>
-  <span style="font-weight:700;color:var(--blue);margin-right:8px">${i.track_code||'—'}</span>
-  <span>${i[keyCol]}</span>
-  ${i.value_per_carrao ? `<span style="color:var(--green);font-size:11px;margin-left:8px">(R$ ${Number(i.value_per_carrao).toFixed(2).replace('.',',')})</span>` : ''}
+  <span style="font-weight:700;color:var(--blue);margin-right:8px">${displayCode}</span>
+  <span style="font-weight:600">${i[keyCol]}</span>
+  ${tbl === 'fruit' ? `
+    <div style="font-size:11px;margin-top:3px;display:flex;gap:8px;flex-wrap:wrap">
+      <span style="color:var(--green)">Equipe: <b>R$ ${rates.carraoRate.toFixed(2).replace('.',',')}</b></span>
+      <span style="color:var(--orange)">Resp. Colheita: <b>R$ ${rates.respRate.toFixed(2).replace('.',',')}</b></span>
+      <span style="color:var(--blue)">Op. Máquina: <b>R$ ${rates.opRate.toFixed(2).replace('.',',')}</b></span>
+    </div>
+  ` : (i.value_per_carrao ? `<span style="color:var(--green);font-size:11px;margin-left:8px">(R$ ${Number(i.value_per_carrao).toFixed(2).replace('.',',')})</span>` : '')}
   </div>
   <div>
-  ${tbl === 'fruit' ? `<button class="sec" style="padding:3px 8px;margin-right:4px;border-color:var(--green);color:var(--green);" onclick="editFruitPrice('${i.id}', '${i[keyCol].replace(/'/g, "\\'")}', ${i.value_per_carrao || 0})"> R$</button>` : ''}
-  <button class="sec" style="padding:3px 8px;margin-right:4px" onclick="setTrackCode('${tbl}s','${i.id}','${i.track_code||''}')">Code</button>
+  ${tbl === 'fruit' ? `<button class="sec" style="padding:3px 8px;margin-right:4px;border-color:var(--green);color:var(--green);" onclick="editFruitPrice('${i.id}')"> R$</button>` : ''}
+  <button class="sec" style="padding:3px 8px;margin-right:4px" onclick="setTrackCode('${tbl}s','${i.id}','${displayCode}')">Code</button>
   <button class="danger" style="padding:3px 8px" onclick="window.del_${tbl}('${i.id}')">×</button>
   </div>
-  </div>`).join('')||`<div style="color:var(--muted);font-size:12px;padding:8px">Nenhum(a).</div>`;
+  </div>`;
+  }).join('')||`<div style="color:var(--muted);font-size:12px;padding:8px">Nenhum(a).</div>`;
 };
 
 async function loadFruits(){
@@ -9690,20 +9781,46 @@ async function loadFruits(){
   } catch(e) { console.error(e); }
 }
 
-async function editFruitPrice(id, name, currentVal) {
-  const newPrice = prompt(`Novo valor por carroção para ${name} (R$):`, currentVal);
+async function editFruitPrice(id, nameArg, currentValArg) {
+  const fruitObj = (window._fruits || []).find(f => f.id === id);
+  const rates = parseFruitHarvestRates(fruitObj || { name: nameArg, value_per_carrao: currentValArg });
+  const name = fruitObj?.name || nameArg || 'Fruta';
+
+  const newPrice = prompt(`1/3 — Valor da EQUIPE DE COLHEDORES por carrocão para ${name} (R$):`, rates.carraoRate.toFixed(2));
   if (newPrice === null) return;
-  const parsed = parseFloat(newPrice.replace(',', '.'));
-  if (isNaN(parsed)) {
-  alert('Valor inválido!');
-  return;
+  const parsedTeam = parseFloat(String(newPrice).replace(',', '.'));
+  if (isNaN(parsedTeam) || parsedTeam < 0) {
+    alert('Valor inválido para Equipe de Colhedores!');
+    return;
   }
-  const { error } = await sb.from('fruits').update({ value_per_carrao: parsed }).eq('id', id);
+
+  const newResp = prompt(`2/3 — Valor do RESPONSÁVEL PELA COLHEITA (Pincelador/Líder) por carrocão para ${name} (R$):`, rates.respRate.toFixed(2));
+  if (newResp === null) return;
+  const parsedResp = parseFloat(String(newResp).replace(',', '.'));
+  if (isNaN(parsedResp) || parsedResp < 0) {
+    alert('Valor inválido para Responsável pela Colheita!');
+    return;
+  }
+
+  const newOp = prompt(`3/3 — Valor do OPERADOR DA MÁQUINA DE COLHEITA por carrocão para ${name} (R$):`, rates.opRate.toFixed(2));
+  if (newOp === null) return;
+  const parsedOp = parseFloat(String(newOp).replace(',', '.'));
+  if (isNaN(parsedOp) || parsedOp < 0) {
+    alert('Valor inválido para Operador da Máquina!');
+    return;
+  }
+
+  const encodedTrackCode = encodeFruitTrackCode(rates.code, parsedResp, parsedOp);
+  const { error } = await sb.from('fruits').update({
+    value_per_carrao: parsedTeam,
+    track_code: encodedTrackCode
+  }).eq('id', id);
+
   if (error) {
-  alert('Erro ao atualizar valor: ' + error.message);
+    alert('Erro ao atualizar valores: ' + error.message);
   } else {
-  toast('Valor atualizado com sucesso!', 'success');
-  loadFruits();
+    toast('Valores de colheita atualizados com sucesso!', 'success');
+    loadFruits();
   }
 }
 async function loadVarieties(){
@@ -9848,11 +9965,20 @@ async function loadLinks(){
 
 async function addFruit(){
   const n=$('fruitName').value.trim(), p=$('fruitPrice').value;
+  const respP = $('fruitRespPrice')?.value;
+  const opP = $('fruitOpPrice')?.value;
   if(!n)return;
-  const tCode = typeof getFruitTrackCode === 'function' ? getFruitTrackCode('', n) : '1';
+  const baseCode = typeof getFruitTrackCode === 'function' ? getFruitTrackCode('', n) : '1';
+  const tCode = encodeFruitTrackCode(baseCode, parseFloat(respP)||0, parseFloat(opP)||0);
   const {error}=await sb.from('fruits').insert([{name:n,active:true,tenant_id:tenantId, value_per_carrao: parseFloat(p)||0, track_code: tCode}]);
   if(error) alert('Erro: ' + error.message);
-  else { $('fruitName').value=''; $('fruitPrice').value=''; loadFruits(); }
+  else {
+    $('fruitName').value='';
+    $('fruitPrice').value='';
+    if ($('fruitRespPrice')) $('fruitRespPrice').value='';
+    if ($('fruitOpPrice')) $('fruitOpPrice').value='';
+    loadFruits();
+  }
 }
 async function addVariety(){
   const n=$('varName').value.trim();
@@ -10233,9 +10359,15 @@ async function unlinkUser(id) {
 }
 
 async function setTrackCode(tbl, id, cur) {
-  const code = prompt('Código de Rastreabilidade (1 dígito):', cur);
+  const code = prompt('Código de Rastreabilidade (1 dígito):', String(cur || '').split('|')[0]);
   if(code === null) return;
-  await sb.from(tbl).update({track_code: code}).eq('id', id);
+  let finalCode = code.trim();
+  if (tbl === 'fruits') {
+    const fObj = (window._fruits || []).find(f => f.id === id);
+    const rates = parseFruitHarvestRates(fObj);
+    finalCode = encodeFruitTrackCode(finalCode, rates.respRate, rates.opRate);
+  }
+  await sb.from(tbl).update({track_code: finalCode}).eq('id', id);
   showTab('trace'); // Reload current tab
 }
 
@@ -17474,28 +17606,106 @@ function e3dRenderColdTable() {
   }).join('');
 }
 
+async function e3dDeletePalletsFromDb(slotsList) {
+  const validSlots = (slotsList || []).filter(Boolean);
+  const idsToDelete = validSlots.map(s => s.id).filter(Boolean);
+
+  // 1. Marcar production_scans correspondentes de hoje como EXCLUIDO para que a reconciliação automática do e3dLoadGridState não recrie os pallets excluídos!
+  try {
+    const todayIso = toISO(today());
+    const scansToday = await sbFetchAll(
+      sb.from('production_scans')
+        .select('id, role, variety_name, caliber, parcel_code, weight_name')
+        .eq('tenant_id', tenantId)
+        .gte('ts', todayIso)
+    );
+    if (scansToday && scansToday.length > 0) {
+      const scanPoolByKey = {};
+      for (const sc of scansToday) {
+        const info = e3dScanStockInfo(sc);
+        if (!info) continue;
+        if (!scanPoolByKey[info.key]) scanPoolByKey[info.key] = [];
+        scanPoolByKey[info.key].push(sc.id);
+      }
+      const scanIdsToExclude = [];
+      for (const s of validSlots) {
+        const key = [
+          (s.boxType || '').trim().toUpperCase(),
+          String(s.caliber || '').trim().toUpperCase(),
+          (s.parcel || '').trim().toUpperCase()
+        ].join('|');
+        const pool = scanPoolByKey[key];
+        if (pool && pool.length > 0) {
+          const takeCount = Math.min(pool.length, Math.max(0, parseInt(s.boxes) || 0));
+          for (let i = 0; i < takeCount; i++) {
+            scanIdsToExclude.push(pool.shift());
+          }
+        }
+      }
+      for (let i = 0; i < scanIdsToExclude.length; i += 100) {
+        const chunk = scanIdsToExclude.slice(i, i + 100);
+        await sb.from('production_scans').update({ caliber: 'EXCLUIDO' }).in('id', chunk);
+      }
+    }
+  } catch (reconcileErr) {
+    console.warn('[WMS Delete] Aviso ao marcar scans como EXCLUIDO:', reconcileErr);
+  }
+
+  // 2. Excluir efetivamente da tabela pallets (em lotes de 50, com fallback via SUPABASE_KEY caso a policy RLS da sessão bloqueie DELETE)
+  for (let i = 0; i < idsToDelete.length; i += 50) {
+    const chunk = idsToDelete.slice(i, i + 50);
+    let deletedCount = 0;
+    try {
+      const { data: delData, error: delErr } = await sb.from('pallets').delete().in('id', chunk).select('id');
+      if (!delErr && Array.isArray(delData)) {
+        deletedCount = delData.length;
+      }
+    } catch (e) {}
+
+    if (deletedCount < chunk.length) {
+      try {
+        const url = `${SUPABASE_URL}/rest/v1/pallets?id=in.(${chunk.join(',')})`;
+        const resp = await fetch(url, {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'x-tenant-id': tenantId || '',
+            'Prefer': 'return=representation'
+          }
+        });
+        if (resp.ok) {
+          const fallbackRows = await resp.json();
+          deletedCount += Array.isArray(fallbackRows) ? fallbackRows.length : 0;
+        }
+      } catch (fbErr) {
+        console.warn('[WMS Delete] Fallback REST DELETE falhou:', fbErr);
+      }
+    }
+
+    if (deletedCount === 0) {
+      await sb.from('pallets').update({ location: 'DELETED', box_count: 0 }).in('id', chunk);
+    }
+  }
+}
+
 async function e3dDeleteColdPallet(id, pNum) {
   const pName = pNum ? `P${String(pNum).padStart(2,'0')}` : '';
   if (!confirm(`Deseja realmente EXCLUIR o pallet ${pName} da câmara fria?\n\nEsta ação liberará a vaga e removerá o pallet permanentemente.`)) return;
   try {
-    if (id && window.sb) {
-      const { error } = await sb.from('pallets').delete().eq('id', id);
-      if (error) {
-        toast('Erro ao excluir do Supabase: ' + error.message, 'danger');
-        return;
-      }
-    }
     const cIdx = e3d.coldGrid.findIndex(s => s && ((id && s.id === id) || (pNum && s.palletNum === pNum)));
+    const slotObj = cIdx !== -1 ? e3d.coldGrid[cIdx] : { id };
+    await e3dDeletePalletsFromDb([slotObj]);
     if (cIdx !== -1) {
       e3d.coldGrid[cIdx] = { status: E3D_STATUS.EMPTY, boxes: 0, caliber: null, boxType: '', boxModel: '', parcel: '', label: '', obs: '', palletNum: 0, closedAt: null, id: null };
     }
-    toast(`Pallet ${pName} excluído com sucesso!`, 'success');
     e3dSaveGridState();
     e3dRenderGrid();
     e3dRenderColdTable();
     e3dUpdateKPIs();
     e3dRenderQueue();
     await e3dLoadGridState();
+    toast(`Pallet ${pName} excluído com sucesso!`, 'success');
   } catch (err) {
     console.error('Erro ao excluir pallet da câmara:', err);
     toast('Erro ao excluir pallet: ' + err.message, 'danger');
@@ -18051,14 +18261,7 @@ async function e3dDeleteCurrentPallet() {
   }
 
   try {
-    if (slot.id && window.sb) {
-      const { error } = await sb.from('pallets').delete().eq('id', slot.id);
-      if (error) {
-        console.warn('Erro ao excluir pallet do Supabase:', error);
-        toast('Erro ao excluir pallet: ' + error.message, 'danger');
-        return;
-      }
-    }
+    await e3dDeletePalletsFromDb([slot]);
 
     const emptySlot = {
       status: E3D_STATUS.EMPTY,
@@ -18080,7 +18283,6 @@ async function e3dDeleteCurrentPallet() {
       e3d.coldGrid[idx] = emptySlot;
     }
 
-    toast(`Pallet ${pNum} excluído com sucesso!`, 'success');
     e3dClosePalletModal();
     e3dSaveGridState();
     e3dRenderGrid();
@@ -18088,6 +18290,7 @@ async function e3dDeleteCurrentPallet() {
     e3dUpdateKPIs();
     e3dRenderQueue();
     await e3dLoadGridState();
+    toast(`Pallet ${pNum} excluído com sucesso!`, 'success');
   } catch (err) {
     console.error('Erro ao excluir pallet:', err);
     toast('Erro inesperado ao excluir pallet.', 'danger');
@@ -18107,10 +18310,10 @@ async function e3dDeleteSelectedPallets() {
   }
 
   try {
-    const idsToDelete = [];
+    const slotsToDelete = [];
     e3dSelectedSlots.forEach(item => {
       const s = item.slot || item;
-      if (s && s.id) idsToDelete.push(s.id);
+      if (s) slotsToDelete.push({ ...s });
 
       const emptySlot = { status: E3D_STATUS.EMPTY, boxes: 0, caliber: null, boxType: '', boxModel: '', parcel: '', label: '', obs: '', palletNum: 0, closedAt: null, id: null };
       
@@ -18128,13 +18331,7 @@ async function e3dDeleteSelectedPallets() {
       }
     });
 
-    if (idsToDelete.length > 0 && window.sb) {
-      const { error } = await sb.from('pallets').delete().in('id', idsToDelete);
-      if (error) {
-        console.error('Erro ao excluir do Supabase:', error);
-        toast('Erro ao excluir do Supabase: ' + error.message, 'danger');
-      }
-    }
+    await e3dDeletePalletsFromDb(slotsToDelete);
 
     e3dClearSelection();
     e3dSaveGridState();
@@ -24943,7 +25140,7 @@ function getFruitTrackCode(varietyName, fruitName) {
   // 3. Procura em cache de frutas salvas no sistema
   if (window._fruits && window._fruits.length > 0) {
     const foundFruit = window._fruits.find(x => x.name && x.name.toUpperCase() === f);
-    if (foundFruit && foundFruit.track_code) return String(foundFruit.track_code).trim();
+    if (foundFruit && foundFruit.track_code) return String(foundFruit.track_code).split('|')[0].trim();
   }
 
   // 4. Regras por Categoria da Fruta
