@@ -7419,8 +7419,11 @@ async function refreshFin(){
     }
   });
 
-  const {data:qAudits}=await sb.from('quality_audits').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59'));
-  const {data:stops}=await sb.from('global_stops').select('*').eq('tenant_id',tenantId).gte('start_ts',s).lte('start_ts',e+'T23:59:59Z');
+  const [qAudits, stopsRes] = await Promise.all([
+    sbFetchAll(sb.from('quality_audits').select('id, ts, station_id, employee_barcode, penalty_boxes, reason, issue_type, inspector_name, parcel_id, variety_id').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')).order('ts', { ascending: false })).catch(() => []),
+    sb.from('global_stops').select('*').eq('tenant_id',tenantId).gte('start_ts',s).lte('start_ts',e+'T23:59:59Z')
+  ]);
+  const stops = stopsRes?.data || [];
 
   const bonusMonthly = Number(tenantConfig.attendance_bonus || 0);
   const penalty = Number(tenantConfig.attendance_penalty || 0);
@@ -7503,6 +7506,9 @@ async function refreshFin(){
 
   window._lastFinEb = eb;
   window._lastFinAbs = abs;
+  window._lastFinScansByEmp = scansByEmp;
+  window._lastFinAuditsByEmp = auditsByEmp;
+  window._lastFinPeriod = { start: s, end: e };
 
   const tbody = $('finTable').querySelector('tbody');
   const sForm = s.split('-').reverse().join('/');
@@ -8099,6 +8105,7 @@ function buildRankingGrid(scans, containerId, audits = []){
     c.name.trim().toLowerCase(),
     {
       employee_name: c.name,
+      barcode: c.barcode,
       boxes: c.boxes,
       rawBoxes: c.rawBoxes,
       kg: c.kg,
@@ -8106,7 +8113,8 @@ function buildRankingGrid(scans, containerId, audits = []){
       qualityIssues: c.penalties,
       qualityPct: c.qualityPct,
       yieldPct: c.yieldPct,
-      score: c.score
+      score: c.score,
+      scans: c.scans
     }
   ]));
 
@@ -8691,27 +8699,26 @@ async function openEmpDrawer(idOrName) {
 
   const stats = window._lastEmpStats ? (window._lastEmpStats[clean] || (emp ? window._lastEmpStats[emp.name.trim().toLowerCase()] : null)) : null;
   const activeTab = document.querySelector('.tab.active')?.id;
-  const rawStart = (activeTab === 'tab-finance' ? $('finStart')?.value : $('dashStart')?.value) || new Date().toISOString().split('T')[0];
-  const rawEnd = (activeTab === 'tab-finance' ? $('finEnd')?.value : $('dashEnd')?.value) || rawStart;
+  let rawStart = $('dashStart')?.value;
+  let rawEnd = $('dashEnd')?.value;
+  if (activeTab === 'tab-finance') {
+    rawStart = $('finStart')?.value || rawStart;
+    rawEnd = $('finEnd')?.value || rawEnd;
+  } else if (activeTab === 'tab-ranking') {
+    rawStart = $('rankStart')?.value || rawStart;
+    rawEnd = $('rankEnd')?.value || rawEnd;
+  } else if (activeTab === 'tab-quality') {
+    rawStart = $('qaStart')?.value || rawStart;
+    rawEnd = $('qaEnd')?.value || rawEnd;
+  }
+  rawStart = rawStart || new Date().toISOString().split('T')[0];
+  rawEnd = rawEnd || rawStart;
 
   const sDateOnly = rawStart.split('T')[0];
   const eDateOnly = rawEnd.split('T')[0];
-  const startMs = new Date(sDateOnly + 'T00:00:00').getTime();
-  const endMs = new Date(eDateOnly + 'T23:59:59.999').getTime();
-  const startIso = sDateOnly;
-  const endIso = eDateOnly + 'T23:59:59Z';
 
   const empBarcode = emp.barcode ? String(emp.barcode).trim() : '0';
   const empName = emp.name ? String(emp.name).trim() : '';
-
-  let scanQuery = sb.from('production_scans').select('ts, weight_kg, role, raw_barcode, employee_name').eq('tenant_id', tenantId).gte('ts', toISO(sDateOnly)).lte('ts', toISO(eDateOnly, '23:59:59'));
-  if (emp.barcode && emp.name) {
-    scanQuery = scanQuery.or(`raw_barcode.eq.${empBarcode},employee_name.eq.${empName}`);
-  } else if (emp.barcode) {
-    scanQuery = scanQuery.eq('raw_barcode', empBarcode);
-  } else if (emp.name) {
-    scanQuery = scanQuery.eq('employee_name', empName);
-  }
 
   // Coleta todos os códigos de barras possíveis do colaborador (inclusive se houver mapeamento no packing)
   const targetBarcodes = new Set();
@@ -8725,7 +8732,12 @@ async function openEmpDrawer(idOrName) {
   }
   const barcodesList = Array.from(targetBarcodes);
 
-  let qualityQuery = sb.from('quality_audits').select('*').eq('tenant_id', tenantId);
+  let qualityQuery = sb.from('quality_audits')
+    .select('id, ts, station_id, employee_barcode, penalty_boxes, reason, issue_type, inspector_name, parcel_id, variety_id')
+    .eq('tenant_id', tenantId)
+    .gte('ts', toISO(sDateOnly))
+    .lte('ts', toISO(eDateOnly, '23:59:59'))
+    .order('ts', { ascending: false });
   if (barcodesList.length === 1) {
     qualityQuery = qualityQuery.eq('employee_barcode', barcodesList[0]);
   } else if (barcodesList.length > 1) {
@@ -8743,20 +8755,40 @@ async function openEmpDrawer(idOrName) {
     absenceQuery = absenceQuery.eq('employee_barcode', empBarcode);
   }
 
-  const [qAudits, qAbs, allScans, qFieldServices, qCarraoServices] = await Promise.all([
-    qualityQuery.gte('ts', toISO(sDateOnly)).lte('ts', toISO(eDateOnly, '23:59:59')).then(r => r).catch(() => ({ data: [] })),
+  // Reutiliza scans já carregados na aba ativa se corresponderem ao período, ou busca via keyset indexado sem timeout
+  const fetchEmpScans = async () => {
+    if ((activeTab === 'tab-ranking' || activeTab === 'tab-dash') && stats && Array.isArray(stats.scans) && stats.scans.length > 0) {
+      return [...stats.scans].sort((a, b) => new Date(a.ts) - new Date(b.ts));
+    }
+    if (activeTab === 'tab-finance' && window._lastFinPeriod?.start === sDateOnly && window._lastFinPeriod?.end === eDateOnly && window._lastFinScansByEmp) {
+      const fKey = (emp?.id && `ID:${emp.id}`) || (empBarcode !== '0' && `BC:${empBarcode}`) || `NAME:${normalizeStr(empName)}`;
+      const cachedScans = window._lastFinScansByEmp[fKey];
+      if (Array.isArray(cachedScans) && cachedScans.length > 0) {
+        return [...cachedScans].sort((a, b) => new Date(a.ts) - new Date(b.ts));
+      }
+    }
+    if (empBarcode && empBarcode !== '0') {
+      const ksScans = await sbFetchScansKeyset({ start: sDateOnly, end: eDateOnly, barcode: empBarcode });
+      if (ksScans && ksScans.length > 0) return ksScans;
+    }
+    if (Array.isArray(window._rankScans) && window._rankScans.length > 0) {
+      const fromMem = window._rankScans.filter(s => {
+        const bc = String(s.raw_barcode || s.employee_barcode || '').trim();
+        return (barcodesList.includes(bc)) || (empName && normalizeStr(s.employee_name) === normalizeStr(empName));
+      });
+      if (fromMem.length > 0) return fromMem.sort((a, b) => new Date(a.ts) - new Date(b.ts));
+    }
+    return [];
+  };
+
+  const [qAuditsList, qAbs, allScans, qFieldServices, qCarraoServices] = await Promise.all([
+    sbFetchAll(qualityQuery).catch(() => []),
     absenceQuery.then(r => r).catch(() => ({ data: [] })),
-    sbFetchByDays(sDateOnly, eDateOnly, (fromIso, toIso) => {
-      let q = sb.from('production_scans').select('ts, weight_kg, role, raw_barcode, employee_name')
-        .eq('tenant_id', tenantId).gte('ts', fromIso).lte('ts', toIso);
-      if (emp.barcode && emp.name) q = q.or(`raw_barcode.eq.${empBarcode},employee_name.eq.${empName}`);
-      else if (emp.barcode) q = q.eq('raw_barcode', empBarcode);
-      else if (emp.name) q = q.eq('employee_name', empName);
-      return q.order('ts', { ascending: true });
-    }, null, 1).catch(() => []),
+    fetchEmpScans().catch(() => []),
     sb.from('field_service_employees').select('*, field_services(*)').eq('employee_id', emp.id).then(r => r).catch(() => ({ data: [] })),
     sb.from('field_carrao_employees').select('*, field_carrao_sessions(*)').eq('employee_id', emp.id).then(r => r).catch(() => ({ data: [] }))
   ]);
+  const qAudits = { data: qAuditsList || [] };
 
   const qualityCount = (qAudits.data || []).reduce((sum, q) => sum + Number(q.penalty_boxes || 0), 0);
   const absencesCount = qAbs.data?.length || 0;
@@ -8785,7 +8817,8 @@ async function openEmpDrawer(idOrName) {
   ? `<img src="${safePhotoUrl(emp.photo_path)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%" onerror="this.parentElement.innerHTML='${emp.name[0]}'">` 
   : emp.name[0];
 
-  const totalBoxes = stats?.boxes || allScans.length;
+  const rawBoxesCount = allScans.length > 0 ? allScans.length : (stats?.rawBoxes || stats?.boxes || 0);
+  const totalBoxes = Math.max(0, rawBoxesCount - qualityCount);
   
   // Client-side date filter for field services
   const fieldServicesList = (qFieldServices.data || []).filter(fs => {
@@ -8816,8 +8849,10 @@ async function openEmpDrawer(idOrName) {
   window._activeDrawerStats = {
   name: emp.name,
   role: emp.role,
+  rawBoxes: rawBoxesCount,
+  netBoxes: totalBoxes,
   boxes: totalBoxes,
-  kg: allScans.reduce((sum, s) => sum + Number(s.weight_kg || 0), 0),
+  kg: allScans.length > 0 ? allScans.reduce((sum, s) => sum + Number(s.weight_kg || 0), 0) : (stats?.kg || 0),
   qualityIssues: qualityCount,
   absences: absencesCount,
   fieldOps: totalFieldOps,
@@ -8902,8 +8937,8 @@ async function openEmpDrawer(idOrName) {
   }).join('')}</div></div>`;
   }
   
-  const rawScansCount = allScans.length;
-  netBoxesCount = Math.max(0, rawScansCount - qualityCount);
+  const rawScansCount = rawBoxesCount;
+  netBoxesCount = totalBoxes;
   const indQualityPct = rawScansCount > 0 ? Math.round(Math.max(0, 100 - (qualityCount / rawScansCount * 100)) * 10) / 10 : 100.0;
   const qualColor = indQualityPct >= 95 ? 'var(--green)' : (indQualityPct >= 85 ? 'var(--yellow)' : 'var(--red)');
 
@@ -8949,6 +8984,7 @@ async function openEmpDrawer(idOrName) {
   <div class="pbi-card" style="padding:15px">
   <div class="klabel" style="font-size:9px">Produção Líquida</div>
   <div class="kpi-value-pbi" style="font-size:20px">${Math.round(netBoxesCount)} <span style="font-size:10px">cx</span></div>
+  <div style="font-size:9px; color:var(--muted)">${rawScansCount} brutas - ${qualityCount} erros</div>
   <div style="font-size:9px; color:${prodScore>90?'var(--green)':prodScore>60?'var(--yellow)':'var(--red)'}">${prodScore}% da Meta (${prodTarget} cx)</div>
   </div>
   <div class="pbi-card" style="padding:15px; border-left:3px solid ${qualColor};">
@@ -9087,7 +9123,7 @@ async function openEmpDrawer(idOrName) {
   <div class="pbi-card" style="border-left:4px solid var(--yellow); padding:15px">
   <div class="klabel" style="font-size:9px">Qualidade (Packing)</div>
   <div style="font-weight:800; font-size:14px; color:var(--yellow)">${qualityCount} erros</div>
-  <div style="font-size:9px; color:var(--muted)">Taxa: ${totalBoxes > 0 ? ((qualityCount / totalBoxes) * 100).toFixed(1) + '%' : '—'}</div>
+  <div style="font-size:9px; color:var(--muted)">Taxa: ${rawBoxesCount > 0 ? ((qualityCount / rawBoxesCount) * 100).toFixed(1) + '%' : '—'}</div>
   </div>
   </div>
   `;
@@ -10049,7 +10085,14 @@ function importTotvs(input) { alert('Processando relatório TOTVS...'); }
 // ══════════════════════════════════════
 async function refreshQuality() {
   const s=$('qaStart').value, e=$('qaEnd').value;
-  const {data}=await sb.from('quality_audits').select('*').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')).order('ts',{ascending:false});
+  const data = await sbFetchAll(
+    sb.from('quality_audits')
+      .select('id, ts, station_id, employee_barcode, penalty_boxes, reason, issue_type, inspector_name, parcel_id, variety_id')
+      .eq('tenant_id', tenantId)
+      .gte('ts', toISO(s))
+      .lte('ts', toISO(e, '23:59:59'))
+      .order('ts', { ascending: false })
+  ).catch(() => []);
   const qaTable = $('qaTable').querySelector('tbody');
   if(!qaTable) return;
   
@@ -10913,14 +10956,15 @@ function exportFinPDF(){
   alternateRowStyles:{fillColor:[245,247,250]},
   theme:'grid',
   styles:{fontSize:7.5,cellPadding:2.5},
+  margin: { left: 14, right: 14 },
   columnStyles: {
   0: { cellWidth: 6 },
-  1: { cellWidth: 36 },
+  1: { cellWidth: 35 },
   2: { cellWidth: 20 },
   3: { cellWidth: 22 },
   4: { cellWidth: 20 },
   5: { cellWidth: 20 },
-  6: { cellWidth: 36 },
+  6: { cellWidth: 35 },
   7: { cellWidth: 22 }
   },
   foot:[['','TOTAL','','','','','',BRL(sumVal)]],
@@ -10954,11 +10998,12 @@ function exportFinPDF(){
   alternateRowStyles:{fillColor:[245,247,250]},
   theme:'grid',
   styles:{fontSize:9,cellPadding:4},
+  margin: { left: 14, right: 14 },
   columnStyles: {
   0: { cellWidth: 8 },
-  1: { cellWidth: 50 },
+  1: { cellWidth: 49 },
   2: { cellWidth: 30 },
-  3: { cellWidth: 34 },
+  3: { cellWidth: 33 },
   4: { cellWidth: 30 },
   5: { cellWidth: 30 }
   },
@@ -12463,11 +12508,15 @@ async function exportEmpDossierPDF() {
   const bonusEarned = stats.bonusEarned || 0;
   const totalToPay = packingEarned + fieldEarned + bonusEarned;
 
+  const rawBx = Math.round(stats.rawBoxes ?? stats.boxes ?? 0);
+  const netBx = Math.round(stats.netBoxes ?? stats.boxes ?? 0);
+  const penBx = Math.round(stats.qualityIssues || 0);
   const bodyRows = [
-  ['Produção Packing (Caixas)', `${Math.round(stats.boxes || 0)} cx (${(stats.kg || 0).toFixed(1)} kg)`, `R$ ${packingEarned.toFixed(2)}`],
+  ['Produção Bruta (Packing)', `${rawBx} cx brutas (${(stats.kg || 0).toFixed(1)} kg)`, '—'],
+  ['Desconto de Qualidade / Inspeção', penBx > 0 ? `-${penBx} cx penalizadas (abatidas da produção)` : '0 erros registrados', penBx > 0 ? `-${penBx} cx` : '—'],
+  ['Produção Líquida Contabilizada', `${netBx} cx líquidas (${rawBx} brutas - ${penBx} perdas)`, `R$ ${packingEarned.toFixed(2)}`],
   ['Serviços de Campo (Diárias/Carrocão)', `${stats.fieldOps || 0} apontamentos`, `R$ ${fieldEarned.toFixed(2)}`],
-  ['Bônus Assiduidade (Pro-rata período)', `${stats.absences || 0} faltas no período`, `R$ ${bonusEarned.toFixed(2)}`],
-  ['Falhas de Qualidade / Inspeção', `${stats.qualityIssues || 0} registros`, '—']
+  ['Bônus Assiduidade (Pro-rata período)', `${stats.absences || 0} faltas no período`, `R$ ${bonusEarned.toFixed(2)}`]
   ];
 
   if (stats.idleTime) {
