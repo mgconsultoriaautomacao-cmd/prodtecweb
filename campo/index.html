@@ -10901,7 +10901,20 @@ async function submitQuality() {
 }
 
 async function pushQuality(payload) {
-  const { error } = await sb.from('quality_audits').insert(payload);
+  const cleanPayload = { ...payload };
+  delete cleanPayload.synced;
+  if (cleanPayload.ts && cleanPayload.employee_barcode) {
+    const { data: existing } = await sb.from('quality_audits')
+      .select('id')
+      .eq('tenant_id', cleanPayload.tenant_id || tenantId)
+      .eq('ts', cleanPayload.ts)
+      .eq('employee_barcode', cleanPayload.employee_barcode)
+      .limit(1);
+    if (existing && existing.length > 0) {
+      return; // Já foi gravado anteriormente — evita duplicidade
+    }
+  }
+  const { error } = await sb.from('quality_audits').insert(cleanPayload);
   if (error) throw error;
 }
 

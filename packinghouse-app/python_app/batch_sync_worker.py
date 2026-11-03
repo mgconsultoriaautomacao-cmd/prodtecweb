@@ -282,8 +282,9 @@ class BatchSyncWorker(threading.Thread):
                 headers['Authorization'] = f'Bearer {new_token or key}'
                 res = requests.post(endpoint, headers=headers, json=body, timeout=20)
             if res.status_code in (200, 201, 204):
-                ids = ','.join(str(q['id']) for q in audits)
-                self._conn.execute(f"UPDATE quality_audits SET synced=1 WHERE id IN ({ids})")
+                for q in audits:
+                    ev_id = q['client_event_id'] or f"{q['station_id']}_{q['ts']}_{q['id']}"
+                    self._conn.execute("UPDATE quality_audits SET synced=1, client_event_id=? WHERE id=?", (ev_id, q['id']))
                 self._conn.commit()
                 print(f"BatchSyncWorker: {len(audits)} auditorias enviadas.")
 

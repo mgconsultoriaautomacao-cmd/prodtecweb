@@ -7437,10 +7437,11 @@ async function refreshFin(){
     }
   });
 
-  const [qAudits, stopsRes] = await Promise.all([
+  const [qAuditsRaw, stopsRes] = await Promise.all([
     sbFetchAll(sb.from('quality_audits').select('id, ts, station_id, employee_barcode, penalty_boxes, reason, issue_type, inspector_name, parcel_id, variety_id').eq('tenant_id',tenantId).gte('ts',toISO(s)).lte('ts',toISO(e,'23:59:59')).order('ts', { ascending: false })).catch(() => []),
     sb.from('global_stops').select('*').eq('tenant_id',tenantId).gte('start_ts',s).lte('start_ts',e+'T23:59:59Z')
   ]);
+  const qAudits = deduplicateQualityAudits(qAuditsRaw || []);
   const stops = stopsRes?.data || [];
 
   const bonusMonthly = Number(tenantConfig.attendance_bonus || 0);
@@ -7716,7 +7717,7 @@ let scans = [];
       sb.from('field_carrao_sessions').select('*, parcels(code), varieties(name)').eq('tenant_id',tenantId).gte('date',s).lte('date',e)
     ]);
     const stops = stopsRes?.data || [];
-    const audits = auditsRes || [];
+    const audits = deduplicateQualityAudits(auditsRes || []);
     const harvest = harvestRes?.data || [];
     window._currentStops = stops;
     updateStopBanner();
@@ -8004,7 +8005,23 @@ function buildWeightDetail(scans){
   if (window.lucide) lucide.createIcons();
 }
 
+function deduplicateQualityAudits(audits) {
+  if (!Array.isArray(audits) || audits.length <= 1) return audits || [];
+  const seen = new Set();
+  return audits.filter(q => {
+    if (!q) return false;
+    const idKey = q.id != null ? `ID:${q.id}` : null;
+    if (idKey && seen.has(idKey)) return false;
+    if (idKey) seen.add(idKey);
+    const sigKey = `SIG:${q.ts || ''}|${q.employee_barcode || q.employee_id || ''}|${q.penalty_boxes || 0}|${q.issue_type || ''}`;
+    if (q.ts && seen.has(sigKey)) return false;
+    if (q.ts) seen.add(sigKey);
+    return true;
+  });
+}
+
 function buildRankingGrid(scans, containerId, audits = []){
+  audits = deduplicateQualityAudits(audits);
   const eb={};
   scans.forEach(x=>{
     const bcode = x.raw_barcode || x.employee_barcode;
@@ -8806,7 +8823,7 @@ async function openEmpDrawer(idOrName) {
     sb.from('field_service_employees').select('*, field_services(*)').eq('employee_id', emp.id).then(r => r).catch(() => ({ data: [] })),
     sb.from('field_carrao_employees').select('*, field_carrao_sessions(*)').eq('employee_id', emp.id).then(r => r).catch(() => ({ data: [] }))
   ]);
-  const qAudits = { data: qAuditsList || [] };
+  const qAudits = { data: deduplicateQualityAudits(qAuditsList || []) };
 
   const qualityCount = (qAudits.data || []).reduce((sum, q) => sum + Number(q.penalty_boxes || 0), 0);
   const absencesCount = qAbs.data?.length || 0;

@@ -147,6 +147,7 @@ def sync_to_supabase(conn: sqlite3.Connection):
 
     if audits:
         body = [{
+            'client_event_id': q['client_event_id'] or f"{q['station_id']}_{q['ts']}_{q['id']}",
             'ts': _ms_to_iso(q['ts']),
             'station_id': q['station_id'],
             'employee_barcode': q['employee_barcode'],
@@ -157,10 +158,22 @@ def sync_to_supabase(conn: sqlite3.Connection):
             'tenant_id': tenant_id,
             'inspector_name': 'Desktop App',
         } for q in audits]
-        res = _post_with_retry(url, '/rest/v1/quality_audits', body, headers, conn, config)
+        audit_headers = {**headers, 'Prefer': 'return=representation,resolution=ignore-duplicates'}
+        res = _post_with_retry(url, '/rest/v1/quality_audits?on_conflict=tenant_id,client_event_id', body, audit_headers, conn, config)
         if res and res.ok:
-            ids = ','.join(str(q['id']) for q in audits)
-            _dbrun(conn, f'UPDATE quality_audits SET synced=1 WHERE id IN ({ids})')
+            try:
+                returned = res.json() if res.text else []
+                for idx_q, q in enumerate(audits):
+                    rem_id = returned[idx_q].get('id') if idx_q < len(returned) and isinstance(returned[idx_q], dict) else None
+                    ev_id = q['client_event_id'] or f"{q['station_id']}_{q['ts']}_{q['id']}"
+                    if rem_id:
+                        conn.execute('UPDATE quality_audits SET synced=1, remote_id=?, client_event_id=? WHERE id=?', (str(rem_id), ev_id, q['id']))
+                    else:
+                        conn.execute('UPDATE quality_audits SET synced=1, client_event_id=? WHERE id=?', (ev_id, q['id']))
+                conn.commit()
+            except Exception:
+                ids = ','.join(str(q['id']) for q in audits)
+                _dbrun(conn, f'UPDATE quality_audits SET synced=1 WHERE id IN ({ids})')
             print(f'Sync [up]: {len(audits)} auditorias enviadas.')
 
     # ── 3. Dicionários (Employees, Fruits, Varieties, Parcels, BoxWeights) ────
@@ -494,18 +507,33 @@ def _sync_quality_audits_from_supabase(conn: sqlite3.Connection, get, tenant_id:
                     """, (rem_emp_id, raw_bc, raw_bc, raw_bc)).fetchone()
                     if local_emp:
                         rem_id_str = str(q['id'])
+                        ev_id_str = q.get('client_event_id')
                         pen_boxes = int(q.get('penalty_boxes') or 0)
-                        existing = conn.execute("SELECT penalty_boxes FROM quality_audits WHERE remote_id=?", (rem_id_str,)).fetchone()
+                        q_ts_ms = _iso_to_ms(q.get('ts'))
+                        existing = conn.execute("SELECT id, penalty_boxes FROM quality_audits WHERE remote_id=?", (rem_id_str,)).fetchone()
+                        if not existing and ev_id_str:
+                            existing_by_ev = conn.execute("SELECT id, penalty_boxes FROM quality_audits WHERE client_event_id=?", (str(ev_id_str),)).fetchone()
+                            if existing_by_ev:
+                                conn.execute("UPDATE quality_audits SET remote_id=?, synced=1 WHERE id=?", (rem_id_str, existing_by_ev[0]))
+                                existing = existing_by_ev
+                        if not existing and q_ts_ms:
+                            existing_by_ts = conn.execute(
+                                "SELECT id, penalty_boxes FROM quality_audits WHERE remote_id IS NULL AND ts=? AND employee_id=? AND penalty_boxes=?",
+                                (q_ts_ms, local_emp[0], pen_boxes)
+                            ).fetchone()
+                            if existing_by_ts:
+                                conn.execute("UPDATE quality_audits SET remote_id=?, synced=1 WHERE id=?", (rem_id_str, existing_by_ts[0]))
+                                existing = existing_by_ts
                         conn.execute("""
-                            INSERT INTO quality_audits(ts,station_id,employee_id,parcel_id,penalty_boxes,issue_type,reason,remote_id,synced)
-                            VALUES(?,?,?,(SELECT id FROM parcels WHERE remote_id=?),?,?,?,?,1)
+                            INSERT INTO quality_audits(ts,station_id,employee_id,parcel_id,penalty_boxes,issue_type,reason,remote_id,client_event_id,synced)
+                            VALUES(?,?,?,(SELECT id FROM parcels WHERE remote_id=?),?,?,?,?,?,1)
                             ON CONFLICT(remote_id) DO UPDATE SET
                               ts=excluded.ts, employee_id=excluded.employee_id,
                               penalty_boxes=excluded.penalty_boxes, reason=excluded.reason, synced=1
-                        """, (_iso_to_ms(q.get('ts')),
+                        """, (q_ts_ms,
                               q.get('station_id') or 'ST01', local_emp[0], q.get('parcel_id'),
-                              pen_boxes, q.get('issue_type'), q.get('reason'), rem_id_str))
-                        if not existing or int(existing[0] or 0) != pen_boxes:
+                              pen_boxes, q.get('issue_type'), q.get('reason'), rem_id_str, ev_id_str))
+                        if not existing or int(existing[1] or 0) != pen_boxes:
                             changed_count += 1
                 except Exception as ex:
                     print(f'Sync [down]: Erro quality_audit {q.get("id")}: {ex}')

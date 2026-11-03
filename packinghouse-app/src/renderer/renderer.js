@@ -3389,9 +3389,13 @@ async function renderShowcaseSlide() {
       employeeId: c.id
     });
 
-    if (singleStats && typeof singleStats.totalBoxes === 'number') {
-      const liveTotalRaw = singleStats.totalBoxes;
-      const liveNet = Math.max(0, liveTotalRaw - pen);
+    if (singleStats) {
+      const liveTotalRaw = typeof singleStats.rawTotalBoxes === 'number'
+        ? singleStats.rawTotalBoxes
+        : (typeof singleStats.totalBoxes === 'number' ? singleStats.totalBoxes + pen : (c.rawBoxes || c.boxes || 0));
+      const liveNet = typeof singleStats.totalBoxes === 'number'
+        ? singleStats.totalBoxes
+        : Math.max(0, liveTotalRaw - pen);
       c.boxes = liveNet;
       c.rawBoxes = liveTotalRaw;
       if (boxesNet) boxesNet.innerHTML = `${liveNet} <span style="font-size: 12px; font-weight: 400; color: var(--muted);">cx</span>`;

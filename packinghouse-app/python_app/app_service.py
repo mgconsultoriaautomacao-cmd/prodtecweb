@@ -660,9 +660,9 @@ def state_get(station_id='ST01', role='EMBALADOR') -> dict:
     rows = _all("""
         SELECT e.id, e.name, e.photo_path,
                SUM(hs.produced_count) as produced_count,
-               SUM(hs.quality_deducted) + COALESCE((
+               COALESCE((
                  SELECT SUM(penalty_boxes) FROM quality_audits
-                 WHERE employee_id=e.id AND ts BETWEEN ? AND ?
+                 WHERE employee_id=e.id AND ts BETWEEN ? AND ? AND ?!='EMPILHADOR'
                ),0) as quality_deducted,
                COUNT(hs.hour_start) as hours_active
         FROM hourly_stats hs
@@ -671,9 +671,9 @@ def state_get(station_id='ST01', role='EMBALADOR') -> dict:
         GROUP BY e.id, e.name, e.photo_path
         ORDER BY (SUM(hs.produced_count) - COALESCE((
           SELECT SUM(penalty_boxes) FROM quality_audits
-          WHERE employee_id=e.id AND ts BETWEEN ? AND ?
+          WHERE employee_id=e.id AND ts BETWEEN ? AND ? AND ?!='EMPILHADOR'
         ),0)) DESC, e.name ASC
-    """, (ds, de, ds, st, rl, rl, rl, ds, de))
+    """, (ds, de, rl, ds, st, rl, rl, rl, ds, de, rl))
 
     candidates = []
     for r in rows:
@@ -815,15 +815,15 @@ def finance_preview(start_ms, end_ms, role='EMBALADOR') -> dict:
                COUNT(se.id) as raw_boxes,
                COALESCE((
                    SELECT SUM(qa.penalty_boxes) FROM quality_audits qa
-                   WHERE qa.employee_id=e.id AND qa.ts BETWEEN ? AND ?
+                   WHERE qa.employee_id=e.id AND qa.ts BETWEEN ? AND ? AND ?!='EMPILHADOR'
                ), 0) as penalty_boxes
         FROM scan_events se JOIN employees e ON e.id=se.employee_id
         WHERE se.ts BETWEEN ? AND ? AND se.role=? AND se.employee_id IS NOT NULL
         GROUP BY e.id, e.name, e.photo_path ORDER BY (COUNT(se.id) - COALESCE((
             SELECT SUM(qa.penalty_boxes) FROM quality_audits qa
-            WHERE qa.employee_id=e.id AND qa.ts BETWEEN ? AND ?
+            WHERE qa.employee_id=e.id AND qa.ts BETWEEN ? AND ? AND ?!='EMPILHADOR'
         ), 0)) DESC, e.name ASC
-    """, (s_ms, e_ms, s_ms, e_ms, rl, s_ms, e_ms))
+    """, (s_ms, e_ms, rl, s_ms, e_ms, rl, s_ms, e_ms, rl))
 
     result = []
     for r in items:

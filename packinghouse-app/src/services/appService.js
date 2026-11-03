@@ -821,7 +821,7 @@ function createAppService(db) {
     const rows = await all(`
       select e.id, e.name, e.photo_path, 
              sum(hs.produced_count) as produced_count, 
-             sum(hs.quality_deducted) + coalesce((
+             coalesce((
                select sum(penalty_boxes) from quality_audits 
                where employee_id = e.id 
                and ts between ? and ?
@@ -832,11 +832,11 @@ function createAppService(db) {
       join employees e on e.id = hs.employee_id
       where hs.hour_start>=? and hs.station_id=? and hs.role=?
       group by e.id, e.name, e.photo_path
-      order by (sum(hs.produced_count) - (sum(hs.quality_deducted) + coalesce((
+      order by (sum(hs.produced_count) - coalesce((
                select sum(penalty_boxes) from quality_audits 
                where employee_id = e.id 
                and ts between ? and ?
-             ), 0))) desc, e.name asc
+             ), 0)) desc, e.name asc
 
     `, [ds, de, ds, st, rl, ds, de]);
 
@@ -963,15 +963,14 @@ function createAppService(db) {
 
     // Build conditional where clauses for queries
     const empWhere = employeeId ? `AND se.employee_id = ?` : ``;
+    const empWhereQa = employeeId ? `AND employee_id = ?` : ``;
+    const empWhereQ = employeeId ? `AND q.employee_id = ?` : ``;
     const empParam = employeeId ? [employeeId] : [];
 
     const collaboratorStats = await all(`
       select 
         e.id, e.name, e.photo_path as photoPath, e.role,
-        max(0, count(se.id) - coalesce((
-          select sum(penalty_boxes) from quality_audits 
-          where employee_id = e.id and ts between ? and ?
-        ), 0)) as boxes,
+        count(se.id) as raw_boxes,
         sum(coalesce(bw.weight_kg, 0)) as kg,
         coalesce((
           select sum(penalty_boxes) from quality_audits 
@@ -986,8 +985,8 @@ function createAppService(db) {
           select sum(penalty_boxes) from quality_audits 
           where employee_id = e.id and ts between ? and ?
         ), 0)) desc
-      limit 10
-    `, [s, e, s, e, st, s, e, ...empParam, s, e]);
+      limit 500
+    `, [s, e, st, s, e, ...empParam, s, e]);
 
 
     const boxTypeStats = await all(`
@@ -1052,11 +1051,12 @@ function createAppService(db) {
     const penalties = await get(`
       select sum(penalty_boxes) as n
       from quality_audits
-      where ts between ? and ? ${empWhere}
+      where ts between ? and ? ${empWhereQa}
     `, [s, e, ...empParam]);
     const penaltyCount = Number(penalties?.n || 0);
 
-    const netBoxes = Math.max(0, (totalStats?.totalBoxes || 0) - penaltyCount);
+    const rawTotalBoxes = Number(totalStats?.totalBoxes || 0);
+    const netBoxes = Math.max(0, rawTotalBoxes - penaltyCount);
     const hoursActive = Math.max(1, Math.round((e - s) / 3600000));
     const avgPerHour = Math.round(netBoxes / hoursActive);
 
@@ -1091,33 +1091,41 @@ function createAppService(db) {
       }
     }
 
+    const enrichedCollabs = collaboratorStats.map(c => {
+      const target = c.role === 'EMPILHADOR' ? tStacker : tPacker;
+      const totalRaw = Number(c.raw_boxes != null ? c.raw_boxes : (c.boxes || 0));
+      const penalties = Number(c.penalty_boxes || 0);
+      const netCollabBoxes = Math.max(0, totalRaw - penalties);
+      const qualityPct = totalRaw > 0 ? Math.round(Math.max(0, 100 - (penalties / totalRaw * 100)) * 10) / 10 : 100;
+      const errorPct = totalRaw > 0 ? Math.round((penalties / totalRaw * 100) * 10) / 10 : 0;
+
+      return {
+        ...c,
+        boxes: netCollabBoxes, // Override with net boxes for charts (discounted only once)
+        rawBoxes: totalRaw,
+        penaltyBoxes: penalties,
+        qualityPct,
+        errorPct,
+        target,
+        yieldPct: target > 0 ? Math.round((netCollabBoxes / target) * 100) : 0
+      };
+    });
+
     return {
-      collaboratorStats: collaboratorStats.map(c => {
-        const target = c.role === 'EMPILHADOR' ? tStacker : tPacker;
-        const totalRaw = Number(c.boxes || 0);
-        const penalties = Number(c.penalty_boxes || 0);
-        const netBoxes = Math.max(0, totalRaw - penalties);
-        
-        return {
-          ...c,
-          boxes: netBoxes, // Override with net boxes for charts
-          rawBoxes: totalRaw,
-          target,
-          yieldPct: target > 0 ? Math.round((netBoxes / target) * 100) : 0
-        };
-      }),
+      collaboratorStats: enrichedCollabs,
 
       boxTypeStats,
       parcelStats,
       hourlyCollab,
       totalBoxes: netBoxes,
+      rawTotalBoxes,
       totalKg: Math.round((totalStats?.totalKg || 0) * 10) / 10,
       penaltyCount,
       avgPerHour,
       qualityBreakdown: await all(`
         select coalesce(issue_type, 'Outros') as label, sum(penalty_boxes) as count
         from quality_audits
-        where ts between ? and ? ${empWhere}
+        where ts between ? and ? ${empWhereQa}
         group by coalesce(issue_type, 'Outros')
         order by count desc
       `, [s, e, ...empParam]),
@@ -1126,7 +1134,7 @@ function createAppService(db) {
         select e.name, sum(q.penalty_boxes) as penalty_count
         from quality_audits q
         join employees e on e.id = q.employee_id
-        where q.ts between ? and ? ${empWhere}
+        where q.ts between ? and ? ${empWhereQ}
         group by e.name
         order by penalty_count desc
         limit 5
@@ -1140,10 +1148,10 @@ function createAppService(db) {
         current: currentTotal?.n || 0,
         previous: prevTotal?.n || 0
       },
-      packerTotal: collaboratorStats
+      packerTotal: enrichedCollabs
         .filter(c => c.role === 'EMBALADOR')
         .reduce((sum, c) => sum + Number(c.boxes || 0), 0),
-      stackerTotal: collaboratorStats
+      stackerTotal: enrichedCollabs
         .filter(c => c.role === 'EMPILHADOR')
         .reduce((sum, c) => sum + Number(c.boxes || 0), 0)
     };
