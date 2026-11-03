@@ -511,20 +511,20 @@ window.addEventListener('DOMContentLoaded', () => {
           const animClass = isRankUp ? 'rank-up-anim' : '';
 
           return `
-            <div class="${animClass}" style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06); transition: all 0.5s ease;">
-              <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-                <div style="${photoStyle(r.photoPath, 42)}">${!photoUrl(r.photoPath) ? '<i data-lucide="user" style="width:20px;height:20px;"></i>' : ''}</div>
+            <div class="${animClass}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 10px;border-bottom:1px solid var(--border); background: rgba(255,255,255,0.015); border-radius: 8px; transition: all 0.5s ease;">
+              <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+                <div style="${photoStyle(r.photoPath, 50)}">${!photoUrl(r.photoPath) ? '<i data-lucide="user" style="width:22px;height:22px;"></i>' : ''}</div>
                 <div style="min-width:0;">
-                  <div style="font-weight:600;">#${pos} ${esc(r.name)}</div>
-                  <div style="display: flex; gap: 10px; font-size: 11px; margin-top: 4px;">
-                    <span style="color: ${colorByPct(r.productivityPct)}; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px;">Prod: ${r.productivityPct}%</span>
-                    <span style="color: ${colorByPct(r.qualityPct)}; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px;">Qual: ${r.qualityPct}%</span>
+                  <div style="font-size: 15.5px; font-weight: 800; color: var(--text); letter-spacing: 0.2px;">#${pos} ${esc(r.name)}</div>
+                  <div style="display: flex; gap: 10px; font-size: 13px; font-weight: 700; margin-top: 6px; flex-wrap: wrap;">
+                    <span style="color: ${colorByPct(r.productivityPct)}; background: var(--bg2); border: 1px solid var(--border); padding: 3px 9px; border-radius: 6px;">Prod: ${r.productivityPct}%</span>
+                    <span style="color: ${colorByPct(r.qualityPct)}; background: var(--bg2); border: 1px solid var(--border); padding: 3px 9px; border-radius: 6px;">Qual: ${r.qualityPct}%</span>
                   </div>
                 </div>
               </div>
-              <div style="text-align:right;">
-                <div style="font-size: 16px;"><strong>${r.produced}</strong> <span class="muted" style="font-size:12px;">cx</span></div>
-                ${isRankUp ? '<div style="font-size:10px; color:#22c55e; font-weight:bold; margin-top: 4px; display:flex; align-items:center; gap:2px;"><i data-lucide="arrow-up" style="width:12px;height:12px;"></i> SUBIU</div>' : ''}
+              <div style="text-align:right; flex-shrink:0;">
+                <div style="font-size: 26px; font-weight: 900; color: var(--green); line-height: 1.05; letter-spacing: -0.5px;">${r.produced} <span class="muted" style="font-size:14px; font-weight:700; color: var(--text); opacity: 0.75;">cx</span></div>
+                ${isRankUp ? '<div style="font-size:11px; color:#22c55e; font-weight:800; margin-top: 4px; display:flex; align-items:center; justify-content:flex-end; gap:2px;"><i data-lucide="arrow-up" style="width:13px;height:13px;"></i> SUBIU</div>' : ''}
               </div>
             </div>
           `;
