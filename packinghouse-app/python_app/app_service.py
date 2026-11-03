@@ -4,14 +4,12 @@ Equivalente direto ao src/services/appService.js do Electron.
 Usa sqlite3 da stdlib Python (sem dependencies externas neste módulo).
 """
 import time
-import math
-import json
 import uuid
 import threading
 import requests
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from pathlib import Path
-from db_python import get_db, rows_to_list, row_to_dict, now_ms
+from db_python import get_db, now_ms
 
 # ─── Profiler de Latência de Leitura (In-Memory, Zero I/O) ───────────────────
 _latency_lock = threading.Lock()
@@ -109,7 +107,7 @@ def _run(sql: str, params=()) -> int:
     conn = get_db()
     cursor = conn.execute(sql, params)
     conn.commit()
-    return cursor.lastrowid
+    return int(cursor.lastrowid or 0)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -530,23 +528,51 @@ def scan_submit(station_id='ST01', scanner_id='SC01', role='EMBALADOR',
 
         ctx = context_get(st, rl)
 
-        # Tenta mapping (barcode combinado)
+        # Tenta mapping (barcode combinado), tolerando zeros à esquerda
         mapping = _get("""
-            SELECT m.employee_id, m.weight_id, e.name, e.photo_path
+            SELECT m.employee_id, m.weight_id, e.name, e.photo_path, e.role as emp_role
             FROM barcode_mappings m
             JOIN employees e ON e.id=m.employee_id
-            WHERE m.barcode=? AND (e.role=? OR (e.role='PACKER' AND ?='EMBALADOR') OR (e.role='STACKER' AND ?='EMPILHADOR')) AND e.active=1
-        """, (raw, rl, rl, rl))
+            WHERE (m.barcode=? OR (TRIM(m.barcode)!='' AND COALESCE(NULLIF(LTRIM(TRIM(m.barcode),'0'),''),'0')=COALESCE(NULLIF(LTRIM(?,'0'),''),'0')))
+              AND (e.role=? OR (e.role='PACKER' AND ?='EMBALADOR') OR (e.role='STACKER' AND ?='EMPILHADOR'))
+              AND e.active=1
+        """, (raw, raw, rl, rl, rl))
+
+        if not mapping:
+            # Fallback sem restrição de aba de função caso o operador tenha deixado a função trocada na tela
+            mapping = _get("""
+                SELECT m.employee_id, m.weight_id, e.name, e.photo_path, e.role as emp_role
+                FROM barcode_mappings m
+                JOIN employees e ON e.id=m.employee_id
+                WHERE (m.barcode=? OR (TRIM(m.barcode)!='' AND COALESCE(NULLIF(LTRIM(TRIM(m.barcode),'0'),''),'0')=COALESCE(NULLIF(LTRIM(?,'0'),''),'0')))
+                  AND e.active=1
+            """, (raw, raw))
 
         emp, weight_id = None, None
         if mapping:
+            if mapping.get('emp_role'):
+                rl = norm_role(mapping['emp_role'])
+                ctx = context_get(st, rl)
             weight_id = mapping['weight_id']
             emp = {'id': mapping['employee_id'], 'name': mapping['name'], 'photo_path': mapping['photo_path']}
         else:
-            emp = _get("""
-                SELECT id, name, photo_path FROM employees
-                WHERE barcode=? AND (role=? OR (role='PACKER' AND ?='EMBALADOR') OR (role='STACKER' AND ?='EMPILHADOR')) AND active=1
-            """, (raw, rl, rl, rl))
+            emp_row = _get("""
+                SELECT id, name, photo_path, role as emp_role FROM employees
+                WHERE (barcode=? OR (TRIM(barcode)!='' AND COALESCE(NULLIF(LTRIM(TRIM(barcode),'0'),''),'0')=COALESCE(NULLIF(LTRIM(?,'0'),''),'0')))
+                  AND (role=? OR (role='PACKER' AND ?='EMBALADOR') OR (role='STACKER' AND ?='EMPILHADOR'))
+                  AND active=1
+            """, (raw, raw, rl, rl, rl))
+            if not emp_row:
+                emp_row = _get("""
+                    SELECT id, name, photo_path, role as emp_role FROM employees
+                    WHERE (barcode=? OR (TRIM(barcode)!='' AND COALESCE(NULLIF(LTRIM(TRIM(barcode),'0'),''),'0')=COALESCE(NULLIF(LTRIM(?,'0'),''),'0')))
+                      AND active=1
+                """, (raw, raw))
+            if emp_row:
+                if emp_row.get('emp_role'):
+                    rl = norm_role(emp_row['emp_role'])
+                    ctx = context_get(st, rl)
+                emp = {'id': emp_row['id'], 'name': emp_row['name'], 'photo_path': emp_row['photo_path']}
             weight_id = ctx.get('weight_id') if rl == 'EMBALADOR' else None
 
         # Override por CV
@@ -706,7 +732,15 @@ def totals_now(station_id='ST01', role='EMBALADOR') -> dict:
         WHERE station_id=? AND role=? AND employee_id IS NOT NULL AND ts>=?
     """, (st, rl, hs))
 
-    penalties = _get("SELECT SUM(penalty_boxes) as n FROM quality_audits WHERE ts>=?", (ds,))
+    penalties = _get("""
+        SELECT SUM(qa.penalty_boxes) as n
+        FROM quality_audits qa
+        LEFT JOIN employees e ON e.id=qa.employee_id
+        WHERE qa.ts>=? AND (
+            (e.id IS NOT NULL AND (e.role=? OR (e.role='PACKER' AND ?='EMBALADOR') OR (e.role='STACKER' AND ?='EMPILHADOR')))
+            OR (e.id IS NULL AND ?='EMBALADOR')
+        )
+    """, (ds, rl, rl, rl, rl))
     penalty_count = int((penalties or {}).get('n') or 0)
 
     by_weight = _all("""
@@ -775,24 +809,38 @@ def finance_preview(start_ms, end_ms, role='EMBALADOR') -> dict:
     value_per_box = sanitize_num(cfg.get(vkey), 0)
     bonus_pct = sanitize_num(cfg.get('bonus_pct'), 0)
 
+    s_ms, e_ms = int(start_ms), int(end_ms)
     items = _all("""
-        SELECT e.id as employeeId, e.name, e.photo_path as photoPath, COUNT(se.id) as boxes
+        SELECT e.id as employeeId, e.name, e.photo_path as photoPath,
+               COUNT(se.id) as raw_boxes,
+               COALESCE((
+                   SELECT SUM(qa.penalty_boxes) FROM quality_audits qa
+                   WHERE qa.employee_id=e.id AND qa.ts BETWEEN ? AND ?
+               ), 0) as penalty_boxes
         FROM scan_events se JOIN employees e ON e.id=se.employee_id
         WHERE se.ts BETWEEN ? AND ? AND se.role=? AND se.employee_id IS NOT NULL
-        GROUP BY e.id, e.name, e.photo_path ORDER BY boxes DESC, e.name ASC
-    """, (int(start_ms), int(end_ms), rl))
+        GROUP BY e.id, e.name, e.photo_path ORDER BY (COUNT(se.id) - COALESCE((
+            SELECT SUM(qa.penalty_boxes) FROM quality_audits qa
+            WHERE qa.employee_id=e.id AND qa.ts BETWEEN ? AND ?
+        ), 0)) DESC, e.name ASC
+    """, (s_ms, e_ms, s_ms, e_ms, rl, s_ms, e_ms))
 
     result = []
     for r in items:
-        boxes = int(r.get('boxes') or 0)
+        raw_boxes = int(r.get('raw_boxes') or 0)
+        penalty_boxes = int(r.get('penalty_boxes') or 0)
+        boxes = max(0, raw_boxes - penalty_boxes)
+        avg_qual = round((boxes / raw_boxes * 100) * 10) / 10 if raw_boxes > 0 else 100.0
         gross = boxes * value_per_box
         bonus = gross * (bonus_pct / 100)
         result.append({
             'employeeId': r['employeeId'], 'name': r['name'],
             'photoPath': r.get('photoPath') or '',
             'boxes': boxes,
+            'rawBoxes': raw_boxes,
+            'penaltyBoxes': penalty_boxes,
             'avgProd': round((boxes / target * 100) * 10) / 10 if target else 0,
-            'avgQual': 100,
+            'avgQual': avg_qual,
             'grossValue': round(gross * 100) / 100,
             'bonusValue': round(bonus * 100) / 100,
             'totalValue': round((gross + bonus) * 100) / 100,
@@ -812,12 +860,16 @@ def daily_finalize(station_id='ST01', date=None, force_sync_fn=None) -> dict:
 
     aggregates = _all("""
         SELECT e.id as employee_id, e.name as employee_name, se.role,
-               COUNT(se.id) as total_boxes, SUM(COALESCE(bw.weight_kg,0)) as total_kg
+               COUNT(se.id) as raw_boxes, SUM(COALESCE(bw.weight_kg,0)) as total_kg,
+               COALESCE((
+                   SELECT SUM(qa.penalty_boxes) FROM quality_audits qa
+                   WHERE qa.employee_id=e.id AND qa.ts BETWEEN ? AND ?
+               ), 0) as penalty_boxes
         FROM scan_events se JOIN employees e ON se.employee_id=e.id
         LEFT JOIN box_weights bw ON bw.id=se.weight_id
         WHERE se.station_id=? AND se.ts BETWEEN ? AND ?
         GROUP BY e.id, e.name, se.role
-    """, (st, s_ms, e_ms))
+    """, (s_ms, e_ms, st, s_ms, e_ms))
 
     if not aggregates:
         return {'ok': False, 'message': 'Nenhuma produção encontrada para este dia.'}
@@ -825,7 +877,9 @@ def daily_finalize(station_id='ST01', date=None, force_sync_fn=None) -> dict:
     created_at = now_ms()
     for row in aggregates:
         v_per_box = v_stacker if row['role'] == 'EMPILHADOR' else v_packer
-        boxes = int(row['total_boxes'] or 0)
+        raw_boxes = int(row['raw_boxes'] or 0)
+        penalty_boxes = int(row.get('penalty_boxes') or 0) if row['role'] != 'EMPILHADOR' else 0
+        boxes = max(0, raw_boxes - penalty_boxes)
         kg = float(row['total_kg'] or 0)
         gross = boxes * v_per_box
         total_value = round((gross + gross * b_pct / 100) * 100) / 100

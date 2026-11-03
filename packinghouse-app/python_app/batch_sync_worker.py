@@ -20,10 +20,10 @@ from pathlib import Path
 from db_python import get_db_path, now_ms
 import sync_service
 
-BATCH_SIZE = 500
-UPLOAD_INTERVAL_NORMAL = 300.0   # 5 minutos
-QUEUE_THRESHOLD_TRIGGER = 500    # Gatilho imediato se atingir 500 pendentes
-DRAIN_PAUSE_SECONDS = 3.0        # Pausa suave entre lotes ao esvaziar fila grande
+BATCH_SIZE = 25                  # Lotes compactos de 25 registros evitam statement timeout (57014) no Supabase
+UPLOAD_INTERVAL_NORMAL = 30.0    # 30 segundos (sincronização rápida de scans e auditorias PWA)
+QUEUE_THRESHOLD_TRIGGER = 100    # Gatilho imediato se atingir 100 pendentes
+DRAIN_PAUSE_SECONDS = 0.4        # Pausa curta entre lotes ao esvaziar fila grande
 
 
 class BatchSyncWorker(threading.Thread):
@@ -85,8 +85,8 @@ class BatchSyncWorker(threading.Thread):
                 # Verifica tamanho da fila local
                 unsynced_count = self._count_unsynced_scans()
                 time_elapsed = (now - self._last_upload_time)
-                # Jitter aleatório de +/- 20s no intervalo normal
-                target_interval = UPLOAD_INTERVAL_NORMAL + random.uniform(-20.0, 20.0)
+                # Jitter aleatório curto (+/- 5s) no intervalo normal
+                target_interval = UPLOAD_INTERVAL_NORMAL + random.uniform(-5.0, 5.0)
 
                 should_upload = (
                     is_forced or
@@ -129,22 +129,31 @@ class BatchSyncWorker(threading.Thread):
 
         try:
             # 1. Upload em Lote de Scans (com esvaziamento suave se houver muitos pendentes)
-            self._upload_scans_in_batches(config)
+            try:
+                self._upload_scans_in_batches(config)
+            except Exception as up_err:
+                print(f"BatchSyncWorker: Aviso no upload de scans: {up_err}")
 
             # 2. Upload de Quality Audits
-            self._upload_quality_audits(config)
+            try:
+                self._upload_quality_audits(config)
+            except Exception as qa_err:
+                print(f"BatchSyncWorker: Aviso no upload de auditorias: {qa_err}")
 
             # 3. Upload de Cadastros/Dicionários (novos cadastrados localmente)
-            self._upload_dictionaries(config)
+            try:
+                self._upload_dictionaries(config)
+            except Exception as dict_err:
+                print(f"BatchSyncWorker: Aviso no upload de dicionários: {dict_err}")
 
-            # 4. Download (Dicionários a cada 15 min e Mapeiro a cada 2 min com cursor incremental)
+            # 4. Download (Auditorias PWA a cada 20s, Mapeiro a cada 30s, Dicionários a cada 15 min)
             new_scans = sync_service.sync_from_supabase(
                 self._conn,
                 on_auth_error=self._on_auth_error,
                 force_full_sync=force_full_sync
             )
             if new_scans and new_scans > 0 and self._push_event:
-                self._push_event('scan:new', json.dumps({'role': 'EMPILHADOR', 'count': new_scans}))
+                self._push_event('scan:new', json.dumps({'role': 'ALL', 'count': new_scans}))
 
             self._backoff = 15.0
             self._emit_status('synced', lastSync=now_ms())
@@ -167,7 +176,8 @@ class BatchSyncWorker(threading.Thread):
             'apikey': key,
             'Authorization': f'Bearer {auth_token or key}',
             'Content-Type': 'application/json',
-            'Prefer': 'return=minimal,resolution=ignore-duplicates'
+            'Prefer': 'return=minimal,resolution=ignore-duplicates',
+            **({'x-tenant-id': tenant_id} if tenant_id else {}),
         }
 
         while self._running:
@@ -212,7 +222,9 @@ class BatchSyncWorker(threading.Thread):
                 new_token = sync_service._refresh_token(self._conn, config)
                 if new_token:
                     headers['Authorization'] = f'Bearer {new_token}'
-                    res = requests.post(endpoint, headers=headers, json=body, timeout=25)
+                else:
+                    headers['Authorization'] = f'Bearer {key}'
+                res = requests.post(endpoint, headers=headers, json=body, timeout=25)
 
             if res.status_code in (200, 201, 204):
                 ids = ','.join(str(s['id']) for s in scans)
@@ -238,7 +250,8 @@ class BatchSyncWorker(threading.Thread):
             'apikey': key,
             'Authorization': f'Bearer {auth_token or key}',
             'Content-Type': 'application/json',
-            'Prefer': 'return=minimal,resolution=ignore-duplicates'
+            'Prefer': 'return=minimal,resolution=ignore-duplicates',
+            **({'x-tenant-id': tenant_id} if tenant_id else {}),
         }
 
         audits = self._conn.execute("""
@@ -264,6 +277,10 @@ class BatchSyncWorker(threading.Thread):
             } for q in audits]
 
             res = requests.post(endpoint, headers=headers, json=body, timeout=20)
+            if res.status_code == 401:
+                new_token = sync_service._refresh_token(self._conn, config)
+                headers['Authorization'] = f'Bearer {new_token or key}'
+                res = requests.post(endpoint, headers=headers, json=body, timeout=20)
             if res.status_code in (200, 201, 204):
                 ids = ','.join(str(q['id']) for q in audits)
                 self._conn.execute(f"UPDATE quality_audits SET synced=1 WHERE id IN ({ids})")

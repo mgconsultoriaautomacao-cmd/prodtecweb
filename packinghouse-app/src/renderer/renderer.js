@@ -391,6 +391,9 @@ window.addEventListener('DOMContentLoaded', () => {
           text.textContent = 'Sincronizando...';
         } else if (state === 'synced') {
           text.textContent = 'Sincronizado';
+          if (typeof window._refreshPainelState === 'function') {
+            window._refreshPainelState().catch(() => {});
+          }
         } else if (state === 'offline') {
           badge.classList.add('offline');
           text.textContent = 'Offline (local)';
@@ -550,13 +553,10 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    scanInput.addEventListener('keydown', async (ev) => {
-      if (ev.key !== 'Enter') return;
+    let scanQueue = Promise.resolve();
 
-      const rawBarcode = scanInput.value.trim();
-      scanInput.value = '';
+    async function handleSingleScan(rawBarcode) {
       if (!rawBarcode) return;
-
       try {
         let caliberDetected = null;
         let cvRes = null; // precisa existir fora do try abaixo (antes era const interno -> sempre undefined)
@@ -682,9 +682,66 @@ window.addEventListener('DOMContentLoaded', () => {
       } catch (err) {
         status.textContent = `Erro na leitura: ${err.message}`;
       } finally {
-        setTimeout(() => scanInput.focus(), 50);
+        const activeScanInp = document.getElementById('scanInput');
+        if (activeScanInp && document.activeElement !== activeScanInp) {
+          const tag = (document.activeElement?.tagName || '').toUpperCase();
+          if (!['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) {
+            setTimeout(() => activeScanInp.focus(), 30);
+          }
+        }
       }
+    }
+
+    function enqueueBarcodeScan(rawBarcode) {
+      const code = String(rawBarcode || '').trim();
+      if (!code) return;
+      scanQueue = scanQueue.then(() => handleSingleScan(code)).catch((err) => {
+        console.error('[ScanQueue] Erro:', err);
+      });
+    }
+
+    window._refreshPainelState = refreshState;
+
+    scanInput.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const rawBarcode = scanInput.value.trim();
+      scanInput.value = '';
+      if (!rawBarcode) return;
+      enqueueBarcodeScan(rawBarcode);
     });
+
+    // Captura global para leitor USB caso o campo #scanInput tenha perdido o foco
+    if (window._painelGlobalKeyListener) {
+      document.removeEventListener('keydown', window._painelGlobalKeyListener, true);
+    }
+    window._painelGlobalKeyListener = (ev) => {
+      const activeScanInp = document.getElementById('scanInput');
+      if (!activeScanInp) return;
+      if (document.activeElement === activeScanInp) return;
+
+      const activeTag = (document.activeElement?.tagName || '').toUpperCase();
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag) || document.activeElement?.isContentEditable) {
+        return;
+      }
+      if (ev.ctrlKey || ev.altKey || ev.metaKey) return;
+
+      if (ev.key === 'Enter') {
+        const code = activeScanInp.value.trim();
+        activeScanInp.value = '';
+        if (code) {
+          ev.preventDefault();
+          enqueueBarcodeScan(code);
+        }
+        activeScanInp.focus();
+      } else if (ev.key && ev.key.length === 1) {
+        activeScanInp.value += ev.key;
+        activeScanInp.focus();
+        ev.preventDefault();
+      }
+    };
+    document.addEventListener('keydown', window._painelGlobalKeyListener, true);
 
     const btnFinalizeDay = must('btnFinalizeDay');
     btnFinalizeDay.onclick = async () => {

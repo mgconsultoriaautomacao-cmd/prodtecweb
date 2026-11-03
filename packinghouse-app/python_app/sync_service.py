@@ -56,6 +56,12 @@ def _refresh_token(conn: sqlite3.Connection, config: dict) -> str | None:
             conn.commit()
             print('Sync: Token renovado com sucesso.')
             return new_token
+        elif res.status_code in (400, 401, 403):
+            print('Sync: Refresh token expirado/inválido. Limpando sessão antiga e usando chave padrão.')
+            conn.execute("DELETE FROM config WHERE key IN ('auth_token', 'auth_refresh_token')")
+            conn.commit()
+            config.pop('auth_token', None)
+            config.pop('auth_refresh_token', None)
     except Exception as e:
         print(f'Sync: Erro ao renovar token: {e}')
     return None
@@ -83,7 +89,8 @@ def sync_to_supabase(conn: sqlite3.Connection):
 
     print(f'Sync [up]: Iniciando upload para {url}...')
 
-    # ── 1. Scan Events ────────────────────────────────────────────────────────
+    # ── 1. Scan Events (lotes de 25 para evitar statement timeout no Supabase) ─
+    scan_headers = {**headers, 'Prefer': 'return=minimal,resolution=ignore-duplicates'}
     while True:
         scans = conn.execute("""
             SELECT s.*, e.name as employee_name,
@@ -95,13 +102,14 @@ def sync_to_supabase(conn: sqlite3.Connection):
             LEFT JOIN parcels p ON s.parcel_id=p.id
             LEFT JOIN fruits f ON s.fruit_id=f.id
             LEFT JOIN varieties v ON s.variety_id=v.id
-            WHERE s.synced=0 LIMIT 200
+            WHERE s.synced=0 LIMIT 25
         """).fetchall()
 
         if not scans:
             break
 
         body = [{
+            'client_event_id': s['client_event_id'] or f"{s['station_id']}_{s['ts']}_{s['id']}",
             'local_id': s['id'],
             'ts': _ms_to_iso(s['ts']),
             'station_id': s['station_id'],
@@ -117,12 +125,12 @@ def sync_to_supabase(conn: sqlite3.Connection):
             'tenant_id': tenant_id,
         } for s in scans]
 
-        res = _post_with_retry(url, '/rest/v1/production_scans', body, headers, conn, config)
+        res = _post_with_retry(url, '/rest/v1/production_scans?on_conflict=tenant_id,client_event_id', body, scan_headers, conn, config)
         if res and res.ok:
             ids = ','.join(str(s['id']) for s in scans)
             _dbrun(conn, f'UPDATE scan_events SET synced=1 WHERE id IN ({ids})')
             print(f'Sync [up]: {len(scans)} scans enviados com sucesso.')
-            if len(scans) < 200:
+            if len(scans) < 25:
                 break
         else:
             _log_error(res, 'production_scans', 'up')
@@ -201,6 +209,12 @@ def _upload_dict(conn, base_url, table, headers, tenant_id, sql, map_fn, match_f
             headers={**headers, 'Prefer': 'return=representation,resolution=merge-duplicates'},
             json=body, timeout=15
         )
+        if res.status_code == 400 and '42P10' in (res.text or ''):
+            # Tabela no Supabase não possui unique constraint para o conflict_param; marca local como sincronizado
+            for r in rows:
+                conn.execute(f"UPDATE {table} SET synced=1 WHERE {match_field}=?", (r[match_field],))
+            conn.commit()
+            return
         if res.ok:
             returned = res.json()
             for rem in returned:
@@ -223,16 +237,19 @@ def _upload_dict(conn, base_url, table, headers, tenant_id, sql, map_fn, match_f
 # ═══════════════════════════════════════════════════════════════════════════════
 _last_dict_download_time = 0.0
 _last_mapeiro_download_time = 0.0
+_last_quality_download_time = 0.0
 DICT_DOWNLOAD_INTERVAL = 900.0   # 15 minutos (cadastros e dicionários)
-MAPEIRO_DOWNLOAD_INTERVAL = 120.0 # 2 minutos (scans do Mapeiro mobile)
+MAPEIRO_DOWNLOAD_INTERVAL = 30.0 # 30 segundos (scans do Mapeiro mobile)
+QUALITY_DOWNLOAD_INTERVAL = 20.0 # 20 segundos (auditorias de qualidade do PWA)
 
 def sync_from_supabase(conn: sqlite3.Connection, on_auth_error=None, force_full_sync=False):
-    global _last_dict_download_time, _last_mapeiro_download_time
+    global _last_dict_download_time, _last_mapeiro_download_time, _last_quality_download_time
     now = time.time()
     should_sync_dict = force_full_sync or ((now - _last_dict_download_time) >= DICT_DOWNLOAD_INTERVAL)
     should_sync_mapeiro = force_full_sync or ((now - _last_mapeiro_download_time) >= MAPEIRO_DOWNLOAD_INTERVAL)
+    should_sync_quality = force_full_sync or ((now - _last_quality_download_time) >= QUALITY_DOWNLOAD_INTERVAL)
 
-    if not should_sync_dict and not should_sync_mapeiro:
+    if not should_sync_dict and not should_sync_mapeiro and not should_sync_quality:
         return 0
 
     config = _get_config(conn)
@@ -258,22 +275,29 @@ def sync_from_supabase(conn: sqlite3.Connection, on_auth_error=None, force_full_
                 headers['Authorization'] = f'Bearer {new_token}'
                 res = requests.get(f'{url}{path}', headers=headers, timeout=15)
             else:
-                if on_auth_error:
+                # Fallback automático para a anon key para nunca travar a sincronização
+                headers['Authorization'] = f'Bearer {key}'
+                res = requests.get(f'{url}{path}', headers=headers, timeout=15)
+                if res.status_code == 401 and on_auth_error:
                     on_auth_error(401, 'Token inválido')
         return res
 
-    new_scans_count = 0
+    new_items_count = 0
 
     if should_sync_dict:
         _sync_dictionaries_from_supabase(conn, get, tenant_id, tf)
         _last_dict_download_time = now
 
+    if should_sync_quality:
+        new_items_count += _sync_quality_audits_from_supabase(conn, get, tenant_id, tf)
+        _last_quality_download_time = now
+
     if should_sync_mapeiro:
-        new_scans_count = _sync_mapeiro_from_supabase(conn, get, tenant_id, tf)
+        new_items_count += _sync_mapeiro_from_supabase(conn, get, tenant_id, tf)
         _last_mapeiro_download_time = now
 
     print('Sync [down]: Ciclo de download concluído.')
-    return new_scans_count
+    return new_items_count
 
 
 def _sync_dictionaries_from_supabase(conn: sqlite3.Connection, get, tenant_id: str, tf: str):
@@ -326,27 +350,7 @@ def _sync_dictionaries_from_supabase(conn: sqlite3.Connection, get, tenant_id: s
                 print(f'Sync [down]: Erro box_weight {w.get("name")}: {ex}')
         conn.commit()
 
-    # ── 3. Quality Audits ─────────────────────────────────────────────────────
-    r = get(f'/rest/v1/quality_audits?select=*&order=ts.desc&limit=100{tf}')
-    if r.ok:
-        for q in r.json():
-            try:
-                local_emp = conn.execute("SELECT id FROM employees WHERE remote_id=? OR barcode=?",
-                    (q.get('employee_id'), q.get('employee_barcode') or q.get('employee_id'))).fetchone()
-                if local_emp:
-                    conn.execute("""
-                        INSERT INTO quality_audits(ts,station_id,employee_id,parcel_id,penalty_boxes,issue_type,reason,remote_id,synced)
-                        VALUES(?,?,?,(SELECT id FROM parcels WHERE remote_id=?),?,?,?,?,1)
-                        ON CONFLICT(remote_id) DO UPDATE SET
-                          penalty_boxes=excluded.penalty_boxes, reason=excluded.reason, synced=1
-                    """, (_iso_to_ms(q.get('ts')),
-                          q['station_id'], local_emp[0], q.get('parcel_id'),
-                          q['penalty_boxes'], q.get('issue_type'), q.get('reason'), q['id']))
-            except Exception as ex:
-                print(f'Sync [down]: Erro quality_audit {q.get("id")}: {ex}')
-        conn.commit()
-
-    # ── 4. Parcels ────────────────────────────────────────────────────────────
+    # ── 3. Parcels ────────────────────────────────────────────────────────────
     r = get(f'/rest/v1/parcels?select=*{tf}&limit=5000')
     if r.ok:
         for p in r.json():
@@ -383,7 +387,7 @@ def _sync_dictionaries_from_supabase(conn: sqlite3.Connection, get, tenant_id: s
 
                     fruta_name = ip.get('fruta') or ip.get('cultura') or ip.get('especie') or ip.get('fruta_nome')
                     if fruta_name:
-                        conn.execute("INSERT OR IGNORE INTO fruits(name,active,created_at,updated_at,synced) VALUES(?,1,?,?,0)", (fruta_name, now_ms(), now_ms()))
+                        conn.execute("INSERT OR IGNORE INTO fruits(name,active,created_at,updated_at,synced) VALUES(?,1,?,?,1)", (fruta_name, now_ms(), now_ms()))
                         fruit_row = conn.execute("SELECT id FROM fruits WHERE name=?", (fruta_name,)).fetchone()
                         parcel_row = conn.execute("SELECT id FROM parcels WHERE remote_id=? OR code=?", (ip['id'], full_code)).fetchone()
                         
@@ -391,7 +395,7 @@ def _sync_dictionaries_from_supabase(conn: sqlite3.Connection, get, tenant_id: s
                             p_id, f_id = parcel_row[0], fruit_row[0]
                             clean_vars = [v for v in vars_list if v]
                             for var_name in clean_vars:
-                                conn.execute("INSERT OR IGNORE INTO varieties(name,active,created_at,updated_at,synced) VALUES(?,1,?,?,0)", (var_name, now_ms(), now_ms()))
+                                conn.execute("INSERT OR IGNORE INTO varieties(name,active,created_at,updated_at,synced) VALUES(?,1,?,?,1)", (var_name, now_ms(), now_ms()))
                                 var_row = conn.execute("SELECT id FROM varieties WHERE name=?", (var_name,)).fetchone()
                                 if var_row:
                                     conn.execute("INSERT OR IGNORE INTO parcel_fruit_varieties(parcel_id,fruit_id,variety_id) VALUES(?,?,?)", (p_id, f_id, var_row[0]))
@@ -405,13 +409,15 @@ def _sync_dictionaries_from_supabase(conn: sqlite3.Connection, get, tenant_id: s
     if r.ok:
         for f_item in r.json():
             try:
-                conn.execute("""
-                    INSERT INTO fruits(name,active,remote_id,created_at,updated_at)
-                    VALUES(?,?,?,?,?)
-                    ON CONFLICT(remote_id) DO UPDATE SET
-                      name=excluded.name, active=excluded.active, updated_at=excluded.updated_at, synced=1
-                    WHERE synced=1 OR excluded.updated_at > fruits.updated_at
-                """, (f_item['name'], 1 if f_item.get('active') else 0, f_item['id'], now_ms(), now_ms()))
+                act = 1 if f_item.get('active') else 0
+                cur = conn.execute("UPDATE fruits SET name=?, active=?, updated_at=?, synced=1 WHERE remote_id=?",
+                                   (f_item['name'], act, now_ms(), f_item['id']))
+                if cur.rowcount == 0:
+                    cur2 = conn.execute("UPDATE fruits SET remote_id=?, active=?, updated_at=?, synced=1 WHERE name=?",
+                                        (f_item['id'], act, now_ms(), f_item['name']))
+                    if cur2.rowcount == 0:
+                        conn.execute("INSERT OR IGNORE INTO fruits(name,active,remote_id,created_at,updated_at,synced) VALUES(?,?,?,?,?,1)",
+                                     (f_item['name'], act, f_item['id'], now_ms(), now_ms()))
             except Exception as ex:
                 print(f'Sync [down]: Erro fruit: {ex}')
         conn.commit()
@@ -421,13 +427,15 @@ def _sync_dictionaries_from_supabase(conn: sqlite3.Connection, get, tenant_id: s
     if r.ok:
         for v in r.json():
             try:
-                conn.execute("""
-                    INSERT INTO varieties(name,active,remote_id,created_at,updated_at)
-                    VALUES(?,?,?,?,?)
-                    ON CONFLICT(remote_id) DO UPDATE SET
-                      name=excluded.name, active=excluded.active, updated_at=excluded.updated_at, synced=1
-                    WHERE synced=1 OR excluded.updated_at > varieties.updated_at
-                """, (v['name'], 1 if v.get('active') else 0, v['id'], now_ms(), now_ms()))
+                act = 1 if v.get('active') else 0
+                cur = conn.execute("UPDATE varieties SET name=?, active=?, updated_at=?, synced=1 WHERE remote_id=?",
+                                   (v['name'], act, now_ms(), v['id']))
+                if cur.rowcount == 0:
+                    cur2 = conn.execute("UPDATE varieties SET remote_id=?, active=?, updated_at=?, synced=1 WHERE name=?",
+                                        (v['id'], act, now_ms(), v['name']))
+                    if cur2.rowcount == 0:
+                        conn.execute("INSERT OR IGNORE INTO varieties(name,active,remote_id,created_at,updated_at,synced) VALUES(?,?,?,?,?,1)",
+                                     (v['name'], act, v['id'], now_ms(), now_ms()))
             except Exception as ex:
                 print(f'Sync [down]: Erro variety: {ex}')
         conn.commit()
@@ -465,6 +473,48 @@ def _sync_dictionaries_from_supabase(conn: sqlite3.Connection, get, tenant_id: s
                 except Exception as ex:
                     print(f'Sync [down]: Erro parcel_link: {ex}')
         conn.commit()
+
+
+def _sync_quality_audits_from_supabase(conn: sqlite3.Connection, get, tenant_id: str, tf: str) -> int:
+    """Sincroniza auditorias de qualidade lançadas no PWA/Web com resolução flexível de código de barras."""
+    changed_count = 0
+    try:
+        r = get(f'/rest/v1/quality_audits?select=*&order=ts.desc&limit=200{tf}')
+        if r.ok:
+            for q in r.json():
+                try:
+                    raw_bc = str(q.get('employee_barcode') or q.get('employee_id') or '').strip()
+                    rem_emp_id = q.get('employee_id')
+                    local_emp = conn.execute("""
+                        SELECT id FROM employees
+                        WHERE (remote_id IS NOT NULL AND remote_id=?)
+                           OR barcode=?
+                           OR (TRIM(barcode)!='' AND ? != '' AND COALESCE(NULLIF(LTRIM(TRIM(barcode),'0'),''),'0')=COALESCE(NULLIF(LTRIM(?,'0'),''),'0'))
+                        ORDER BY active DESC, id ASC LIMIT 1
+                    """, (rem_emp_id, raw_bc, raw_bc, raw_bc)).fetchone()
+                    if local_emp:
+                        rem_id_str = str(q['id'])
+                        pen_boxes = int(q.get('penalty_boxes') or 0)
+                        existing = conn.execute("SELECT penalty_boxes FROM quality_audits WHERE remote_id=?", (rem_id_str,)).fetchone()
+                        conn.execute("""
+                            INSERT INTO quality_audits(ts,station_id,employee_id,parcel_id,penalty_boxes,issue_type,reason,remote_id,synced)
+                            VALUES(?,?,?,(SELECT id FROM parcels WHERE remote_id=?),?,?,?,?,1)
+                            ON CONFLICT(remote_id) DO UPDATE SET
+                              ts=excluded.ts, employee_id=excluded.employee_id,
+                              penalty_boxes=excluded.penalty_boxes, reason=excluded.reason, synced=1
+                        """, (_iso_to_ms(q.get('ts')),
+                              q.get('station_id') or 'ST01', local_emp[0], q.get('parcel_id'),
+                              pen_boxes, q.get('issue_type'), q.get('reason'), rem_id_str))
+                        if not existing or int(existing[0] or 0) != pen_boxes:
+                            changed_count += 1
+                except Exception as ex:
+                    print(f'Sync [down]: Erro quality_audit {q.get("id")}: {ex}')
+            conn.commit()
+            if changed_count > 0:
+                print(f'Sync [down]: {changed_count} auditorias de qualidade (PWA/Web) sincronizadas.')
+    except Exception as ex:
+        print(f'Sync [down]: Erro ao baixar quality_audits: {ex}')
+    return changed_count
 
 
 def _sync_mapeiro_from_supabase(conn: sqlite3.Connection, get, tenant_id: str, tf: str) -> int:
@@ -608,6 +658,9 @@ def _post_with_retry(base_url, path, body, headers, conn, config):
             new_token = _refresh_token(conn, config)
             if new_token:
                 headers['Authorization'] = f'Bearer {new_token}'
+                res = requests.post(f'{base_url}{path}', headers=headers, json=body, timeout=15)
+            elif config.get('supabase_key'):
+                headers['Authorization'] = f"Bearer {config['supabase_key']}"
                 res = requests.post(f'{base_url}{path}', headers=headers, json=body, timeout=15)
         return res
     except Exception as e:
