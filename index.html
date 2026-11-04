@@ -2195,6 +2195,7 @@
   <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
   <div style="display:flex; align-items:center; gap:8px"><i data-lucide="shopping-bag" class="btn-i" style="color:var(--green)"></i> Colheitas por Parcela & Emissão de Ordens de Colheita</div>
   <div style="display:flex; gap:8px; align-items:center">
+  <button onclick="printPastaCampoCalendario()" class="btn sec" style="font-size:13px; padding:8px 14px; display:inline-flex; align-items:center; gap:6px; background:rgba(124,58,237,0.15); color:#a78bfa; border:1px solid rgba(124,58,237,0.3)" title="Imprimir Calendário de Plantio e Colheita (PC04)"><i data-lucide="calendar" style="width:16px; height:16px"></i> Imprimir Calendário (PC04)</button>
   <button onclick="printSelectedColheitaOrders()" class="btn on" style="font-size:13px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px"><i data-lucide="printer" style="width:16px; height:16px"></i>  Imprimir Ordens Selecionadas</button>
   <button onclick="openNewColheitaModal()" class="green" style="font-size:13px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px; background:var(--green)"><i data-lucide="plus-circle" style="width:16px; height:16px"></i> + Nova Colheita</button>
   </div>
@@ -3136,6 +3137,42 @@
   </table>
   </div>
 
+  <!-- Resumo Consolidado por Produto Utilizado (Garantias % e Somas dos Totais) -->
+  <div style="margin-top:24px; border-top:1px solid var(--border); padding-top:18px">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px">
+      <div>
+        <div style="font-size:15px; font-weight:800; color:#fff; display:flex; align-items:center; gap:6px">
+          <i data-lucide="layers" style="width:16px;height:16px;color:var(--blue)"></i> <span>Resumo Consolidado por Produto Utilizado (Garantias % e Somas)</span>
+        </div>
+        <div style="font-size:12px; color:var(--muted)">Composição percentual (%) oficial de cada produto por kg ou L usado, total consumido na parcela e a soma exata de cada elemento.</div>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%; border-collapse:collapse; font-size:12px">
+        <thead>
+          <tr style="border-bottom:1.5px solid var(--border); background:rgba(255,255,255,0.03); color:var(--muted2)">
+            <th style="padding:8px 12px; text-align:left">Produto / Fertilizante</th>
+            <th style="padding:8px 10px; text-align:center">Origem</th>
+            <th style="padding:8px 10px; text-align:center">Total Usado</th>
+            <th style="padding:8px 12px; text-align:left">Garantias (%) dos Elementos</th>
+            <th style="padding:8px 8px; text-align:center; color:#93c5fd">N (kg)</th>
+            <th style="padding:8px 8px; text-align:center; color:#86efac">P₂O₅ (kg)</th>
+            <th style="padding:8px 8px; text-align:center; color:#fdba74">K₂O (kg)</th>
+            <th style="padding:8px 8px; text-align:center; color:#fef08a">CaO (kg)</th>
+            <th style="padding:8px 8px; text-align:center; color:#f472b6">MgO (kg)</th>
+            <th style="padding:8px 8px; text-align:center; color:#cbd5e1">SO₃ (kg)</th>
+            <th style="padding:8px 8px; text-align:center; color:#a78bfa">B (kg)</th>
+            <th style="padding:8px 8px; text-align:center; color:#6ee7b7">Zn (kg)</th>
+            <th style="padding:8px 8px; text-align:center; color:#e2e8f0">Demais Elem.</th>
+          </tr>
+        </thead>
+        <tbody id="ccProdutosConsolidadosTableBody">
+          <tr><td colspan="13" style="text-align:center; padding:20px; color:var(--muted)">Selecione uma parcela para carregar o resumo de produtos.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- Card Detalhado de Foliares Individuais (PC09) -->
   <div style="margin-top:28px; border-top:1px solid var(--border); padding-top:20px">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px">
@@ -3187,6 +3224,7 @@
   <div class="title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
   <div style="display:flex; align-items:center; gap:8px"><i data-lucide="clipboard-list" class="btn-i" style="color:var(--green)"></i> Tratos Culturais e Preparo de Solo</div>
   <div style="display:flex; gap:8px; flex-wrap:wrap">
+  <button onclick="printPastaCampoTratos()" class="btn sec" style="font-size:13px; padding:8px 14px; display:inline-flex; align-items:center; gap:6px; background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3)" title="Imprimir Folha Oficial PC05"><i data-lucide="printer" style="width:16px; height:16px"></i> Imprimir PC05 (Tratos)</button>
   <button onclick="openAutoTratosModal()" class="btn sec" style="font-size:13px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px; background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3)"><i data-lucide="zap" style="width:16px; height:16px"></i> Gerar Tratos Automáticos (Foto Modelo)</button>
   <button onclick="openNewTratoModal()" class="green" style="font-size:13px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px; background:var(--green)"><i data-lucide="plus-circle" style="width:16px; height:16px"></i> + Novo Trato Cultural</button>
   </div>
@@ -13766,96 +13804,136 @@ function printSelectedPlantioCapas() {
 }
 
 function generateSingleCapaHtml(item) {
-  const tenantName = (window.tenantConfig && window.tenantConfig.name) || 'Empresa';
-  
-  // Buscar todas as variedades para a mesma parcela em _infoParcelas
-  const matchingIpsCapa = (_infoParcelas || []).filter(x => 
-  (x.parcela2 && item.parcela2 && String(x.parcela2).trim() === String(item.parcela2).trim()) ||
-  (x.parcela && item.parcela && String(x.parcela).trim() === String(item.parcela).trim()) ||
-  (x.id === item.id)
-  );
+  const normData = (typeof extractNormalizedParcelVarieties === 'function')
+    ? extractNormalizedParcelVarieties(item)
+    : { vars: [], totalLinhas: 0, totalArea: 0 };
 
-  const capaVarsSet = new Set();
-  let totalAreaCapa = 0;
-  matchingIpsCapa.forEach(p => {
-  if (p.variedade) {
-  p.variedade.split(/[,;\/]+/).forEach(v => { const cv = v.trim(); if(cv) capaVarsSet.add(cv.toUpperCase()); });
+  const pCode = (item.parcela2 || (item.parcela ? item.parcela + (item.letra || '') : '')) || item.code || '—';
+  const dtPlantioItem = item.plantio ? new Date(item.plantio + (item.plantio.includes('T') ? '' : 'T12:00:00')) : null;
+  const anoStr = dtPlantioItem ? `${dtPlantioItem.getFullYear()}/${dtPlantioItem.getFullYear() + 1}` : '2025/2026';
+
+  let varsData = (normData.vars && normData.vars.length > 0) ? normData.vars : [];
+  if (varsData.length === 0) {
+    varsData = [{
+      nome: item.variedade || item.cultura || 'MELÃO',
+      lote: item.lote || '—',
+      data: item.plantio || item.transplante || '',
+      linhas: parseFloat(item.linhas) || 0,
+      qtd: parseFloat(item.quantidade) || 0,
+      area: parseFloat(item.area || item.area_ha) || 0
+    }];
   }
-  if (p.area) totalAreaCapa += parseFloat(p.area) || 0;
+
+  let totalLinhasCalculadas = 0;
+  let totalAreaCalculada = 0;
+  let totalMudasCalculadas = 0;
+  varsData.forEach(v => {
+    totalLinhasCalculadas += (parseFloat(v.linhas) || 0);
+    totalAreaCalculada += (parseFloat(v.area) || 0);
+    totalMudasCalculadas += (parseFloat(v.qtd) || 0);
   });
-  if (item.variedade) {
-  item.variedade.split(/[,;\/]+/).forEach(v => { const cv = v.trim(); if(cv) capaVarsSet.add(cv.toUpperCase()); });
-  }
 
-  const variedadesList = Array.from(capaVarsSet);
-  let variedadesHtml = variedadesList.map(v => `<div>${v}</div>`).join('');
-  if (!variedadesHtml) variedadesHtml = '—';
-  
-  const dtPlantio = item.plantio ? new Date(item.plantio + 'T12:00:00') : null;
-  const anoStr = dtPlantio ? `${dtPlantio.getFullYear()}/${dtPlantio.getFullYear() + 1}` : new Date().getFullYear();
+  const areaFinalStr = (totalAreaCalculada > 0 ? totalAreaCalculada : (parseFloat(item.area || item.area_ha) || 0)).toFixed(2).replace('.', ',');
+  const totalLinhasFinal = totalLinhasCalculadas > 0 ? totalLinhasCalculadas : (item.linhas || '—');
+  const totalMudasFinal = totalMudasCalculadas > 0 ? totalMudasCalculadas.toLocaleString('pt-BR') : (item.quantidade ? parseFloat(item.quantidade).toLocaleString('pt-BR') : '—');
+
+  const variedadesRowsHtml = varsData.map((v, i) => `
+    <tr>
+      <td style="border:1px solid #000; padding:2px 4px; text-align:center;">${i+1}</td>
+      <td style="border:1px solid #000; padding:2px 6px; font-weight:bold;">${v.nome}</td>
+      <td style="border:1px solid #000; padding:2px 6px; text-align:right;">${(parseFloat(v.area)||0).toFixed(2).replace('.', ',')} ha</td>
+    </tr>
+  `).join('');
 
   const fmtD = d => d ? d.split('-').reverse().join('/') : '____/____/________';
 
   return `
-  <div class="sheet">
-  <table class="hdr-table">
-  <tr>
-  <td class="hdr-left">${tenantName.toUpperCase()}</td>
-  <td class="hdr-right">AGR-PC-01-R00 / REGISTRO DA CULTURA - ANEXO I</td>
-  </tr>
-  </table>
+  <div class="sheet" style="page-break-after:always; margin-bottom:15px;">
+    <table class="hdr-table">
+      <tr>
+        <td width="36%" style="line-height: 1.3;">
+          <strong>ELABORADO, EMITIDO E REVISADO POR:</strong> EMANUELA MOREIRA<br/>
+          Avaliado por: ADGF &nbsp;|&nbsp; Aprovado por: ADGF<br/>
+          <strong>FREQUÊNCIA:</strong> POR PARCELA DE CAMPO.
+        </td>
+        <td width="18%" style="text-align:center; vertical-align:middle;">${getTenantLogoHtml(40, 115)}</td>
+        <td width="46%" style="line-height: 1.3;">
+          <strong>DEPARTAMENTO:</strong> CAMPO<br/>
+          <strong>NOME DO DOC:</strong> REGISTROS DA CULTURA<br/>
+          <strong>EMISSÃO:</strong> 15/06/2026 &nbsp;|&nbsp; <strong>MOD. E APROVAÇÃO:</strong> 01/07/2026 &nbsp;|&nbsp; <strong>U. REVISÃO:</strong> 01/07/2026<br/>
+          <strong>PAG:</strong> 01 DE 01 &nbsp;\\&nbsp; <strong>COD:</strong> PC01 &nbsp;\\&nbsp; <strong>REVISÃO:</strong> ANUAL &nbsp;\\&nbsp; <strong>VERSÃO:</strong> 01
+        </td>
+      </tr>
+    </table>
 
-  <div class="main-title">CAMPO DA PARCELA Nº ${item.parcela2 || item.parcela || '____'}</div>
+    <div style="font-size: 13pt; font-weight: 900; text-align: center; margin: 4px 0 6px 0; letter-spacing: 0.5px; text-transform: uppercase;">REGISTROS DA CULTURA</div>
 
-  <div class="section-title">1. IDENTIFICAÇÃO DA ÁREA DE CULTIVO</div>
-  <table class="data-table">
-  <tr>
-  <td width="50%"><span class="lbl">SAFRA (ANO):</span> ${anoStr}</td>
-  <td width="50%"><span class="lbl">CULTURA:</span> ${item.cultura || 'MELÃO'}</td>
-  </tr>
-  <tr>
-  <td><span class="lbl">Nº DA PARCELA:</span> ${item.parcela2 || item.parcela || '—'}</td>
-  <td><span class="lbl">ÁREA DA PARCELA:</span> ${totalAreaStr + ' ha'}</td>
-  </tr>
-  <tr>
-  <td colspan="2"><span class="lbl">VARIEDADE(S):</span> ${variedadesHtml}</td>
-  </tr>
-  <tr>
-  <td><span class="lbl">TOTAL DE FILEIRAS/LINHAS:</span> ${item.linhas || '—'}</td>
-  <td><span class="lbl">ESPAÇAMENTO:</span> ${item.espacamento ? item.espacamento + ' m' : '—'}</td>
-  </tr>
-  </table>
+    <table class="data-table" style="width:100%; border-collapse:collapse; margin-bottom:5px; font-size:7.5pt;">
+      <tr style="background:#f8fafc">
+        <td style="width: 33%; border:1px solid #000; padding:4px;"><strong>PARCELA:</strong><br/><span style="font-size: 13pt; font-weight: 900; color:#1d4ed8">${pCode}</span></td>
+        <td style="width: 33%; border:1px solid #000; padding:4px;"><strong>CULTURA:</strong><br/><span style="font-size: 12pt; font-weight: 800;">${(item.cultura || 'MELÃO').toUpperCase()}</span></td>
+        <td style="width: 34%; border:1px solid #000; padding:4px;"><strong>SAFRA / ANO AGRÍCOLA:</strong><br/><span style="font-size: 11pt; font-weight: 800;">${anoStr}</span></td>
+      </tr>
+      <tr>
+        <td colspan="2" style="border:1px solid #000; line-height:1.3; padding:4px; vertical-align:top;">
+          <div style="font-weight:bold; font-size:7.5pt; margin-bottom:2px; text-transform:uppercase;">Variedades / Cultivares Plantadas na Parcela:</div>
+          <table style="width:100%; border-collapse:collapse; margin-top:3px; font-size:7.5pt;">
+            <thead>
+              <tr style="background:#f1f5f9;">
+                <th style="padding:2px 4px; border:1px solid #000; text-align:center; width:30px">#</th>
+                <th style="padding:2px 6px; border:1px solid #000; text-align:left">Variedade / Cultivar</th>
+                <th style="padding:2px 6px; border:1px solid #000; text-align:right; width:130px">Área (ha)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${variedadesRowsHtml}
+              <tr style="background:#f8fafc; font-weight:bold;">
+                <td colspan="2" style="text-align:right; border:1px solid #000; padding:3px 6px;">TOTAL DA PARCELA:</td>
+                <td style="text-align:right; border:1px solid #000; padding:3px 6px; color:#16a34a; font-size:9pt; font-weight:900;">${areaFinalStr} ha</td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+        <td style="border:1px solid #000; background:#fdfdfd; vertical-align:middle; text-align:center; padding:6px;">
+          <div style="font-size:7pt; color:#64748b; font-weight:bold; text-transform:uppercase;">Área Registrada da Parcela</div>
+          <div style="font-size:16pt; font-weight:900; color:#16a34a; margin-top:2px;">${areaFinalStr} <span style="font-size:10pt;">ha</span></div>
+          <div style="font-size:7pt; color:#64748b; margin-top:4px;">Linhas: <strong>${totalLinhasFinal}</strong> | Espaçamento: <strong>${item.espacamento || '2,0 x 0,3'} m</strong></div>
+        </td>
+      </tr>
+    </table>
 
-  <div class="section-title">2. DADOS DE SEMEADURA E TRANSPLANTE</div>
-  <table class="data-table">
-  <tr>
-  <td width="50%"><span class="lbl">DATA DA SEMEADURA:</span> ${fmtD(item.semeadura)}</td>
-  <td width="50%"><span class="lbl">DATA DO TRANSPLANTE:</span> ${fmtD(item.transplante || item.plantio)}</td>
-  </tr>
-  <tr>
-  <td><span class="lbl">QUANTIDADE DE MUDAS/SEMENTES:</span> ${item.quantidade ? item.quantidade.toLocaleString('pt-BR') : '—'}</td>
-  <td><span class="lbl">PREVISÃO DE INÍCIO DA COLHEITA:</span> ${fmtD(item.previsao_colheita)}</td>
-  </tr>
-  </table>
+    <div style="font-size: 8.8pt; font-weight: 900; margin-top: 6px; margin-bottom: 3px; text-transform: uppercase; border-bottom: 1px solid #000; padding-bottom: 2px;">1. DADOS DE SEMEADURA E PLANTIO</div>
+    <table class="data-table" style="width:100%; border-collapse:collapse; margin-bottom:5px; font-size:7.5pt;">
+      <tr>
+        <td style="width: 50%; border:1px solid #000; padding:4px;"><span style="font-weight:bold;">DATA DA SEMEADURA:</span> ${fmtD(item.semeadura)}</td>
+        <td style="width: 50%; border:1px solid #000; padding:4px;"><span style="font-weight:bold;">DATA DO TRANSPLANTE / PLANTIO:</span> ${fmtD(item.transplante || item.plantio)}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #000; padding:4px;"><span style="font-weight:bold;">QUANTIDADE DE MUDAS / SEMENTES:</span> ${totalMudasFinal}</td>
+        <td style="border:1px solid #000; padding:4px;"><span style="font-weight:bold;">PREVISÃO DE INÍCIO DA COLHEITA:</span> ${fmtD(item.previsao_colheita)}</td>
+      </tr>
+    </table>
 
-  <div class="section-title">3. RASTREABILIDADE DAS SEMENTES E REGISTROS IDIARN</div>
-  <table class="data-table">
-  <tr>
-  <td width="50%"><span class="lbl">Nº NOTA FISCAL SEMENTE:</span> ${item.nf || '—'}</td>
-  <td width="50%"><span class="lbl">FORNECEDOR SEMENTE:</span> ${item.fornecedor || '—'}</td>
-  </tr>
-  <tr>
-  <td><span class="lbl">TERMO DE CONFORMIDADE:</span> ${item.termo || '—'}</td>
-  <td><span class="lbl">VIVEIRO / PRODUTOR MUDA:</span> ${item.fornecedor2 || '—'}</td>
-  </tr>
-  <tr>
-  <td colspan="2"><span class="lbl">REGISTRO DE PLANTIO IDIARN:</span> ${item.idiarn || 'CONFORME LEGISLAÇÃO VIGENTE'}</td>
-  </tr>
-  </table>
+    <div style="font-size: 8.8pt; font-weight: 900; margin-top: 6px; margin-bottom: 3px; text-transform: uppercase; border-bottom: 1px solid #000; padding-bottom: 2px;">2. RASTREABILIDADE DAS SEMENTES E REGISTRO FITOSSANITÁRIO</div>
+    <table class="data-table" style="width:100%; border-collapse:collapse; margin-bottom:5px; font-size:7.5pt;">
+      <tr>
+        <td style="width: 50%; border:1px solid #000; padding:4px;"><span style="font-weight:bold;">Nº NOTA FISCAL SEMENTE:</span> ${item.nf || '—'}</td>
+        <td style="width: 50%; border:1px solid #000; padding:4px;"><span style="font-weight:bold;">FORNECEDOR SEMENTE:</span> ${item.fornecedor || '—'}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #000; padding:4px;"><span style="font-weight:bold;">TERMO DE CONFORMIDADE:</span> ${item.termo || '—'}</td>
+        <td style="border:1px solid #000; padding:4px;"><span style="font-weight:bold;">VIVEIRO / PRODUTOR DA MUDA:</span> ${item.fornecedor2 || '—'}</td>
+      </tr>
+      <tr>
+        <td colspan="2" style="border:1px solid #000; padding:4px;"><span style="font-weight:bold;">REGISTRO DE PLANTIO IDIARN:</span> ${item.idiarn || 'CONFORME LEGISLAÇÃO VIGENTE'}</td>
+      </tr>
+    </table>
 
-  <div style="margin-top:20px; font-size:7.5pt; color:#4b5563; text-align:center;">
-  Documento Oficial de Rastreabilidade Agrícola • ProdTec Gestão Integrada
-  </div>
+    <div style="margin-top: 8px; font-size: 6.8pt; line-height: 1.25; text-align: justify; border-top: 1px solid #000; padding-top: 4px;">
+      <strong>OBSERVAÇÕES:</strong><br/>
+      1. Os dados de aplicação de agrotóxicos e tratos fitossanitários constam no documento COD: PC06 (Controle Mensal de Agrotóxicos).<br/>
+      2. O cronograma operacional diário de tratos culturais consta no documento COD: PC05 e o histórico de colheitas em COD: OC01.
+    </div>
   </div>
   `;
 }
@@ -14498,17 +14576,45 @@ async function printPastaCampoCalendario(id) {
   const prevColheitaRaw = item.previsao_colheita || (normVars[0] && normVars[0].previsao) || null;
   const dtPrevColheita = parseFlexDate(prevColheitaRaw) || new Date(baseDate.getTime() + (75 * 86400000));
 
-  // Buscar OPs e MIPs da parcela para cruzar datas
+  // Buscar OPs, MIPs e COLHEITAS da parcela para cruzar datas
   let opsDates = new Set();
   let mipsDates = new Set();
+  let colheitaDates = new Set();
   try {
     const { data: ops } = await sb.from('caderno_campo_op').select('data_aplicacao').eq('parcela', pCode);
     if (ops) ops.forEach(o => { if (o.data_aplicacao) opsDates.add(o.data_aplicacao); });
 
     const { data: mips } = await sb.from('caderno_campo_mip').select('data_monitoramento').eq('parcela', pCode);
     if (mips) mips.forEach(m => { if (m.data_monitoramento) mipsDates.add(m.data_monitoramento); });
+
+    // Busca colheitas registradas no Supabase (caderno_campo_colheita e field_carrao_sessions)
+    const { data: cols } = await sb.from('caderno_campo_colheita').select('*').eq('parcela', pCode);
+    if (cols && cols.length > 0) {
+      cols.forEach(cl => {
+        if (cl.data_colheita) colheitaDates.add(cl.data_colheita);
+      });
+    }
+
+    const { data: carr } = await sb.from('field_carrao_sessions').select('*').eq('parcela', pCode);
+    if (carr && carr.length > 0) {
+      carr.forEach(cr => {
+        const d = cr.data_sessao || cr.created_at;
+        if (d) {
+          const dClean = d.split('T')[0];
+          colheitaDates.add(dClean);
+        }
+      });
+    }
+
+    // Fallback: busca em memória local (_colheitasList ou localStorage)
+    const localCols = (window._colheitasList || []).concat(JSON.parse(localStorage.getItem('prodtech_colheita_records') || '[]'));
+    localCols.forEach(cl => {
+      if (cl && (cl.parcela === pCode || String(cl.parcela2) === String(pCode)) && cl.data_colheita) {
+        colheitaDates.add(cl.data_colheita);
+      }
+    });
   } catch(e) {
-    console.warn('Erro ao buscar datas de OP/MIP:', e);
+    console.warn('Erro ao buscar datas de OP/MIP/Colheita:', e);
   }
 
   // Montar linhas de 1 a 44 (coluna esquerda) e 45 a 90 (coluna direita)
@@ -14573,27 +14679,37 @@ async function printPastaCampoCalendario(id) {
     `;
   }
 
-  // Linhas DAP 45 a 90
+  // Linhas DAP 45 a 90 (com PREVISÃO DE COLHEITA e COLHEITAS REALIZADAS)
+  const dtPrevColheitaStr = formatShortDate(dtPrevColheita);
   let rightRowsHtml = '';
   for (let dap = 45; dap <= 90; dap++) {
     const dtBr = getDayDateBr(dap);
     const isoDt = getIsoDateForDap(dap);
     const hasMip = isoDt && mipsDates.has(isoDt);
     const hasOp = isoDt && opsDates.has(isoDt);
+    const hasColheita = isoDt && colheitaDates.has(isoDt);
+    const isPrevisaoColheita = (dtBr === dtPrevColheitaStr);
+
     const mipStyle = hasMip ? 'background:#0284c7; color:#fff; font-weight:bold;' : '';
     const opStyle = hasOp ? 'background:#ea580c; color:#fff; font-weight:bold;' : '';
+    const prevStyle = isPrevisaoColheita ? 'background:#16a34a; color:#fff; font-weight:bold;' : '';
+    const colhRealStyle = hasColheita ? 'background:#eab308; color:#000; font-weight:bold;' : '';
+
+    let colhObs = '';
+    if (hasColheita) colhObs = 'COLHEITA';
+    else if (isPrevisaoColheita) colhObs = 'PREV. COLHEITA';
+
     rightRowsHtml += `
       <tr>
         <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.8pt; font-weight:600">${dap}</td>
         <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt; ${mipStyle}">${dtBr}</td>
         <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt; ${opStyle}">${dtBr}</td>
-        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt">${dtBr}</td>
-        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt">${dap <= 45 ? dtBr : '-'}</td>
-        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt"></td>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt; ${prevStyle}">${isPrevisaoColheita ? dtBr : '-'}</td>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt; ${colhRealStyle}">${hasColheita ? dtBr : '-'}</td>
+        <td style="border:1px solid #000; padding:1.5px 2px; text-align:center; font-size:6.5pt; font-weight:bold; ${hasColheita ? 'color:#854d0e' : ''}">${colhObs}</td>
       </tr>
     `;
   }
-
   // Montar tabela de 5 linhas com as variedades reais e áreas reais da parcela
   let varRowsHtml = '';
   for (let i = 0; i < 5; i++) {
@@ -14895,10 +15011,10 @@ async function printPastaCampoTratos(id) {
     <table class="header-box">
       <tr>
         <td style="width: 35%; font-size: 6.8pt; line-height: 1.3;">
-          <strong>EMITIDO OU REVISADO POR:</strong> ${window.tenantConfig && (window.tenantConfig.agronomo_certificacao || window.tenantConfig.responsavel_tecnico_nome) ? (window.tenantConfig.agronomo_certificacao || window.tenantConfig.responsavel_tecnico_nome) : 'EMANUELA MOREIRA'}<br/>
-          AVALIADO POR: JMLL<br/>
-          APROVADO POR: JMLL<br/>
-          FREQUÊNCIA: POR PARCELA DE CAMPO.
+          <strong>ELABORADO, EMITIDO e REVISADO POR:</strong> EMANUELA MOREIRA<br/>
+          Avaliado por: ADGF<br/>
+          Aprovado Por: ADGF<br/>
+          Frequência: Por parcela de campo.
         </td>
         <td style="width: 20%; text-align:center; vertical-align:middle;">${getTenantLogoHtml(42, 120)}</td>
         <td style="width: 45%; font-size: 6.5pt; line-height: 1.35;">
@@ -18948,13 +19064,21 @@ function renderInfoParcelasTable(list) {
   <small style="color:var(--muted)">Lote: ${esc(item.lote || '—')}</small>
   </td>
   <td style="padding:10px 8px; text-align:right; white-space:nowrap">
-  <button class="btn on" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoCapa('${item.id}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Capa (PC01)</button>
-  <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoSementes('${item.id}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Sementes (PC03)</button>
-  <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(124,58,237,0.15); color:#8b5cf6; border:1px solid rgba(124,58,237,0.3)" onclick="printPastaCampoCalendario('${item.id}')"><i data-lucide="calendar" style="width:12px; height:12px"></i> Calendário (PC04)</button>
-  <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoTratos('${item.id}')"><i data-lucide="printer" style="width:12px; height:12px"></i> Tratos (PC05)</button>
-  <button class="btn sec" style="font-size:11px; padding:4px 8px; margin-right:3px; display:inline-flex; align-items:center; gap:2px; background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3)" title="Imprimir Controle Mensal de Agrotóxicos na Cultura (PC06)" onclick="printPastaCampoDefensivos('${item.id}')"><i data-lucide="shield" style="width:12px; height:12px"></i> Defensivos (PC06)</button>
-  <button class="sec" style="padding:3px 8px; margin-right:3px" onclick="openInfoParcelaModal('${item.id}')"></button>
-  <button class="danger" style="padding:3px 8px" onclick="deleteInfoParcela('${item.id}')">×</button>
+  <button class="btn on" style="font-size:11px; padding:4px 7px; margin-right:2px; display:inline-flex; align-items:center; gap:2px" onclick="printPastaCampoCapa('${item.id}')" title="Capa da Cultura (PC01)"><i data-lucide="printer" style="width:12px; height:12px"></i> Capa (PC01)</button>
+  <select onchange="handlePlantioPrintAction(this, '${item.id}')" style="font-size:11px; padding:3px 6px; background:rgba(255,255,255,0.06); color:var(--text); border:1px solid var(--border); border-radius:6px; cursor:pointer; font-weight:600; outline:none; margin-right:4px;" title="Mais Fichas Oficiais PC">
+    <option value="" selected>Fichas PC...</option>
+    <option value="pc01">Capa (PC01)</option>
+    <option value="pc03">Sementes (PC03)</option>
+    <option value="pc04">Calendário (PC04)</option>
+    <option value="pc05">Tratos Culturais (PC05)</option>
+    <option value="pc06">Defensivos (PC06)</option>
+    <option value="pc07">Fertirrigação (PC07)</option>
+    <option value="pc08">Resumo Elementos (PC08)</option>
+    <option value="pc09">Adubos Foliares (PC09)</option>
+    <option value="idiarn">IDIARN Fitossanitário</option>
+  </select>
+  <button class="sec" style="padding:3px 8px; margin-right:3px" onclick="openInfoParcelaModal('${item.id}')" title="Editar"><i data-lucide="edit-3" style="width:12px; height:12px"></i></button>
+  <button class="danger" style="padding:3px 8px" onclick="deleteInfoParcela('${item.id}')" title="Excluir">×</button>
   </td>
   </tr>
   `;
@@ -19640,7 +19764,12 @@ async function onWebElementosParcelChange() {
 
   if (typeof calcResumoElementosParcela === 'function') {
     const res = await calcResumoElementosParcela(pId);
-    const fmt = v => (v != null && v > 0) ? v.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' kg' : '0,000 kg';
+    const fmt = v => {
+      if (v == null || v <= 0) return '0,000 kg';
+      if (v < 0.001) return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 5 }) + ' kg';
+      if (v < 0.01) return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + ' kg';
+      return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 }) + ' kg';
+    };
 
     if ($('elemVal_N')) $('elemVal_N').textContent = fmt(res.totalGeral.n);
     if ($('elemVal_P2O5')) $('elemVal_P2O5').textContent = fmt(res.totalGeral.p2o5);
@@ -19655,15 +19784,105 @@ async function onWebElementosParcelChange() {
         const tot = res.totalGeral[col.key] || 0;
         const isDestaque = ['n', 'p2o5', 'k2o', 'cao', 'mgo', 'so3'].includes(col.key);
 
+        const fmtCol = v => {
+          if (v == null || v <= 0) return '—';
+          if (v < 0.001) return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 5 });
+          if (v < 0.01) return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+          return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+        };
+
         return `
           <tr style="border-bottom:1px solid var(--border); ${isDestaque ? 'background:rgba(255,255,255,0.02); font-weight:600' : ''}">
             <td style="padding:10px 14px; color:var(--text)"><strong>${col.label}</strong></td>
-            <td style="padding:10px 14px; text-align:center">${fert > 0 ? fert.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3}) : '—'}</td>
-            <td style="padding:10px 14px; text-align:center">${fol > 0 ? fol.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3}) : '—'}</td>
-            <td style="padding:10px 14px; text-align:center; font-weight:800; color:${tot > 0 ? 'var(--blue)' : 'var(--muted)'}">${tot > 0 ? tot.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3}) + ' kg' : '—'}</td>
+            <td style="padding:10px 14px; text-align:center">${fmtCol(fert)}</td>
+            <td style="padding:10px 14px; text-align:center">${fmtCol(fol)}</td>
+            <td style="padding:10px 14px; text-align:center; font-weight:800; color:${tot > 0 ? 'var(--blue)' : 'var(--muted)'}">${tot > 0 ? fmtCol(tot) + ' kg' : '—'}</td>
           </tr>
         `;
       }).join('');
+    }
+
+    // Renderiza a nova tabela: Resumo Consolidado por Produto Utilizado
+    const prodTbody = $('ccProdutosConsolidadosTableBody');
+    if (prodTbody) {
+      const prods = res.produtosConsolidados || [];
+      if (prods.length === 0) {
+        prodTbody.innerHTML = `<tr><td colspan="13" style="text-align:center; padding:20px; color:var(--muted)">Nenhum fertilizante ou produto foliar registrado nesta parcela.</td></tr>`;
+      } else {
+        const fmtN = v => {
+          if (v == null || v <= 0) return '—';
+          if (v < 0.001) return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 5 });
+          if (v < 0.01) return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+          return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+        };
+
+        let somaTotalQtd = 0;
+        const somaElementos = {};
+        NUTRIENT_COLUMNS.forEach(col => { somaElementos[col.key] = 0; });
+
+        const rowsHtml = prods.map(p => {
+          somaTotalQtd += (p.quantidadeTotal || 0);
+          NUTRIENT_COLUMNS.forEach(col => {
+            somaElementos[col.key] += (p.nutrientes[col.key] || 0);
+          });
+
+          // Demais elementos (Mn, Fe, Cu, Mo, Co, etc.)
+          const outrosList = [];
+          ['mn', 'fe', 'cu', 'mo', 'co', 'mat_org', 'ac_humico', 'silicio'].forEach(k => {
+            const val = p.nutrientes[k];
+            if (val != null && val > 0) {
+              const colDef = NUTRIENT_COLUMNS.find(c => c.key === k);
+              outrosList.push(`${colDef ? colDef.label : k.toUpperCase()}: ${fmtN(val)} kg`);
+            }
+          });
+          const outrosStr = outrosList.length > 0 ? outrosList.join(' | ') : '—';
+
+          return `
+            <tr style="border-bottom:1px solid var(--border); font-size:12px; transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+              <td style="padding:8px 12px; font-weight:800; color:#fff">${p.produto}</td>
+              <td style="padding:8px 10px; text-align:center"><span class="badge" style="background:${p.origem === 'Foliar' ? 'rgba(74,222,128,0.1)' : 'rgba(59,130,246,0.1)'}; color:${p.origem === 'Foliar' ? '#4ade80' : '#60a5fa'}; font-size:10px">${p.origem}</span></td>
+              <td style="padding:8px 10px; text-align:center; font-weight:700; color:var(--text)">${p.quantidadeTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} ${p.unidade}</td>
+              <td style="padding:8px 12px; font-size:11px; color:#cbd5e1; font-family:monospace">${p.garantiasStr}</td>
+              <td style="padding:8px 8px; text-align:center; font-weight:600; color:${p.nutrientes.n > 0 ? '#93c5fd' : 'var(--muted)'}">${fmtN(p.nutrientes.n)}</td>
+              <td style="padding:8px 8px; text-align:center; font-weight:600; color:${p.nutrientes.p2o5 > 0 ? '#86efac' : 'var(--muted)'}">${fmtN(p.nutrientes.p2o5)}</td>
+              <td style="padding:8px 8px; text-align:center; font-weight:600; color:${p.nutrientes.k2o > 0 ? '#fdba74' : 'var(--muted)'}">${fmtN(p.nutrientes.k2o)}</td>
+              <td style="padding:8px 8px; text-align:center; font-weight:600; color:${p.nutrientes.cao > 0 ? '#fef08a' : 'var(--muted)'}">${fmtN(p.nutrientes.cao)}</td>
+              <td style="padding:8px 8px; text-align:center; font-weight:600; color:${p.nutrientes.mgo > 0 ? '#f472b6' : 'var(--muted)'}">${fmtN(p.nutrientes.mgo)}</td>
+              <td style="padding:8px 8px; text-align:center; font-weight:600; color:${p.nutrientes.so3 > 0 ? '#cbd5e1' : 'var(--muted)'}">${fmtN(p.nutrientes.so3)}</td>
+              <td style="padding:8px 8px; text-align:center; font-weight:600; color:${p.nutrientes.b > 0 ? '#a78bfa' : 'var(--muted)'}">${fmtN(p.nutrientes.b)}</td>
+              <td style="padding:8px 8px; text-align:center; font-weight:600; color:${p.nutrientes.zn > 0 ? '#6ee7b7' : 'var(--muted)'}">${fmtN(p.nutrientes.zn)}</td>
+              <td style="padding:8px 10px; font-size:10px; color:var(--muted2)">${outrosStr}</td>
+            </tr>
+          `;
+        }).join('');
+
+        const totalOutrosList = [];
+        ['mn', 'fe', 'cu', 'mo', 'co', 'mat_org', 'ac_humico', 'silicio'].forEach(k => {
+          const val = somaElementos[k];
+          if (val != null && val > 0) {
+            const colDef = NUTRIENT_COLUMNS.find(c => c.key === k);
+            totalOutrosList.push(`${colDef ? colDef.label : k.toUpperCase()}: ${fmtN(val)} kg`);
+          }
+        });
+        const totalOutrosStr = totalOutrosList.length > 0 ? totalOutrosList.join(' | ') : '—';
+
+        prodTbody.innerHTML = rowsHtml + `
+          <tr style="background:rgba(255,255,255,0.05); font-weight:900; border-top:2px solid var(--border)">
+            <td colspan="2" style="padding:10px 12px; text-align:right; font-size:12px; color:var(--text)">SOMA DOS TOTAIS:</td>
+            <td style="padding:10px; text-align:center; color:#34d399; font-weight:900">${somaTotalQtd.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} kg/L</td>
+            <td style="font-size:11px; color:var(--muted); padding:10px 12px;">Todos os elementos calculados diretamente das garantias (%)</td>
+            <td style="padding:8px; text-align:center; color:#93c5fd">${fmtN(somaElementos.n)}</td>
+            <td style="padding:8px; text-align:center; color:#86efac">${fmtN(somaElementos.p2o5)}</td>
+            <td style="padding:8px; text-align:center; color:#fdba74">${fmtN(somaElementos.k2o)}</td>
+            <td style="padding:8px; text-align:center; color:#fef08a">${fmtN(somaElementos.cao)}</td>
+            <td style="padding:8px; text-align:center; color:#f472b6">${fmtN(somaElementos.mgo)}</td>
+            <td style="padding:8px; text-align:center; color:#cbd5e1">${fmtN(somaElementos.so3)}</td>
+            <td style="padding:8px; text-align:center; color:#a78bfa">${fmtN(somaElementos.b)}</td>
+            <td style="padding:8px; text-align:center; color:#6ee7b7">${fmtN(somaElementos.zn)}</td>
+            <td style="padding:8px 10px; font-size:10px; color:#e2e8f0; font-weight:bold">${totalOutrosStr}</td>
+          </tr>
+        `;
+      }
     }
 
     // Renderiza a tabela individual de Aplicações Foliares (PC09)
@@ -19672,14 +19891,20 @@ async function onWebElementosParcelChange() {
       if (res.foliarRows.length === 0) {
         folTbody.innerHTML = `<tr><td colspan="15" style="text-align:center; padding:20px; color:var(--muted)">Nenhuma aplicação foliar registrada nesta parcela.</td></tr>`;
       } else {
-        const fmtN = v => (v != null && v > 0) ? v.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '—';
+        const fmtN = v => {
+          if (v == null || v <= 0) return '—';
+          if (v < 0.001) return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 5 });
+          if (v < 0.01) return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+          return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+        };
+
         folTbody.innerHTML = res.foliarRows.map(r => `
           <tr style="border-bottom:1px solid var(--border); font-size:12px; transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
             <td style="padding:8px 10px; text-align:center">${r.data}</td>
             <td style="padding:8px 8px; text-align:center; font-weight:700">${r.ordem}</td>
             <td style="padding:8px 8px; text-align:center; font-weight:bold">${r.dap}</td>
             <td style="padding:8px 12px; font-weight:800; color:#fff">${r.produto}</td>
-            <td style="padding:8px 10px; text-align:center; font-weight:700">${r.quantidade.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg/L</td>
+            <td style="padding:8px 10px; text-align:center; font-weight:700">${r.quantidade.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} ${r.unidade || 'kg/L'}</td>
             <td style="padding:8px 10px; text-align:center; font-size:11px; color:var(--muted2)">${r.dosagem}</td>
             <td style="padding:8px 8px; text-align:center; font-weight:600; color:${r.nutrientes.n > 0 ? '#93c5fd' : 'var(--muted)'}">${fmtN(r.nutrientes.n)}</td>
             <td style="padding:8px 8px; text-align:center; font-weight:600; color:${r.nutrientes.p2o5 > 0 ? '#86efac' : 'var(--muted)'}">${fmtN(r.nutrientes.p2o5)}</td>
@@ -19694,7 +19919,7 @@ async function onWebElementosParcelChange() {
         `).join('') + `
           <tr style="background:rgba(255,255,255,0.04); font-weight:900; border-top:2px solid var(--border)">
             <td colspan="4" style="padding:10px 12px; text-align:right; font-size:12px; color:var(--text)">TOTAL GERAL FOLIAR:</td>
-            <td style="padding:10px; text-align:center; color:#34d399">${res.foliarRows.reduce((acc, x) => acc + x.quantidade, 0).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg/L</td>
+            <td style="padding:10px; text-align:center; color:#34d399">${res.foliarRows.reduce((acc, x) => acc + x.quantidade, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} kg/L</td>
             <td></td>
             <td style="padding:8px; text-align:center; color:#93c5fd">${fmtN(res.totalFoliar.n)}</td>
             <td style="padding:8px; text-align:center; color:#86efac">${fmtN(res.totalFoliar.p2o5)}</td>
@@ -19713,7 +19938,6 @@ async function onWebElementosParcelChange() {
 
   if (window.lucide) lucide.createIcons();
 }
-
 async function loadMipTable() {
   try {
     const tId = tenantId || window.tenantId || (window.tenantConfig && window.tenantConfig.id);
@@ -25606,7 +25830,18 @@ async function deleteColheitaRecord(id) {
 }
 
 function printOrdemColheitaReport(itemStr) {
-  const item = JSON.parse(decodeURIComponent(itemStr));
+  let item = null;
+  try {
+    item = typeof itemStr === 'object' ? itemStr : JSON.parse(decodeURIComponent(itemStr));
+  } catch(e) {
+    try { item = JSON.parse(itemStr); } catch(err){}
+  }
+  if (!item) { alert('Dados da ordem de colheita não encontrados.'); return; }
+  
+  if (typeof exportHarvestOrderPDF === 'function') {
+    return exportHarvestOrderPDF(item.id || item);
+  }
+
   const printWin = window.open('', '_blank', 'width=900,height=1200');
   if (!printWin) { alert('Permita popups para imprimir.'); return; }
 

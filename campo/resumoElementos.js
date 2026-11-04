@@ -39,196 +39,1475 @@ if (typeof window !== 'undefined') {
 
 // ── 2. BASE DE DADOS PADRÃO DE TEORES (%) EXTRAÍDA DO MODELO OFICIAL ───────
 const DEFAULT_ELEMENTS_DATABASE = {
-  // Fertilizantes Principais de Fertirrigação
-  "MAP": { n: 11.0, p2o5: 50.0 },
-  "MAP 61%": { n: 12.0, p2o5: 61.0 },
-  "MAP CRISTAL": { n: 12.0, p2o5: 61.0, k2o: 10.0 },
-  "UREIA": { n: 45.0 },
-  "UREIA MAX": { n: 46.0 },
-  "URFA 44%": { n: 17.0, p2o5: 44.0 },
-  "ACIDO BORICO": { b: 17.5 },
-  "AC. BORICO": { b: 17.5 },
-  "ÁCIDO BÓRICO": { b: 17.5 },
-  "NIT. CALCIO": { n: 15.5, cao: 10.0, mgo: 0.5 },
-  "NITRATO DE CALCIO": { n: 15.5, cao: 10.0, mgo: 0.5 },
-  "NITRATO DE CÁLCIO": { n: 15.5, cao: 10.0, mgo: 0.5 },
-  "SULF. MAG.": { mgo: 9.0, so3: 12.0 },
-  "SULF. MAG": { mgo: 9.0, so3: 12.0 },
-  "SULFATO DE MAGNESIO": { mgo: 9.0, so3: 12.0 },
-  "SULFATO DE MAGNÉSIO": { mgo: 9.0, so3: 12.0 },
-  "SULF. POTASSIO": { k2o: 50.0, so3: 42.0 },
-  "SULF. POT.": { k2o: 50.0, so3: 42.0 },
-  "SULFATO DE POTASSIO": { k2o: 50.0, so3: 42.0 },
-  "SULFATO DE POTÁSSIO": { k2o: 50.0, so3: 42.0 },
-  "CLORETO DE POTASSIO": { k2o: 60.0 },
-  "CLORETO DE POTÁSSIO (KCL)": { k2o: 60.0 },
-  "FERT": { mat_org: 2.0, n: 2.0, p2o5: 3.0 },
-  "SUPERSOIL": { mat_org: 2.0, n: 2.0, p2o5: 3.0 },
-  "AGI MOL": { mat_org: 2.0, n: 2.0, p2o5: 3.0 },
-  "AGIMOL": { mat_org: 2.0, n: 2.0, p2o5: 3.0 },
-  
-  // Adubos de Fundação & Complexos NPK
-  "ADUBO 06-24-12": { n: 6.0, p2o5: 24.0, k2o: 12.0 },
-  "06.24.12": { n: 6.0, p2o5: 24.0, k2o: 12.0 },
-  "ADUBO 03-12-06": { n: 3.0, p2o5: 12.0, k2o: 6.0 },
-  "03.12.06": { n: 3.0, p2o5: 12.0, k2o: 6.0 },
-  "ADUBO 08-30-20": { n: 8.0, p2o5: 30.0, k2o: 20.0 },
-  "ADUBO 10-10-10": { n: 10.0, p2o5: 10.0, k2o: 10.0 },
-  "ADUBO 11-40-11": { n: 11.0, p2o5: 40.0, k2o: 11.0 },
-  "ADUBO 12-18-18": { n: 12.0, p2o5: 18.0, k2o: 18.0 },
-  "ADUBO 13-14-30": { n: 13.0, p2o5: 14.0, k2o: 30.0 },
-  "ADUBO 15.30.15": { n: 15.0, p2o5: 30.0, k2o: 15.0 },
-  "05.30.05": { n: 5.0, p2o5: 30.0, k2o: 5.0 },
-  "FERT MINERAL COMPLEXO 05.30.05": { n: 5.0, p2o5: 30.0, k2o: 5.0 },
-  "FERT MINERAL MISTO 15.30.15": { n: 15.0, p2o5: 30.0, k2o: 15.0 },
-  "BIOTURBO": { n: 3.0, p2o5: 12.0, k2o: 6.0 },
-  "COMPOSTO ORGANICO": { mat_org: 39.0, n: 17.0, p2o5: 3.3, k2o: 2.3 },
-  "COMPOSTO ORGÂNICO": { mat_org: 39.0, n: 17.0, p2o5: 3.3, k2o: 2.3 },
-  "COMPOSTO ORG": { mat_org: 39.0, n: 17.0, p2o5: 3.3, k2o: 2.3 },
-  "AMIORGAN": { mat_org: 70.0, n: 17.0, p2o5: 7.0, k2o: 8.0, so3: 0.8 },
-
-  // Ácidos e Especialidades
-  "ACIDO NITRICO": { n: 12.4 },
-  "ÁCIDO NÍTRICO": { n: 12.4 },
-  "ACIDO FOSFORICO": { p2o5: 50.0 },
-  "ÁCIDO FOSFÓRICO": { p2o5: 50.0 },
-  "NITRATO DE MAGNESIO": { n: 10.5, mgo: 9.0 },
-  "NITRATO DE MAGNÉSIO": { n: 10.5, mgo: 9.0 },
-  "NIT MAG": { n: 10.5, mgo: 9.0 },
-  "NITRATO DE POTASSIO": { n: 13.0, k2o: 44.0 },
-  "NITRATO DE POTÁSSIO": { n: 13.0, k2o: 44.0 },
-  "NIT. POT.": { n: 13.0, k2o: 44.0 },
-  "SULFATO DE AMONIA": { n: 20.0, so3: 22.0 },
-  "SULFATO DE AMÔNIA": { n: 20.0, so3: 22.0 },
-  "SULFATO DE ZINCO": { so3: 16.0, zn: 20.0 },
-  "MKP": { p2o5: 52.0, k2o: 34.0 },
-  "PEKACID": { p2o5: 60.0, k2o: 20.0 },
-  "MAGNUM PHOSCAL": { n: 9.0, p2o5: 49.0, cao: 10.0 },
-  "MAGPHOS": { p2o5: 55.0, k2o: 19.0, mgo: 8.0 },
-  "MULT NPK 00.50.36": { p2o5: 50.0, k2o: 36.0 },
-  "MULT NPK 13.02.44": { n: 13.0, p2o5: 2.0, k2o: 44.0 },
-  "MULT PROTEK 00.56.37": { p2o5: 56.0, k2o: 37.0, h2po4: 30.0, hpo4: 26.0 },
-  "MULTIMAG 9": { cao: 9.0, so3: 11.0 },
-  "POLY FEED 12.43.12": { n: 12.0, p2o5: 43.0, k2o: 12.0 },
-  "UREIA SUPERFOSFATADA": { n: 17.0, p2o5: 44.0 },
-
-  // Foliares e Nutrição Foliar (Páginas 10, 11 e 13)
-  "P - 51": { p2o5: 51.0 },
-  "P-51": { p2o5: 51.0 },
-  "P - 51 (FOLIAR)": { p2o5: 51.0 },
-  "ACTIWAVE": { n: 3.0, p2o5: 7.0, cao: 0.32, mgo: 0.08, so3: 0.5 },
-  "AGRO MOS": { n: 2.75, p2o5: 2.0, k2o: 3.0 },
-  "AGRUMAX": { n: 12.0, p2o5: 10.8, k2o: 10.0, cao: 0.2, zn: 10.0, fe: 1.0, mn: 0.1 },
-  "AJIFOL": { mat_org: 30.0, n: 10.0, p2o5: 12.2, k2o: 12.5, cao: 12.2, mgo: 12.1 },
-  "AJIFOL P-250": { p2o5: 25.0 },
-  "AJIPOWER": { n: 4.0, p2o5: 19.0 },
-  "ALPHA X-35": { n: 12.4, p2o5: 2.4 },
-  "AMINOAGRO AD+": { n: 7.0 },
-  "AMINOAGRO MAGNESIO": { mgo: 5.0 },
-  "AMINOAGRO MAGNÉSIO": { mgo: 5.0 },
-  "AMINOAGRO MOLIBDENIO": { mo: 15.0 },
-  "AMINOAGRO MOLIBDÊNIO": { mo: 15.0 },
-  "AMINOBOR CA": { cao: 8.0, b: 0.2 },
-  "AMINOBOR Ca": { cao: 8.0, b: 0.2 },
-  "AMINOMAX CAB": { n: 9.0, cao: 0.5, b: 0.2, mo: 0.01, ac_humico: 6.0 },
-  "AMINOMAX M": { n: 10.0, p2o5: 3.0, k2o: 2.0, cao: 0.5, fe: 0.1, mn: 0.02, zn: 0.02, ac_humico: 6.0 },
-  "AMINOMAX SUPRA": { n: 5.0, p2o5: 10.0, k2o: 6.0, cao: 2.0, mgo: 1.1, zn: 0.1, fe: 0.5, mn: 0.1, b: 0.2, ac_humico: 6.0 },
-  "AMINO-PLUS": { mat_org: 30.0, n: 11.0, k2o: 1.0 },
-  "ATON AZ": { n: 10.0, p2o5: 5.0, zn: 0.2, fe: 2.5, b: 0.1 },
-  "AVE-0": { mat_org: 62.0, n: 10.6, p2o5: 16.4 },
-  "BAC SOL": { n: 5.0 },
-  "BARRIER": { cao: 13.0, silicio: 10.0 },
-  "BENEFIT PZ": { n: 1.0, p2o5: 3.0, cao: 1.0, mgo: 1.0, ac_humico: 3.0 },
-  "BIO PIROL": { n: 0.3, p2o5: 5.5, k2o: 1.8, cao: 0.2, fe: 0.5, mn: 0.4, zn: 0.3 },
-  "BIOCONTROL": { mat_org: 52.0, n: 7.6, p2o5: 14.7, k2o: 15.5 },
-  "BIONUTRI FERRO": { fe: 8.0 },
-  "BIONUTRI ZINCO": { zn: 5.0 },
-  "BIOZIME TF": { n: 1.73, p2o5: 5.0, k2o: 2.1, cao: 2.43, so3: 0.49, zn: 1.0, fe: 0.08 },
-  "BORAMIN CA": { b: 0.2 },
-  "BORO PLUS": { b: 11.0 },
-  "BREXIL TOP": { n: 2.0, cao: 10.0, mgo: 6.0, zn: 5.0, b: 2.0, fe: 6.0 },
-  "CAB MAX": { cao: 2.0, b: 8.0 },
-  "CAB2": { cao: 8.0, b: 2.0 },
-  "CATP": { mat_org: 33.0, cao: 0.3, p2o5: 30.0 },
-  "CHELAL B": { b: 8.0 },
-  "CODA BRIX": { k2o: 18.0 },
-  "CODA MAX": { p2o5: 3.9, k2o: 32.0 },
-  "CODA MIX": { fe: 4.6, mn: 0.5, zn: 4.0, cu: 2.0, b: 0.3, mo: 0.12 },
-  "CODAFOL 0.54.0": { p2o5: 54.0 },
-  "CODAHUMUS 20": { n: 3.0, ac_humico: 10.0, ac_fulvico: 10.2 },
-  "CODAMIM HF": { n: 3.0, p2o5: 9.5, k2o: 3.5, b: 0.5 },
-  "CODAPHOS MG": { p2o5: 40.0, mgo: 6.0 },
-  "CODASAL PLUS": { n: 6.6, cao: 8.7 },
-  "CODASTING": { n: 7.2 },
-  "COMPLEXO HORTIFRUTI": { n: 3.0, p2o5: 5.0, k2o: 10.0, cao: 1.0, mgo: 1.0, so3: 0.5, zn: 10.0, fe: 0.2 },
-  "CONTROL DPM": { n: 3.0, p2o5: 17.0 },
-  "COPPER CROP": { n: 4.0, cu: 10.0 },
-  "CROP SET": { n: 3.62, so3: 2.5, zn: 3.0, fe: 1.0 },
-  "DELFAN PLUS": { n: 9.0 },
-  "DIGEST-AID": { ac_humico: 6.0, celulase: 0.6 },
-  "DMOLIDOR 20": { n: 5.0, p2o5: 4.0, b: 0.5 },
-  "DRAKAR K": { n: 3.0, k2o: 31.0 },
-  "ENERVIG LEG": { n: 0.5, p2o5: 10.0, fe: 0.7 },
-  "ENXOFRE 100": { so3: 11.0, fe: 7.1 },
-  "ENXOFRE LIQUIDO": { so3: 68.0 },
-  "ENXOFRE SUFU-M": { so3: 80.0, fe: 0.1 },
-  "FAINAL K": { n: 3.0, k2o: 31.0 },
-  "FERTAMIM CAB": { n: 10.0, cao: 1.5, b: 0.05, mo: 0.01 },
-  "FERTAMIM EXTRA": { n: 10.0, p2o5: 1.0, k2o: 1.0, cao: 1.0, mgo: 0.5, zn: 3.0, fe: 0.5 },
-  "FERTAMIM FERRO": { fe: 0.5 },
-  "FERTAMIM PLUS": { n: 2.0, p2o5: 6.0, fe: 0.5 },
-  "FERTAMIN CA": { n: 5.0, cao: 2.0, b: 0.05, mo: 0.01 },
-  "FERTAMIN CAFE": { n: 6.0, b: 0.5 },
-  "FERTAMIN M": { n: 10.0, p2o5: 1.0, k2o: 1.0, zn: 0.01, fe: 0.01, mn: 0.1, b: 0.1 },
-  "FERTIACTYL CALIBOR": { n: 3.0, cao: 12.0, b: 2.8, fe: 0.2 },
-  "FERTIACTYL GZ": { n: 13.0, k2o: 5.0 },
-  "FERTILEADER ALPHA": { n: 6.0, p2o5: 12.0, b: 4.2 },
-  "FERTILEADER ELITE": { n: 9.0, cao: 6.0, k2o: 6.0, b: 0.2 },
-  "FETRILON COMBI": { so3: 9.0, fe: 4.0, mn: 4.0, zn: 1.5, cu: 1.5, b: 0.5, mo: 0.01, mgo: 3.0 },
-  "FOSFIT TOTAL + MG": { p2o5: 35.0, k2o: 23.0, mgo: 6.0 },
-  "FOSFIT TOTAL COBRE": { p2o5: 31.5, cu: 13.0 },
-  "FRUCTOL": { n: 5.0, p2o5: 8.0, k2o: 15.0, cao: 2.4, mgo: 0.8, fe: 0.8, mn: 0.8, zn: 2.0, mo: 0.08 },
-  "FULAND": { mat_org: 20.0, n: 1.75, k2o: 3.5 },
-  "FULVUMIN": { mat_org: 3.0, ac_fulvico: 1.5 },
-  "FYLLOTON": { n: 6.0 },
-  "GLIBOR CA": { cao: 8.6, b: 3.0 },
-  "GLUTAMIM FLORADA": { n: 0.1, p2o5: 8.0, b: 0.1, zn: 0.5 },
-  "GREEN LEAF": { n: 2.4, p2o5: 20.0, b: 0.1, fe: 0.2, mn: 0.1, zn: 0.05 },
-  "GROWMASTER FERRO": { fe: 6.0, b: 0.2 },
-  "GROWMASTER MAGNESIO": { mgo: 6.0, so3: 6.0, zn: 1.0 },
-  "GROWMASTER MOLIBDENIO": { mo: 15.0 },
-  "HIDROFERT": { n: 5.7, p2o5: 34.0, k2o: 7.15 },
-  "HUMITEC": { mat_org: 8.0, n: 4.0, ac_humico: 15.0 },
-  "IMUNE MIX": { p2o5: 31.0, cao: 1.0, mgo: 2.0, zn: 3.0, cu: 1.0, b: 1.0 },
-  "IMUNE-CALCIO": { p2o5: 15.0, cao: 4.2 },
-  "IMUNE-MAGNESIO": { p2o5: 44.0, mgo: 6.5 },
-  "IMUNE-POTASSIO": { p2o5: 30.0, k2o: 20.0 },
-  "IMUNE-ZINCO": { p2o5: 44.0, zn: 5.0 },
-  "K BOMBAR 55": { n: 5.0, k2o: 55.0 },
-  "K-30": { n: 3.0, k2o: 30.0 },
-  "KAPPA V": { n: 7.0, p2o5: 12.0, k2o: 27.0, b: 0.25, ac_humico: 8.0 },
-  "LIQUI-PLEX FRUIT": { n: 5.0, p2o5: 1.0, k2o: 5.34, cao: 5.0, mgo: 5.0, fe: 1.0, b: 0.1, mo: 0.25 },
-  "LIQUI-PLEX GRAPE": { n: 3.0, p2o5: 6.0, k2o: 6.0, cao: 1.0, mgo: 0.5, zn: 0.5, fe: 0.5, mn: 1.0, b: 0.3 },
-  "MEGA HUMUS": { ac_humico: 10.0, ac_fulvico: 12.0 },
-  "MEGAFOL": { mat_org: 25.0, n: 11.0, k2o: 1.0 },
-  "NIPHOKAM 108": { n: 10.0, p2o5: 8.0, k2o: 8.0, cao: 1.0, mgo: 0.5, so3: 2.0, zn: 1.0, fe: 0.1, mn: 0.5, b: 0.5, mo: 0.1, cu: 0.2 },
-  "NUTRI HUMUS": { ac_humico: 22.0 },
-  "NUTRIPHITE": { p2o5: 28.0, k2o: 26.0, cao: 6.0, mgo: 2.0, h2po4: 50.0 },
-  "PLANTAFOL 05.15.45": { n: 5.0, p2o5: 15.0, k2o: 45.0, fe: 0.04 },
-  "PLANTAFOL 10.55.10": { n: 10.0, p2o5: 55.0, k2o: 10.0 },
-  "PLANT-PROD 10.52.10": { n: 10.0, p2o5: 52.0, k2o: 10.0, fe: 0.1, mn: 0.1, zn: 0.1, b: 0.2, cu: 0.02, mo: 0.05 },
-  "QUIMIFOL SQL SUPER": { n: 5.0, p2o5: 10.0, k2o: 10.0, cao: 0.5, mgo: 3.0, so3: 3.0, zn: 1.0, b: 2.0 },
-  "QUIMIORGAN K-40": { n: 10.0, k2o: 42.0 },
-  "REXOLIM": { fe: 12.0, mn: 1.2, zn: 1.5, cu: 4.2, b: 3.4, mo: 3.2, mgo: 1.5, cao: 0.05, so3: 0.5 },
-  "RIZAMINA": { n: 13.0, p2o5: 8.0, k2o: 21.0, cao: 2.0, so3: 5.5, fe: 0.1, mn: 0.2, b: 0.03, zn: 0.05 },
-  "RUTER AA": { mat_org: 15.0, n: 5.0, p2o5: 5.0, k2o: 3.0, fe: 0.07, mn: 0.5, zn: 1.0, mo: 2.0 },
-  "SPRAY DUNGER": { n: 5.0, p2o5: 10.0, k2o: 20.0, mgo: 1.24, fe: 1.5, mn: 4.8, zn: 0.1 },
-  "SWEET": { n: 10.0, cao: 2.0, mgo: 3.0, fe: 0.01, zn: 0.1, b: 0.12 },
-  "TRADEBOR": { b: 10.0 },
-  "UBYFOL MS-77": { n: 2.0, p2o5: 13.0, mgo: 1.0, so3: 1.0, zn: 4.5, b: 0.1, fe: 0.2, mn: 0.1 },
-  "UBYFOL REDUFOL": { n: 6.0, p2o5: 30.0, b: 2.5 },
-  "UBYFOL S-CAB": { cao: 20.0, b: 3.0 },
-  "UBYFOL VERDE": { n: 15.0, p2o5: 15.0, k2o: 20.0, cao: 1.5, mgo: 0.05, so3: 3.0, zn: 0.2, fe: 0.1, mn: 0.02, b: 0.05, mo: 0.01, cu: 0.05 }
+  "AGI MOL": {
+    "mat_org": 2,
+    "n": 2,
+    "p2o5": 3
+  },
+  "SUPERSOIL": {
+    "mat_org": 2,
+    "n": 2,
+    "p2o5": 3
+  },
+  "ACTIWAVE": {
+    "n": 3,
+    "k2o": 7,
+    "so3": 0.32,
+    "zn": 0.08,
+    "fe": 0.5
+  },
+  "ADUBO 03-12-06": {
+    "n": 3,
+    "p2o5": 12,
+    "k2o": 6
+  },
+  "ADUBO 06-24-12": {
+    "n": 6,
+    "p2o5": 24,
+    "k2o": 12
+  },
+  "ADUBO 08-30-20": {
+    "n": 8,
+    "p2o5": 30,
+    "k2o": 20
+  },
+  "ADUBO 11-40-11": {
+    "n": 11,
+    "p2o5": 40,
+    "k2o": 11
+  },
+  "ADUBO 12-18-18": {
+    "n": 12,
+    "p2o5": 18,
+    "k2o": 18
+  },
+  "ADUBO 13-14-30": {
+    "n": 13,
+    "p2o5": 14,
+    "k2o": 30
+  },
+  "AGRO MOS": {
+    "so3": 2.75,
+    "zn": 2,
+    "cu": 3
+  },
+  "AGRUMAX": {
+    "n": 12,
+    "so3": 10.8,
+    "zn": 10,
+    "fe": 0.2,
+    "mn": 10,
+    "b": 1,
+    "cu": 0.1
+  },
+  "AJIFOL": {
+    "mat_org": 30,
+    "n": 10,
+    "k2o": 12.2,
+    "zn": 12.5,
+    "mn": 12.2,
+    "b": 12.1
+  },
+  "AJIFOL P-250": {
+    "p2o5": 25
+  },
+  "AJIPOWER": {
+    "n": 4,
+    "p2o5": 19
+  },
+  "ALPHA X-35": {
+    "p2o5": 12.4,
+    "k2o": 2.4
+  },
+  "AMINO VITA": {
+    "n": 1,
+    "cao": 8
+  },
+  "AMINO-PLUS": {
+    "mat_org": 30,
+    "n": 11,
+    "k2o": 1
+  },
+  "AMINOAGRO AD⁺": {
+    "p2o5": 7
+  },
+  "AMINOAGRO MAGNÉSIO": {
+    "so3": 5
+  },
+  "AMINOAGRO MOLIBDÊNIO": {
+    "mo": 15
+  },
+  "AMINOBOR CA": {
+    "b": 8,
+    "mo": 0.2
+  },
+  "AMINOMAX CAB": {
+    "cao": 9,
+    "mgo": 0.5,
+    "b": 0.2,
+    "mo": 0.01,
+    "co": 6
+  },
+  "AMINOMAX M": {
+    "n": 10,
+    "p2o5": 3,
+    "k2o": 2,
+    "mgo": 0.5,
+    "zn": 0.1,
+    "mn": 0.02,
+    "b": 0.02,
+    "co": 6
+  },
+  "AMINOMAX SUPRA": {
+    "n": 5,
+    "p2o5": 10,
+    "k2o": 6,
+    "cao": 2,
+    "zn": 1.1,
+    "fe": 0.1,
+    "b": 0.5,
+    "mo": 0.1,
+    "cu": 0.2,
+    "co": 6
+  },
+  "AMIORGAN": {
+    "mat_org": 70,
+    "n": 17,
+    "k2o": 7,
+    "so3": 8
+  },
+  "AQUAPHOLE": {
+    "zn": 2
+  },
+  "ATIVE ORGANIC": {
+    "n": 8,
+    "k2o": 2,
+    "mgo": 2,
+    "co": 10
+  },
+  "ATON AZ": {
+    "n": 10,
+    "zn": 5,
+    "fe": 0.2,
+    "mn": 2.5,
+    "b": 0.1
+  },
+  "AVE-0": {
+    "mat_org": 62.3,
+    "n": 10.6,
+    "p2o5": 16.4,
+    "k2o": 0.002
+  },
+  "BAC SOL": {
+    "n": 5
+  },
+  "BARRIER": {
+    "cao": 13,
+    "silicio": 10
+  },
+  "BENEFIT PZ": {
+    "k2o": 1,
+    "cao": 3.02,
+    "zn": 0.7,
+    "fe": 0.7,
+    "mn": 2.7
+  },
+  "BIO PIROL": {
+    "mgo": 0.3,
+    "so3": 5.5,
+    "zn": 1.8,
+    "fe": 0.2,
+    "mn": 0.5,
+    "b": 0.4,
+    "cu": 0.3
+  },
+  "BIOACE": {
+    "b": 0.04
+  },
+  "BIOCONTROL": {
+    "mat_org": 51.8,
+    "n": 7.6,
+    "p2o5": 14.7,
+    "k2o": 15.5
+  },
+  "BIONUTRI FERRO": {
+    "fe": 8
+  },
+  "BIONUTRI ZINCO": {
+    "zn": 5
+  },
+  "BIOTURBO": {
+    "n": 3,
+    "p2o5": 12,
+    "k2o": 6
+  },
+  "BIOZIME TF": {
+    "p2o5": 1.73,
+    "cao": 5,
+    "zn": 2.1,
+    "fe": 2.43,
+    "mn": 0.49,
+    "b": 1,
+    "mo": 0.08
+  },
+  "BORAMIN CA": {
+    "b": 0.2
+  },
+  "BORO PLUS": {
+    "b": 11
+  },
+  "BREXIL TOP": {
+    "mgo": 1.5,
+    "so3": 10,
+    "zn": 6,
+    "mn": 5,
+    "b": 2,
+    "mo": 5.5
+  },
+  "BURKE": {
+    "zn": 0.2,
+    "mn": 0.7
+  },
+  "BYOFOL": {
+    "p2o5": 1,
+    "b": 0.5
+  },
+  "CAB MAX": {
+    "cao": 2,
+    "b": 8
+  },
+  "CAB2": {
+    "cao": 8,
+    "b": 2
+  },
+  "CALBIT C": {
+    "cao": 10.7
+  },
+  "CATP": {
+    "mat_org": 32.9,
+    "n": 0.3,
+    "p2o5": 30
+  },
+  "CHELAL B": {
+    "b": 8
+  },
+  "CITROPLANT": {
+    "p2o5": 3
+  },
+  "CLORETO DE POTÁSSIO (KCL)": {
+    "k2o": 60
+  },
+  "COBRE - 60 LBE": {
+    "p2o5": 10.5,
+    "cu": 4.3
+  },
+  "CODA BRIX": {
+    "p2o5": 18
+  },
+  "CODA MAX": {
+    "n": 3.9,
+    "p2o5": 32
+  },
+  "CODA MIX": {
+    "so3": 4.6,
+    "zn": 0.5,
+    "fe": 4,
+    "mn": 2,
+    "b": 0.3,
+    "cu": 0.12
+  },
+  "CODAFOL 0.54.0": {
+    "p2o5": 54
+  },
+  "CODAHUMUS 20": {
+    "n": 3,
+    "ac_humico": 10,
+    "ac_fulvico": 10.2
+  },
+  "CODAMICRO": {
+    "so3": 3.1,
+    "zn": 1,
+    "fe": 3,
+    "mn": 1
+  },
+  "CODAMIM HF": {
+    "n": 3,
+    "k2o": 9.5,
+    "cao": 3.5,
+    "b": 0.5
+  },
+  "CODAPHOS MG": {
+    "p2o5": 40,
+    "mgo": 6
+  },
+  "CODASAL PLUS": {
+    "n": 6.6,
+    "cao": 8.7
+  },
+  "CODASAL PREMIUM": {
+    "n": 6,
+    "cao": 8.7
+  },
+  "CODASTING": {
+    "n": 7.2
+  },
+  "COMOL": {
+    "mgo": 0.1,
+    "mo": 0.5
+  },
+  "COMPLEXO HORTIFRUTI": {
+    "n": 3,
+    "p2o5": 5,
+    "k2o": 10,
+    "zn": 1,
+    "mn": 1,
+    "b": 0.5,
+    "mo": 0.1,
+    "cu": 0.2
+  },
+  "COMPOSTO ORGÂNICO": {
+    "mat_org": 39,
+    "n": 17,
+    "p2o5": 3.3,
+    "k2o": 2.3
+  },
+  "CONDUCTOR": {
+    "cao": 5,
+    "mgo": 1,
+    "so3": 1,
+    "b": 1
+  },
+  "CONTROL DPM": {
+    "n": 3,
+    "p2o5": 17
+  },
+  "COPPER CROP": {
+    "n": 4,
+    "cu": 10
+  },
+  "CROP SET": {
+    "so3": 3.62,
+    "fe": 2.5,
+    "mn": 3,
+    "cu": 1
+  },
+  "DELFAN PLUS": {
+    "n": 9
+  },
+  "DIGEST-AID": {
+    "celulase": 6,
+    "amilase": 0.6
+  },
+  "DMOLIDOR 20": {
+    "n": 5,
+    "mgo": 4,
+    "b": 0.5
+  },
+  "DRAKAR K": {
+    "n": 3,
+    "k2o": 31
+  },
+  "DRIPSOL MAGNUM 44": {
+    "n": 17.5,
+    "p2o5": 44
+  },
+  "DS-FLORADA": {
+    "n": 12,
+    "p2o5": 18,
+    "k2o": 18,
+    "mgo": 2,
+    "so3": 3.1,
+    "zn": 0.1,
+    "fe": 0.2,
+    "b": 0.5,
+    "mo": 0.07
+  },
+  "DS-FRUTO": {
+    "n": 13,
+    "p2o5": 14,
+    "k2o": 30
+  },
+  "ENERVIG LEG": {
+    "b": 0.5,
+    "mo": 10,
+    "co": 0.7
+  },
+  "ENXOFRE 100": {
+    "p2o5": 11,
+    "so3": 7.1
+  },
+  "ENXOFRE LÍQUIDO (HIGH CROP)": {
+    "so3": 68
+  },
+  "ENXOFRE SUFU-M": {
+    "so3": 80,
+    "mn": 0.1
+  },
+  "ENXOFRE-100 LBE": {
+    "p2o5": 11,
+    "so3": 2.1
+  },
+  "ESCOLTA": {
+    "cao": 2,
+    "zn": 7
+  },
+  "EXTRA HUMUS": {
+    "ac_humico": 15
+  },
+  "FAINAL K": {
+    "n": 3,
+    "k2o": 31
+  },
+  "FALICIST": {
+    "n": 1,
+    "k2o": 6,
+    "cao": 11
+  },
+  "FERRILENE": {
+    "fe": 6
+  },
+  "FERT": {
+    "n": 2,
+    "p2o5": 1.5,
+    "k2o": 3,
+    "mat_org": 2.0
+  },
+  "FERT MINERAL COMPLEXO 05.30.05": {
+    "n": 5,
+    "p2o5": 30,
+    "k2o": 5
+  },
+  "FERT MINERAL MISTO 15.30.15": {
+    "n": 15,
+    "p2o5": 30,
+    "k2o": 15
+  },
+  "FERT V PLUS": {
+    "n": 5,
+    "p2o5": 8,
+    "k2o": 5,
+    "mgo": 1,
+    "b": 0.5
+  },
+  "FERTAMIM CAB": {
+    "cao": 10,
+    "so3": 1.5,
+    "b": 0.05,
+    "mo": 0.01
+  },
+  "FERTAMIM EXTRA": {
+    "n": 10,
+    "p2o5": 1,
+    "k2o": 1,
+    "cao": 1,
+    "mgo": 0.5,
+    "so3": 3,
+    "b": 0.5
+  },
+  "FERTAMIM FERRO": {
+    "fe": 0.5
+  },
+  "FERTAMIM PLUS": {
+    "mgo": 2,
+    "zn": 6,
+    "b": 0.5
+  },
+  "FERTAMIN CA": {
+    "cao": 5,
+    "so3": 2,
+    "b": 0.05,
+    "mo": 0.01
+  },
+  "FERTAMIN CAFÉ": {
+    "zn": 6,
+    "b": 0.5
+  },
+  "FERTAMIN M": {
+    "mat_org": 25,
+    "n": 10,
+    "p2o5": 1,
+    "k2o": 1,
+    "mgo": 0.01,
+    "so3": 0.01,
+    "zn": 0.1,
+    "mo": 0.1
+  },
+  "FERTIACTYL CALIBOR": {
+    "p2o5": 3,
+    "k2o": 12,
+    "mgo": 2.8,
+    "mo": 0.2
+  },
+  "FERTIACTYL GZ": {
+    "n": 13,
+    "k2o": 5
+  },
+  "FERTILEADER ALPHA": {
+    "n": 6,
+    "p2o5": 12,
+    "b": 4.2
+  },
+  "FERTILEADER ELITE": {
+    "mat_org": 2,
+    "n": 9,
+    "k2o": 6,
+    "cao": 6,
+    "b": 0.2
+  },
+  "FETRILON COMBI": {
+    "mgo": 9,
+    "so3": 3,
+    "zn": 1.5,
+    "fe": 4,
+    "mn": 4,
+    "b": 0.5,
+    "mo": 0.01,
+    "cu": 1.5
+  },
+  "FOSFATO NATURAL REATIVO": {
+    "p2o5": 12
+  },
+  "FOSFATO TOTAL COBRE": {
+    "p2o5": 31.5,
+    "cu": 13
+  },
+  "FOSFIT TOTAL + MG": {
+    "p2o5": 35,
+    "k2o": 23,
+    "mgo": 6
+  },
+  "FOSFIT TOTAL COBRE": {
+    "p2o5": 31.5,
+    "cu": 13
+  },
+  "FRUCTOL": {
+    "n": 5,
+    "p2o5": 8,
+    "k2o": 15,
+    "mgo": 2.4,
+    "zn": 0.8,
+    "fe": 0.8,
+    "mn": 0.8,
+    "b": 2,
+    "mo": 0.08
+  },
+  "FULAND": {
+    "k2o": 20,
+    "so3": 1.75,
+    "cu": 3.5
+  },
+  "FULVUMIN": {
+    "p2o5": 3,
+    "zn": 1.5
+  },
+  "FYLLOTON": {
+    "p2o5": 6
+  },
+  "GLIBOR CA": {
+    "mgo": 8.6,
+    "mo": 3
+  },
+  "GLUTAMIM FLORADA": {
+    "n": 0.1,
+    "cao": 8,
+    "mn": 0.1,
+    "b": 0.5
+  },
+  "GREEN LEAF": {
+    "n": 2.4,
+    "k2o": 20,
+    "zn": 0.1,
+    "fe": 0.2,
+    "b": 0.1,
+    "cu": 0.05
+  },
+  "GROWMASTER FERRO": {
+    "fe": 6,
+    "b": 0.2
+  },
+  "GROWMASTER MAGNÉSIO": {
+    "n": 6,
+    "mgo": 6,
+    "zn": 1
+  },
+  "GROWMASTER MOLIBDÊNIO": {
+    "mo": 15
+  },
+  "HIDROFERT": {
+    "p2o5": 5.7,
+    "k2o": 34,
+    "mgo": 7.15
+  },
+  "HUMITEC": {
+    "n": 8,
+    "k2o": 4,
+    "mo": 15
+  },
+  "IMUNE MIX": {
+    "k2o": 31,
+    "cao": 1,
+    "mgo": 2,
+    "zn": 3,
+    "mn": 1,
+    "b": 1
+  },
+  "IMUNE-CÁLCIO": {
+    "p2o5": 15,
+    "cao": 4.2
+  },
+  "IMUNE-MAGNÉSIO": {
+    "p2o5": 44,
+    "mgo": 6.5
+  },
+  "IMUNE-POTÁSSIO": {
+    "p2o5": 30,
+    "k2o": 20
+  },
+  "IMUNE-ZINCO": {
+    "p2o5": 44,
+    "zn": 5
+  },
+  "INITIATE": {
+    "zn": 12.48
+  },
+  "JISA 40-22": {
+    "n": 4.5,
+    "p2o5": 3,
+    "k2o": 3,
+    "cao": 0.2,
+    "mgo": 0.15,
+    "ac_fulvico": 22
+  },
+  "K BOMBAR 55": {
+    "p2o5": 5,
+    "k2o": 55
+  },
+  "K-30": {
+    "n": 3,
+    "k2o": 30
+  },
+  "KAPPA V": {
+    "n": 7,
+    "p2o5": 12,
+    "k2o": 27,
+    "fe": 0.25,
+    "b": 8
+  },
+  "KELIRAN COMBI": {
+    "mgo": 5.43,
+    "so3": 6.7,
+    "zn": 1.5,
+    "fe": 4,
+    "mn": 4,
+    "b": 0.5,
+    "mo": 1.1,
+    "cu": 1.5
+  },
+  "KENDAL": {
+    "n": 9,
+    "k2o": 9
+  },
+  "KSC": {
+    "zn": 0.1,
+    "fe": 0.1,
+    "mn": 0.02,
+    "b": 0.1,
+    "mo": 0.01,
+    "cu": 0.05
+  },
+  "KSC ADUR": {
+    "mgo": 9,
+    "so3": 11,
+    "zn": 1.5,
+    "fe": 2.5,
+    "mn": 2,
+    "b": 0.5,
+    "mo": 0.2,
+    "cu": 0.5
+  },
+  "KSC I": {
+    "n": 14,
+    "p2o5": 40,
+    "so3": 3,
+    "zn": 0.1,
+    "b": 0.1
+  },
+  "KSC II": {
+    "n": 23,
+    "p2o5": 5,
+    "k2o": 5
+  },
+  "KSC MIX": {
+    "mgo": 9,
+    "so3": 11,
+    "zn": 1.5,
+    "fe": 2.5,
+    "mn": 2,
+    "b": 0.5,
+    "mo": 0.2,
+    "cu": 0.5
+  },
+  "KYMON PLUS": {
+    "n": 9,
+    "k2o": 3
+  },
+  "LIQUI PLEX COMO": {
+    "cao": 1.33,
+    "mo": 10,
+    "co": 0.3
+  },
+  "LIQUI-PLEX BONDER": {
+    "n": 1,
+    "p2o5": 2,
+    "k2o": 1
+  },
+  "LIQUI-PLEX CA+MG+B": {
+    "cao": 6,
+    "mgo": 2,
+    "b": 2
+  },
+  "LIQUI-PLEX FAST": {
+    "n": 3,
+    "k2o": 15
+  },
+  "LIQUI-PLEX FRUIT": {
+    "n": 5,
+    "cao": 1,
+    "so3": 5.34,
+    "zn": 5,
+    "mn": 0.05,
+    "b": 1,
+    "co": 6
+  },
+  "LIQUI-PLEX GRAPE": {
+    "n": 3,
+    "p2o5": 6,
+    "k2o": 6,
+    "cao": 1,
+    "mgo": 0.5,
+    "fe": 0.5,
+    "b": 0.5,
+    "mo": 1,
+    "cu": 0.3
+  },
+  "LIQUI-PLEX VEGETABLES": {
+    "zn": 3,
+    "mn": 8,
+    "b": 1,
+    "cu": 0.5
+  },
+  "LOWER 7": {
+    "n": 15,
+    "so3": 16
+  },
+  "MAGNUM PHOSCAL": {
+    "n": 9,
+    "p2o5": 49,
+    "cao": 10
+  },
+  "MAGPHOS": {
+    "p2o5": 55,
+    "k2o": 19,
+    "mgo": 8
+  },
+  "MAP": {
+    "n": 11,
+    "p2o5": 50
+  },
+  "MAP 61%": {
+    "n": 12,
+    "p2o5": 61
+  },
+  "MAP CRISTAL": {
+    "n": 12,
+    "p2o5": 61,
+    "k2o": 10
+  },
+  "MAXFLOW MG": {
+    "mgo": 13.2
+  },
+  "MAXFRUI": {
+    "n": 3,
+    "p2o5": 7,
+    "mgo": 0.05,
+    "zn": 0.1
+  },
+  "MEGA HUMUS": {
+    "ac_humico": 10
+  },
+  "MEGAFOL": {
+    "mat_org": 25,
+    "n": 11,
+    "k2o": 1
+  },
+  "MELÃO FLORADA": {
+    "n": 8,
+    "p2o5": 18,
+    "k2o": 18,
+    "mgo": 2.2,
+    "so3": 6.7,
+    "zn": 0.5,
+    "fe": 0.35,
+    "mn": 0.25,
+    "b": 1.3,
+    "cu": 0.1
+  },
+  "METALOSATE COBRE": {
+    "cu": 4
+  },
+  "MICROCOMPLEX": {
+    "mgo": 8,
+    "so3": 13,
+    "zn": 1.4,
+    "fe": 0.4,
+    "mn": 1.2,
+    "b": 0.4,
+    "cu": 1.1
+  },
+  "MKP": {
+    "p2o5": 51,
+    "k2o": 33
+  },
+  "MS - 28": {
+    "k2o": 1,
+    "so3": 12.2,
+    "zn": 15,
+    "fe": 1.6,
+    "mn": 6,
+    "b": 4,
+    "mo": 0.5,
+    "cu": 1,
+    "co": 0.1
+  },
+  "MS FLORADA": {
+    "cao": 13,
+    "b": 8
+  },
+  "MULT NPK  13.02.44": {
+    "n": 13,
+    "p2o5": 2,
+    "k2o": 44
+  },
+  "MULT PROTEK 00.56.37": {
+    "p2o5": 56,
+    "k2o": 37,
+    "mn": 30,
+    "b": 26
+  },
+  "MULTICARE": {
+    "p2o5": 3,
+    "k2o": 21
+  },
+  "MULTIMAG": {
+    "mgo": 9,
+    "so3": 11
+  },
+  "NATUFRUIT": {
+    "k2o": 25
+  },
+  "NATUIVITAL 25": {
+    "ac_humico": 5,
+    "ac_fulvico": 20
+  },
+  "NATURAMIM WSP": {
+    "n": 12
+  },
+  "NATURAMIM ZN": {
+    "zn": 5
+  },
+  "NATURQUEL - B": {
+    "b": 10.5
+  },
+  "NATURQUEL - CA": {
+    "b": 7
+  },
+  "NATUSAL": {
+    "cao": 9.1,
+    "mgo": 0.6
+  },
+  "NATUVITAL": {
+    "k2o": 7,
+    "ac_humico": 5,
+    "ac_fulvico": 20
+  },
+  "NIPHOKAM 108": {
+    "n": 10,
+    "p2o5": 8,
+    "k2o": 8,
+    "cao": 1,
+    "mgo": 0.5,
+    "so3": 2,
+    "zn": 1,
+    "fe": 0.1,
+    "mn": 0.5,
+    "b": 0.5,
+    "mo": 0.1,
+    "cu": 0.2
+  },
+  "NIPOKAN": {
+    "n": 10,
+    "p2o5": 8,
+    "k2o": 8,
+    "cao": 1,
+    "mgo": 0.5
+  },
+  "NIT MAG": {
+    "n": 10,
+    "mgo": 9
+  },
+  "NIT. CÁLCIO": {
+    "n": 15.5,
+    "cao": 26
+  },
+  "NIT. POT.": {
+    "n": 12,
+    "mgo": 9,
+    "so3": 1.2
+  },
+  "NITROFOSKA A": {
+    "n": 10,
+    "p2o5": 4,
+    "k2o": 7
+  },
+  "NUTRI HUMUS": {
+    "ac_fulvico": 22
+  },
+  "NUTRIFOLHA EQUILÍBRIO": {
+    "n": 5,
+    "k2o": 10,
+    "co": 6
+  },
+  "NUTRIFOLHA REDUZINC": {
+    "so3": 3,
+    "zn": 4.5,
+    "mn": 0.5
+  },
+  "NUTRIMINS FERRO": {
+    "fe": 4
+  },
+  "NUTRIMINS MAGNÉSIO": {
+    "mgo": 7
+  },
+  "NUTRIMINS ZINCO": {
+    "zn": 7
+  },
+  "NUTRIPHITE": {
+    "p2o5": 28,
+    "k2o": 26,
+    "zn": 6,
+    "mn": 2,
+    "mo": 50
+  },
+  "ORGA SOL AM-10": {
+    "n": 3
+  },
+  "OXI ATIVO": {
+    "n": 10
+  },
+  "OXI CAB": {
+    "cao": 10,
+    "b": 2
+  },
+  "OXI ENERVIG LEG": {
+    "b": 0.5,
+    "mo": 10,
+    "co": 0.7
+  },
+  "OXI FORT": {
+    "mgo": 4.5,
+    "so3": 14.2,
+    "zn": 6,
+    "fe": 3,
+    "mn": 5,
+    "b": 2,
+    "cu": 0.7
+  },
+  "OXI MAGNÉSIO": {
+    "mgo": 8
+  },
+  "OXI MOLIBIDENIO": {
+    "mo": 12
+  },
+  "OXI ZINCO 322 FLUID": {
+    "zn": 21.5
+  },
+  "P - 51": {
+    "n": 1,
+    "p2o5": 51
+  },
+  "PEKACID": {
+    "p2o5": 60,
+    "k2o": 20
+  },
+  "PERFORMEM": {
+    "zn": 4,
+    "mn": 1
+  },
+  "PIRONIN SUPER WG": {
+    "n": 2,
+    "zn": 2
+  },
+  "PLANT-PROD 10.52.10": {
+    "n": 10,
+    "p2o5": 52,
+    "k2o": 10,
+    "zn": 0.1,
+    "fe": 0.1,
+    "mn": 0.1,
+    "b": 0.2,
+    "mo": 0.02,
+    "cu": 0.05
+  },
+  "PLANTAFOL 05.15.45": {
+    "n": 5,
+    "p2o5": 15,
+    "k2o": 45,
+    "b": 0.04
+  },
+  "PLANTAFOL 10.55.10": {
+    "n": 10,
+    "p2o5": 55,
+    "k2o": 10
+  },
+  "POLY FEED 12.43.12": {
+    "n": 12,
+    "p2o5": 43,
+    "k2o": 12
+  },
+  "POTAMAL PLUS": {
+    "n": 7,
+    "k2o": 1.7,
+    "mo": 2
+  },
+  "PROSPER": {
+    "n": 3,
+    "cao": 6,
+    "mgo": 2,
+    "zn": 5.25,
+    "mn": 0.5,
+    "b": 0.5,
+    "cu": 0.5
+  },
+  "PT - 01": {
+    "mat_org": 22.1,
+    "n": 1.6,
+    "p2o5": 16.4,
+    "zn": 22
+  },
+  "PT - 04": {
+    "mat_org": 33.9,
+    "n": 1.8,
+    "p2o5": 18.3,
+    "k2o": 0.76,
+    "zn": 22
+  },
+  "QUELATEC": {
+    "zn": 0.7,
+    "fe": 7.5,
+    "mn": 3.5,
+    "cu": 0.28
+  },
+  "QUIMIFOL SQL SUPER": {
+    "mgo": 5,
+    "so3": 10,
+    "zn": 10,
+    "fe": 0.5,
+    "mn": 3,
+    "b": 3,
+    "mo": 1,
+    "cu": 2
+  },
+  "QUIMIORGAN K-40": {
+    "n": 10,
+    "k2o": 42
+  },
+  "RADIFARM - BR": {
+    "n": 3,
+    "p2o5": 8,
+    "cao": 10,
+    "zn": 0.1
+  },
+  "RADIMAX": {
+    "n": 4,
+    "p2o5": 8,
+    "k2o": 4,
+    "zn": 0.2
+  },
+  "RAIZ": {
+    "p2o5": 19,
+    "zn": 1
+  },
+  "RAYNITRO": {
+    "mo": 6,
+    "co": 0.5
+  },
+  "RAYNITRO MD": {
+    "cao": 10,
+    "b": 5
+  },
+  "RAÍZA": {
+    "n": 12,
+    "cao": 7
+  },
+  "REDU MAIS": {
+    "p2o5": 7
+  },
+  "RESTORER": {
+    "n": 5,
+    "k2o": 5,
+    "zn": 0.1,
+    "fe": 0.05,
+    "mn": 0.01,
+    "b": 0.5,
+    "cu": 0.01
+  },
+  "RETROSAL": {
+    "n": 3.5,
+    "cao": 5.7,
+    "zn": 0.2
+  },
+  "REXOLIM": {
+    "k2o": 11.6,
+    "so3": 1.28,
+    "zn": 3.38,
+    "fe": 2.66,
+    "mn": 2.48,
+    "b": 1.5,
+    "mo": 0.36,
+    "cu": 0.36
+  },
+  "RIZAMINA": {
+    "n": 13,
+    "p2o5": 8,
+    "k2o": 21,
+    "mgo": 2,
+    "so3": 5.5,
+    "zn": 0.1,
+    "fe": 0.2,
+    "b": 0.03,
+    "cu": 0.05
+  },
+  "ROOT": {
+    "n": 5,
+    "k2o": 5,
+    "cu": 0.5
+  },
+  "ROT-NIM (BIO SILICA)": {
+    "n": 1,
+    "cao": 8
+  },
+  "RUTER AA": {
+    "mat_org": 15,
+    "n": 5,
+    "p2o5": 5,
+    "k2o": 3,
+    "zn": 0.07,
+    "mn": 0.5,
+    "mo": 1,
+    "cu": 2
+  },
+  "S-FLOWABLE": {
+    "so3": 55,
+    "zn": 0.7,
+    "mn": 0.3
+  },
+  "SETT": {
+    "n": 5,
+    "cao": 10,
+    "b": 2
+  },
+  "SOIL PLEX ACTIVE": {
+    "n": 2,
+    "p2o5": 2,
+    "k2o": 3.56
+  },
+  "SOIL PLEX FERT": {
+    "n": 2,
+    "p2o5": 1.5,
+    "k2o": 3
+  },
+  "SOIL PLEX READY": {
+    "n": 3,
+    "p2o5": 3,
+    "k2o": 3.44,
+    "cao": 19.35
+  },
+  "SOIL SET": {
+    "so3": 3.75,
+    "zn": 3.2,
+    "fe": 1.6,
+    "mn": 0.8,
+    "cu": 2
+  },
+  "SPRAY DUNGER": {
+    "p2o5": 5,
+    "k2o": 10,
+    "cao": 20,
+    "mgo": 1.24,
+    "so3": 1.5,
+    "zn": 4.8,
+    "mn": 0.1
+  },
+  "SPRINT ALGA": {
+    "p2o5": 5
+  },
+  "SULF. MAG": {
+    "k2o": 1,
+    "mgo": 9,
+    "so3": 18.8
+  },
+  "SULF. POT.": {
+    "p2o5": 42,
+    "k2o": 51,
+    "so3": 46
+  },
+  "SULFATO DE AMÔNIA": {
+    "n": 20,
+    "so3": 23
+  },
+  "SULFATO DE ZINCO": {
+    "so3": 9,
+    "zn": 20
+  },
+  "SULFORMAX": {
+    "zn": 50
+  },
+  "SUNRED": {
+    "n": 2,
+    "k2o": 7,
+    "cao": 14
+  },
+  "SUPRA LINK": {
+    "so3": 2.1,
+    "fe": 1,
+    "mn": 3.1
+  },
+  "SWEET": {
+    "n": 5,
+    "cao": 10,
+    "mgo": 2,
+    "so3": 3,
+    "zn": 0.01,
+    "b": 0.1,
+    "co": 0.12
+  },
+  "THIOTRAC 300": {
+    "n": 14,
+    "so3": 22.7
+  },
+  "TORPED GOLD": {
+    "n": 5,
+    "p2o5": 8,
+    "k2o": 8,
+    "cao": 6,
+    "mgo": 0.5,
+    "so3": 0.88,
+    "zn": 1,
+    "mn": 0.5,
+    "b": 0.5,
+    "cu": 1.5
+  },
+  "TRADEBOR": {
+    "b": 10
+  },
+  "TRINADOR": {
+    "mat_org": 10,
+    "so3": 6,
+    "zn": 10,
+    "mn": 1,
+    "b": 3,
+    "mo": 0.5
+  },
+  "TROTTER": {
+    "cao": 10,
+    "mgo": 2.7,
+    "b": 0.46
+  },
+  "TURBO FLOWER": {
+    "mat_org": 71.7,
+    "n": 4.8,
+    "p2o5": 11.9,
+    "k2o": 0.2
+  },
+  "UBYFOL MS-77": {
+    "mgo": 2,
+    "zn": 13,
+    "fe": 1,
+    "mn": 1,
+    "b": 4.5,
+    "mo": 0.1,
+    "cu": 0.2,
+    "co": 0.1
+  },
+  "UBYFOL MULTIMICROS": {
+    "k2o": 1,
+    "so3": 12.2,
+    "zn": 15,
+    "fe": 1.6,
+    "mn": 6,
+    "b": 4,
+    "cu": 10,
+    "co": 1
+  },
+  "UBYFOL REDUFOL": {
+    "n": 6,
+    "p2o5": 30,
+    "zn": 2.5
+  },
+  "UBYFOL S-CAB": {
+    "cao": 20,
+    "b": 3
+  },
+  "UBYFOL VERDE": {
+    "n": 15,
+    "p2o5": 15,
+    "k2o": 20,
+    "cao": 1.5,
+    "so3": 3,
+    "zn": 0.2,
+    "fe": 0.1,
+    "mn": 0.02,
+    "b": 0.05,
+    "mo": 0.01,
+    "cu": 0.05
+  },
+  "URFA 44%": {
+    "n": 17,
+    "p2o5": 44
+  },
+  "URÉIA": {
+    "n": 46
+  },
+  "URÉIA MAX": {
+    "n": 46
+  },
+  "VITA COMPLEX": {
+    "n": 1,
+    "cao": 3
+  },
+  "VITA LOK": {
+    "n": 2,
+    "p2o5": 8,
+    "k2o": 6,
+    "cao": 3,
+    "mgo": 3
+  },
+  "VIVA": {
+    "mat_org": 25,
+    "n": 3,
+    "k2o": 9
+  },
+  "YANTRA": {
+    "p2o5": 33.6,
+    "k2o": 29
+  },
+  "ÁC. BÓRICO": {
+    "k2o": 1,
+    "b": 17
+  },
+  "ÁC. FOSF.": {
+    "p2o5": 50
+  },
+  "ÁC. NÍTRICO": {
+    "n": 12.4
+  },
+  "UREIA": {
+    "n": 46.0
+  },
+  "UREIA MAX": {
+    "n": 46.0
+  },
+  "ACIDO BORICO": {
+    "b": 17.5
+  },
+  "ÁCIDO BÓRICO": {
+    "b": 17.5
+  },
+  "AC. BORICO": {
+    "b": 17.5
+  },
+  "NIT. CALCIO": {
+    "n": 15.5,
+    "cao": 26.0
+  },
+  "NITRATO DE CALCIO": {
+    "n": 15.5,
+    "cao": 26.0
+  },
+  "NITRATO DE CÁLCIO": {
+    "n": 15.5,
+    "cao": 26.0
+  },
+  "SULF. MAG.": {
+    "mgo": 9.0,
+    "so3": 18.8
+  },
+  "SULFATO DE MAGNESIO": {
+    "mgo": 9.0,
+    "so3": 18.8
+  },
+  "SULFATO DE MAGNÉSIO": {
+    "mgo": 9.0,
+    "so3": 18.8
+  },
+  "SULF. POTASSIO": {
+    "k2o": 51.0,
+    "so3": 46.0
+  },
+  "SULFATO DE POTASSIO": {
+    "k2o": 51.0,
+    "so3": 46.0
+  },
+  "SULFATO DE POTÁSSIO": {
+    "k2o": 51.0,
+    "so3": 46.0
+  },
+  "CLORETO DE POTASSIO": {
+    "k2o": 60.0
+  },
+  "CLORETO DE POTÁSSIO": {
+    "k2o": 60.0
+  },
+  "AGIMOL": {
+    "mat_org": 2.0,
+    "n": 2.0,
+    "p2o5": 3.0
+  },
+  "06.24.12": {
+    "n": 6.0,
+    "p2o5": 24.0,
+    "k2o": 12.0
+  },
+  "03.12.06": {
+    "n": 3.0,
+    "p2o5": 12.0,
+    "k2o": 6.0
+  },
+  "ADUBO 10-10-10": {
+    "n": 10.0,
+    "p2o5": 10.0,
+    "k2o": 10.0
+  },
+  "COMPOSTO ORGANICO": {
+    "mat_org": 39.0,
+    "n": 17.0,
+    "p2o5": 3.3,
+    "k2o": 2.3
+  },
+  "COMPOSTO ORG": {
+    "mat_org": 39.0,
+    "n": 17.0,
+    "p2o5": 3.3,
+    "k2o": 2.3
+  },
+  "P-51": {
+    "n": 1.0,
+    "p2o5": 51.0
+  },
+  "P51": {
+    "n": 1.0,
+    "p2o5": 51.0
+  }
 };
 
 // ── 3. GETTER / SETTER DE COMPOSIÇÃO DOS PRODUTOS ─────────────────────────
@@ -290,6 +1569,26 @@ function extractNutrientsFromText(txt) {
   return res;
 }
 
+function formatGarantiasStr(comp) {
+  if (!comp || typeof comp !== 'object') return '—';
+  const labelsMap = {
+    mat_org: 'Mat.Org', n: 'N', p2o5: 'P2O5', k2o: 'K2O', cao: 'CaO', mgo: 'MgO',
+    so3: 'SO3', zn: 'Zn', fe: 'Fe', mn: 'Mn', b: 'B', mo: 'Mo', cu: 'Cu', co: 'Co',
+    h2po4: 'H2PO4', hpo4: 'HPO4', ac_humico: 'Ac.Humico', ac_fulvico: 'Ac.Fulvico',
+    celulase: 'Celulase', silicio: 'Silicio', amilase: 'Amilase'
+  };
+  const parts = [];
+  NUTRIENT_COLUMNS.forEach(col => {
+    const val = comp[col.key];
+    if (val != null && val > 0) {
+      const lbl = labelsMap[col.key] || col.label || col.key.toUpperCase();
+      parts.push();
+    }
+  });
+  return parts.length > 0 ? parts.join(' + ') : '—';
+}
+window.formatGarantiasStr = formatGarantiasStr;
+
 function getElementsComposition(productName, itemContext = null) {
   const normKey = _normProductKey(productName);
   if (!normKey) return {};
@@ -302,7 +1601,23 @@ function getElementsComposition(productName, itemContext = null) {
   // 1. Customizado pelo Usuário
   if (localCustom[normKey]) return localCustom[normKey];
 
-  // 2. Base Padrão Interna
+  // 2. Mapa Geral de Fertilizantes do Sistema (FERTILIZANTES_NUTRIENTES_MAP) - Prioridade oficial máxima!
+  const officialMap = (typeof FERTILIZANTES_NUTRIENTES_MAP !== 'undefined') ? FERTILIZANTES_NUTRIENTES_MAP : (window.FERTILIZANTES_NUTRIENTES_MAP || {});
+  if (officialMap[normKey]) {
+    const res = {};
+    Object.entries(officialMap[normKey]).forEach(([k, v]) => { res[_normNutrientKey(k)] = v; });
+    return res;
+  }
+  for (const [k, v] of Object.entries(officialMap)) {
+    const kn = _normProductKey(k);
+    if (kn === normKey || (kn.length >= 4 && (normKey.includes(kn) || kn.includes(normKey)))) {
+      const res = {};
+      Object.entries(v).forEach(([nk, nv]) => { res[_normNutrientKey(nk)] = nv; });
+      return res;
+    }
+  }
+
+  // 3. Base Padrão Interna Sincronizada
   if (DEFAULT_ELEMENTS_DATABASE[normKey]) {
     const res = {};
     Object.entries(DEFAULT_ELEMENTS_DATABASE[normKey]).forEach(([k, v]) => {
@@ -319,22 +1634,6 @@ function getElementsComposition(productName, itemContext = null) {
     }
   }
 
-  // 3. Mapa Geral de Fertilizantes do Sistema (FERTILIZANTES_NUTRIENTES_MAP)
-  const officialMap = (typeof FERTILIZANTES_NUTRIENTES_MAP !== 'undefined') ? FERTILIZANTES_NUTRIENTES_MAP : (window.FERTILIZANTES_NUTRIENTES_MAP || {});
-  if (officialMap[normKey]) {
-    const res = {};
-    Object.entries(officialMap[normKey]).forEach(([k, v]) => { res[_normNutrientKey(k)] = v; });
-    return res;
-  }
-  for (const [k, v] of Object.entries(officialMap)) {
-    const kn = _normProductKey(k);
-    if (kn === normKey || (kn.length >= 4 && (normKey.includes(kn) || kn.includes(normKey)))) {
-      const res = {};
-      Object.entries(v).forEach(([nk, nv]) => { res[_normNutrientKey(nk)] = nv; });
-      return res;
-    }
-  }
-
   // 4. Extração a partir do contexto do item ou catálogo em memória
   if (itemContext) {
     const rawTxt = [
@@ -342,7 +1641,8 @@ function getElementsComposition(productName, itemContext = null) {
       itemContext.garantias,
       itemContext.observacoes,
       itemContext.formula,
-      itemContext.alvo
+      itemContext.alvo,
+      itemContext.dose_texto
     ].filter(Boolean).join(' ');
     const fromCtx = extractNutrientsFromText(rawTxt);
     if (Object.keys(fromCtx).length > 0) return fromCtx;
@@ -359,7 +1659,7 @@ function getElementsComposition(productName, itemContext = null) {
     if (Object.keys(fromDef).length > 0) return fromDef;
   }
 
-  // 5. Fallback NPK inteligente por Regex no nome
+  // 5. Fallback NPK inteligente por Regex no nome (ex: 06-24-12, 10-10-10)
   const npkMatch = normKey.match(/(\d{1,2})[\.\-\s](\d{1,2})[\.\-\s](\d{1,2})/);
   if (npkMatch) {
     return {
@@ -374,16 +1674,16 @@ function getElementsComposition(productName, itemContext = null) {
   if (normKey.includes('NITRATO') && normKey.includes('MAGNES')) {
     fallbacks.n = 10.5; fallbacks.mgo = 9.0;
   } else if (normKey.includes('SULFATO') && normKey.includes('MAGNES')) {
-    fallbacks.mgo = 9.0; fallbacks.so3 = 12.0;
+    fallbacks.mgo = 9.0; fallbacks.so3 = 18.8;
   } else if (normKey.includes('MAGNES') || normKey.includes('MAGNE') || normKey.includes('MAXFLOW MG')) {
     const num = (normKey.match(/(\d+)\s*%/)||[])[1];
     fallbacks.mgo = num ? parseFloat(num) : 6.0;
   }
 
   if (normKey.includes('NITRATO') && normKey.includes('POTAS')) {
-    fallbacks.n = 13.0; fallbacks.k2o = 44.0;
+    fallbacks.n = 12.0; fallbacks.k2o = 44.0;
   } else if (normKey.includes('SULFATO') && normKey.includes('POTAS')) {
-    fallbacks.k2o = 50.0; fallbacks.so3 = 42.0;
+    fallbacks.k2o = 51.0; fallbacks.so3 = 46.0;
   } else if (normKey.includes('CLORETO') && normKey.includes('POTAS')) {
     fallbacks.k2o = 60.0;
   } else if (normKey.includes('POTASS') || normKey.includes('DRAKAR K') || normKey.includes('FAINAL K') || normKey.includes('K-30')) {
@@ -392,7 +1692,7 @@ function getElementsComposition(productName, itemContext = null) {
   }
 
   if (normKey.includes('NITRATO') && normKey.includes('CALC')) {
-    fallbacks.n = 15.5; fallbacks.cao = 10.0; fallbacks.mgo = 0.5;
+    fallbacks.n = 15.5; fallbacks.cao = 26.0;
   } else if (normKey.includes('CALCIO') || normKey.includes('CALMAX') || normKey.includes('BARRIER') || normKey.includes('CAB MAX')) {
     const num = (normKey.match(/(\d+)\s*%/)||[])[1];
     fallbacks.cao = num ? parseFloat(num) : 12.0;
@@ -401,7 +1701,7 @@ function getElementsComposition(productName, itemContext = null) {
 
   if (normKey.includes('BORICO') || normKey.includes('BORO') || normKey.includes('TRADEBOR') || normKey.includes('BORAMIN')) {
     const num = (normKey.match(/(\d+)\s*%/)||[])[1];
-    fallbacks.b = num ? parseFloat(num) : 10.0;
+    fallbacks.b = num ? parseFloat(num) : 17.5;
   }
 
   if (normKey.includes('ZINCO') || normKey.includes('ZINC')) {
@@ -418,12 +1718,11 @@ function getElementsComposition(productName, itemContext = null) {
   }
 
   if (normKey.includes('P-51') || normKey.includes('P 51') || normKey.includes('P51')) {
-    fallbacks.p2o5 = 51.0;
+    fallbacks.n = 1.0; fallbacks.p2o5 = 51.0;
   }
 
   return fallbacks;
 }
-
 function saveCustomElementComposition(productName, compositionObj) {
   const normKey = _normProductKey(productName);
   if (!normKey) return;
@@ -575,16 +1874,6 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
       fertData = fData || [];
 
       if (fertData.length > 0) {
-        const fIds = fertData.map(f => f.id);
-        const { data: iData } = await window.sb.from('caderno_campo_fertirrigacao_itens').select('*').in('fert_id', fIds);
-        itensData = iData || [];
-      }
-    }
-  } catch(e) {
-    console.warn('Erro ao carregar fertirrigação para cálculo de elementos:', e);
-  }
-
-  if (fertData.length > 0) {
     const itemsByFertId = {};
     itensData.forEach(it => {
       if (!itemsByFertId[it.fert_id]) itemsByFertId[it.fert_id] = [];
@@ -595,7 +1884,7 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
       const dtStr = f.data_inicio ? f.data_inicio.split('-').reverse().join('/') : '—';
       let dapVal = f.dap;
       if ((dapVal == null || dapVal === '' || dapVal === '—') && plantioDt && f.data_inicio) {
-        const dF = parseDateFlexible ? parseDateFlexible(f.data_inicio) : new Date(f.data_inicio + 'T12:00:00');
+        const dF = (typeof parseDateFlexible === 'function') ? parseDateFlexible(f.data_inicio) : new Date(f.data_inicio + 'T12:00:00');
         if (dF && !isNaN(dF.getTime())) {
           dapVal = Math.round((dF.getTime() - plantioDt.getTime()) / 86400000);
         }
@@ -606,8 +1895,10 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
 
       const pList = itemsByFertId[f.id] || [];
       pList.forEach(it => {
-        const q = parseFloat(it.quantidade) || 0;
-        const comp = getElementsComposition(it.produto_nome);
+        let q = parseFloat(it.quantidade) || 0;
+        const u = String(it.unidade || '').trim().toLowerCase();
+        if ((u === 'g' || u === 'ml') && q >= 10) q = q / 1000;
+        const comp = getElementsComposition(it.produto_nome, it);
         NUTRIENT_COLUMNS.forEach(col => {
           const pct = (comp[col.key] || 0) / 100;
           nutrs[col.key] += (q * pct);
@@ -652,7 +1943,7 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
         const dd = String(d.getDate()).padStart(2, '0');
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const yy = String(d.getFullYear()).slice(-2);
-        dtStr = `${dd}/${mm}/${yy}`;
+        dtStr = ;
       }
 
       const nutrs = {};
@@ -731,19 +2022,20 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
         const prodName = (fit.produto_nome || fit.produto || fit.nome || '').trim();
         if (!prodName) return;
 
-        // Dosagem real por hectare e quantidade total calculada
-        const doseHa = parseFloat(fit.dosagem_corrigida || fit.dosagem_real || fit.dose_calculada || fit.dose || 0) || 0;
-        let q = parseFloat(fit.quantidade_utilizada || fit.quantidade || 0);
-        if (!q && doseHa > 0) {
-          q = parseFloat((doseHa * areaVal).toFixed(3));
-        }
+        // Regra Oficial do Usuário: Nos foliares, a dosagem informada é a quantidade total utilizada na parcela!
+        // Não multiplicar por hectare quando a quantidade já é direta da aplicação.
+        const doseReal = parseFloat(fit.dosagem_real || fit.dosagem_corrigida || fit.dose || 0) || 0;
+        let q = parseFloat(fit.quantidade_utilizada || fit.quantidade || fit.dosagem_total_parcela || doseReal || 0);
+        const u = String(fit.unidade || '').trim().toLowerCase();
+        if ((u === 'g' || u === 'ml') && q >= 10) q = q / 1000;
+        if (!q && doseReal > 0) q = doseReal;
         if (!q) q = 1.0;
 
         const comp = getElementsComposition(prodName, fit);
         const nutrs = {};
         NUTRIENT_COLUMNS.forEach(col => {
           const pct = (comp[col.key] || 0) / 100;
-          nutrs[col.key] = parseFloat((q * pct).toFixed(4));
+          nutrs[col.key] = parseFloat((q * pct).toFixed(6));
         });
 
         // DAP Real: se não preenchido na OP, calcula a partir da data de plantio
@@ -763,63 +2055,89 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
           dap: dapCalculado || '—',
           produto: prodName,
           quantidade: q,
-          dosagem: doseHa > 0 ? `${doseHa} ${fit.unidade || 'L/ha'}` : '—',
+          unidade: (u === 'g' || u === 'kg') ? 'kg' : 'L',
+          dosagem: doseReal > 0 ?  : '—',
           nutrientes: nutrs,
+          garantias: formatGarantiasStr(comp),
           operador: op.tratorista || op.aplicador || op.barrista || op.responsavel || 'ROBSON RAFAEL'
         });
       });
     });
 
-    // Se nenhuma pulverização foliar estiver registrada para esta parcela,
-    // carrega o cronograma padrão oficial de nutrição foliar para que a ficha PC09 e os nutrientes individuais não fiquem zerados
-    if (foliarRows.length === 0) {
-      const defaultFoliarSched = [
-        { dap: 12, produto: 'P - 51', doseHa: 1.5, unidade: 'L/ha', op: 101 },
-        { dap: 16, produto: 'AMINOAGRO AD+', doseHa: 1.0, unidade: 'L/ha', op: 102 },
-        { dap: 20, produto: 'AMINOAGRO MAGNÉSIO', doseHa: 1.5, unidade: 'L/ha', op: 103 },
-        { dap: 25, produto: 'NITRATO DE POTÁSSIO', doseHa: 2.0, unidade: 'kg/ha', op: 104 },
-        { dap: 30, produto: 'CONDUCTOR', doseHa: 1.0, unidade: 'L/ha', op: 105 },
-        { dap: 35, produto: 'CALMAX GOLD', doseHa: 1.5, unidade: 'L/ha', op: 106 },
-        { dap: 42, produto: 'LIQUI-PLEX Ca+Mg+B', doseHa: 1.5, unidade: 'L/ha', op: 107 },
-        { dap: 48, produto: 'K-30', doseHa: 2.0, unidade: 'L/ha', op: 108 },
-        { dap: 55, produto: 'BORO PLUS', doseHa: 1.0, unidade: 'L/ha', op: 109 }
-      ];
-
-      foliarRows = defaultFoliarSched.map(itemSched => {
-        let dtStr = '—';
-        if (plantioDt && !isNaN(plantioDt.getTime())) {
-          const d = new Date(plantioDt.getTime() + ((itemSched.dap - 1) * 86400000));
-          const dd = String(d.getDate()).padStart(2, '0');
-          const mm = String(d.getMonth() + 1).padStart(2, '0');
-          const yy = String(d.getFullYear()).slice(-2);
-          dtStr = `${dd}/${mm}/${yy}`;
-        }
-        const totalQtd = parseFloat((itemSched.doseHa * areaVal).toFixed(2));
-        const comp = getElementsComposition(itemSched.produto);
-        const nutrs = {};
-        NUTRIENT_COLUMNS.forEach(col => {
-          const pct = (comp[col.key] || 0) / 100;
-          nutrs[col.key] = parseFloat((totalQtd * pct).toFixed(4));
-        });
-
-        return {
-          tipo: 'FOLIAR',
-          data: dtStr,
-          ordem: itemSched.op,
-          dap: itemSched.dap,
-          produto: itemSched.produto,
-          quantidade: totalQtd,
-          dosagem: `${itemSched.doseHa} ${itemSched.unidade}`,
-          nutrientes: nutrs,
-          operador: 'ROBSON RAFAEL'
-        };
-      });
-    }
   } catch(e) {
     console.warn('Erro ao calcular foliares:', e);
   }
 
-  // 4.4. TOTAIS CONSOLIDADOS
+  // 4.4. CONSOLIDAÇÃO INDIVIDUAL POR PRODUTO UTILIZADO (Fertirrigação + Foliar)
+  const produtosMap = {};
+  
+  // Consolidação de Fertirrigação
+  if (fertData.length > 0) {
+    const itemsByFertId = {};
+    itensData.forEach(it => {
+      if (!itemsByFertId[it.fert_id]) itemsByFertId[it.fert_id] = [];
+      itemsByFertId[it.fert_id].push(it);
+    });
+    fertData.forEach(f => {
+      const pList = itemsByFertId[f.id] || [];
+      pList.forEach(it => {
+        const prod = (it.produto_nome || '').trim();
+        if (!prod) return;
+        const normP = _normProductKey(prod);
+        let q = parseFloat(it.quantidade) || 0;
+        const u = String(it.unidade || 'kg').trim();
+        if ((u.toLowerCase() === 'g' || u.toLowerCase() === 'ml') && q >= 10) q = q / 1000;
+        const comp = getElementsComposition(prod, it);
+
+        if (!produtosMap[normP]) {
+          const initNutrs = {};
+          NUTRIENT_COLUMNS.forEach(col => { initNutrs[col.key] = 0; });
+          produtosMap[normP] = {
+            produto: prod,
+            origem: 'Fertirrigação',
+            unidade: (u.toLowerCase() === 'l' || u.toLowerCase() === 'ml') ? 'L' : 'kg',
+            quantidadeTotal: 0,
+            garantiasStr: formatGarantiasStr(comp),
+            nutrientes: initNutrs
+          };
+        }
+        produtosMap[normP].quantidadeTotal += q;
+        NUTRIENT_COLUMNS.forEach(col => {
+          const pct = (comp[col.key] || 0) / 100;
+          produtosMap[normP].nutrientes[col.key] += (q * pct);
+        });
+      });
+    });
+  }
+
+  // Consolidação de Foliar
+  foliarRows.forEach(r => {
+    const prod = (r.produto || '').trim();
+    if (!prod) return;
+    const normP = _normProductKey(prod);
+    const comp = getElementsComposition(prod);
+    if (!produtosMap[normP]) {
+      const initNutrs = {};
+      NUTRIENT_COLUMNS.forEach(col => { initNutrs[col.key] = 0; });
+      produtosMap[normP] = {
+        produto: prod,
+        origem: 'Foliar',
+        unidade: r.unidade || 'L',
+        quantidadeTotal: 0,
+        garantiasStr: formatGarantiasStr(comp),
+        nutrientes: initNutrs
+      };
+    }
+    produtosMap[normP].quantidadeTotal += r.quantidade;
+    NUTRIENT_COLUMNS.forEach(col => {
+      const pct = (comp[col.key] || 0) / 100;
+      produtosMap[normP].nutrientes[col.key] += (r.quantidade * pct);
+    });
+  });
+
+  const produtosConsolidados = Object.values(produtosMap).sort((a,b) => a.produto.localeCompare(b.produto));
+
+  // 4.5. TOTAIS CONSOLIDADOS
   const totalFert = {};
   const totalFoliar = {};
   const totalGeral = {};
@@ -852,12 +2170,12 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
     fundacaoNutrientes,
     fertRows,
     foliarRows,
+    produtosConsolidados,
     totalFert,
     totalFoliar,
     totalGeral
   };
 }
-
 // ── 5. IMPRESSÃO OFICIAL: PC08 — CONTROLE GERAL DO USO DE FERTILIZANTES ─────
 async function printPastaCampoResumoElementos(parcelIdOrCode, forceManual) {
   let isManualMode = true;
@@ -884,7 +2202,12 @@ async function printPastaCampoResumoElementos(parcelIdOrCode, forceManual) {
   const certNome = (window.tenantConfig && window.tenantConfig.agronomo_certificacao) || 'Emanuela Moreira';
   const areaHa = data.areaHa.toFixed(3);
 
-  const fmtVal = v => (v != null && v > 0) ? v.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '-';
+  const fmtVal = v => {
+    if (v == null || v <= 0) return '-';
+    if (v < 0.001) return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 5 });
+    if (v < 0.01) return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+    return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+  };
 
   // Linhas de Fertirrigação (Modo Manual de Auditoria ou Digital Completo)
   let fertRowsHtml = data.fertRows.map((r, i) => {
@@ -1032,7 +2355,12 @@ async function printPastaCampoFoliares(parcelIdOrCode) {
   const rtNome = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS';
   const certNome = (window.tenantConfig && window.tenantConfig.agronomo_certificacao) || 'Emanuela Moreira';
 
-  const fmtVal = v => (v != null && v > 0) ? v.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '-';
+  const fmtVal = v => {
+    if (v == null || v <= 0) return '-';
+    if (v < 0.001) return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 5 });
+    if (v < 0.01) return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+    return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+  };
 
   let foliarRowsHtml = data.foliarRows.map(r => {
     const cols = NUTRIENT_COLUMNS.map(c => `<td style="border:1px solid #000; padding:2px 3px; text-align:center">${fmtVal(r.nutrientes[c.key])}</td>`).join('');
