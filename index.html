@@ -11442,10 +11442,33 @@ async function exportHarvestOrderPDF(sidOrIds) {
   doc.text(tenantName.toUpperCase(), mg + 20, y + 9);
   doc.line(mg + 18, y + 10, mg + 120, y + 10);
 
+  // Resolução e autocorreção do lote de rastreabilidade
+  let resolvedParcel = s.parcels?.code || s.parcela || s.parcel_code || '';
+  if (!resolvedParcel && s.parcel_id) {
+    const ip = (_infoParcelas || []).find(x => x.id === s.parcel_id || x.parcel_id === s.parcel_id);
+    const pObj = (window._parcels || []).find(x => x.id === s.parcel_id);
+    resolvedParcel = ip ? (ip.parcela2 || ip.parcela) : (pObj ? pObj.code : '');
+  }
+
+  let finalLotStr = String(s.julian_lot || s.carrao_seq || '—');
+  const cleanPDigits = String(resolvedParcel || '').replace(/\D/g, '');
+
+  // Se o número da parcela tiver 4 dígitos (ex: 1003) e o lote gerado anteriormente tiver truncado para 3 dígitos (ex: 4003...),
+  // corrige automaticamente para refletir a parcela integralmente (ex: 41003...)
+  if (cleanPDigits.length >= 4 && finalLotStr && finalLotStr !== '—') {
+    const p3 = cleanPDigits.slice(-3); // ex: '003'
+    if (finalLotStr.includes(p3)) {
+      const farmDig = (window.tenantConfig && window.tenantConfig.farm_code) ? String(window.tenantConfig.farm_code).replace(/\D/g, '').slice(-1) : '4';
+      if (finalLotStr.startsWith(farmDig + p3)) {
+        finalLotStr = farmDig + cleanPDigits + finalLotStr.substring(farmDig.length + p3.length);
+      }
+    }
+  }
+
   doc.setFontSize(7); doc.setFont('helvetica', 'bold');
   doc.text('LOTE / RASTREABILIDADE', 165, y + 5, { align: 'center' });
   doc.setFontSize(14);
-  doc.text(String(s.julian_lot || s.carrao_seq || '—'), 165, y + 11, { align: 'center' });
+  doc.text(finalLotStr, 165, y + 11, { align: 'center' });
   y += h3;
 
   // ── LINHA: DATA E Nº DO CARROÇÃO ────────────────────────────────────────
@@ -11488,10 +11511,19 @@ async function exportHarvestOrderPDF(sidOrIds) {
   parcDisplay = ip ? (ip.parcela2 || ip.parcela) : (pObj ? pObj.code : '');
   }
   if (!parcDisplay && s.julian_lot && s.julian_lot.length >= 4) {
-    const pCodeFromLot = s.julian_lot.substring(1, 4);
-    const pNum = parseInt(pCodeFromLot, 10);
-    const ip = (_infoParcelas || []).find(x => parseInt(x.parcela, 10) === pNum || x.parcela == pCodeFromLot || x.parcela == String(pNum));
-    parcDisplay = ip ? (ip.parcela2 || ip.parcela) : (pNum ? String(pNum) : pCodeFromLot);
+    // Tenta primeiro casar com parcelas de 4 dígitos cadastrados (ex: 1003)
+    const ip4 = (_infoParcelas || []).find(x => {
+      const pClean = String(x.parcela2 || x.parcela || '').replace(/\D/g, '');
+      return pClean && pClean.length >= 4 && s.julian_lot.includes(pClean);
+    });
+    if (ip4) {
+      parcDisplay = ip4.parcela2 || ip4.parcela;
+    } else {
+      const pCodeFromLot = s.julian_lot.substring(1, 4);
+      const pNum = parseInt(pCodeFromLot, 10);
+      const ip = (_infoParcelas || []).find(x => parseInt(x.parcela, 10) === pNum || x.parcela == pCodeFromLot || x.parcela == String(pNum));
+      parcDisplay = ip ? (ip.parcela2 || ip.parcela) : (pNum ? String(pNum) : pCodeFromLot);
+    }
   }
   doc.text(String(parcDisplay || '—'), mg + 10, y + 11);
   
@@ -25007,12 +25039,20 @@ async function loadColheitasTable() {
   const pObj = (window._parcels || []).find(x => x.id === item.parcel_id);
   pName = ip ? (ip.parcela2 || ip.parcela) : (pObj ? pObj.code : '');
   }
-  // Fallback inteligente: recuperar parcela pelo código juliano de rastreabilidade (F PPP V DDD)
+  // Fallback inteligente: recuperar parcela pelo código juliano de rastreabilidade
   if (!pName && item.julian_lot && item.julian_lot.length >= 4) {
-    const pCodeFromLot = item.julian_lot.substring(1, 4); // Ex: '013' -> 13
-    const pNum = parseInt(pCodeFromLot, 10);
-    const ip = (_infoParcelas || []).find(x => parseInt(x.parcela, 10) === pNum || x.parcela == pCodeFromLot || x.parcela == String(pNum));
-    pName = ip ? (ip.parcela2 || ip.parcela) : (pNum ? String(pNum) : pCodeFromLot);
+    const ip4 = (_infoParcelas || []).find(x => {
+      const pClean = String(x.parcela2 || x.parcela || '').replace(/\D/g, '');
+      return pClean && pClean.length >= 4 && item.julian_lot.includes(pClean);
+    });
+    if (ip4) {
+      pName = ip4.parcela2 || ip4.parcela;
+    } else {
+      const pCodeFromLot = item.julian_lot.substring(1, 4);
+      const pNum = parseInt(pCodeFromLot, 10);
+      const ip = (_infoParcelas || []).find(x => parseInt(x.parcela, 10) === pNum || x.parcela == pCodeFromLot || x.parcela == String(pNum));
+      pName = ip ? (ip.parcela2 || ip.parcela) : (pNum ? String(pNum) : pCodeFromLot);
+    }
   }
 
   const workers = item.field_carrao_employees || [];
@@ -25648,10 +25688,16 @@ function generateAuditTraceCode(parcelaStr, varietyStr, dateStr, fruitStr) {
   const farmRaw = (window.tenantConfig && window.tenantConfig.farm_code) || window.farmCode || '4';
   const F = String(farmRaw).replace(/\D/g, '').slice(-1) || '4';
 
-  // PPP: Parcela com 3 dígitos (ex: 56 O -> 056, 33 -> 033, 5 -> 005)
-  const numMatches = String(parcelaStr || '').match(/\d+/);
-  const pNum = numMatches ? parseInt(numMatches[0], 10) : 0;
-  const PPP = String(pNum).padStart(3, '0').slice(-3);
+  // P...P: Código da Parcela preservando todos os dígitos (ex: 1003 -> 1003, 56 -> 056, 5 -> 005)
+  // NUNCA trunca parcelas de 4 ou mais dígitos (como 1003 para 003)!
+  const cleanDigits = String(parcelaStr || '').replace(/\D/g, '');
+  let PPP = '';
+  if (cleanDigits.length >= 4) {
+    PPP = cleanDigits; // Mantém integralmente o número da parcela (ex: 1003, 1004)
+  } else {
+    const pNum = cleanDigits ? parseInt(cleanDigits, 10) : 0;
+    PPP = String(pNum).padStart(3, '0');
+  }
 
   // V: Código da fruta / variedade (1 dígito)
   const V = getFruitTrackCode(varietyStr, fruitStr);

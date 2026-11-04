@@ -3327,7 +3327,8 @@ function updateCampoJulianPreview() {
 
   const farmRaw = window.farmCode || (window.tenantConfig && window.tenantConfig.farm_code) || '4';
   const F = String(farmRaw).replace(/\D/g, '').slice(-1) || '4';
-  const PPP = String(parcela?.code || '0').replace(/\D/g,'').padStart(3, '0').slice(-3);
+  const pDigits = String(parcela?.code || '0').replace(/\D/g,'');
+  const PPP = (pDigits.length >= 4) ? pDigits : pDigits.padStart(3, '0');
   const V = getFruitTrackCode(variety?.name, cState?.fruitName || variety?.fruits?.name);
 
   let d = new Date();
@@ -11521,7 +11522,8 @@ async function submitCarrao() {
   
   const farmRaw = window.farmCode || (window.tenantConfig && window.tenantConfig.farm_code) || '4';
   const F = String(farmRaw).replace(/\D/g, '').slice(-1) || '4';
-  const PPP = String(parcela?.code || '0').replace(/\D/g,'').padStart(3, '0').slice(-3);
+  const pDigits = String(parcela?.code || '0').replace(/\D/g,'');
+  const PPP = (pDigits.length >= 4) ? pDigits : pDigits.padStart(3, '0');
   const V = getFruitTrackCode(variety?.name, cState.fruitName || variety?.fruits?.name);
   const DDD = String(dayOfYear).padStart(3, '0').slice(-3);
   
