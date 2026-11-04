@@ -24,14 +24,14 @@ from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtCore import QObject, pyqtSlot, QUrl, QTimer, pyqtSignal
 from PyQt6.QtGui import QIcon
 
-# Importa camadas locais
+
 import db_python
 import app_service
 import sync_service
 from batch_sync_worker import BatchSyncWorker
 
-# ─── Caminhos ────────────────────────────────────────────────────────────────
-_APP_DIR      = _THIS_DIR.parent                          # packinghouse-app/
+
+_APP_DIR      = _THIS_DIR.parent
 _RENDERER_DIR = _APP_DIR / 'src' / 'renderer'
 _CV_SERVICE   = _APP_DIR / 'cv_service.py'
 _INDEX_HTML   = _RENDERER_DIR / 'index.html'
@@ -411,20 +411,21 @@ class MainWindow(QMainWindow):
         # Web view com console integrado
         self._view = QWebEngineView(self)
         self._page = ConsolePage(self)
-        
+
         # Configurações de segurança + permissões na página ativa
         settings = self._page.settings()
-        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.AllowWindowActivationFromJavaScript, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.AllowRunningInsecureContent, True)
-        # Otimizacoes de renderizacao fluida por hardware (GPU 60fps no Windows / Linux / macOS / Raspberry Pi)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.Accelerated2dCanvasEnabled, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.ScrollAnimatorEnabled, False)
-        
+        if settings is not None:
+            settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
+            settings.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
+            settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
+            settings.setAttribute(QWebEngineSettings.WebAttribute.AllowWindowActivationFromJavaScript, True)
+            settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
+            settings.setAttribute(QWebEngineSettings.WebAttribute.AllowRunningInsecureContent, True)
+            # Otimizacoes de renderizacao fluida por hardware (GPU 60fps no Windows / Linux / macOS / Raspberry Pi)
+            settings.setAttribute(QWebEngineSettings.WebAttribute.Accelerated2dCanvasEnabled, True)
+            settings.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
+            settings.setAttribute(QWebEngineSettings.WebAttribute.ScrollAnimatorEnabled, False)
+
         self._view.setPage(self._page)
         self.setCentralWidget(self._view)
 
@@ -471,7 +472,9 @@ class MainWindow(QMainWindow):
     def _on_push_event(self, event_name: str, payload: str):
         """Envia eventos push do Python → JavaScript (substitui ipcRenderer.on)."""
         js = f"window.__pyPushEvent && window.__pyPushEvent({json.dumps(event_name)}, {payload});"
-        self._view.page().runJavaScript(js)
+        page = self._view.page()
+        if page is not None:
+            page.runJavaScript(js)
 
     # ── Sincronização ─────────────────────────────────────────────────────────
     def _is_batch_sync_enabled(self) -> bool:
@@ -573,9 +576,10 @@ class MainWindow(QMainWindow):
             print(f'App: Erro ao iniciar CV Service: {e}')
 
     def _log_cv_output(self):
-        if not self._py_process:
+        proc = self._py_process
+        if proc is None or proc.stdout is None:
             return
-        for line in self._py_process.stdout:
+        for line in proc.stdout:
             try:
                 text = line.decode('utf-8', errors='replace').rstrip()
                 # Remove emojis que o console Windows não suporta
@@ -607,14 +611,14 @@ if __name__ == '__main__':
     import traceback
 
     def _safe_excepthook(exc_type, exc, tb):
-        # Evita que o PyQt6 derrube o app (abort) por erro em qualquer slot.
+        # Evita que o PyQt6 derrube o app (abort) por erro em qualquer slot- com tese clara - em serie.
         print('ERRO (app continua rodando):')
         traceback.print_exception(exc_type, exc, tb)
     sys.excepthook = _safe_excepthook
     # Compatibilidade com telas de alta resolução (DPI)
     os.environ.setdefault('QT_AUTO_SCREEN_SCALE_FACTOR', '1')
 
-    # Flags comuns (sem dependência de GPU): desativa throttling desnecessário
+    # colunas comuns  (sem dependência de GPU): desativa uso desnecessário
     chromium_flags = [
         '--no-sandbox',
         '--enable-features=NetworkServiceInProcess',
@@ -624,9 +628,6 @@ if __name__ == '__main__':
         '--disable-smooth-scrolling',
     ]
 
-    # Por padrão usa renderização por SOFTWARE: previne TELA PRETA no QWebEngine em PCs com
-    # placas integradas, drivers básicos ou sem GPU dedicada.
-    # Para habilitar aceleração por GPU (máquinas com driver bom), defina PRODTEC_GPU=1.
     if os.environ.get('PRODTEC_GPU', '').strip() in ('1', 'true', 'yes'):
         print('App: Modo GPU habilitado (PRODTEC_GPU=1).')
         chromium_flags += [

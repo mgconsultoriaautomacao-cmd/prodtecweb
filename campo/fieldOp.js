@@ -12,10 +12,10 @@ const fOperations = {
 };
 
 function showFTab(tab) {
-  $('fTabNew').className    = 'tab-pane' + (tab==='new' ?' on':'');
-  $('fTabHist').className   = 'tab-pane' + (tab==='hist'?' on':'');
-  $('fTabNewBtn').className = 'tab-btn'  + (tab==='new' ?' on':'');
-  $('fTabHistBtn').className= 'tab-btn'  + (tab==='hist'?' on':'');
+  $('fTabNew').className = 'tab-pane' + (tab === 'new' ? ' on' : '');
+  $('fTabHist').className = 'tab-pane' + (tab === 'hist' ? ' on' : '');
+  $('fTabNewBtn').className = 'tab-btn' + (tab === 'new' ? ' on' : '');
+  $('fTabHistBtn').className = 'tab-btn' + (tab === 'hist' ? ' on' : '');
   if (tab === 'hist') loadFieldOpHistory();
 }
 
@@ -34,18 +34,18 @@ function fUpdateOperations() {
 
 function loadFieldOpSelects() {
   $('fDate').value = today();
-  
+
   const pSel = $('fParcela');
   const vSel = $('fVariety');
-  if(pSel && pSel.options.length <= 1) {
+  if (pSel && pSel.options.length <= 1) {
     pSel.innerHTML = '<option value="">(Opcional) Parcela</option>';
     parcelas.forEach(p => pSel.insertAdjacentHTML('beforeend', `<option value="${p.id}">${p.code}</option>`));
   }
-  if(vSel && vSel.options.length <= 1) {
+  if (vSel && vSel.options.length <= 1) {
     vSel.innerHTML = '<option value="">(Opcional) Variedade</option>';
     varieties.forEach(v => vSel.insertAdjacentHTML('beforeend', `<option value="${v.id}">${v.name}</option>`));
   }
-  
+
   if (fState.workers.size === 0) {
     renderFEmpList(employees);
   }
@@ -58,14 +58,14 @@ function filterFEmp() {
 
 function renderFEmpList(list) {
   const ctn = $('fEmpList');
-  if(!list.length) return ctn.innerHTML = '<div class="empty">Nenhum funcionário encontrado</div>';
-  
+  if (!list.length) return ctn.innerHTML = '<div class="empty">Nenhum funcionário encontrado</div>';
+
   let html = '';
   list.forEach(e => {
     const isSel = fState.workers.has(e.id);
     html += `
       <div class="emp-item ${isSel ? 'on' : ''}" onclick="toggleFEmp(${e.id}, '${e.name}')" data-id="${e.id}">
-        <div class="emp-avatar">${e.name.substring(0,2).toUpperCase()}</div>
+        <div class="emp-avatar">${e.name.substring(0, 2).toUpperCase()}</div>
         <div class="emp-name">${e.name} <div style="font-size:10px;color:var(--muted)">Cartão: ${e.barcode || '—'} | ${e.role || 'Geral'}</div></div>
         <div class="emp-check">${isSel ? '✓' : ''}</div>
       </div>
@@ -84,14 +84,14 @@ function toggleFEmp(id, name) {
 function toggleAllFEmp() {
   const items = Array.from(document.querySelectorAll('#fEmpList .emp-item'));
   const allSelected = items.every(el => fState.workers.has(parseInt(el.getAttribute('data-id'))));
-  
+
   items.forEach(el => {
     const id = parseInt(el.getAttribute('data-id'));
     const name = el.querySelector('.emp-name').childNodes[0].nodeValue.trim();
     if (allSelected) fState.workers.delete(id);
     else fState.workers.set(id, name);
   });
-  
+
   filterFEmp();
   fUpdateCalc();
 }
@@ -177,8 +177,8 @@ async function submitFieldOp() {
   };
 
   const workersArr = Array.from(fState.workers.entries()).map(([id, name]) => ({
-    employee_id: id, 
-    employee_name: name, 
+    employee_id: id,
+    employee_name: name,
     value_received: parseFloat(perEmp.toFixed(2))
   }));
 
@@ -196,17 +196,17 @@ async function submitFieldOp() {
       delete dbSession.synced;
       const { data: sessList, error: e1 } = await sb.from('field_services').insert([dbSession]).select('*');
       if (e1) throw e1;
-      
+
       const sessId = sessList[0].id;
       const empRows = workersArr.map(w => ({ ...w, service_id: sessId }));
-      
+
       const { error: e2 } = await sb.from('field_service_employees').insert(empRows);
       if (e2) throw e2;
 
       toast('✓ Apontamento registrado!', 'ok');
       resetFForm();
     }
-  } catch(e) {
+  } catch (e) {
     toast('Erro: ' + e.message, 'err');
   } finally {
     btn.disabled = false;
@@ -233,14 +233,14 @@ async function loadFieldOpHistory() {
     return;
   }
   el.innerHTML = '<div class="loading"><div class="spinner"></div>Carregando...</div>';
-  
+
   const { data, error } = await sb.from('field_services')
     .select('*, parcels(code), varieties(name)')
     .eq('tenant_id', tenantId)
-    .order('date', {ascending:false})
-    .order('start_time', {ascending:false})
+    .order('date', { ascending: false })
+    .order('start_time', { ascending: false })
     .limit(20);
-    
+
   if (error || !data?.length) {
     el.innerHTML = '<div class="empty">Nenhum apontamento recente</div>';
     return;
@@ -254,7 +254,7 @@ async function loadFieldOpHistory() {
           <span class="hist-time">${fmtTime(r.created_at)}</span>
         </div>
         <div class="hist-meta">
-          <span class="pill pill-blue">${r.start_time.substring(0,5)} as ${r.end_time.substring(0,5)}</span>
+          <span class="pill pill-blue">${r.start_time.substring(0, 5)} as ${r.end_time.substring(0, 5)}</span>
           <span class="pill pill-green">${r.employee_count} pessoas</span>
           <span class="pill pill-gray">${BRL(r.total_value)}</span>
         </div>
