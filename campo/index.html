@@ -7575,6 +7575,10 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
   const productTotals = {};
   uniqueProducts.forEach(p => { productTotals[p] = 0; });
 
+  // Rastreamento de dosagens para aplicação das regras de impressão por coluna (em ordem cronológica)
+  const lastDoseByProduct = {};
+  uniqueProducts.forEach(p => { lastDoseByProduct[p] = null; });
+
   let rowsHtml = '';
 
   if (fertData.length > 0) {
@@ -7602,12 +7606,39 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
       const pItems = itemsByFertId[f.id] || {};
 
       const colsHtml = uniqueProducts.map(p => {
-        const val = pItems[p];
-        if (val != null && val > 0) {
-          productTotals[p] += val;
-          return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</td>`;
+        if (!p || !p.trim()) {
+          // Regra 4: Sem produto definido -> célula vazia
+          lastDoseByProduct[p] = null;
+          return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px;">&nbsp;</td>`;
         }
-        return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; color:#999">-</td>`;
+
+        const rawVal = pItems[p];
+        if (rawVal != null) {
+          const val = parseFloat(rawVal) || 0;
+          if (val > 0) {
+            productTotals[p] = (productTotals[p] || 0) + val;
+            const prevDose = lastDoseByProduct[p];
+            const isRepeated = (prevDose != null && Math.abs(val - prevDose) < 0.0001);
+            lastDoseByProduct[p] = val;
+            const formatted = val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+
+            if (isRepeated) {
+              // Regra 2: Linha com valor > 0 IGUAL ao anterior -> FONTE BRANCA (permanece no HTML/dados, mas invisível para escrita manual)
+              return `<td class="dose-repetida-branca" style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px; color:#fff !important; -webkit-text-fill-color:#fff !important; user-select:none;">${formatted}</td>`;
+            }
+            // Regra 1: Primeira linha de uma dosagem (valor > 0 e diferente do anterior) -> visível
+            return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold; height:20px; color:#000;">${formatted}</td>`;
+          } else {
+            // Regra 5: O valor 0,0 permanece visível como está
+            lastDoseByProduct[p] = 0;
+            return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px; color:#000;">0,000</td>`;
+          }
+        }
+
+        // Regra 3: Intervalo de idade (DAP) em que o produto NÃO é aplicado -> traço "–"
+        // Reinicia a comparação "igual à linha anterior" quando há traço no meio
+        lastDoseByProduct[p] = null;
+        return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px; color:#000; font-weight:normal;">–</td>`;
       }).join('');
 
       return `
@@ -7645,25 +7676,51 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
         calcDtStr = `${dd}/${mm}/${yy}`;
       }
       const faseStr = `DAP ${dapNum}`;
-      const isInitialReference = !isManualMode || (idx < 7);
 
       const colsHtml = uniqueProducts.map(p => {
-        if (!isInitialReference) {
+        if (!p || !p.trim()) {
+          // Regra 4: Sem produto definido -> célula vazia
+          lastDoseByProduct[p] = null;
           return '<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px;">&nbsp;</td>';
         }
 
         let doseBase = 0;
+        let hasProductInDap = false;
         Object.entries(doses).forEach(([fKey, val]) => {
           if (fKey === 'OBSERVAÇÕES') return;
           const mappedName = mapFertNames[fKey] || fKey.trim().toUpperCase();
-          if (mappedName === p) doseBase += Number(val);
+          if (mappedName === p) {
+            hasProductInDap = true;
+            doseBase += Number(val);
+          }
         });
-        const totalKg = doseBase * areaVal;
-        if (totalKg > 0) {
-          productTotals[p] = (productTotals[p] || 0) + totalKg;
-          return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold; height:20px;">${totalKg.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</td>`;
+
+        if (hasProductInDap) {
+          const totalKg = doseBase * areaVal;
+          if (totalKg > 0) {
+            productTotals[p] = (productTotals[p] || 0) + totalKg;
+            const prevDose = lastDoseByProduct[p];
+            const isRepeated = (prevDose != null && Math.abs(totalKg - prevDose) < 0.0001);
+            lastDoseByProduct[p] = totalKg;
+            const formatted = totalKg.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+
+            if (isRepeated) {
+              // Regra 2: Linha com valor > 0 IGUAL ao anterior -> FONTE BRANCA (permanece no HTML/dados, mas invisível para escrita manual)
+              return `<td class="dose-repetida-branca" style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px; color:#fff !important; -webkit-text-fill-color:#fff !important; user-select:none;">${formatted}</td>`;
+            }
+            // Regra 1: Primeira linha de uma dosagem (valor > 0 e diferente do anterior) -> visível
+            return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold; height:20px; color:#000;">${formatted}</td>`;
+          } else {
+            // Regra 5: O valor 0,0 permanece visível
+            lastDoseByProduct[p] = 0;
+            return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px; color:#000;">0,000</td>`;
+          }
         }
-        return '<td style="border:1px solid #000; padding:2px 2px; text-align:center; color:#999; height:20px;">-</td>';
+
+        // Regra 3: Intervalo de idade (DAP) em que o produto NÃO é aplicado -> traço "–"
+        // Reinicia a comparação "igual à linha anterior" quando há traço no meio
+        lastDoseByProduct[p] = null;
+        return '<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px; color:#000; font-weight:normal;">–</td>';
       }).join('');
 
       return `
@@ -7685,8 +7742,8 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
   const operadorNome = opPrompt.trim() || defaultOp;
 
   const totalsColsHtml = uniqueProducts.map(p => {
-    const tot = productTotals[p];
-    return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${tot > 0 ? tot.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '-'}</td>`;
+    const tot = productTotals[p] || 0;
+    return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold">${tot > 0 ? tot.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '–'}</td>`;
   }).join('');
 
   const printWin = window.open('', '_blank', 'width=1100,height=1250');
@@ -7716,8 +7773,15 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
   .obs-box { border: 1px solid #000; padding: 3px 5px; font-size: 5.4pt; line-height: 1.15; margin-bottom: 3px; background: #fafafa; }
   .sig-table { width: 100%; border-collapse: collapse; margin-top: 3px; font-size: 6.5pt; }
   .sig-table td { border: 1px solid #000; padding: 4px 6px; text-align: center; vertical-align: bottom; }
+  .dose-repetida-branca { color: #fff !important; -webkit-text-fill-color: #fff !important; user-select: none; }
   @media print {
     html, body { height: 100%; margin: 0 !important; padding: 0 !important; }
+    .sheet { page-break-inside: avoid; page-break-after: avoid; }
+    table { page-break-inside: avoid; }
+    tr { page-break-inside: avoid; }
+    .dose-repetida-branca { color: #fff !important; -webkit-text-fill-color: #fff !important; }
+  }
+  </style>
     .sheet { page-break-inside: avoid; page-break-after: avoid; }
     table { page-break-inside: avoid; }
     tr { page-break-inside: avoid; }

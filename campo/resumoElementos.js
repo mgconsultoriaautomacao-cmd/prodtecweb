@@ -1874,6 +1874,18 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
       fertData = fData || [];
 
       if (fertData.length > 0) {
+        const fIds = fertData.map(f => f.id);
+        const { data: iData } = await window.sb.from('caderno_campo_fertirrigacao_itens')
+          .select('*')
+          .in('fert_id', fIds);
+        itensData = iData || [];
+      }
+    }
+  } catch(e) {
+    console.warn('Erro ao carregar fertirrigação para cálculo de elementos:', e);
+  }
+
+  if (fertData.length > 0) {
     const itemsByFertId = {};
     itensData.forEach(it => {
       if (!itemsByFertId[it.fert_id]) itemsByFertId[it.fert_id] = [];
@@ -1943,7 +1955,7 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
         const dd = String(d.getDate()).padStart(2, '0');
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const yy = String(d.getFullYear()).slice(-2);
-        dtStr = ;
+        dtStr = `${dd}/${mm}/${yy}`;
       }
 
       const nutrs = {};
@@ -2056,7 +2068,7 @@ async function calcResumoElementosParcela(parcelIdOrCode) {
           produto: prodName,
           quantidade: q,
           unidade: (u === 'g' || u === 'kg') ? 'kg' : 'L',
-          dosagem: doseReal > 0 ?  : '—',
+          dosagem: doseReal > 0 ? `${doseReal.toFixed(2)} ${(u === 'g' || u === 'kg') ? 'kg/ha' : 'L/ha'}` : '—',
           nutrientes: nutrs,
           garantias: formatGarantiasStr(comp),
           operador: op.tratorista || op.aplicador || op.barrista || op.responsavel || 'ROBSON RAFAEL'
