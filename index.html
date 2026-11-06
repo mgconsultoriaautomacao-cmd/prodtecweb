@@ -1407,35 +1407,216 @@
   </div>
   </div>
 
-  <!-- ═══ PARADAS GERAIS ═══ -->
+  <!-- ═══ PARADAS GERAIS & RELATÓRIOS ═══ -->
   <div id="tab-stops" class="tab">
-  <h1 class="ptitle"><i data-lucide="ban"></i> Registro de Paradas Gerais</h1>
-  <div class="fbar" style="flex-wrap:wrap; align-items:flex-end;">
-  <div class="f"><label class="flabel">Início da Parada</label><input type="datetime-local" id="stopStart"/></div>
-  <div class="f" style="min-width:290px; flex:1.5; position:relative;">
-    <label class="flabel">Motivo da Parada (Pesquisar ou Selecionar)</label>
-    <div style="position:relative;">
-      <input type="text" id="stopReason" autocomplete="off" placeholder="Clique para selecionar ou digite para pesquisar..." onfocus="openStopReasonDropdown()" oninput="filterStopReasonDropdown(this.value)" style="width:100%; padding-right:34px;"/>
-      <button type="button" onclick="toggleStopReasonDropdown(event)" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:var(--muted); cursor:pointer; padding:4px; display:flex; align-items:center; box-shadow:none;">
-        <i data-lucide="chevron-down" style="width:16px;height:16px"></i>
-      </button>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+      <div>
+        <h1 class="ptitle" style="margin:0"><i data-lucide="ban"></i> Registro & Gestão de Paradas Gerais</h1>
+        <p style="color:var(--muted); font-size:12px; margin-top:4px;">Controle operacional da esteira de embalagem, abono de ociosidade e inteligência gerencial.</p>
+      </div>
+      <!-- [REL-PARADAS] Subtabs de Navegação Interna -->
+      <div style="display:flex; gap:8px; background:rgba(15,23,42,0.6); padding:4px; border-radius:10px; border:1px solid var(--border);">
+        <button type="button" id="btnStopsSubTabReg" onclick="switchStopsSubTab('reg')" style="padding:8px 14px; border-radius:7px; font-size:12px; font-weight:700; border:none; cursor:pointer; background:var(--blue); color:#fff; display:inline-flex; align-items:center; gap:6px;">
+          <i data-lucide="play-circle" style="width:14px;height:14px"></i> Registrar & Ativas
+        </button>
+        <button type="button" id="btnStopsSubTabRep" onclick="switchStopsSubTab('rep')" style="padding:8px 14px; border-radius:7px; font-size:12px; font-weight:700; border:none; cursor:pointer; background:transparent; color:var(--muted); display:inline-flex; align-items:center; gap:6px;">
+          <i data-lucide="bar-chart-3" style="width:14px;height:14px"></i> Relatórios Gerenciais
+        </button>
+      </div>
     </div>
-    <div id="stopReasonDropdown" style="display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; background:var(--card, #1e293b); border:1px solid var(--border, #334155); border-radius:10px; max-height:280px; overflow-y:auto; z-index:2500; box-shadow:0 12px 28px rgba(0,0,0,0.45);"></div>
-  </div>
-  <div class="f" style="min-width:240px; flex:1.2;">
-    <label id="stopObsLabel" class="flabel">Observações / Detalhes (Opcional)</label>
-    <input type="text" id="stopObs" placeholder="Detalhes adicionais ou especifique Outros..." style="width:100%;"/>
-  </div>
-  <div class="f" style="min-width:200px; flex:0.9;">
-    <label class="flabel">Responsável pelo Registro</label>
-    <input type="text" id="stopRegisteredBy" placeholder="Usuário logado" style="width:100%;"/>
-  </div>
-  <button onclick="saveStop()"><i data-lucide="ban" class="btn-i"></i> Registrar Parada</button>
-  </div>
-  <div class="card">
-  <div class="title"><i data-lucide="clock" class="btn-i"></i> Histórico Recente de Ocorrências</div>
-  <div id="stopList" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px"></div>
-  </div>
+
+    <!-- SEÇÃO 1: REGISTRO E OCORRÊNCIAS RECENTES -->
+    <div id="stopsSectionReg">
+      <div class="fbar" style="flex-wrap:wrap; align-items:flex-end;">
+        <div class="f"><label class="flabel">Início da Parada</label><input type="datetime-local" id="stopStart"/></div>
+        <div class="f" style="min-width:290px; flex:1.5; position:relative;">
+          <label class="flabel">Motivo da Parada (Pesquisar ou Selecionar)</label>
+          <div style="position:relative;">
+            <input type="text" id="stopReason" autocomplete="off" placeholder="Clique para selecionar ou digite para pesquisar..." onfocus="openStopReasonDropdown()" oninput="filterStopReasonDropdown(this.value)" style="width:100%; padding-right:34px;"/>
+            <button type="button" onclick="toggleStopReasonDropdown(event)" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:var(--muted); cursor:pointer; padding:4px; display:flex; align-items:center; box-shadow:none;">
+              <i data-lucide="chevron-down" style="width:16px;height:16px"></i>
+            </button>
+          </div>
+          <div id="stopReasonDropdown" style="display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; background:var(--card, #1e293b); border:1px solid var(--border, #334155); border-radius:10px; max-height:280px; overflow-y:auto; z-index:2500; box-shadow:0 12px 28px rgba(0,0,0,0.45);"></div>
+        </div>
+        <div class="f" style="min-width:240px; flex:1.2;">
+          <label id="stopObsLabel" class="flabel">Observações / Detalhes (Opcional)</label>
+          <input type="text" id="stopObs" placeholder="Detalhes adicionais ou especifique Outros..." style="width:100%;"/>
+        </div>
+        <div class="f" style="min-width:200px; flex:0.9;">
+          <label class="flabel">Responsável pelo Registro</label>
+          <input type="text" id="stopRegisteredBy" placeholder="Usuário logado" style="width:100%;"/>
+        </div>
+        <button onclick="saveStop()" class="red" style="font-weight:700; display:inline-flex; align-items:center; gap:6px;"><i data-lucide="ban" class="btn-i"></i> Registrar Parada</button>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <div class="title" style="display:flex; justify-content:space-between; align-items:center;">
+          <span><i data-lucide="clock" class="btn-i"></i> Histórico Recente de Ocorrências</span>
+          <button type="button" onclick="switchStopsSubTab('rep')" class="sec" style="font-size:11px; padding:5px 10px; display:inline-flex; align-items:center; gap:5px;">
+            <i data-lucide="bar-chart-2" style="width:13px;height:13px"></i> Ver Painel de Relatórios
+          </button>
+        </div>
+        <div id="stopList" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:15px"></div>
+      </div>
+    </div>
+
+    <!-- [REL-PARADAS] SEÇÃO 2: RELATÓRIOS GERENCIAIS DE PARADAS -->
+    <div id="stopsSectionRep" style="display:none;">
+      <!-- Barra de Filtros dos Relatórios -->
+      <div class="fbar" style="flex-wrap:wrap; align-items:flex-end; gap:10px; margin-bottom:16px;">
+        <div class="f" style="min-width:130px;">
+          <label class="flabel">Período Rápido</label>
+          <select id="stopRepPreset" onchange="handleStopRepPresetChange(this.value)">
+            <option value="today">Hoje</option>
+            <option value="yesterday">Ontem</option>
+            <option value="7d" selected>Últimos 7 dias</option>
+            <option value="30d">Últimos 30 dias</option>
+            <option value="this_month">Mês Atual</option>
+            <option value="custom">Personalizado</option>
+          </select>
+        </div>
+        <div class="f" style="min-width:140px;">
+          <label class="flabel">Data Início</label>
+          <input type="date" id="stopRepStartDate" onchange="onStopRepDateChange()"/>
+        </div>
+        <div class="f" style="min-width:140px;">
+          <label class="flabel">Data Fim</label>
+          <input type="date" id="stopRepEndDate" onchange="onStopRepDateChange()"/>
+        </div>
+        <div class="f" style="min-width:180px; flex:1;">
+          <label class="flabel">Categoria</label>
+          <select id="stopRepCategoryFilter" onchange="refreshStopReports()">
+            <option value="ALL">Todas as Categorias</option>
+          </select>
+        </div>
+        <div class="f" style="min-width:210px; flex:1.2;">
+          <label class="flabel">Motivo Específico</label>
+          <select id="stopRepReasonFilter" onchange="refreshStopReports()">
+            <option value="ALL">Todos os Motivos</option>
+          </select>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button onclick="refreshStopReports()" class="blue" style="display:inline-flex; align-items:center; gap:5px; font-weight:700;">
+            <i data-lucide="filter" style="width:14px;height:14px"></i> Filtrar
+          </button>
+          <button onclick="exportStopReportCsv()" class="sec" title="Exportar dados filtrados para Excel/CSV" style="display:inline-flex; align-items:center; gap:5px; font-weight:600;">
+            <i data-lucide="download" style="width:14px;height:14px"></i> Excel
+          </button>
+          <button onclick="printStopReport()" class="sec" title="Imprimir relatório gerencial consolidado" style="display:inline-flex; align-items:center; gap:5px; font-weight:700; background:rgba(6,182,212,0.12); color:#06b6d4; border-color:rgba(6,182,212,0.3);">
+            <i data-lucide="printer" style="width:14px;height:14px"></i> Imprimir PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Cards de Métricas Principais (A, E, F) -->
+      <div class="kgrid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:16px;">
+        <div class="kcard">
+          <div class="klabel">TOTAL DE PARADAS</div>
+          <div class="kval" id="stopKpiCount">0</div>
+          <div class="ksub" id="stopKpiCountSub">Ocorrências no período</div>
+        </div>
+        <div class="kcard">
+          <div class="klabel">TEMPO TOTAL PARADO</div>
+          <div class="kval" style="color:var(--red, #ef4444)" id="stopKpiTotalDuration">0h 00m</div>
+          <div class="ksub" id="stopKpiTotalDurationSub">0 minutos totais</div>
+        </div>
+        <div class="kcard">
+          <div class="klabel">DURAÇÃO MÉDIA</div>
+          <div class="kval" style="color:var(--orange, #f59e0b)" id="stopKpiAvgDuration">0 min</div>
+          <div class="ksub">Por parada registrada</div>
+        </div>
+        <div class="kcard">
+          <div class="klabel">MÉDIA DIÁRIA PARADA</div>
+          <div class="kval" style="color:#a855f7" id="stopKpiDailyAvg">0 min</div>
+          <div class="ksub" id="stopKpiDailyAvgSub">Por dia com operação</div>
+        </div>
+        <div class="kcard">
+          <div class="klabel">PERDA DE PRODUÇÃO (ESTIMADA)</div>
+          <div class="kval" style="color:#f43f5e" id="stopKpiLostBoxes">~0 cx</div>
+          <div class="ksub" id="stopKpiLostBoxesSub">Ritmo médio de linha</div>
+        </div>
+        <div class="kcard">
+          <div class="klabel">IMPACTO NO ABONO</div>
+          <div class="kval" style="color:var(--green, #10b981)" id="stopKpiAbonoTime">0h 00m</div>
+          <div class="ksub">Ociosidade abonada à equipe</div>
+        </div>
+      </div>
+
+      <!-- Gráficos de Evolução e Motivos (B e C) -->
+      <div class="cgrid" style="margin-bottom:16px;">
+        <div class="card">
+          <div class="title" style="display:flex; justify-content:space-between; align-items:center;">
+            <span><i data-lucide="trending-up" class="btn-i"></i> Evolução Temporal de Paradas (Minutos por Dia)</span>
+            <span style="font-size:11px; color:var(--muted)">Minutos parados / dia</span>
+          </div>
+          <div class="ch" style="height:260px;"><canvas id="chartStopEvolution"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="title" style="display:flex; justify-content:space-between; align-items:center;">
+            <span><i data-lucide="pie-chart" class="btn-i"></i> Maiores Ofensores por Tempo Total (Minutos)</span>
+            <span style="font-size:11px; color:var(--muted)">Top Motivos</span>
+          </div>
+          <div class="ch" style="height:260px;"><canvas id="chartStopReasons"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Ranking de Motivos (Top 10) & Duração Média (C e D) -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="title"><i data-lucide="list-ordered" class="btn-i"></i> Ranking de Motivos — Ofensores por Frequência e Impacto no Tempo (Top 10)</div>
+        <div style="overflow-x:auto;">
+          <table id="stopRepRankingTable" style="width:100%; border-collapse:collapse; font-size:12px;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border); color:var(--muted); text-align:left;">
+                <th style="padding:9px 6px; width:40px; text-align:center;">#</th>
+                <th style="padding:9px 8px;">Motivo Padronizado</th>
+                <th style="padding:9px 8px;">Categoria</th>
+                <th style="padding:9px 8px; text-align:center;">Ocorrências</th>
+                <th style="padding:9px 8px; text-align:center;">% Ocorrências</th>
+                <th style="padding:9px 8px; text-align:center;">Tempo Total</th>
+                <th style="padding:9px 8px; text-align:center;">% Tempo Total</th>
+                <th style="padding:9px 8px; text-align:center;">Duração Média</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Detalhamento de Ocorrências do Período -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="title" style="display:flex; justify-content:space-between; align-items:center;">
+          <span><i data-lucide="table" class="btn-i"></i> Ocorrências Detalhadas do Período</span>
+          <span id="stopRepDetailsCount" style="font-size:11.5px; color:var(--muted)">0 registros</span>
+        </div>
+        <div style="overflow-x:auto; max-height:420px;">
+          <table id="stopRepDetailsTable" style="width:100%; border-collapse:collapse; font-size:11.5px;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border); color:var(--muted); text-align:left; position:sticky; top:0; background:var(--card, #1e293b); z-index:10;">
+                <th style="padding:9px 6px; text-align:center;">Data</th>
+                <th style="padding:9px 6px; text-align:center;">Início</th>
+                <th style="padding:9px 6px; text-align:center;">Fim</th>
+                <th style="padding:9px 6px; text-align:center;">Duração</th>
+                <th style="padding:9px 8px;">Motivo Padronizado</th>
+                <th style="padding:9px 8px;">Categoria</th>
+                <th style="padding:9px 8px;">Observações</th>
+                <th style="padding:9px 8px;">Registrado Por</th>
+                <th style="padding:9px 6px; text-align:center;">Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Nota Metodológica de Cálculo -->
+      <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:11px; color:var(--muted); line-height:1.5;">
+        <strong>Nota Metodológica & Regras dos Indicadores:</strong><br/>
+        • <strong>Perda de Produção Estimada:</strong> Calculada pela fórmula <code>Minutos Parados × Cadência Média da Linha (Caixas/min)</code>. Representa o volume estimado de caixas não embaladas em virtude das interrupções de linha.<br/>
+        • <strong>Virada de Turno/Dia:</strong> Paradas que cruzam a meia-noite são contabilizadas pelo dia de início (data de abertura da ocorrência na esteira).<br/>
+        • <strong>Paradas em Aberto:</strong> Contabilizadas a partir do horário de início até o momento atual, com status visual <code>[EM ANDAMENTO]</code>.
+      </div>
+    </div>
   </div>
 
   <!-- ═══ AUDITORIA DE QUALIDADE ═══ -->
@@ -9415,6 +9596,7 @@ function calculateIdleDetails(scans, globalStops = []) {
   return { totalMinutes, gaps, avgGapMinutes };
 }
 
+// [REL-PARADAS] Lista padronizada de motivos (15 originais + 6 novos = 21 motivos)
 const STOP_STANDARD_REASONS = [
   '1 - Problema na prodol',
   '2 - Problema na mesa de embalagem',
@@ -9430,8 +9612,78 @@ const STOP_STANDARD_REASONS = [
   '12 - Pane sistema',
   '13 - Jantar',
   '14 - Muito defeito no fruto (pausa para resolução)',
-  '15 - Outros (descrever em observações)'
+  '15 - Outros (descrever em observações)',
+  '16 - Falta de caixa no estoque',
+  '17 - Aguardando transporte de caixa da empilhadeira',
+  '18 - Merenda extra',
+  '19 - Auditoria interna',
+  '20 - Interrupções na esteira',
+  '21 - Problema na monovia'
 ];
+
+// [REL-PARADAS] Mapeamento de categorias e regras de abono dos motivos
+const STOP_REASONS_METADATA = {
+  '1':  { nome: 'Problema na prodol',                         categoria: 'Manutenção / Equipamento',   abona: true },
+  '2':  { nome: 'Problema na mesa de embalagem',              categoria: 'Manutenção / Equipamento',   abona: true },
+  '3':  { nome: 'Falta de fruto',                             categoria: 'Matéria-Prima / Fruto',       abona: true },
+  '4':  { nome: 'Problema mecânico interno',                  categoria: 'Manutenção / Equipamento',   abona: true },
+  '5':  { nome: 'Problema mecânico externo',                  categoria: 'Manutenção / Equipamento',   abona: true },
+  '6':  { nome: 'Troca de material de embalagem',             categoria: 'Insumos / Embalagem',        abona: true },
+  '7':  { nome: 'Pausa para revisão',                         categoria: 'Processo / Operação',        abona: true },
+  '8':  { nome: 'Reuniões',                                   categoria: 'Processo / Operação',        abona: true },
+  '9':  { nome: 'Troca de setores',                           categoria: 'Logística / Movimentação',   abona: true },
+  '10': { nome: 'Falta de energia',                           categoria: 'Infraestrutura / Utilidades',abona: true },
+  '11': { nome: 'Treinamentos',                               categoria: 'Processo / Operação',        abona: true },
+  '12': { nome: 'Pane sistema',                               categoria: 'Infraestrutura / TI',        abona: true },
+  '13': { nome: 'Jantar',                                     categoria: 'Intervalo / Refeição',       abona: true },
+  '14': { nome: 'Muito defeito no fruto (pausa para resolução)', categoria: 'Qualidade / Fruto',        abona: true },
+  '15': { nome: 'Outros (descrever em observações)',          categoria: 'Geral / Outros',             abona: true },
+  '16': { nome: 'Falta de caixa no estoque',                  categoria: 'Insumos / Embalagem',        abona: true },
+  '17': { nome: 'Aguardando transporte de caixa da empilhadeira', categoria: 'Logística / Movimentação', abona: true },
+  '18': { nome: 'Merenda extra',                              categoria: 'Intervalo / Refeição',       abona: true },
+  '19': { nome: 'Auditoria interna',                          categoria: 'Qualidade / Auditoria',      abona: true },
+  '20': { nome: 'Interrupções na esteira',                    categoria: 'Manutenção / Equipamento',   abona: true },
+  '21': { nome: 'Problema na monovia',                        categoria: 'Manutenção / Equipamento',   abona: true }
+};
+
+// [REL-PARADAS] Extrai categoria, título padronizado e detalhes do motivo
+function getStopCategoryAndInfo(rawReason) {
+  const parsed = parseStopReasonDisplay(rawReason);
+  const text = (parsed.title || '').trim();
+  const numMatch = text.match(/^(\d+)\s*[-–]/);
+  if (numMatch && STOP_REASONS_METADATA[numMatch[1]]) {
+    const meta = STOP_REASONS_METADATA[numMatch[1]];
+    return {
+      num: numMatch[1],
+      title: `${numMatch[1]} - ${meta.nome}`,
+      categoria: meta.categoria,
+      abona: meta.abona,
+      obs: parsed.obs,
+      resp: parsed.resp
+    };
+  }
+  const lower = normStopSearch(text);
+  for (const [key, meta] of Object.entries(STOP_REASONS_METADATA)) {
+    if (lower.includes(normStopSearch(meta.nome))) {
+      return {
+        num: key,
+        title: `${key} - ${meta.nome}`,
+        categoria: meta.categoria,
+        abona: meta.abona,
+        obs: parsed.obs,
+        resp: parsed.resp
+      };
+    }
+  }
+  return {
+    num: '15',
+    title: text || '15 - Outros',
+    categoria: 'Geral / Outros',
+    abona: true,
+    obs: parsed.obs,
+    resp: parsed.resp
+  };
+}
 
 function getLoggedUserName() {
   const u = window._loggedUser;
@@ -9599,6 +9851,9 @@ async function loadStops() {
   `;
   }).join('') || '<div style="padding:20px; color:var(--muted)">Nenhuma parada registrada.</div>';
   if(window.lucide) lucide.createIcons();
+  if (_currentStopsSubTab === 'rep') {
+    refreshStopReports();
+  }
 }
 
 async function saveStop() {
@@ -9659,6 +9914,705 @@ function updateStopBanner() {
   banner.style.display = 'none';
   }
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// [REL-PARADAS] RELATÓRIOS GERENCIAIS & INDICADORES DE PARADAS (PACKING HOUSE)
+// ════════════════════════════════════════════════════════════════════════════
+let _currentStopsSubTab = 'reg';
+function switchStopsSubTab(tab) {
+  _currentStopsSubTab = tab;
+  const secReg = $('stopsSectionReg');
+  const secRep = $('stopsSectionRep');
+  const btnReg = $('btnStopsSubTabReg');
+  const btnRep = $('btnStopsSubTabRep');
+
+  if (tab === 'rep') {
+    if (secReg) secReg.style.display = 'none';
+    if (secRep) secRep.style.display = 'block';
+    if (btnReg) { btnReg.style.background = 'transparent'; btnReg.style.color = 'var(--muted)'; }
+    if (btnRep) { btnRep.style.background = 'var(--blue)'; btnRep.style.color = '#fff'; }
+    initStopReports();
+    refreshStopReports();
+  } else {
+    if (secReg) secReg.style.display = 'block';
+    if (secRep) secRep.style.display = 'none';
+    if (btnReg) { btnReg.style.background = 'var(--blue)'; btnReg.style.color = '#fff'; }
+    if (btnRep) { btnRep.style.background = 'transparent'; btnRep.style.color = 'var(--muted)'; }
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
+function formatDurationHm(totalMinutes) {
+  if (totalMinutes == null || isNaN(totalMinutes) || totalMinutes <= 0) return '0 min';
+  const total = Math.round(totalMinutes);
+  if (total < 60) return `${total} min`;
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${h}h ${String(m).padStart(2, '0')}m`;
+}
+
+function handleStopRepPresetChange(preset) {
+  const startInp = $('stopRepStartDate');
+  const endInp = $('stopRepEndDate');
+  if (!startInp || !endInp) return;
+
+  const now = new Date();
+  const toYmd = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  if (preset === 'today') {
+    startInp.value = toYmd(now);
+    endInp.value = toYmd(now);
+  } else if (preset === 'yesterday') {
+    const yest = new Date(now.getTime() - 86400000);
+    startInp.value = toYmd(yest);
+    endInp.value = toYmd(yest);
+  } else if (preset === '7d') {
+    const d7 = new Date(now.getTime() - 6 * 86400000);
+    startInp.value = toYmd(d7);
+    endInp.value = toYmd(now);
+  } else if (preset === '30d') {
+    const d30 = new Date(now.getTime() - 29 * 86400000);
+    startInp.value = toYmd(d30);
+    endInp.value = toYmd(now);
+  } else if (preset === 'this_month') {
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    startInp.value = toYmd(firstDay);
+    endInp.value = toYmd(now);
+  }
+  refreshStopReports();
+}
+
+function onStopRepDateChange() {
+  const presetSel = $('stopRepPreset');
+  if (presetSel) presetSel.value = 'custom';
+  refreshStopReports();
+}
+
+let _stopReportsInitialized = false;
+function initStopReports() {
+  if (_stopReportsInitialized) return;
+  _stopReportsInitialized = true;
+
+  const catSel = $('stopRepCategoryFilter');
+  if (catSel) {
+    const cats = Array.from(new Set(Object.values(STOP_REASONS_METADATA).map(m => m.categoria))).sort();
+    catSel.innerHTML = '<option value="ALL">Todas as Categorias</option>' + 
+      cats.map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+
+  const reasonSel = $('stopRepReasonFilter');
+  if (reasonSel) {
+    reasonSel.innerHTML = '<option value="ALL">Todos os Motivos</option>' + 
+      STOP_STANDARD_REASONS.map(r => `<option value="${r}">${r}</option>`).join('');
+  }
+
+  const startInp = $('stopRepStartDate');
+  const endInp = $('stopRepEndDate');
+  if (startInp && !startInp.value && endInp && !endInp.value) {
+    handleStopRepPresetChange('7d');
+  }
+}
+
+let _chartStopEvolutionInstance = null;
+let _chartStopReasonsInstance = null;
+let _lastFilteredStops = [];
+
+function refreshStopReports() {
+  initStopReports();
+  const startVal = $('stopRepStartDate')?.value;
+  const endVal = $('stopRepEndDate')?.value;
+  const catFilter = $('stopRepCategoryFilter')?.value || 'ALL';
+  const reasonFilter = $('stopRepReasonFilter')?.value || 'ALL';
+
+  const dStart = startVal ? new Date(`${startVal}T00:00:00`) : new Date(0);
+  const dEnd = endVal ? new Date(`${endVal}T23:59:59.999`) : new Date(8640000000000000);
+
+  const allStops = _globalStops || [];
+  const nowTs = Date.now();
+
+  // Filtragem dos registros atribuindo ao dia de início
+  const filtered = allStops.filter(s => {
+    const sStart = new Date(s.start_ts);
+    if (isNaN(sStart.getTime())) return false;
+    if (sStart < dStart || sStart > dEnd) return false;
+
+    const info = getStopCategoryAndInfo(s.reason);
+    if (catFilter !== 'ALL' && info.categoria !== catFilter) return false;
+    if (reasonFilter !== 'ALL') {
+      const targetLower = normStopSearch(reasonFilter);
+      const sLower = normStopSearch(s.reason);
+      if (!sLower.includes(targetLower) && !targetLower.includes(normStopSearch(info.title))) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  _lastFilteredStops = filtered;
+
+  let totalMinutes = 0;
+  let abonoMinutes = 0;
+  const datesSet = new Set();
+  const byDayMap = {};
+  const byReasonMap = {};
+
+  filtered.forEach(s => {
+    const sStart = new Date(s.start_ts);
+    const sEnd = s.end_ts ? new Date(s.end_ts) : new Date(nowTs);
+    const durMin = Math.max(0, (sEnd.getTime() - sStart.getTime()) / 60000);
+    totalMinutes += durMin;
+
+    const info = getStopCategoryAndInfo(s.reason);
+    if (info.abona) abonoMinutes += durMin;
+
+    const dayKey = `${sStart.getFullYear()}-${String(sStart.getMonth() + 1).padStart(2, '0')}-${String(sStart.getDate()).padStart(2, '0')}`;
+    datesSet.add(dayKey);
+    byDayMap[dayKey] = (byDayMap[dayKey] || 0) + durMin;
+
+    const rKey = info.title;
+    if (!byReasonMap[rKey]) {
+      byReasonMap[rKey] = {
+        title: rKey,
+        categoria: info.categoria,
+        count: 0,
+        totalMinutes: 0
+      };
+    }
+    byReasonMap[rKey].count++;
+    byReasonMap[rKey].totalMinutes += durMin;
+  });
+
+  const totalCount = filtered.length;
+  const avgDuration = totalCount > 0 ? (totalMinutes / totalCount) : 0;
+  const operatingDays = Math.max(1, datesSet.size);
+  const dailyAvgMinutes = datesSet.size > 0 ? (totalMinutes / operatingDays) : 0;
+
+  // Estimativa de perda de produção baseada em caixas/minuto
+  let linePaceCpm = 25.0;
+  if (typeof window._currentBoxes === 'number' && window._currentBoxes > 0) {
+    linePaceCpm = Math.max(10.0, Math.min(60.0, window._currentBoxes / Math.max(60, totalMinutes + 120)));
+  }
+  const estimatedLostBoxes = Math.round(totalMinutes * linePaceCpm);
+
+  // 1. Atualizar Cards (A, E, F)
+  if ($('stopKpiCount')) $('stopKpiCount').textContent = totalCount.toLocaleString('pt-BR');
+  if ($('stopKpiCountSub')) $('stopKpiCountSub').textContent = `${datesSet.size} dia(s) com paradas`;
+
+  if ($('stopKpiTotalDuration')) $('stopKpiTotalDuration').textContent = formatDurationHm(totalMinutes);
+  if ($('stopKpiTotalDurationSub')) $('stopKpiTotalDurationSub').textContent = `${Math.round(totalMinutes).toLocaleString('pt-BR')} minutos totais`;
+
+  if ($('stopKpiAvgDuration')) $('stopKpiAvgDuration').textContent = `${avgDuration.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} min`;
+
+  if ($('stopKpiDailyAvg')) $('stopKpiDailyAvg').textContent = `${dailyAvgMinutes.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} min`;
+  if ($('stopKpiDailyAvgSub')) $('stopKpiDailyAvgSub').textContent = `Média em ${operatingDays} dia(s) operacionais`;
+
+  if ($('stopKpiLostBoxes')) $('stopKpiLostBoxes').textContent = `~${estimatedLostBoxes.toLocaleString('pt-BR')} cx`;
+  if ($('stopKpiLostBoxesSub')) $('stopKpiLostBoxesSub').textContent = `Fórmula: ${Math.round(totalMinutes)} min × ${linePaceCpm.toFixed(1)} cx/min`;
+
+  if ($('stopKpiAbonoTime')) $('stopKpiAbonoTime').textContent = formatDurationHm(abonoMinutes);
+
+  // 2. Gráfico de Evolução (B)
+  renderStopEvolutionChart(byDayMap, dStart, dEnd);
+
+  // 3. Gráfico e Ranking de Motivos (C e D)
+  renderStopReasonsChartAndRanking(byReasonMap, totalCount, totalMinutes);
+
+  // 4. Tabela Detalhada
+  renderStopDetailsTable(filtered);
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function renderStopEvolutionChart(byDayMap, dStart, dEnd) {
+  const canvas = $('chartStopEvolution');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  if (_chartStopEvolutionInstance) {
+    _chartStopEvolutionInstance.destroy();
+    _chartStopEvolutionInstance = null;
+  }
+
+  const sortedDays = Object.keys(byDayMap).sort();
+  let labels = [];
+  let dataPoints = [];
+
+  if (sortedDays.length > 0) {
+    labels = sortedDays.map(dk => {
+      const parts = dk.split('-');
+      return `${parts[2]}/${parts[1]}`;
+    });
+    dataPoints = sortedDays.map(dk => Math.round(byDayMap[dk] || 0));
+  } else {
+    labels = ['Sem dados'];
+    dataPoints = [0];
+  }
+
+  const ctx = canvas.getContext('2d');
+  _chartStopEvolutionInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Minutos Parados',
+        data: dataPoints,
+        backgroundColor: 'rgba(239, 68, 68, 0.75)',
+        borderColor: '#ef4444',
+        borderWidth: 1.5,
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(c) {
+              const val = c.raw || 0;
+              return ` ${val} min (${formatDurationHm(val)})`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(255, 255, 255, 0.06)' },
+          ticks: { color: '#94a3b8', font: { size: 10 } }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { color: '#94a3b8', font: { size: 10 } }
+        }
+      }
+    }
+  });
+}
+
+function renderStopReasonsChartAndRanking(byReasonMap, totalCount, totalMinutes) {
+  const reasonsList = Object.values(byReasonMap).sort((a,b) => b.totalMinutes - a.totalMinutes);
+
+  const canvas = $('chartStopReasons');
+  if (canvas && typeof Chart !== 'undefined') {
+    if (_chartStopReasonsInstance) {
+      _chartStopReasonsInstance.destroy();
+      _chartStopReasonsInstance = null;
+    }
+
+    const top6 = reasonsList.slice(0, 6);
+    const otherMinutes = reasonsList.slice(6).reduce((sum, r) => sum + r.totalMinutes, 0);
+
+    const labels = top6.map(r => r.title.length > 28 ? r.title.slice(0, 26) + '...' : r.title);
+    const dataPoints = top6.map(r => Math.round(r.totalMinutes));
+
+    if (otherMinutes > 0) {
+      labels.push('Outros motivos');
+      dataPoints.push(Math.round(otherMinutes));
+    }
+
+    const colors = [
+      '#ef4444', '#f97316', '#f59e0b', '#3b82f6', '#8b5cf6', '#06b6d4', '#64748b'
+    ];
+
+    const ctx = canvas.getContext('2d');
+    _chartStopReasonsInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels.length ? labels : ['Nenhum motivo'],
+        datasets: [{
+          data: dataPoints.length ? dataPoints : [0],
+          backgroundColor: colors.slice(0, Math.max(1, labels.length)),
+          borderWidth: 1,
+          borderColor: 'rgba(15, 23, 42, 0.8)'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: { color: '#cbd5e1', font: { size: 10.5 }, boxWidth: 12 }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(c) {
+                const val = c.raw || 0;
+                const pct = totalMinutes > 0 ? ((val / totalMinutes) * 100).toFixed(1) : '0,0';
+                return ` ${c.label}: ${val} min (${pct}%)`;
+              }
+            }
+          }
+        },
+        cutout: '62%'
+      }
+    });
+  }
+
+  const tbody = document.querySelector('#stopRepRankingTable tbody');
+  if (tbody) {
+    const top10 = reasonsList.slice(0, 10);
+    if (top10.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:18px; color:var(--muted)">Nenhuma parada registrada no período filtrado.</td></tr>`;
+    } else {
+      tbody.innerHTML = top10.map((r, idx) => {
+        const pctCount = totalCount > 0 ? ((r.count / totalCount) * 100).toFixed(1) : '0,0';
+        const pctTime = totalMinutes > 0 ? ((r.totalMinutes / totalMinutes) * 100).toFixed(1) : '0,0';
+        const avgMin = r.count > 0 ? (r.totalMinutes / r.count).toFixed(1) : '0,0';
+        const medal = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : `${idx + 1}º`));
+
+        return `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05); transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+            <td style="padding:8px 6px; text-align:center; font-weight:700; color:var(--text);">${medal}</td>
+            <td style="padding:8px 8px; font-weight:700; color:var(--text);">${esc(r.title)}</td>
+            <td style="padding:8px 8px; color:var(--muted); font-size:11px;"><span style="background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px;">${esc(r.categoria)}</span></td>
+            <td style="padding:8px 8px; text-align:center; font-weight:700;">${r.count}</td>
+            <td style="padding:8px 8px; text-align:center; color:var(--muted);">${pctCount.replace('.', ',')}%</td>
+            <td style="padding:8px 8px; text-align:center; font-weight:700; color:#f87171;">${formatDurationHm(r.totalMinutes)} <small style="color:var(--muted); font-weight:normal">(${Math.round(r.totalMinutes)}m)</small></td>
+            <td style="padding:8px 8px; text-align:center; color:var(--muted); font-weight:600;">${pctTime.replace('.', ',')}%</td>
+            <td style="padding:8px 8px; text-align:center; font-weight:700; color:#fbbf24;">${avgMin.replace('.', ',')} min</td>
+          </tr>
+        `;
+      }).join('');
+    }
+  }
+}
+
+function renderStopDetailsTable(stops) {
+  const tbody = document.querySelector('#stopRepDetailsTable tbody');
+  const countEl = $('stopRepDetailsCount');
+  if (countEl) countEl.textContent = `${stops.length} ocorrência(s) encontrada(s)`;
+
+  if (!tbody) return;
+  if (stops.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:18px; color:var(--muted)">Nenhum registro para os filtros selecionados.</td></tr>`;
+    return;
+  }
+
+  const nowTs = Date.now();
+  tbody.innerHTML = stops.map(s => {
+    const sStart = new Date(s.start_ts);
+    const sEnd = s.end_ts ? new Date(s.end_ts) : null;
+    const durMin = Math.max(0, ((sEnd ? sEnd.getTime() : nowTs) - sStart.getTime()) / 60000);
+    const isOngoing = !s.end_ts;
+
+    const dateStr = !isNaN(sStart.getTime()) ? sStart.toLocaleDateString('pt-BR') : '—';
+    const startStr = !isNaN(sStart.getTime()) ? sStart.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : '—';
+    const endStr = sEnd && !isNaN(sEnd.getTime()) ? sEnd.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : '—';
+
+    const info = getStopCategoryAndInfo(s.reason);
+
+    return `
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.05); transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+        <td style="padding:8px 6px; text-align:center; font-weight:600;">${dateStr}</td>
+        <td style="padding:8px 6px; text-align:center; color:var(--muted);">${startStr}</td>
+        <td style="padding:8px 6px; text-align:center; color:var(--muted);">${endStr}</td>
+        <td style="padding:8px 6px; text-align:center; font-weight:700; color:${isOngoing ? '#4ade80' : '#f87171'}">${formatDurationHm(durMin)}</td>
+        <td style="padding:8px 8px; font-weight:700; color:var(--text);">${esc(info.title)}</td>
+        <td style="padding:8px 8px; color:var(--muted); font-size:11px;">${esc(info.categoria)}</td>
+        <td style="padding:8px 8px; color:var(--muted); max-width:200px;">${esc(info.obs || '—')}</td>
+        <td style="padding:8px 8px; color:var(--muted);">${esc(info.resp || '—')}</td>
+        <td style="padding:8px 6px; text-align:center;">
+          ${isOngoing
+            ? '<span style="background:rgba(34,197,94,0.18); color:#4ade80; border:1px solid rgba(34,197,94,0.3); padding:2px 7px; border-radius:10px; font-size:10px; font-weight:700;">EM ANDAMENTO</span>'
+            : '<span style="background:rgba(148,163,184,0.14); color:#94a3b8; padding:2px 7px; border-radius:10px; font-size:10px; font-weight:600;">CONCLUÍDA</span>'
+          }
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function exportStopReportCsv() {
+  const stops = _lastFilteredStops || [];
+  if (stops.length === 0) {
+    return alert('Nenhuma ocorrência encontrada para exportar.');
+  }
+
+  const nowTs = Date.now();
+  let csv = '\uFEFF';
+  csv += 'Data;Inicio;Fim;Duracao_Minutos;Duracao_Formatada;Motivo;Categoria;Observacoes;Registrado_Por;Status\n';
+
+  stops.forEach(s => {
+    const sStart = new Date(s.start_ts);
+    const sEnd = s.end_ts ? new Date(s.end_ts) : null;
+    const durMin = Math.max(0, ((sEnd ? sEnd.getTime() : nowTs) - sStart.getTime()) / 60000);
+    const dateStr = !isNaN(sStart.getTime()) ? sStart.toLocaleDateString('pt-BR') : '';
+    const startStr = !isNaN(sStart.getTime()) ? sStart.toLocaleTimeString('pt-BR') : '';
+    const endStr = sEnd && !isNaN(sEnd.getTime()) ? sEnd.toLocaleTimeString('pt-BR') : '';
+    const info = getStopCategoryAndInfo(s.reason);
+    const statusStr = s.end_ts ? 'CONCLUÍDA' : 'EM ANDAMENTO';
+
+    const safe = (v) => `"${String(v || '').replace(/"/g, '""')}"`;
+
+    csv += [
+      safe(dateStr),
+      safe(startStr),
+      safe(endStr),
+      durMin.toFixed(1).replace('.', ','),
+      safe(formatDurationHm(durMin)),
+      safe(info.title),
+      safe(info.categoria),
+      safe(info.obs),
+      safe(info.resp),
+      safe(statusStr)
+    ].join(';') + '\n';
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `relatorio_paradas_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function printStopReport() {
+  const stops = _lastFilteredStops || [];
+  if (stops.length === 0) {
+    return alert('Nenhum dado para imprimir no período selecionado.');
+  }
+
+  const tenantName = (window.tenantConfig && (window.tenantConfig.razao_social || window.tenantConfig.name)) || 'PRODTEC PACKING HOUSE';
+  const startVal = $('stopRepStartDate')?.value || '';
+  const endVal = $('stopRepEndDate')?.value || '';
+  const periodStr = `${startVal ? startVal.split('-').reverse().join('/') : 'Início'} até ${endVal ? endVal.split('-').reverse().join('/') : 'Fim'}`;
+
+  const nowTs = Date.now();
+  let totalMinutes = 0;
+  let abonoMinutes = 0;
+  const datesSet = new Set();
+  const byReasonMap = {};
+
+  stops.forEach(s => {
+    const sStart = new Date(s.start_ts);
+    const sEnd = s.end_ts ? new Date(s.end_ts) : new Date(nowTs);
+    const durMin = Math.max(0, (sEnd.getTime() - sStart.getTime()) / 60000);
+    totalMinutes += durMin;
+
+    const info = getStopCategoryAndInfo(s.reason);
+    if (info.abona) abonoMinutes += durMin;
+
+    const dayKey = `${sStart.getFullYear()}-${String(sStart.getMonth() + 1).padStart(2, '0')}-${String(sStart.getDate()).padStart(2, '0')}`;
+    datesSet.add(dayKey);
+
+    const rKey = info.title;
+    if (!byReasonMap[rKey]) {
+      byReasonMap[rKey] = { title: rKey, categoria: info.categoria, count: 0, totalMinutes: 0 };
+    }
+    byReasonMap[rKey].count++;
+    byReasonMap[rKey].totalMinutes += durMin;
+  });
+
+  const totalCount = stops.length;
+  const avgDuration = totalCount > 0 ? (totalMinutes / totalCount) : 0;
+  const operatingDays = Math.max(1, datesSet.size);
+  const dailyAvg = totalMinutes / operatingDays;
+  const estimatedLostBoxes = Math.round(totalMinutes * 25.0);
+
+  const reasonsList = Object.values(byReasonMap).sort((a,b) => b.totalMinutes - a.totalMinutes);
+
+  const rankingRows = reasonsList.slice(0, 10).map((r, idx) => {
+    const pctCount = totalCount > 0 ? ((r.count / totalCount) * 100).toFixed(1) : '0,0';
+    const pctTime = totalMinutes > 0 ? ((r.totalMinutes / totalMinutes) * 100).toFixed(1) : '0,0';
+    const avgMin = r.count > 0 ? (r.totalMinutes / r.count).toFixed(1) : '0,0';
+    return `
+      <tr>
+        <td style="border:1px solid #000; padding:3px; text-align:center; font-weight:bold;">${idx + 1}º</td>
+        <td style="border:1px solid #000; padding:3px 5px; font-weight:bold;">${r.title}</td>
+        <td style="border:1px solid #000; padding:3px 5px;">${r.categoria}</td>
+        <td style="border:1px solid #000; padding:3px; text-align:center; font-weight:bold;">${r.count}</td>
+        <td style="border:1px solid #000; padding:3px; text-align:center;">${pctCount.replace('.', ',')}%</td>
+        <td style="border:1px solid #000; padding:3px; text-align:center; font-weight:bold;">${formatDurationHm(r.totalMinutes)}</td>
+        <td style="border:1px solid #000; padding:3px; text-align:center;">${pctTime.replace('.', ',')}%</td>
+        <td style="border:1px solid #000; padding:3px; text-align:center;">${avgMin.replace('.', ',')} min</td>
+      </tr>
+    `;
+  }).join('');
+
+  const detailRows = stops.slice(0, 40).map(s => {
+    const sStart = new Date(s.start_ts);
+    const sEnd = s.end_ts ? new Date(s.end_ts) : null;
+    const durMin = Math.max(0, ((sEnd ? sEnd.getTime() : nowTs) - sStart.getTime()) / 60000);
+    const dateStr = !isNaN(sStart.getTime()) ? sStart.toLocaleDateString('pt-BR') : '';
+    const startStr = !isNaN(sStart.getTime()) ? sStart.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : '';
+    const endStr = sEnd && !isNaN(sEnd.getTime()) ? sEnd.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : 'EM ANDAMENTO';
+    const info = getStopCategoryAndInfo(s.reason);
+
+    return `
+      <tr>
+        <td style="border:1px solid #000; padding:2px 3px; text-align:center;">${dateStr}</td>
+        <td style="border:1px solid #000; padding:2px 3px; text-align:center;">${startStr}</td>
+        <td style="border:1px solid #000; padding:2px 3px; text-align:center;">${endStr}</td>
+        <td style="border:1px solid #000; padding:2px 3px; text-align:center; font-weight:bold;">${formatDurationHm(durMin)}</td>
+        <td style="border:1px solid #000; padding:2px 4px;">${info.title}</td>
+        <td style="border:1px solid #000; padding:2px 4px;">${info.categoria}</td>
+        <td style="border:1px solid #000; padding:2px 4px;">${info.obs || '—'}</td>
+        <td style="border:1px solid #000; padding:2px 4px; text-align:center;">${info.resp || '—'}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const printWin = window.open('', '_blank', 'width=1100,height=900');
+  if (!printWin) return alert('Permita popups para imprimir o relatório.');
+
+  const logoHtml = typeof getTenantLogoHtml === 'function' ? getTenantLogoHtml(34, 110) : '<b>PRODTEC</b>';
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Relatório Gerencial de Paradas de Produção</title>
+    <style>
+      @page { size: A4 portrait; margin: 6mm 8mm; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: Arial, Helvetica, sans-serif; font-size: 7pt; color: #000; line-height: 1.2; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .sheet { width: 100%; }
+      .hdr { width: 100%; border: 1.5px solid #000; border-collapse: collapse; margin-bottom: 6px; }
+      .hdr td { border: 1px solid #000; padding: 3px 6px; vertical-align: middle; }
+      .title-box { background: #f1f5f9; border: 1.5px solid #000; padding: 4px; text-align: center; font-size: 9pt; font-weight: bold; margin-bottom: 6px; text-transform: uppercase; }
+      .kgrid { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+      .kgrid td { border: 1px solid #000; padding: 4px; text-align: center; width: 16.6%; background: #fafafa; }
+      .kgrid .val { font-size: 8.5pt; font-weight: bold; color: #000; margin-top: 2px; }
+      .kgrid .lbl { font-size: 5.5pt; color: #475569; font-weight: bold; text-transform: uppercase; }
+      .tbl { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 6.5pt; }
+      .tbl th { background: #e2e8f0; font-weight: bold; border: 1px solid #000; padding: 3px; }
+      .tbl td { border: 1px solid #000; padding: 2px 3px; }
+      .sec-title { font-size: 7.5pt; font-weight: bold; margin: 6px 0 3px 0; border-bottom: 1.5px solid #000; padding-bottom: 2px; }
+      .footer-note { font-size: 5.8pt; color: #475569; border-top: 1px solid #000; padding-top: 4px; margin-top: 8px; line-height: 1.3; }
+      @media print {
+        html, body { height: 100%; margin: 0 !important; }
+        tr { page-break-inside: avoid; }
+      }
+    </style>
+  </head>
+  <body onload="window.print()">
+    <div class="sheet">
+      <table class="hdr">
+        <tr>
+          <td width="22%" style="text-align:center;">${logoHtml}</td>
+          <td width="56%" style="text-align:center;">
+            <div style="font-size:10pt; font-weight:bold;">${tenantName.toUpperCase()}</div>
+            <div style="font-size:7.5pt; margin-top:2px;">RELATÓRIO GERENCIAL DE PARADAS & INDICADORES DE LINHA</div>
+            <div style="font-size:6.5pt; color:#334155; margin-top:2px;">Período Analisado: <strong>${periodStr}</strong></div>
+          </td>
+          <td width="22%" style="font-size:6pt; line-height:1.3;">
+            <strong>Emissão:</strong> ${new Date().toLocaleString('pt-BR')}<br/>
+            <strong>Módulo:</strong> Packing House<br/>
+            <strong>Status:</strong> Oficial
+          </td>
+        </tr>
+      </table>
+
+      <div class="title-box">Indicadores Consolidados de Ocorrências e Impacto Operacional</div>
+
+      <table class="kgrid">
+        <tr>
+          <td>
+            <div class="lbl">Total Ocorrências</div>
+            <div class="val">${totalCount}</div>
+          </td>
+          <td>
+            <div class="lbl">Tempo Total Parado</div>
+            <div class="val" style="color:#b91c1c;">${formatDurationHm(totalMinutes)}</div>
+          </td>
+          <td>
+            <div class="lbl">Duração Média</div>
+            <div class="val">${avgDuration.toFixed(1).replace('.', ',')} min</div>
+          </td>
+          <td>
+            <div class="lbl">Média Diária</div>
+            <div class="val">${dailyAvg.toFixed(1).replace('.', ',')} min</div>
+          </td>
+          <td>
+            <div class="lbl">Perda Estimada</div>
+            <div class="val" style="color:#b91c1c;">~${estimatedLostBoxes.toLocaleString('pt-BR')} cx</div>
+          </td>
+          <td>
+            <div class="lbl">Tempo Abonado</div>
+            <div class="val" style="color:#15803d;">${formatDurationHm(abonoMinutes)}</div>
+          </td>
+        </tr>
+      </table>
+
+      <div class="sec-title">Ranking dos Maiores Ofensores por Tempo Total (Top 10)</div>
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th width="5%">#</th>
+            <th width="32%">Motivo Padronizado</th>
+            <th width="20%">Categoria</th>
+            <th width="8%">Ocorrências</th>
+            <th width="8%">% Qtd</th>
+            <th width="11%">Tempo Total</th>
+            <th width="8%">% Tempo</th>
+            <th width="8%">Duração Média</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rankingRows}
+        </tbody>
+      </table>
+
+      <div class="sec-title">Ocorrências Detalhadas da Linha (${stops.length} registros)</div>
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th width="10%">Data</th>
+            <th width="8%">Início</th>
+            <th width="8%">Fim</th>
+            <th width="10%">Duração</th>
+            <th width="26%">Motivo Padronizado</th>
+            <th width="16%">Categoria</th>
+            <th width="14%">Observações</th>
+            <th width="8%">Resp.</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${detailRows}
+        </tbody>
+      </table>
+
+      <div class="footer-note">
+        <strong>Fórmula de Perda de Produção Estimada:</strong> Minutos Parados × Cadência Média da Linha (25 caixas/minuto). Paradas que ultrapassam a virada do dia são atribuídas ao turno/dia de início. Todos os períodos de parada registrados abonaram automaticamente a ociosidade dos colaboradores no ranking de produtividade.
+      </div>
+
+      <div style="display:flex; justify-content:space-between; margin-top:20px; font-size:6.5pt;">
+        <div style="text-align:center; width:220px;">
+          <div style="border-bottom:1px solid #000; height:18px; margin-bottom:3px;"></div>
+          Supervisão do Packing House
+        </div>
+        <div style="text-align:center; width:220px;">
+          <div style="border-bottom:1px solid #000; height:18px; margin-bottom:3px;"></div>
+          Gestão de Produção & Qualidade
+        </div>
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+
+  printWin.document.open();
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
+window.switchStopsSubTab = switchStopsSubTab;
+window.handleStopRepPresetChange = handleStopRepPresetChange;
+window.onStopRepDateChange = onStopRepDateChange;
+window.refreshStopReports = refreshStopReports;
+window.exportStopReportCsv = exportStopReportCsv;
+window.printStopReport = printStopReport;
 window._lastEmpStats = {};
 
 async function saveBulk() {
@@ -15545,9 +16499,15 @@ async function printPastaCampoDefensivos(id, forceDirectPrint) {
 
     <div class="main-title">CONTROLE GERAL DE AGROTÓXICO NA CULTURA</div>
 
+    <!-- [AJUSTE-DEF] Recupera status de resíduos salvo para a parcela -->
     <div class="info-bar">
       <div><strong>Fazenda:</strong> &nbsp; ${tenantName.toUpperCase()} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Parcela:</strong> ${pCode} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Área:</strong> ${areaHa} ha &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Cultura:</strong> ${item.cultura || 'Melão'}</div>
-      <div><strong>Data de Plantio:</strong> ${plantioStr ? plantioStr.split('-').reverse().join('/') : '—'}</div>
+      <div style="display:flex; align-items:center; gap:16px;">
+        <div><strong>Data de Plantio:</strong> ${plantioStr ? plantioStr.split('-').reverse().join('/') : '—'}</div>
+        <div style="border:1px solid #000; padding:1px 6px; font-size:6.3pt; border-radius:2px; background:#fff; letter-spacing:0.3px;">
+          <strong>Resíduos:</strong> &nbsp; [ ${(function(){ try{ return localStorage.getItem('prodtec_residuos_' + pCode) === 'SIM' ? '<b>X</b>' : '&nbsp;&nbsp;'; }catch(e){ return '&nbsp;&nbsp;'; } })()} ] Sim &nbsp;&nbsp; [ ${(function(){ try{ return localStorage.getItem('prodtec_residuos_' + pCode) === 'NAO' ? '<b>X</b>' : '&nbsp;&nbsp;'; }catch(e){ return '&nbsp;&nbsp;'; } })()} ] Não
+        </div>
+      </div>
     </div>
 
     <table class="grid-table">
@@ -27291,10 +28251,42 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
     ['MAP', 'UREIA', 'ÁCIDO BÓRICO', 'NITRATO DE CÁLCIO', 'SULFATO DE MAGNÉSIO', 'SULFATO DE POTÁSSIO', customF].forEach(p => uniqueProducts.push(p));
   }
 
+  // [AJUSTE-FERT] Carrega protocolo de programação para identificar dosagens programadas por DAP
+  const varUpper = (variedadesStr + ' ' + (item ? item.cultura || '' : '')).toUpperCase();
+  let protoKey = 'MELAO_PADRAO';
+  if (varUpper.includes('ASTURIA')) protoKey = 'ASTURIA';
+  else if (varUpper.includes('GRAND') || varUpper.includes('PRIX')) protoKey = 'GRAND_PRIX';
+  else if (varUpper.includes('MELANCIA') || varUpper.includes('WATERMELON')) protoKey = 'MELANCIA_PADRAO';
+
+  const proto = (typeof FERT_PROTOCOLS_WEB !== 'undefined' && FERT_PROTOCOLS_WEB[protoKey]) ||
+                (typeof FERT_PROTOCOLS !== 'undefined' && FERT_PROTOCOLS[protoKey]) ||
+                (window.FERT_PROTOCOLS && window.FERT_PROTOCOLS[protoKey]) || {};
+  const sched = proto.schedule || {};
+  const areaVal = parseFloat(areaHa) || 1.0;
+
+  // [AJUSTE-FERT] Consulta dosagem programada por produto e DAP no cronograma
+  function getProgDoseForProductDap(prodName, dap) {
+    if (!prodName || dap == null) return null;
+    const doses = sched[String(dap)] || sched[Number(dap)];
+    if (!doses) return null;
+    let doseBase = 0;
+    let hasEntry = false;
+    Object.entries(doses).forEach(([fKey, val]) => {
+      if (fKey === 'OBSERVAÇÕES') return;
+      const mappedName = mapFertNames[fKey] || fKey.trim().toUpperCase();
+      if (mappedName === prodName) {
+        hasEntry = true;
+        doseBase += Number(val);
+      }
+    });
+    if (!hasEntry) return null;
+    return doseBase * areaVal;
+  }
+
   const productTotals = {};
   uniqueProducts.forEach(p => { productTotals[p] = 0; });
 
-  // Rastreamento de dosagens para aplicação das regras de impressão por coluna (em ordem cronológica)
+  // [AJUSTE-FERT] Rastreamento de dosagens para aplicação das regras de impressão por coluna (em ordem cronológica)
   const lastDoseByProduct = {};
   uniqueProducts.forEach(p => { lastDoseByProduct[p] = null; });
 
@@ -27321,19 +28313,25 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
           dapVal = Math.round((dF.getTime() - plantioDt.getTime()) / 86400000);
         }
       }
+      const dapNum = (dapVal != null && !isNaN(parseInt(dapVal))) ? parseInt(dapVal) : (idx + 1);
       const faseStr = dapVal != null ? `DAP ${dapVal} (${getFertPhaseWeb(dapVal)})` : '—';
       const pItems = itemsByFertId[f.id] || {};
 
       const colsHtml = uniqueProducts.map(p => {
+        // [AJUSTE-FERT] Regra d: Sem produto definido -> célula vazia
         if (!p || !p.trim()) {
-          // Regra 4: Sem produto definido -> célula vazia
           lastDoseByProduct[p] = null;
           return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px;">&nbsp;</td>`;
         }
 
+        const progDose = getProgDoseForProductDap(p, dapNum);
         const rawVal = pItems[p];
-        if (rawVal != null) {
-          const val = parseFloat(rawVal) || 0;
+        const realVal = (rawVal != null && !isNaN(parseFloat(rawVal))) ? parseFloat(rawVal) : null;
+        const isProgrammed = (progDose != null && progDose > 0);
+        const hasRealApp = (realVal != null && realVal > 0);
+
+        if (isProgrammed || hasRealApp) {
+          const val = hasRealApp ? realVal : (progDose || 0);
           if (val > 0) {
             productTotals[p] = (productTotals[p] || 0) + val;
             const prevDose = lastDoseByProduct[p];
@@ -27342,20 +28340,18 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
             const formatted = val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
             if (isRepeated) {
-              // Regra 2: Linha com valor > 0 IGUAL ao anterior -> FONTE BRANCA (permanece no HTML/dados, mas invisível para escrita manual)
-              return `<td class="dose-repetida-branca" style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px; color:#fff !important; -webkit-text-fill-color:#fff !important; user-select:none;">${formatted}</td>`;
+              // [AJUSTE-FERT] Regra b: Dosagem programada repetida -> visível/discreta na tela, fonte branca na impressão (@media print)
+              return `<td class="dose-repetida-branca" style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px;">${formatted}</td>`;
             }
-            // Regra 1: Primeira linha de uma dosagem (valor > 0 e diferente do anterior) -> visível
+            // [AJUSTE-FERT] Regra a: Primeiro dia do bloco programado com novo valor -> visível normal
             return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold; height:20px; color:#000;">${formatted}</td>`;
           } else {
-            // Regra 5: O valor 0,0 permanece visível como está
             lastDoseByProduct[p] = 0;
             return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px; color:#000;">0,000</td>`;
           }
         }
 
-        // Regra 3: Intervalo de idade (DAP) em que o produto NÃO é aplicado -> traço "–"
-        // Reinicia a comparação "igual à linha anterior" quando há traço no meio
+        // [AJUSTE-FERT] Regra c: Fora do período programado do produto (sem aplicação) -> traço "–"
         lastDoseByProduct[p] = null;
         return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px; color:#000; font-weight:normal;">–</td>`;
       }).join('');
@@ -27370,17 +28366,7 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
       `;
     }).join('');
   } else {
-    // Se não há lançamentos manuais no banco, monta a distribuição por ciclos/idade DAP a partir do protocolo
-    const varUpper = (variedadesStr + ' ' + (item ? item.cultura || '' : '')).toUpperCase();
-    let protoKey = 'MELAO_PADRAO';
-    if (varUpper.includes('ASTURIA')) protoKey = 'ASTURIA';
-    else if (varUpper.includes('GRAND') || varUpper.includes('PRIX')) protoKey = 'GRAND_PRIX';
-    else if (varUpper.includes('MELANCIA') || varUpper.includes('WATERMELON')) protoKey = 'MELANCIA_PADRAO';
-
-    const proto = FERT_PROTOCOLS_WEB[protoKey] || FERT_PROTOCOLS_WEB['MELAO_PADRAO'];
-    const sched = proto ? proto.schedule : {};
-    const areaVal = parseFloat(areaHa) || 1.0;
-
+    // [AJUSTE-FERT] Fallback quando ainda não há lançamentos: cronograma completo da safra
     let orderCount = 1;
     const allSchedEntries = Object.entries(sched).sort((a,b) => Number(a[0]) - Number(b[0]));
 
@@ -27397,47 +28383,29 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
       const faseStr = `DAP ${dapNum} (${getFertPhaseWeb(dapNum)})`;
 
       const colsHtml = uniqueProducts.map(p => {
+        // [AJUSTE-FERT] Regra d: Sem produto definido -> célula vazia
         if (!p || !p.trim()) {
-          // Regra 4: Sem produto definido -> célula vazia
           lastDoseByProduct[p] = null;
           return '<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px;">&nbsp;</td>';
         }
 
-        let doseBase = 0;
-        let hasProductInDap = false;
-        Object.entries(doses).forEach(([fKey, val]) => {
-          if (fKey === 'OBSERVAÇÕES') return;
-          const mappedName = mapFertNames[fKey] || fKey.trim().toUpperCase();
-          if (mappedName === p) {
-            hasProductInDap = true;
-            doseBase += Number(val);
-          }
-        });
+        const progDose = getProgDoseForProductDap(p, dapNum);
+        if (progDose != null && progDose > 0) {
+          productTotals[p] = (productTotals[p] || 0) + progDose;
+          const prevDose = lastDoseByProduct[p];
+          const isRepeated = (prevDose != null && Math.abs(progDose - prevDose) < 0.0001);
+          lastDoseByProduct[p] = progDose;
+          const formatted = progDose.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
-        if (hasProductInDap) {
-          const totalKg = doseBase * areaVal;
-          if (totalKg > 0) {
-            productTotals[p] = (productTotals[p] || 0) + totalKg;
-            const prevDose = lastDoseByProduct[p];
-            const isRepeated = (prevDose != null && Math.abs(totalKg - prevDose) < 0.0001);
-            lastDoseByProduct[p] = totalKg;
-            const formatted = totalKg.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
-
-            if (isRepeated) {
-              // Regra 2: Linha com valor > 0 IGUAL ao anterior -> FONTE BRANCA (permanece no HTML/dados, mas invisível para escrita manual)
-              return `<td class="dose-repetida-branca" style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px; color:#fff !important; -webkit-text-fill-color:#fff !important; user-select:none;">${formatted}</td>`;
-            }
-            // Regra 1: Primeira linha de uma dosagem (valor > 0 e diferente do anterior) -> visível
-            return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold; height:20px; color:#000;">${formatted}</td>`;
-          } else {
-            // Regra 5: O valor 0,0 permanece visível
-            lastDoseByProduct[p] = 0;
-            return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px; color:#000;">0,000</td>`;
+          if (isRepeated) {
+            // [AJUSTE-FERT] Regra b: Dosagem repetida do bloco -> fonte branca na impressão, visível na tela
+            return `<td class="dose-repetida-branca" style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px;">${formatted}</td>`;
           }
+          // [AJUSTE-FERT] Regra a: Primeiro dia do bloco programado -> visível normal
+          return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold; height:20px; color:#000;">${formatted}</td>`;
         }
 
-        // Regra 3: Intervalo de idade (DAP) em que o produto NÃO é aplicado -> traço "–"
-        // Reinicia a comparação "igual à linha anterior" quando há traço no meio
+        // [AJUSTE-FERT] Regra c: Fora do período programado -> traço "–"
         lastDoseByProduct[p] = null;
         return '<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px; color:#000; font-weight:normal;">–</td>';
       }).join('');
@@ -27492,13 +28460,19 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
   .obs-box { border: 1px solid #000; padding: 3px 5px; font-size: 5.4pt; line-height: 1.15; margin-bottom: 3px; background: #fafafa; }
   .sig-table { width: 100%; border-collapse: collapse; margin-top: 3px; font-size: 6.5pt; }
   .sig-table td { border: 1px solid #000; padding: 4px 6px; text-align: center; vertical-align: bottom; }
-  .dose-repetida-branca { color: #fff !important; -webkit-text-fill-color: #fff !important; user-select: none; }
+  /* [AJUSTE-FERT] Na tela o valor repetido fica discreto para conferência; na impressão vira branco exato */
+  .dose-repetida-branca { color: #94a3b8; user-select: text; }
   @media print {
     html, body { height: 100%; margin: 0 !important; padding: 0 !important; }
     .sheet { page-break-inside: avoid; page-break-after: avoid; }
     table { page-break-inside: avoid; }
     tr { page-break-inside: avoid; }
-    .dose-repetida-branca { color: #fff !important; -webkit-text-fill-color: #fff !important; }
+    .dose-repetida-branca { 
+      color: #ffffff !important; 
+      -webkit-text-fill-color: #ffffff !important; 
+      -webkit-print-color-adjust: exact; 
+      print-color-adjust: exact; 
+    }
   }
   </style>
   </head>
@@ -27954,6 +28928,16 @@ function printPosColheitaReport(itemStr) {
   const iAtivo = item.ingrediente_ativo || 'Azoxistrobina + Fludioxonil';
   const mlProd = item.dosagem_produto != null ? parseFloat(item.dosagem_produto).toFixed(2).replace('.', ',') : '0,00';
   const lAgua = item.volume_agua != null ? parseFloat(item.volume_agua).toFixed(2).replace('.', ',') : '0,00';
+
+  // [AJUSTE-POS] Cálculo de dosagem por litro (mL/L)
+  const numMl = item.dosagem_produto != null ? parseFloat(item.dosagem_produto) : 0;
+  const numAgua = item.volume_agua != null ? parseFloat(item.volume_agua) : 0;
+  let mlPorLitroStr = '–';
+  if (numAgua > 0 && numMl > 0) {
+    const calcMlL = numMl / numAgua;
+    mlPorLitroStr = calcMlL.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
   const carencia = item.carencia_dias != null ? (item.carencia_dias === 0 ? 'ND' : item.carencia_dias + 'd') : 'ND';
   const justif = item.justificativa || 'Antracnose';
   const carrocoes = item.quantidade_carrocoes || '';
@@ -27970,6 +28954,7 @@ function printPosColheitaReport(itemStr) {
       <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt; color:#d32f2f">${iAtivo}</td>
       <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt">${mlProd}</td>
       <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt">${lAgua}</td>
+      <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt; font-weight:bold">${mlPorLitroStr}</td>
       <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt">${carencia}</td>
       <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt; color:#d32f2f; font-weight:bold">${justif}</td>
       <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt">1 e 2</td>
@@ -27980,6 +28965,7 @@ function printPosColheitaReport(itemStr) {
     rowsHtml += `
       <tr>
         <td style="border:1px solid #000; height:18px; padding:2px"></td>
+        <td style="border:1px solid #000; padding:2px"></td>
         <td style="border:1px solid #000; padding:2px"></td>
         <td style="border:1px solid #000; padding:2px"></td>
         <td style="border:1px solid #000; padding:2px"></td>
@@ -28064,17 +29050,19 @@ function printPosColheitaReport(itemStr) {
         <tr>
           <th rowspan="2" style="width: 8%;">Data da<br/>Aplicação</th>
           <th rowspan="2" style="width: 8%;">Quantidade<br/>de Carroções</th>
-          <th colspan="2" style="width: 32%;">Produto Utilizado</th>
-          <th colspan="2" style="width: 18%;">Quantidade Utilizada</th>
+          <th colspan="2" style="width: 30%;">Produto Utilizado</th>
+          <th colspan="3" style="width: 25%;">Quantidade Utilizada</th>
           <th rowspan="2" style="width: 7%;">Carência<br/>(dias)</th>
-          <th rowspan="2" style="width: 17%;">Justificativa.<br/>Controle</th>
-          <th rowspan="2" style="width: 10%;">Nº dos<br/>aplicadores</th>
+          <th rowspan="2" style="width: 14%;">Justificativa.<br/>Controle</th>
+          <th rowspan="2" style="width: 8%;">Nº dos<br/>aplicadores</th>
         </tr>
         <tr>
-          <th style="width: 14%;">Nome Comercial</th>
-          <th style="width: 18%;">Ingrediente ativo</th>
-          <th style="width: 9%;">(mL de Produto)</th>
-          <th style="width: 9%;">(L de Água)</th>
+          <th style="width: 13%;">Nome Comercial</th>
+          <th style="width: 17%;">Ingrediente ativo</th>
+          <th style="width: 8%;">(mL de Produto)</th>
+          <th style="width: 8%;">(L de Água)</th>
+          <!-- [AJUSTE-POS] Nova coluna de dosagem por litro de calda -->
+          <th style="width: 9%;">mL/L<br/>(Calda)</th>
         </tr>
       </thead>
       <tbody>

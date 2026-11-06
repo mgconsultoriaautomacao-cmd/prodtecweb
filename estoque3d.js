@@ -37,6 +37,18 @@
     hoveredPallet: null,
     animatingCam: false,
     isFullscreen: false,
+    // [EQUIPE] Estado e cache para os funcionários ilustrativos
+    workers: null,
+    workersList: [],
+    workersEnabled: true,
+    workersManual: false,
+    lineItemsGroup: null,
+    palletBoxPrevMap: {},
+    risingBoxGroup: null,
+    workerGeo: null,
+    workerMat: null,
+    fpsHistory: [],
+    lastFrameTime: performance.now(),
     zoneBounds: { cx: 0, cz: 0, maxD: 0, xEnd: 0, packingCenter: null, coldCenter: null }
   };
 
@@ -191,6 +203,447 @@
     return (S.mat = m);
   }
 
+  // [EQUIPE] Geometrias e Materiais compartilhados para funcionários (Three.js r128 compatível)
+  function initWorkerAssets() {
+    if (S.workerGeo && S.workerMat) return;
+
+    S.workerGeo = {
+      head: new THREE.SphereGeometry(0.12, 10, 8),
+      cap: new THREE.CylinderGeometry(0.13, 0.135, 0.08, 10),
+      torso: new THREE.BoxGeometry(0.28, 0.40, 0.18),
+      apron: new THREE.BoxGeometry(0.26, 0.32, 0.03),
+      arm: new THREE.BoxGeometry(0.08, 0.30, 0.08),
+      leg: new THREE.BoxGeometry(0.10, 0.42, 0.11),
+      stool: new THREE.BoxGeometry(0.32, 0.26, 0.28),
+      board: new THREE.BoxGeometry(0.22, 0.02, 0.28),
+      risingBox: new THREE.BoxGeometry(0.48, BH * 0.85, 0.38),
+      // [EQUIPE] Mesa de embalagem (geometrias unitárias escaladas por mesh)
+      unitBox: new THREE.BoxGeometry(1, 1, 1),
+      roller: new THREE.CylinderGeometry(0.025, 0.025, 1, 6),
+      fruit: new THREE.SphereGeometry(0.075, 6, 5)
+    };
+
+    // Materiais PBR sem texturas nem sombras (castShadow = false)
+    S.workerMat = {
+      skin: new THREE.MeshLambertMaterial({ color: 0xd4a373 }),
+      capWhite: new THREE.MeshLambertMaterial({ color: 0xf8fafc }),
+      uniformGreen: new THREE.MeshLambertMaterial({ color: 0x16a34a }),
+      uniformOrange: new THREE.MeshLambertMaterial({ color: 0xea580c }),
+      apronYellow: new THREE.MeshLambertMaterial({ color: 0xeab308 }),
+      pantsBlue: new THREE.MeshLambertMaterial({ color: 0x1e3a5f }),
+      pantsGray: new THREE.MeshLambertMaterial({ color: 0x475569 }),
+      supervisorTorso: new THREE.MeshLambertMaterial({ color: 0x84cc16 }),
+      blueBench: new THREE.MeshLambertMaterial({ color: 0x2563eb }),
+      boardMat: new THREE.MeshLambertMaterial({ color: 0xffffff }),
+      risingBoxMat: new THREE.MeshLambertMaterial({ color: 0xc89d67, transparent: true, opacity: 0.9 }),
+      // [EQUIPE] Mesa de embalagem
+      beltBlue: new THREE.MeshLambertMaterial({ color: 0x1d4ed8 }),
+      metal: new THREE.MeshLambertMaterial({ color: 0x94a3b8 }),
+      rollerMat: new THREE.MeshLambertMaterial({ color: 0xcbd5e1 }),
+      fruitYellow: new THREE.MeshLambertMaterial({ color: 0xfacc15 }),
+      boxKraft: new THREE.MeshLambertMaterial({ color: 0xa47148 }),
+      tvScreenMat: new THREE.MeshBasicMaterial({ color: 0x1e3a8a }),
+      tvBezelMat: new THREE.MeshLambertMaterial({ color: 0x0f172a }),
+      binMat: new THREE.MeshLambertMaterial({ color: 0x9333ea })
+    };
+  }
+
+  // [EQUIPE] Verifica se o momento atual é horário de almoço
+  function isLunchTimeNow() {
+    var d = new Date();
+    var curMinutes = d.getHours() * 60 + d.getMinutes();
+    var lunchStart = (window.tenantConfig && window.tenantConfig.lunch_start_time) || '11:30';
+    var lunchEnd = (window.tenantConfig && window.tenantConfig.lunch_end_time) || '13:00';
+    var pStart = lunchStart.split(':').map(Number);
+    var pEnd = lunchEnd.split(':').map(Number);
+    var startMin = (pStart[0] || 11) * 60 + (pStart[1] || 30);
+    var endMin = (pEnd[0] || 13) * 60 + (pEnd[1] || 0);
+    return curMinutes >= startMin && curMinutes < endMin;
+  }
+
+  // [EQUIPE] Constrói um modelo low-poly de funcionário
+  function createWorkerMesh(type, options) {
+    initWorkerAssets();
+    options = options || {};
+    var G = S.workerGeo;
+    var M = S.workerMat;
+
+    var root = new THREE.Group();
+    root.name = 'Worker_' + type;
+
+    // Tronco e partes
+    var torsoMat = M.uniformGreen;
+    if (type === 'supervisor') torsoMat = M.supervisorTorso;
+    else if (options.isOrange) torsoMat = M.uniformOrange;
+
+    var pantsMat = type === 'supervisor' ? M.pantsGray : M.pantsBlue;
+
+    // Corpo pivô (permite inclinação para frente no trabalho)
+    var bodyPivot = new THREE.Group();
+    bodyPivot.position.set(0, 0.44, 0); // Altura da cintura
+    root.add(bodyPivot);
+
+    // Tronco
+    var torso = new THREE.Mesh(G.torso, torsoMat);
+    torso.position.set(0, 0.20, 0);
+    bodyPivot.add(torso);
+
+    // Avental opcional (ex: embalador da ponta)
+    if (options.hasApron) {
+      var apron = new THREE.Mesh(G.apron, M.apronYellow);
+      apron.position.set(0, 0.17, 0.10);
+      bodyPivot.add(apron);
+    }
+
+    // Cabeça e touca
+    var headGroup = new THREE.Group();
+    headGroup.position.set(0, 0.46, 0);
+    var head = new THREE.Mesh(G.head, M.skin);
+    var cap = new THREE.Mesh(G.cap, M.capWhite);
+    cap.position.set(0, 0.07, 0);
+    headGroup.add(head);
+    headGroup.add(cap);
+    bodyPivot.add(headGroup);
+
+    // Braço esquerdo (pivô no ombro)
+    var leftShoulder = new THREE.Group();
+    leftShoulder.position.set(-0.18, 0.35, 0);
+    var leftArm = new THREE.Mesh(G.arm, torsoMat);
+    leftArm.position.set(0, -0.15, 0);
+    leftShoulder.add(leftArm);
+    bodyPivot.add(leftShoulder);
+
+    // Braço direito (pivô no ombro)
+    var rightShoulder = new THREE.Group();
+    rightShoulder.position.set(0.18, 0.35, 0);
+    var rightArm = new THREE.Mesh(G.arm, torsoMat);
+    rightArm.position.set(0, -0.15, 0);
+    rightShoulder.add(rightArm);
+    bodyPivot.add(rightShoulder);
+
+    // Pernas
+    var leftLeg = new THREE.Mesh(G.leg, pantsMat);
+    leftLeg.position.set(-0.08, 0.21, 0);
+    root.add(leftLeg);
+
+    var rightLeg = new THREE.Mesh(G.leg, pantsMat);
+    rightLeg.position.set(0.08, 0.21, 0);
+    root.add(rightLeg);
+
+    // Banco azul (se estiver sentado no horário de almoço)
+    var stool = new THREE.Mesh(G.stool, M.blueBench);
+    stool.position.set(0, 0.13, 0);
+    stool.visible = false;
+    root.add(stool);
+
+    // Prancheta se for classificador/supervisor
+    if (options.hasClipboard) {
+      var board = new THREE.Mesh(G.board, M.boardMat);
+      board.position.set(0, -0.06, 0.14);
+      rightShoulder.add(board);
+    }
+
+    // Desativa sombras para máxima performance e integridade
+    root.traverse(function (child) {
+      if (child.isMesh) {
+        child.castShadow = false;
+        child.receiveShadow = false;
+      }
+    });
+
+    root.userData = {
+      type: type,
+      basePos: new THREE.Vector3(),
+      bodyPivot: bodyPivot,
+      leftShoulder: leftShoulder,
+      rightShoulder: rightShoulder,
+      leftLeg: leftLeg,
+      rightLeg: rightLeg,
+      stool: stool,
+      phase: options.phase || Math.random() * Math.PI * 2,
+      isSitting: false
+    };
+
+    return root;
+  }
+
+  // [EQUIPE] Atualiza as animações dos funcionários e ciclo de trabalho vs almoço
+  function updateWorkersAnimation(timeSec, delta) {
+    if (!S.workers || !S.workersEnabled || !S.workersList || !S.workersList.length) return;
+
+    var isLunch = isLunchTimeNow();
+
+    for (var i = 0; i < S.workersList.length; i++) {
+      var w = S.workersList[i];
+      var u = w.userData;
+      if (!u || !u.bodyPivot) continue;
+
+      if (u.type === 'packer') {
+        if (isLunch) {
+          // ALMOÇO: Sentado, descansando com braços no colo
+          if (!u.isSitting) {
+            u.isSitting = true;
+            u.stool.visible = true;
+            u.bodyPivot.position.y = 0.28;
+            u.bodyPivot.rotation.x = 0.08;
+            u.leftLeg.rotation.x = -Math.PI / 2.3;
+            u.rightLeg.rotation.x = -Math.PI / 2.3;
+            u.leftLeg.position.set(-0.08, 0.26, 0.14);
+            u.rightLeg.position.set(0.08, 0.26, 0.14);
+          }
+          // Braços pousados calmamente no colo
+          u.leftShoulder.rotation.x = 0.45;
+          u.rightShoulder.rotation.x = 0.45;
+          u.leftShoulder.rotation.z = -0.15;
+          u.rightShoulder.rotation.z = 0.15;
+        } else {
+          // TRABALHANDO: Sempre em pé, pegando frutas/caixas no ciclo contínuo
+          if (u.isSitting) {
+            u.isSitting = false;
+            u.stool.visible = false;
+            u.bodyPivot.position.y = 0.44;
+            u.leftLeg.rotation.x = 0;
+            u.rightLeg.rotation.x = 0;
+            u.leftLeg.position.set(-0.08, 0.21, 0);
+            u.rightLeg.position.set(0.08, 0.21, 0);
+          }
+
+          var cycle = Math.sin(timeSec * 3.2 + u.phase);
+          // Inclina tronco levemente para frente (em direção ao palete/esteira)
+          u.bodyPivot.rotation.x = 0.22 + 0.06 * Math.sin(timeSec * 3.2 + u.phase);
+          u.bodyPivot.rotation.y = 0.05 * Math.cos(timeSec * 1.6 + u.phase);
+
+          // Movimento de braços harmônico: pegar -> colocar na caixa
+          u.leftShoulder.rotation.x = -0.55 + 0.42 * cycle;
+          u.rightShoulder.rotation.x = -0.48 + 0.40 * Math.sin(timeSec * 3.2 + u.phase + 0.3);
+          u.leftShoulder.rotation.z = -0.12 + 0.08 * cycle;
+          u.rightShoulder.rotation.z = 0.12 - 0.08 * cycle;
+        }
+      } else if (u.type === 'supervisor') {
+        // Supervisor patrulhando lentamente o packing
+        var patrolOff = Math.sin(timeSec * 0.45) * 1.4;
+        w.position.x = u.basePos.x + patrolOff;
+        w.rotation.y = patrolOff >= 0 ? 0 : Math.PI;
+
+        u.bodyPivot.rotation.x = 0.04;
+        u.leftShoulder.rotation.x = 0.20 * Math.sin(timeSec * 1.8);
+        u.rightShoulder.rotation.x = -0.20 * Math.sin(timeSec * 1.8);
+      } else if (u.type === 'classifier') {
+        // Classificador com prancheta na bancada direita
+        var headTurn = Math.sin(timeSec * 0.9) * 0.18;
+        u.bodyPivot.rotation.y = headTurn;
+        u.rightShoulder.rotation.x = -0.65 + 0.08 * Math.sin(timeSec * 2.2);
+        u.leftShoulder.rotation.x = -0.55;
+      }
+    }
+
+    // Animação da caixa subindo (opcional leve)
+    if (S.risingBoxGroup && S.risingBoxGroup.visible) {
+      var rb = S.risingBoxGroup;
+      var now = performance.now();
+      var prog = Math.min(1.0, (now - rb.userData.startTime) / rb.userData.duration);
+      var ease = 1 - Math.pow(1 - prog, 3); // ease-out cubic
+      rb.position.y = rb.userData.startY + (rb.userData.targetY - rb.userData.startY) * ease;
+      rb.position.x = rb.userData.startX + (rb.userData.targetX - rb.userData.startX) * ease;
+      rb.position.z = rb.userData.startZ + (rb.userData.targetZ - rb.userData.startZ) * ease;
+
+      if (prog >= 1.0) {
+        rb.visible = false;
+      }
+    }
+  }
+
+  // [EQUIPE] Mesa de embalagem: esteira azul central + roletes laterais + bancada de classificação
+  function buildPackingLine(x0, W, z0) {
+    initWorkerAssets();
+    var Gw = S.workerGeo, Mw = S.workerMat;
+    S.lineItems = [];
+
+    var line = new THREE.Group();
+    line.name = 'PackingLine';
+    var zLine = z0 - 2.6;              // À frente da baia de pallets
+    var L = Math.max(3, W - 0.8);      // Comprimento da esteira
+    var cxL = x0 + W / 2;
+    var xStart = cxL - L / 2, xEnd = cxL + L / 2;
+    var topY = 0.86;
+
+    function box(mat, sx, sy, sz, px, py, pz) {
+      var m = new THREE.Mesh(Gw.unitBox, mat);
+      m.scale.set(sx, sy, sz);
+      m.position.set(px, py, pz);
+      line.add(m);
+      return m;
+    }
+
+    // Esteira central azul com bordas metálicas
+    box(Mw.beltBlue, L, 0.06, 0.62, cxL, topY, zLine);
+    box(Mw.metal, L, 0.08, 0.03, cxL, topY + 0.04, zLine - 0.32);
+    box(Mw.metal, L, 0.08, 0.03, cxL, topY + 0.04, zLine + 0.32);
+
+    // Pernas da esteira e dos roletes
+    var nLegs = Math.max(2, Math.ceil(L / 1.6) + 1);
+    for (var i = 0; i < nLegs; i++) {
+      var lx = xStart + (L * i) / (nLegs - 1);
+      box(Mw.metal, 0.05, topY, 0.05, lx, topY / 2, zLine - 0.26);
+      box(Mw.metal, 0.05, topY, 0.05, lx, topY / 2, zLine + 0.26);
+      box(Mw.metal, 0.04, 0.74, 0.04, lx, 0.37, zLine - 0.74);
+      box(Mw.metal, 0.04, 0.74, 0.04, lx, 0.37, zLine + 0.74);
+    }
+
+    // Roletes laterais (onde as caixas são embaladas), um de cada lado
+    [-1, 1].forEach(function (side) {
+      var rz = zLine + side * 0.58;
+      box(Mw.metal, L, 0.04, 0.03, cxL, 0.74, rz - 0.17);
+      box(Mw.metal, L, 0.04, 0.03, cxL, 0.74, rz + 0.17);
+      var nRol = Math.min(28, Math.max(4, Math.floor(L / 0.45)));
+      for (var r = 0; r < nRol; r++) {
+        var roller = new THREE.Mesh(Gw.roller, Mw.rollerMat);
+        roller.scale.set(1, 0.34, 1);
+        roller.rotation.x = Math.PI / 2;
+        roller.position.set(xStart + 0.15 + r * ((L - 0.3) / (nRol - 1 || 1)), 0.76, rz);
+        line.add(roller);
+      }
+    });
+
+    // Bancada de classificação azul na ponta direita, com prancheta
+    var benchX = xEnd + 0.75;
+    box(Mw.beltBlue, 0.7, 0.05, 0.6, benchX, 0.82, zLine);
+    [[-0.3, -0.25], [0.3, -0.25], [-0.3, 0.25], [0.3, 0.25]].forEach(function (p) {
+      box(Mw.metal, 0.04, 0.8, 0.04, benchX + p[0], 0.4, zLine + p[1]);
+    });
+    box(Mw.boardMat, 0.22, 0.015, 0.28, benchX - 0.05, 0.855, zLine);
+
+    // [REALISMO VÍDEOS] Trilho aéreo superior com suportes de caixas suspensas (hanger de caixas montadas)
+    var railY = 2.15;
+    box(Mw.metal, L + 0.6, 0.04, 0.04, cxL, railY, zLine);
+    box(Mw.metal, 0.05, railY, 0.05, xStart + 0.3, railY / 2, zLine);
+    box(Mw.metal, 0.05, railY, 0.05, xEnd - 0.3, railY / 2, zLine);
+    var nHangers = Math.max(3, Math.floor(L / 0.85));
+    for (var h = 0; h < nHangers; h++) {
+      var hx = xStart + 0.4 + h * ((L - 0.8) / (nHangers - 1 || 1));
+      box(Mw.metal, 0.015, 0.28, 0.015, hx, railY - 0.14, zLine);
+      box(Mw.boxKraft, 0.32, 0.38, 0.04, hx, railY - 0.36, zLine);
+    }
+
+    // [REALISMO VÍDEOS] TV / Monitor de Produção PRODTEC suspenso na coluna
+    var tvX = cxL - 0.5;
+    box(Mw.tvBezelMat, 0.68, 0.44, 0.06, tvX, 2.05, zLine - 0.45);
+    box(Mw.tvScreenMat, 0.62, 0.38, 0.01, tvX, 2.05, zLine - 0.415);
+    box(Mw.metal, 0.03, 0.55, 0.03, tvX, 2.45, zLine - 0.45);
+
+    // [REALISMO VÍDEOS] Lixeira plástica cilíndrica de chão no corredor da linha
+    var binMesh = new THREE.Mesh(Gw.roller, Mw.binMat);
+    binMesh.scale.set(3.2, 0.55, 3.2); // reutiliza cilindro com diâmetro ~0.38m
+    binMesh.position.set(cxL, 0.28, zLine + 0.95);
+    line.add(binMesh);
+
+    line.traverse(function (c) { if (c.isMesh) { c.castShadow = false; c.receiveShadow = false; } });
+    S.world.add(line);
+
+    // Itens animados: frutas correndo na esteira e caixas nos roletes (objetos fixos, reaproveitados)
+    var itemsGrp = new THREE.Group();
+    itemsGrp.name = 'PackingLineItems';
+    S.lineItemsGroup = itemsGrp;
+    itemsGrp.visible = !!S.workersEnabled;
+    S.world.add(itemsGrp);
+    var nFruits = Math.min(18, Math.floor(L / 0.45));
+    for (var f = 0; f < nFruits; f++) {
+      var fr = new THREE.Mesh(Gw.fruit, Mw.fruitYellow);
+      fr.position.set(xStart, topY + 0.1, zLine + ((f % 3) - 1) * 0.16);
+      fr.userData = { minX: xStart + 0.1, len: L - 0.2, speed: 0.35, offset: (f / nFruits) * (L - 0.2) };
+      itemsGrp.add(fr);
+      S.lineItems.push(fr);
+    }
+    [-1, 1].forEach(function (side) {
+      var nBox = Math.max(2, Math.floor(L / 1.4));
+      for (var b = 0; b < nBox; b++) {
+        var bx = new THREE.Mesh(Gw.unitBox, Mw.boxKraft);
+        bx.scale.set(0.42, 0.2, 0.3);
+        bx.position.set(xStart, 0.88, zLine + side * 0.58);
+        bx.userData = { minX: xStart + 0.2, len: L - 0.4, speed: 0.12, offset: (b / nBox) * (L - 0.4) + (side > 0 ? 0.3 : 0) };
+        itemsGrp.add(bx);
+        S.lineItems.push(bx);
+      }
+    });
+    itemsGrp.traverse(function (c) { if (c.isMesh) { c.castShadow = false; c.receiveShadow = false; } });
+
+    // Embaladores em pé dos dois lados da esteira, de frente para ela
+    var perSide = Math.max(2, Math.min(5, Math.floor(L / 1.4)));
+    var k = 0;
+    [-1, 1].forEach(function (side) {
+      for (var p = 0; p < perSide; p++) {
+        var px = xStart + (L * (p + 0.5)) / perSide;
+        var pz = zLine + side * 1.02;
+        var wk = createWorkerMesh('packer', {
+          hasApron: (side < 0 && p === 0),   // Embalador da ponta esquerda com avental amarelo
+          isOrange: (k === 3),               // Camiseta laranja ocasional
+          phase: k * 1.37
+        });
+        wk.position.set(px, 0, pz);
+        wk.rotation.y = side < 0 ? 0 : Math.PI;
+        wk.userData.basePos.set(px, 0, pz);
+        wk.userData.atTable = true;
+        S.workers.add(wk);
+        S.workersList.push(wk);
+        k++;
+      }
+    });
+
+    // Classificador em pé na bancada, olhando para a esteira
+    var cls = createWorkerMesh('classifier', { hasClipboard: true, phase: 1.2 });
+    cls.position.set(benchX + 0.55, 0, zLine);
+    cls.rotation.y = -Math.PI / 2;
+    cls.userData.basePos.copy(cls.position);
+    S.workers.add(cls);
+    S.workersList.push(cls);
+
+    return { zLine: zLine, xStart: xStart, xEnd: xEnd };
+  }
+
+  // [EQUIPE] Move frutas e caixas na esteira (para no horário de almoço ou se equipe estiver desligada)
+  function updatePackingLine(timeSec) {
+    if (!S.workersEnabled) return;
+    if (!S.lineItems || !S.lineItems.length) return;
+    if (isLunchTimeNow()) return;
+    for (var i = 0; i < S.lineItems.length; i++) {
+      var u = S.lineItems[i].userData;
+      S.lineItems[i].position.x = u.minX + ((timeSec * u.speed + u.offset) % u.len);
+    }
+  }
+
+  // [EQUIPE] Dispara UMA caixa única subindo até o topo do pallet em formação (objeto reutilizado)
+  function triggerRisingBox(targetX, targetZ, palletBaseY, curBoxes) {
+    if (!S.workers || !S.workersEnabled) return;
+    initWorkerAssets();
+
+    if (!S.risingBoxGroup) {
+      S.risingBoxGroup = new THREE.Mesh(S.workerGeo.risingBox, S.workerMat.risingBoxMat);
+      S.risingBoxGroup.castShadow = false;
+      S.risingBoxGroup.receiveShadow = false;
+      S.risingBoxGroup.visible = false;
+      S.world.add(S.risingBoxGroup);
+    }
+
+    var lim = 80;
+    var fillRatio = Math.min(1.0, Math.max(0.12, curBoxes / lim));
+    var layers = Math.max(1, Math.ceil(fillRatio * 6));
+    var topY = palletBaseY + H0 + layers * BH;
+
+    S.risingBoxGroup.userData = {
+      startTime: performance.now(),
+      duration: 1100,
+      startX: targetX - 0.75,
+      startY: palletBaseY + 0.35,
+      startZ: targetZ,
+      targetX: targetX,
+      targetY: topY,
+      targetZ: targetZ
+    };
+
+    S.risingBoxGroup.position.set(targetX - 0.75, palletBaseY + 0.35, targetZ);
+    S.risingBoxGroup.visible = true;
+  }
+
   function clearGroup(grp) {
     if (!grp) return;
     for (var i = grp.children.length - 1; i >= 0; i--) {
@@ -319,6 +772,12 @@
     S.world.add(S.pal);
     S.palletsList = [];
 
+    // [EQUIPE] Grupo independente para não poluir S.palletsList nem raycasting
+    S.workers = new THREE.Group();
+    S.world.add(S.workers);
+    S.workersList = [];
+    S.workers.visible = !!S.workersEnabled;
+
     var dark = document.documentElement.getAttribute('data-theme') !== 'light';
     var M = initMaterials();
 
@@ -359,6 +818,7 @@
     ];
 
     var maxD = 0, xEnd = 0;
+    var lineInfo = null; // [EQUIPE]
     var packingCenter = new THREE.Vector3();
     var coldCenter = new THREE.Vector3();
 
@@ -396,6 +856,9 @@
       addMesh(S.world, G(W, 0.03, 0.08), borderMat, zCenterX, 0.012, z0 + D);
       addMesh(S.world, G(0.08, 0.03, D), borderMat, x0, 0.012, zCenterZ);
       addMesh(S.world, G(0.08, 0.03, D), borderMat, x0 + W, 0.012, zCenterZ);
+
+      // [EQUIPE] Mesa de embalagem à frente do Packing House
+      if (!n) lineInfo = buildPackingLine(x0, W, z0);
 
       // Totem / Letreiro 3D da Zona
       var totemBadge = createZoneHeaderBadge(z.title, z.subtitle, z.accent);
@@ -443,9 +906,53 @@
           var pMesh = createPalletMesh(slot, i, z.name, x, zz);
           S.pal.add(pMesh);
           S.palletsList.push(pMesh);
+
+          // [EQUIPE] Instancia embaladores ao lado de pallets em formação no Packing House
+          if (z.name === 'packing' && slot.status === 'forming') {
+            var palletKey = z.name + '_' + i;
+            var prevBoxes = S.palletBoxPrevMap[palletKey];
+            var curBoxes = slot.boxes || 0;
+
+            // Caixa subindo (opcional leve) se o número de caixas aumentou entre rebuilds
+            if (typeof prevBoxes === 'number' && curBoxes > prevBoxes) {
+              triggerRisingBox(x, zz, pMesh.position.y, curBoxes);
+            }
+            S.palletBoxPrevMap[palletKey] = curBoxes;
+
+            // Limite de até 8 embaladores no packing house
+            var packerCount = S.workersList.filter(function(wk){ return wk.userData && wk.userData.type === 'packer' && !wk.userData.atTable; }).length;
+            if (packerCount < 8) {
+              var isLeftEnd = (i % z.cols === 0);
+              var worker = createWorkerMesh('packer', {
+                hasApron: isLeftEnd,
+                isOrange: (i === 3 || i === 7),
+                phase: (i * 0.95) // Preserva fase por índice para sincronia suave
+              });
+              // Posiciona ao lado do palete (offset x - 0.95) de frente para ele (girado para +X)
+              var wx = x - 0.95;
+              var wz = zz;
+              worker.position.set(wx, 0, wz);
+              worker.rotation.y = Math.PI / 2;
+              worker.userData.basePos.set(wx, 0, wz);
+
+              S.workers.add(worker);
+              S.workersList.push(worker);
+            }
+          }
         }
       });
     });
+
+    // [EQUIPE] Supervisor andando devagar no corredor entre a mesa de embalagem e os pallets
+    if (packingCenter && packingCenter.lengthSq() > 0) {
+      var supervisor = createWorkerMesh('supervisor', { phase: 0 });
+      var supX = packingCenter.x - 1.2;
+      var supZ = lineInfo ? lineInfo.zLine + 1.9 : -1.8;
+      supervisor.position.set(supX, 0, supZ);
+      supervisor.userData.basePos.set(supX, 0, supZ);
+      S.workers.add(supervisor);
+      S.workersList.push(supervisor);
+    }
 
     var cx = (-SX / 2 + xEnd) / 2;
     var cz = maxD / 2 - SZ / 2;
@@ -470,6 +977,7 @@
     }
 
     updateMetricsHUD();
+    if (S.r && S.r.shadowMap) S.r.shadowMap.needsUpdate = true;
     render();
   }
 
@@ -551,6 +1059,39 @@
       if (!S.visible) return;
       requestAnimationFrame(animate);
 
+      var now = performance.now();
+      var delta = Math.min(0.1, (now - S.lastFrameTime) / 1000);
+      S.lastFrameTime = now;
+
+      // [EQUIPE] Monitoramento de FPS para proteção de máquinas muito lentas
+      // NUNCA auto-desativa se o usuário ativou/desativou manualmente (S.workersManual).
+      if (delta > 0) {
+        var currentFps = 1 / delta;
+        S.fpsHistory.push(currentFps);
+        if (S.fpsHistory.length > 120) S.fpsHistory.shift();
+
+        if (S.fpsHistory.length >= 120 && S.workersEnabled && !S.workersManual) {
+          var sumFps = 0;
+          for (var fi = 0; fi < S.fpsHistory.length; fi++) sumFps += S.fpsHistory[fi];
+          var avgFps = sumFps / S.fpsHistory.length;
+          if (avgFps < 8) {
+            console.warn('[estoque3d] FPS muito baixo na carga inicial (' + avgFps.toFixed(1) + ' FPS). Desativando equipe por padrão para fluidez.');
+            S.workersEnabled = false;
+            S.fpsHistory = [];
+            if (S.workers) S.workers.visible = false;
+            if (S.lineItemsGroup) S.lineItemsGroup.visible = false;
+            var teamBtn = document.getElementById('e3d-btn-team');
+            if (teamBtn) {
+              teamBtn.style.background = 'transparent';
+              teamBtn.style.color = '#94a3b8';
+              teamBtn.style.borderColor = 'transparent';
+              teamBtn.innerHTML = '<i data-lucide="users" style="width:13px;height:13px"></i> Equipe: Off';
+              if (window.lucide) lucide.createIcons();
+            }
+          }
+        }
+      }
+
       if (S.controls && S.controls.update) {
         S.controls.update();
       }
@@ -558,6 +1099,11 @@
       if (S.animatingCam) {
         updateCameraTween();
       }
+
+      // [EQUIPE] Anima os colaboradores em tempo de execução
+      var timeSec = now * 0.001;
+      updateWorkersAnimation(timeSec, delta);
+      updatePackingLine(timeSec); // [EQUIPE]
 
       render();
     }
@@ -753,10 +1299,12 @@
     var h = cv.clientHeight || 640;
 
     S.r = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
-    S.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    S.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     S.r.setSize(w, h);
     S.r.shadowMap.enabled = true;
     S.r.shadowMap.type = THREE.PCFSoftShadowMap;
+    S.r.shadowMap.autoUpdate = false;
+    S.r.shadowMap.needsUpdate = true;
     cv.appendChild(S.r.domElement);
 
     S.sc = new THREE.Scene();
@@ -922,6 +1470,7 @@
       <button id="e3d-cam-packing" title="Focar no Packing House" style="background:transparent; color:#f59e0b; border:none; padding:6px 10px; border-radius:6px; font-size:11.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px;"><i data-lucide="warehouse" style="width:13px;height:13px"></i> Packing</button>
       <button id="e3d-cam-cold" title="Focar na Câmara Fria" style="background:transparent; color:#06b6d4; border:none; padding:6px 10px; border-radius:6px; font-size:11.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px;"><i data-lucide="snowflake" style="width:13px;height:13px"></i> Câmara Fria</button>
       <button id="e3d-cam-reset" title="Centralizar e Enquadrar Tudo" style="background:transparent; color:#94a3b8; border:none; padding:6px 8px; border-radius:6px; font-size:11.5px; cursor:pointer;"><i data-lucide="refresh-cw" style="width:13px;height:13px"></i></button>
+      <button id="e3d-btn-team" title="Ligar/Desligar Ilustração da Equipe" style="background:rgba(22,163,74,0.22); color:#4ade80; border:1px solid rgba(74,222,128,0.3); padding:6px 10px; border-radius:6px; font-size:11.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:5px;"><i data-lucide="users" style="width:13px;height:13px"></i> Equipe: On</button>
     `;
 
     // Bloco Direito: Busca & Tela Cheia
@@ -1084,6 +1633,31 @@
     if (btnReset) {
       btnReset.onclick = function () {
         if (btnIso) btnIso.click();
+      };
+    }
+
+    // [EQUIPE] Botão de alternância manual da Equipe
+    var btnTeam = document.getElementById('e3d-btn-team');
+    if (btnTeam) {
+      btnTeam.onclick = function () {
+        S.workersManual = true; // Usuário assume controle manual definitivo
+        S.fpsHistory = [];      // Reseta histórico para evitar falsos positivos
+        S.workersEnabled = !S.workersEnabled;
+        if (S.workers) S.workers.visible = !!S.workersEnabled;
+        if (S.lineItemsGroup) S.lineItemsGroup.visible = !!S.workersEnabled;
+        if (S.workersEnabled) {
+          btnTeam.style.background = 'rgba(22,163,74,0.22)';
+          btnTeam.style.color = '#4ade80';
+          btnTeam.style.borderColor = 'rgba(74,222,128,0.3)';
+          btnTeam.innerHTML = '<i data-lucide="users" style="width:13px;height:13px"></i> Equipe: On';
+        } else {
+          btnTeam.style.background = 'transparent';
+          btnTeam.style.color = '#94a3b8';
+          btnTeam.style.borderColor = 'transparent';
+          btnTeam.innerHTML = '<i data-lucide="users" style="width:13px;height:13px"></i> Equipe: Off';
+        }
+        if (window.lucide) lucide.createIcons();
+        render();
       };
     }
 

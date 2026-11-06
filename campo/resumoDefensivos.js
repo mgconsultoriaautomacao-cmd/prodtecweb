@@ -468,23 +468,39 @@ async function openModalResumoDefensivos(idOrStr) {
         <button type="button" onclick="closeModalResumoDefensivos()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; border-radius:8px; width:34px; height:34px; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.color='#f87171'" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.color='#94a3b8'">X</button>
       </div>
 
-      <!-- BARRA DE GESTÃO RÁPIDA DE APLICADORES -->
+      <!-- BARRA DE GESTÃO RÁPIDA DE APLICADORES E RESÍDUOS -->
       <div style="background:rgba(30,41,59,0.5); border-bottom:1px solid rgba(255,255,255,0.06); padding:12px 20px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px;">
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <span style="font-size:12px; font-weight:700; color:#93c5fd; display:flex; align-items:center; gap:6px;">
-             Aplicador Pré-cadastrado:
-          </span>
-          <select id="resumoDefGlobalAplicadorSelect" style="padding:7px 12px; border-radius:7px; background:#1e293b; border:1px solid rgba(255,255,255,0.18); color:#f8fafc; font-size:12px; font-weight:600; outline:none; min-width:180px;">
-            ${optionsHtml}
-          </select>
-          <button type="button" onclick="resumoDefApplyGlobalAplicador()" style="background:#2563eb; color:#fff; border:none; padding:7px 14px; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:background 0.2s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
-             Aplicar a Todas as Linhas
-          </button>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:12px; font-weight:700; color:#93c5fd; display:flex; align-items:center; gap:6px;">
+               Aplicador:
+            </span>
+            <select id="resumoDefGlobalAplicadorSelect" style="padding:7px 12px; border-radius:7px; background:#1e293b; border:1px solid rgba(255,255,255,0.18); color:#f8fafc; font-size:12px; font-weight:600; outline:none; min-width:170px;">
+              ${optionsHtml}
+            </select>
+            <button type="button" onclick="resumoDefApplyGlobalAplicador()" style="background:#2563eb; color:#fff; border:none; padding:7px 14px; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:background 0.2s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
+               Aplicar a Todos
+            </button>
+          </div>
+
+          <!-- [AJUSTE-DEF] Seletor de Análise de Resíduos -->
+          <div style="display:flex; align-items:center; gap:8px; background:rgba(15,23,42,0.65); padding:6px 12px; border-radius:7px; border:1px solid rgba(255,255,255,0.14);">
+            <span style="font-size:11.5px; font-weight:700; color:#cbd5e1;">Resíduos:</span>
+            <label style="font-size:11.5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; color:#4ade80; font-weight:600;">
+              <input type="radio" name="resumoDefResiduosRadio" value="SIM" onchange="resumoDefSetResiduos('SIM')" /> Sim
+            </label>
+            <label style="font-size:11.5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; color:#f87171; font-weight:600;">
+              <input type="radio" name="resumoDefResiduosRadio" value="NAO" onchange="resumoDefSetResiduos('NAO')" /> Não
+            </label>
+            <label style="font-size:11.5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; color:#94a3b8; font-weight:600;">
+              <input type="radio" name="resumoDefResiduosRadio" value="VAZIO" checked onchange="resumoDefSetResiduos('VAZIO')" /> Em Branco
+            </label>
+          </div>
         </div>
 
         <div>
           <button type="button" onclick="openResumoDefGerenciarAplicadoresSubmodal()" style="background:rgba(255,255,255,0.06); color:#cbd5e1; border:1px solid rgba(255,255,255,0.15); padding:7px 14px; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
-             Gerenciar Aplicadores Pré-Cadastrados
+             Gerenciar Aplicadores
           </button>
         </div>
       </div>
@@ -562,6 +578,18 @@ function resumoDefApplyGlobalAplicador() {
   if (typeof toast === 'function') toast(`Aplicador "${val}" definido para todas as linhas!`, 'ok');
 }
 
+// [AJUSTE-DEF] Define status de resíduos selecionado no modal
+function resumoDefSetResiduos(val) {
+  if (_currentResumoDefData) {
+    _currentResumoDefData.residuosStatus = val;
+    try {
+      const pKey = _currentResumoDefData.pCode || 'default';
+      localStorage.setItem(`prodtec_residuos_${pKey}`, val);
+    } catch(e){}
+  }
+}
+window.resumoDefSetResiduos = resumoDefSetResiduos;
+
 function confirmAndPrintResumoDefensivos() {
   if (!_currentResumoDefData || !_currentResumoDefData.rowsData) return;
 
@@ -579,8 +607,13 @@ function confirmAndPrintResumoDefensivos() {
     try { localStorage.setItem('prodtec_def_default_aplicador', firstOp); } catch(e){}
   }
 
-  // Imprime a folha oficial sem a coluna destruição e com os aplicadores selecionados
-  printPastaCampoDefensivosOficial(_currentResumoDefData.item, _currentResumoDefData.rowsData);
+  // [AJUSTE-DEF] Recupera status de resíduos selecionado no modal ou salvo no localStorage
+  const resVal = _currentResumoDefData.residuosStatus || (function(){
+    try { return localStorage.getItem(`prodtec_residuos_${_currentResumoDefData.pCode || 'default'}`) || 'VAZIO'; } catch(e){ return 'VAZIO'; }
+  })();
+
+  // Imprime a folha oficial sem a coluna destruição, com aplicadores e status de resíduos
+  printPastaCampoDefensivosOficial(_currentResumoDefData.item, _currentResumoDefData.rowsData, resVal);
   closeModalResumoDefensivos();
 }
 
@@ -671,12 +704,20 @@ function refreshResumoDefSelectsAndDatalists(selectedNew) {
 }
 
 // ── 6. IMPRESSÃO OFICIAL: PC06 — CONTROLE GERAL DE AGROTÓXICO (SEM DESTRUIÇÃO) ─────
-function printPastaCampoDefensivosOficial(item, rowsData) {
+// [AJUSTE-DEF] Suporte ao parâmetro residuosOpt ('SIM', 'NAO' ou 'VAZIO')
+function printPastaCampoDefensivosOficial(item, rowsData, residuosOpt) {
   const tenantName = (window.tenantConfig && (window.tenantConfig.razao_social || window.tenantConfig.name)) || 'DINA DINAMARCA INDUSTRIAL AGRÍCOLA LTDA';
   const rtNome = (window.tenantConfig && window.tenantConfig.responsavel_tecnico_nome) || 'IVANOSCA MARTINS DE OLIVEIRA CUNHA';
   const pCode = item.parcela2 || item.parcela || '10.01 T';
   const plantioStr = item.semeadura || item.data_semeadura || item.semeadura1 || item.plantio || item.data_plantio || item.transplante;
   const areaHa = parseFloat(item.area || 3.0).toFixed(3);
+
+  // [AJUSTE-DEF] Recupera status de resíduos do parâmetro ou do cache da parcela
+  const resStatus = residuosOpt || (function(){
+    try { return localStorage.getItem(`prodtec_residuos_${pCode}`) || 'VAZIO'; } catch(e){ return 'VAZIO'; }
+  })();
+  const isResSim = (resStatus === 'SIM');
+  const isResNao = (resStatus === 'NAO');
 
   // GERAÇÃO DAS LINHAS IMPRESSAS — SEM A COLUNA "COLHEITA REALIZADA P/ DESTRUIÇÃO"
   const rowsHtml = (rowsData || []).map(r => `
@@ -723,7 +764,50 @@ function printPastaCampoDefensivosOficial(item, rowsData) {
     .hdr-table { width: 100%; border-collapse: collapse; margin-bottom: 2px; border: 1px solid #000; }
     .hdr-table td { border: 1px solid #000; padding: 1.5px 3px; font-size: 5.5pt; vertical-align: middle; }
     .main-title { font-size: 8pt; font-weight: bold; text-align: center; padding: 2px; border: 1px solid #000; margin-bottom: 2px; background: #f9fafb; color: #d32f2f; text-transform: uppercase; }
-    .info-bar { width: 100%; display: flex; justify-content: space-between; font-size: 6.8pt; font-weight: bold; margin-bottom: 2px; }
+    .info-bar { width: 100%; display: flex; justify-content: space-between; align-items: center; font-size: 6.8pt; font-weight: bold; margin-bottom: 2px; }
+    .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 2px; font-size: 5.3pt; }
+    .grid-table th, .grid-table td { border: 1px solid #000; padding: 1px 2px; }
+    .grid-table th { background: #f3f4f6; font-weight: bold; text-align: center; font-size: 5.1pt; }
+    .footer-obs { font-size: 5pt; line-height: 1.15; margin-top: 2px; border-top: 1px solid #000; padding-top: 2px; }
+    @media print {
+      html, body { height: 100%; margin: 0 !important; padding: 0 !important; }
+      .sheet { page-break-inside: avoid; page-break-after: avoid; }
+      table { page-break-inside: avoid; }
+      tr { page-break-inside: avoid; }
+    }
+  </style>
+  </head>
+  <body onload="window.print()">
+  <div class="sheet">
+    <table class="hdr-table">
+      <tr>
+        <td width="36%" style="line-height: 1.2;">
+          <strong>ELABORADO, EMITIDO E REVISADO POR:</strong> EMANUELA MOREIRA<br/>
+          Avaliado por: ADGF &nbsp;|&nbsp; Aprovado por: ADGF<br/>
+          <strong>FREQUÊNCIA:</strong> POR PARCELA DE CAMPO.
+        </td>
+        <td width="18%" style="text-align:center; vertical-align:middle;">${logoHtml}</td>
+        <td width="46%" style="line-height: 1.2;">
+          <strong>DEPARTAMENTO:</strong> CAMPO<br/>
+          <strong>NOME DO DOC:</strong> CONTROLE GERAL DE AGROTÓXICO NA CULTURA<br/>
+          <strong>EMISSÃO:</strong> 15/06/2026 &nbsp;|&nbsp; <strong>MOD. E APROVAÇÃO:</strong> 01/07/2026 &nbsp;|&nbsp; <strong>U. REVISÃO:</strong> 01/07/2026<br/>
+          <strong>PAG:</strong> 01 DE 01 &nbsp;\\&nbsp; <strong>COD:</strong> PC06 &nbsp;\\&nbsp; <strong>REVISÃO:</strong> ANUAL &nbsp;\\&nbsp; <strong>VERSÃO:</strong> 01
+        </td>
+      </tr>
+    </table>
+
+    <div class="main-title">CONTROLE GERAL DE AGROTÓXICO NA CULTURA</div>
+
+    <div class="info-bar">
+      <div><strong>Fazenda:</strong> &nbsp; ${tenantName.toUpperCase()} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Parcela:</strong> ${pCode} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Área:</strong> ${areaHa} ha &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Cultura:</strong> ${item.cultura || 'Melão'}</div>
+      <div style="display:flex; align-items:center; gap:16px;">
+        <div><strong>Data de Plantio:</strong> ${plantioStr ? plantioStr.split('-').reverse().join('/') : '—'}</div>
+        <!-- [AJUSTE-DEF] Campo Resíduos: Sim / Não -->
+        <div style="border:1px solid #000; padding:1px 6px; font-size:6.3pt; border-radius:2px; background:#fff; letter-spacing:0.3px;">
+          <strong>Resíduos:</strong> &nbsp; [ ${isResSim ? '<b>X</b>' : '&nbsp;&nbsp;'} ] Sim &nbsp;&nbsp; [ ${isResNao ? '<b>X</b>' : '&nbsp;&nbsp;'} ] Não
+        </div>
+      </div>
+    </div>
     .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 2px; font-size: 5.3pt; }
     .grid-table th, .grid-table td { border: 1px solid #000; padding: 1px 2px; }
     .grid-table th { background: #f3f4f6; font-weight: bold; text-align: center; font-size: 5.1pt; }

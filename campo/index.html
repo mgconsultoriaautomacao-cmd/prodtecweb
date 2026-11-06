@@ -7572,10 +7572,43 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
     ['MAP', 'UREIA', 'ÁCIDO BÓRICO', 'NITRATO DE CÁLCIO', 'SULFATO DE MAGNÉSIO', 'SULFATO DE POTÁSSIO', customF].forEach(p => uniqueProducts.push(p));
   }
 
+  // [AJUSTE-FERT] Carrega protocolo de programação para identificar dosagens programadas por DAP
+  const varUpper = (variedadesStr + ' ' + (item ? item.cultura || '' : '')).toUpperCase();
+  let protoKey = 'MELAO_PADRAO';
+  if (varUpper.includes('ASTURIA')) protoKey = 'ASTURIA';
+  else if (varUpper.includes('GRAND') || varUpper.includes('PRIX')) protoKey = 'GRAND_PRIX';
+  else if (varUpper.includes('MELANCIA') || varUpper.includes('WATERMELON')) protoKey = 'MELANCIA_PADRAO';
+
+  const proto = (typeof FERT_PROTOCOLS !== 'undefined' && FERT_PROTOCOLS[protoKey]) ||
+                (typeof DEFAULT_FERT_PROTOCOLS !== 'undefined' && DEFAULT_FERT_PROTOCOLS[protoKey]) ||
+                (window.FERT_PROTOCOLS && window.FERT_PROTOCOLS[protoKey]) ||
+                (window.DEFAULT_FERT_PROTOCOLS && window.DEFAULT_FERT_PROTOCOLS[protoKey]) || {};
+  const sched = proto.schedule || {};
+  const areaVal = parseFloat(areaHa) || 1.0;
+
+  // [AJUSTE-FERT] Consulta dosagem programada por produto e DAP no cronograma
+  function getProgDoseForProductDap(prodName, dap) {
+    if (!prodName || dap == null) return null;
+    const doses = sched[String(dap)] || sched[Number(dap)];
+    if (!doses) return null;
+    let doseBase = 0;
+    let hasEntry = false;
+    Object.entries(doses).forEach(([fKey, val]) => {
+      if (fKey === 'OBSERVAÇÕES') return;
+      const mappedName = mapFertNames[fKey] || fKey.trim().toUpperCase();
+      if (mappedName === prodName) {
+        hasEntry = true;
+        doseBase += Number(val);
+      }
+    });
+    if (!hasEntry) return null;
+    return doseBase * areaVal;
+  }
+
   const productTotals = {};
   uniqueProducts.forEach(p => { productTotals[p] = 0; });
 
-  // Rastreamento de dosagens para aplicação das regras de impressão por coluna (em ordem cronológica)
+  // [AJUSTE-FERT] Rastreamento de dosagens para aplicação das regras de impressão por coluna (em ordem cronológica)
   const lastDoseByProduct = {};
   uniqueProducts.forEach(p => { lastDoseByProduct[p] = null; });
 
@@ -7602,19 +7635,25 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
           dapVal = Math.round((dF.getTime() - plantioDt.getTime()) / 86400000);
         }
       }
+      const dapNum = (dapVal != null && !isNaN(parseInt(dapVal))) ? parseInt(dapVal) : (idx + 1);
       const faseStr = dapVal != null ? `DAP ${dapVal}` : '—';
       const pItems = itemsByFertId[f.id] || {};
 
       const colsHtml = uniqueProducts.map(p => {
+        // [AJUSTE-FERT] Regra d: Sem produto definido -> célula vazia
         if (!p || !p.trim()) {
-          // Regra 4: Sem produto definido -> célula vazia
           lastDoseByProduct[p] = null;
           return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px;">&nbsp;</td>`;
         }
 
+        const progDose = getProgDoseForProductDap(p, dapNum);
         const rawVal = pItems[p];
-        if (rawVal != null) {
-          const val = parseFloat(rawVal) || 0;
+        const realVal = (rawVal != null && !isNaN(parseFloat(rawVal))) ? parseFloat(rawVal) : null;
+        const isProgrammed = (progDose != null && progDose > 0);
+        const hasRealApp = (realVal != null && realVal > 0);
+
+        if (isProgrammed || hasRealApp) {
+          const val = hasRealApp ? realVal : (progDose || 0);
           if (val > 0) {
             productTotals[p] = (productTotals[p] || 0) + val;
             const prevDose = lastDoseByProduct[p];
@@ -7623,20 +7662,18 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
             const formatted = val.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
             if (isRepeated) {
-              // Regra 2: Linha com valor > 0 IGUAL ao anterior -> FONTE BRANCA (permanece no HTML/dados, mas invisível para escrita manual)
-              return `<td class="dose-repetida-branca" style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px; color:#fff !important; -webkit-text-fill-color:#fff !important; user-select:none;">${formatted}</td>`;
+              // [AJUSTE-FERT] Regra b: Dosagem programada repetida -> visível/discreta na tela, fonte branca na impressão (@media print)
+              return `<td class="dose-repetida-branca" style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px;">${formatted}</td>`;
             }
-            // Regra 1: Primeira linha de uma dosagem (valor > 0 e diferente do anterior) -> visível
+            // [AJUSTE-FERT] Regra a: Primeiro dia do bloco programado com novo valor -> visível normal
             return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold; height:20px; color:#000;">${formatted}</td>`;
           } else {
-            // Regra 5: O valor 0,0 permanece visível como está
             lastDoseByProduct[p] = 0;
             return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px; color:#000;">0,000</td>`;
           }
         }
 
-        // Regra 3: Intervalo de idade (DAP) em que o produto NÃO é aplicado -> traço "–"
-        // Reinicia a comparação "igual à linha anterior" quando há traço no meio
+        // [AJUSTE-FERT] Regra c: Fora do período programado do produto (sem aplicação) -> traço "–"
         lastDoseByProduct[p] = null;
         return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px; color:#000; font-weight:normal;">–</td>`;
       }).join('');
@@ -7651,17 +7688,7 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
       `;
     }).join('');
   } else {
-    // Protocolo Fallback Completo DAP 11 ao 65/75
-    const varUpper = (variedadesStr + ' ' + (item ? item.cultura || '' : '')).toUpperCase();
-    let protoKey = 'MELAO_PADRAO';
-    if (varUpper.includes('ASTURIA')) protoKey = 'ASTURIA';
-    else if (varUpper.includes('GRAND') || varUpper.includes('PRIX')) protoKey = 'GRAND_PRIX';
-    else if (varUpper.includes('MELANCIA') || varUpper.includes('WATERMELON')) protoKey = 'MELANCIA_PADRAO';
-
-    const proto = FERT_PROTOCOLS[protoKey] || FERT_PROTOCOLS['MELAO_PADRAO'];
-    const sched = proto ? proto.schedule : {};
-    const areaVal = parseFloat(areaHa) || 1.0;
-
+    // [AJUSTE-FERT] Fallback quando ainda não há lançamentos: cronograma completo da safra
     let orderCount = 1;
     const allSchedEntries = Object.entries(sched).sort((a,b) => Number(a[0]) - Number(b[0]));
 
@@ -7678,47 +7705,29 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
       const faseStr = `DAP ${dapNum}`;
 
       const colsHtml = uniqueProducts.map(p => {
+        // [AJUSTE-FERT] Regra d: Sem produto definido -> célula vazia
         if (!p || !p.trim()) {
-          // Regra 4: Sem produto definido -> célula vazia
           lastDoseByProduct[p] = null;
           return '<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px;">&nbsp;</td>';
         }
 
-        let doseBase = 0;
-        let hasProductInDap = false;
-        Object.entries(doses).forEach(([fKey, val]) => {
-          if (fKey === 'OBSERVAÇÕES') return;
-          const mappedName = mapFertNames[fKey] || fKey.trim().toUpperCase();
-          if (mappedName === p) {
-            hasProductInDap = true;
-            doseBase += Number(val);
-          }
-        });
+        const progDose = getProgDoseForProductDap(p, dapNum);
+        if (progDose != null && progDose > 0) {
+          productTotals[p] = (productTotals[p] || 0) + progDose;
+          const prevDose = lastDoseByProduct[p];
+          const isRepeated = (prevDose != null && Math.abs(progDose - prevDose) < 0.0001);
+          lastDoseByProduct[p] = progDose;
+          const formatted = progDose.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
-        if (hasProductInDap) {
-          const totalKg = doseBase * areaVal;
-          if (totalKg > 0) {
-            productTotals[p] = (productTotals[p] || 0) + totalKg;
-            const prevDose = lastDoseByProduct[p];
-            const isRepeated = (prevDose != null && Math.abs(totalKg - prevDose) < 0.0001);
-            lastDoseByProduct[p] = totalKg;
-            const formatted = totalKg.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
-
-            if (isRepeated) {
-              // Regra 2: Linha com valor > 0 IGUAL ao anterior -> FONTE BRANCA (permanece no HTML/dados, mas invisível para escrita manual)
-              return `<td class="dose-repetida-branca" style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px; color:#fff !important; -webkit-text-fill-color:#fff !important; user-select:none;">${formatted}</td>`;
-            }
-            // Regra 1: Primeira linha de uma dosagem (valor > 0 e diferente do anterior) -> visível
-            return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold; height:20px; color:#000;">${formatted}</td>`;
-          } else {
-            // Regra 5: O valor 0,0 permanece visível
-            lastDoseByProduct[p] = 0;
-            return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px; color:#000;">0,000</td>`;
+          if (isRepeated) {
+            // [AJUSTE-FERT] Regra b: Dosagem repetida do bloco -> fonte branca na impressão, visível na tela
+            return `<td class="dose-repetida-branca" style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px;">${formatted}</td>`;
           }
+          // [AJUSTE-FERT] Regra a: Primeiro dia do bloco programado -> visível normal
+          return `<td style="border:1px solid #000; padding:2px 2px; text-align:center; font-weight:bold; height:20px; color:#000;">${formatted}</td>`;
         }
 
-        // Regra 3: Intervalo de idade (DAP) em que o produto NÃO é aplicado -> traço "–"
-        // Reinicia a comparação "igual à linha anterior" quando há traço no meio
+        // [AJUSTE-FERT] Regra c: Fora do período programado -> traço "–"
         lastDoseByProduct[p] = null;
         return '<td style="border:1px solid #000; padding:2px 2px; text-align:center; height:20px; color:#000; font-weight:normal;">–</td>';
       }).join('');
@@ -7773,18 +7782,19 @@ async function printPastaCampoFertirrigacao(parcelIdOrCode, forceManual) {
   .obs-box { border: 1px solid #000; padding: 3px 5px; font-size: 5.4pt; line-height: 1.15; margin-bottom: 3px; background: #fafafa; }
   .sig-table { width: 100%; border-collapse: collapse; margin-top: 3px; font-size: 6.5pt; }
   .sig-table td { border: 1px solid #000; padding: 4px 6px; text-align: center; vertical-align: bottom; }
-  .dose-repetida-branca { color: #fff !important; -webkit-text-fill-color: #fff !important; user-select: none; }
+  /* [AJUSTE-FERT] Na tela o valor repetido fica discreto para conferência; na impressão vira branco exato */
+  .dose-repetida-branca { color: #94a3b8; user-select: text; }
   @media print {
     html, body { height: 100%; margin: 0 !important; padding: 0 !important; }
     .sheet { page-break-inside: avoid; page-break-after: avoid; }
     table { page-break-inside: avoid; }
     tr { page-break-inside: avoid; }
-    .dose-repetida-branca { color: #fff !important; -webkit-text-fill-color: #fff !important; }
-  }
-  </style>
-    .sheet { page-break-inside: avoid; page-break-after: avoid; }
-    table { page-break-inside: avoid; }
-    tr { page-break-inside: avoid; }
+    .dose-repetida-branca { 
+      color: #ffffff !important; 
+      -webkit-text-fill-color: #ffffff !important; 
+      -webkit-print-color-adjust: exact; 
+      print-color-adjust: exact; 
+    }
   }
   </style>
   </head>
@@ -8495,9 +8505,15 @@ async function printPastaCampoDefensivos(idOrStr, forceDirectPrint) {
 
     <div class="main-title">CONTROLE GERAL DE AGROTÓXICO NA CULTURA</div>
 
+    <!-- [AJUSTE-DEF] Recupera status de resíduos salvo para a parcela -->
     <div class="info-bar">
       <div><strong>Fazenda:</strong> &nbsp; ${tenantName.toUpperCase()} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Parcela:</strong> ${pCode} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Área:</strong> ${areaHa} ha &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Cultura:</strong> ${item.cultura || 'Melão'}</div>
-      <div><strong>Data de Plantio:</strong> ${plantioStr ? plantioStr.split('-').reverse().join('/') : '—'}</div>
+      <div style="display:flex; align-items:center; gap:16px;">
+        <div><strong>Data de Plantio:</strong> ${plantioStr ? plantioStr.split('-').reverse().join('/') : '—'}</div>
+        <div style="border:1px solid #000; padding:1px 6px; font-size:6.3pt; border-radius:2px; background:#fff; letter-spacing:0.3px;">
+          <strong>Resíduos:</strong> &nbsp; [ ${(function(){ try{ return localStorage.getItem('prodtec_residuos_' + pCode) === 'SIM' ? '<b>X</b>' : '&nbsp;&nbsp;'; }catch(e){ return '&nbsp;&nbsp;'; } })()} ] Sim &nbsp;&nbsp; [ ${(function(){ try{ return localStorage.getItem('prodtec_residuos_' + pCode) === 'NAO' ? '<b>X</b>' : '&nbsp;&nbsp;'; }catch(e){ return '&nbsp;&nbsp;'; } })()} ] Não
+        </div>
+      </div>
     </div>
 
     <table class="grid-table">
@@ -8719,6 +8735,16 @@ function printPosColheitaReport(itemStr) {
   const iAtivo = item.ingrediente_ativo || 'Azoxistrobina + Fludioxonil';
   const mlProd = item.dosagem_produto != null ? parseFloat(item.dosagem_produto).toFixed(2).replace('.', ',') : '0,00';
   const lAgua = item.volume_agua != null ? parseFloat(item.volume_agua).toFixed(2).replace('.', ',') : '0,00';
+  
+  // [AJUSTE-POS] Cálculo de dosagem por litro (mL/L)
+  const numMl = item.dosagem_produto != null ? parseFloat(item.dosagem_produto) : 0;
+  const numAgua = item.volume_agua != null ? parseFloat(item.volume_agua) : 0;
+  let mlPorLitroStr = '–';
+  if (numAgua > 0 && numMl > 0) {
+    const calcMlL = numMl / numAgua;
+    mlPorLitroStr = calcMlL.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
   const carencia = item.carencia_dias != null ? (item.carencia_dias === 0 ? 'ND' : item.carencia_dias + 'd') : 'ND';
   const justif = item.justificativa || 'Antracnose';
   const carrocoes = item.quantidade_carrocoes || '';
@@ -8734,6 +8760,7 @@ function printPosColheitaReport(itemStr) {
       <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt; color:#d32f2f">${iAtivo}</td>
       <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt">${mlProd}</td>
       <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt">${lAgua}</td>
+      <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt; font-weight:bold">${mlPorLitroStr}</td>
       <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt">${carencia}</td>
       <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt; color:#d32f2f; font-weight:bold">${justif}</td>
       <td style="border:1px solid #000; padding:3px; text-align:center; font-size:7.2pt">1 e 2</td>
@@ -8744,6 +8771,7 @@ function printPosColheitaReport(itemStr) {
     rowsHtml += `
       <tr>
         <td style="border:1px solid #000; height:18px; padding:2px"></td>
+        <td style="border:1px solid #000; padding:2px"></td>
         <td style="border:1px solid #000; padding:2px"></td>
         <td style="border:1px solid #000; padding:2px"></td>
         <td style="border:1px solid #000; padding:2px"></td>
@@ -8826,17 +8854,19 @@ function printPosColheitaReport(itemStr) {
         <tr>
           <th rowspan="2" style="width: 8%;">Data da<br/>Aplicação</th>
           <th rowspan="2" style="width: 8%;">Quantidade<br/>de Carroções</th>
-          <th colspan="2" style="width: 32%;">Produto Utilizado</th>
-          <th colspan="2" style="width: 18%;">Quantidade Utilizada</th>
+          <th colspan="2" style="width: 30%;">Produto Utilizado</th>
+          <th colspan="3" style="width: 25%;">Quantidade Utilizada</th>
           <th rowspan="2" style="width: 7%;">Carência<br/>(dias)</th>
-          <th rowspan="2" style="width: 17%;">Justificativa.<br/>Controle</th>
-          <th rowspan="2" style="width: 10%;">Nº dos<br/>aplicadores</th>
+          <th rowspan="2" style="width: 14%;">Justificativa.<br/>Controle</th>
+          <th rowspan="2" style="width: 8%;">Nº dos<br/>aplicadores</th>
         </tr>
         <tr>
-          <th style="width: 14%;">Nome Comercial</th>
-          <th style="width: 18%;">Ingrediente ativo</th>
-          <th style="width: 9%;">(mL de Produto)</th>
-          <th style="width: 9%;">(L de Água)</th>
+          <th style="width: 13%;">Nome Comercial</th>
+          <th style="width: 17%;">Ingrediente ativo</th>
+          <th style="width: 8%;">(mL de Produto)</th>
+          <th style="width: 8%;">(L de Água)</th>
+          <!-- [AJUSTE-POS] Nova coluna de dosagem por litro de calda -->
+          <th style="width: 9%;">mL/L<br/>(Calda)</th>
         </tr>
       </thead>
       <tbody>
@@ -12497,6 +12527,7 @@ async function loadCHistory() {
 // ═══════════════════════════════════════════
 // PARADAS GERAIS
 // ═══════════════════════════════════════════
+// [REL-PARADAS] Lista padronizada de motivos (15 originais + 6 novos = 21 motivos)
 const STOP_STANDARD_REASONS = [
   '1 - Problema na prodol',
   '2 - Problema na mesa de embalagem',
@@ -12512,7 +12543,13 @@ const STOP_STANDARD_REASONS = [
   '12 - Pane sistema',
   '13 - Jantar',
   '14 - Muito defeito no fruto (pausa para resolução)',
-  '15 - Outros (descrever em observações)'
+  '15 - Outros (descrever em observações)',
+  '16 - Falta de caixa no estoque',
+  '17 - Aguardando transporte de caixa da empilhadeira',
+  '18 - Merenda extra',
+  '19 - Auditoria interna',
+  '20 - Interrupções na esteira',
+  '21 - Problema na monovia'
 ];
 
 function getLoggedUserName() {
